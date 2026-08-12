@@ -1,0 +1,16 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 128 128" role="img" aria-label="Resuming mark: crouch then stride">
+  <rect width="128" height="128" rx="28" fill="#faf6f0"/>
+  <!-- ground -->
+  <path d="M16 106 H54" fill="none" stroke="#c9b5a4" stroke-width="6" stroke-linecap="round"/>
+  <path d="M70 106 H112" fill="none" stroke="#e07a5f" stroke-width="6" stroke-linecap="round"/>
+  <!-- deep crouch (ink) -->
+  <circle cx="36" cy="70" r="8" fill="#1a1614"/>
+  <path d="M36 80 C24 86, 22 100, 28 106" fill="none" stroke="#1a1614" stroke-width="9" stroke-linecap="round"/>
+  <path d="M36 80 C44 90, 48 100, 46 106" fill="none" stroke="#1a1614" stroke-width="8" stroke-linecap="round"/>
+  <path d="M32 84 L22 78" fill="none" stroke="#1a1614" stroke-width="7" stroke-linecap="round"/>
+  <!-- strong stride (coral) -->
+  <circle cx="90" cy="32" r="8" fill="#e07a5f"/>
+  <path d="M90 44 L82 74 L68 106" fill="none" stroke="#e07a5f" stroke-width="9" stroke-linecap="round" stroke-linejoin="round"/>
+  <path d="M82 74 L102 82 L112 106" fill="none" stroke="#e07a5f" stroke-width="9" stroke-linecap="round" stroke-linejoin="round"/>
+  <path d="M86 56 L108 44" fill="none" stroke="#e07a5f" stroke-width="7" stroke-linecap="round"/>
+</svg>

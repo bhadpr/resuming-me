@@ -40,10 +40,12 @@ h1, h2, h3, p {
 
 h1, h2, h3,
 .app-title,
+.brand-title,
 .screen-heading h2,
 .form-title,
 .detail-hero h2,
 .landing-card h1,
+.landing-brand,
 .empty-state h2 {
   font-family: var(--font-display);
   font-weight: var(--heading-weight, 700);
@@ -523,10 +525,38 @@ select.field-input {
   border-radius: var(--radius);
 }
 
-.landing-card h1 {
+.landing-card h1,
+.landing-brand {
   font-size: clamp(2.5rem, 10vw, 3.25rem);
   line-height: 1.05;
   color: var(--color-text);
+}
+
+.brand-title {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.45em;
+  margin: 0;
+}
+
+.brand-mark {
+  flex-shrink: 0;
+  display: block;
+  border-radius: 22%;
+}
+
+.brand-title-sm .brand-mark {
+  width: 2.475rem;
+  height: 2.475rem;
+}
+
+.brand-title-lg .brand-mark {
+  width: 1.27em;
+  height: 1.27em;
+}
+
+.brand-title-text {
+  min-width: 0;
 }
 
 .tagline {
@@ -744,6 +774,24 @@ select.field-input {
   margin: 0;
 }
 
+.legal-article ul {
+  margin: 0;
+  padding-left: 1.25rem;
+  display: flex;
+  flex-direction: column;
+  gap: 0.5rem;
+}
+
+.legal-article li {
+  margin: 0;
+}
+
+.legal-article a {
+  color: var(--color-accent);
+  text-decoration: underline;
+  text-underline-offset: 0.15em;
+}
+
 .legal-muted {
   color: var(--color-text-muted);
   font-size: 0.8125rem;
@@ -940,6 +988,14 @@ select.field-input {
 .app-title {
   font-size: 1.35rem;
   font-weight: 700;
+  letter-spacing: 0.18em;
+}
+
+.app-title.brand-title {
+  letter-spacing: 0;
+}
+
+.app-title .brand-title-text {
   letter-spacing: 0.18em;
 }
 
@@ -1834,7 +1890,8 @@ select.field-input {
 }
 
 [data-theme='broadsheet'] .app-title,
-[data-theme='broadsheet'] .landing-card h1 {
+[data-theme='broadsheet'] .landing-card h1,
+[data-theme='broadsheet'] .landing-brand {
   font-family: var(--font-display);
   letter-spacing: -0.02em;
 }

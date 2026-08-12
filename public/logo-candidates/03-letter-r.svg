@@ -1,0 +1,22 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 128 128" role="img" aria-label="Resuming mark: letter R with return curve">
+  <rect width="128" height="128" rx="28" fill="#faf6f0"/>
+  <!-- stem -->
+  <rect x="34" y="30" width="14" height="68" rx="7" fill="#1a1614"/>
+  <!-- bowl -->
+  <path
+    d="M48 30 H74 C90 30, 100 42, 100 56 C100 70, 90 82, 74 82 H48 Z"
+    fill="#1a1614"
+  />
+  <path
+    d="M62 44 H74 C80 44, 86 49, 86 56 C86 63, 80 68, 74 68 H62 Z"
+    fill="#faf6f0"
+  />
+  <!-- return leg in coral: the resume -->
+  <path
+    d="M70 78 Q86 78 96 98"
+    fill="none"
+    stroke="#e07a5f"
+    stroke-width="14"
+    stroke-linecap="round"
+  />
+</svg>

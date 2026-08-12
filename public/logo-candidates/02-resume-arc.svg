@@ -1,0 +1,20 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 128 128" role="img" aria-label="Resuming mark: open arc continuing">
+  <rect width="128" height="128" rx="28" fill="#faf6f0"/>
+  <!-- broken path that picks back up -->
+  <path
+    d="M28 78 C28 48, 52 34, 74 34"
+    fill="none"
+    stroke="#1a1614"
+    stroke-width="12"
+    stroke-linecap="round"
+  />
+  <path
+    d="M88 42 C104 52, 108 70, 98 86 C90 98, 74 104, 58 98"
+    fill="none"
+    stroke="#e07a5f"
+    stroke-width="12"
+    stroke-linecap="round"
+  />
+  <!-- resume tip -->
+  <circle cx="58" cy="98" r="7" fill="#e07a5f"/>
+</svg>

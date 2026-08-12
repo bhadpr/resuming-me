@@ -1,0 +1,22 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 128 128" role="img" aria-label="Resuming mark: pushing up from crawl into a walk">
+  <rect width="128" height="128" rx="28" fill="#faf6f0"/>
+  <!-- ground -->
+  <path d="M14 108 H54" fill="none" stroke="#c9b5a4" stroke-width="6" stroke-linecap="round"/>
+  <path d="M68 108 H114" fill="none" stroke="#e07a5f" stroke-width="6" stroke-linecap="round"/>
+  <!-- on all fours, head lifting (trying to wake up) -->
+  <circle cx="48" cy="66" r="8" fill="#1a1614"/>
+  <!-- body angled up from hips -->
+  <path d="M26 100 L34 88 L48 76" fill="none" stroke="#1a1614" stroke-width="9" stroke-linecap="round" stroke-linejoin="round"/>
+  <!-- supporting arm -->
+  <path d="M40 86 L34 108" fill="none" stroke="#1a1614" stroke-width="8" stroke-linecap="round"/>
+  <!-- back knee -->
+  <path d="M26 100 L18 108" fill="none" stroke="#1a1614" stroke-width="8" stroke-linecap="round"/>
+  <path d="M26 100 L36 108" fill="none" stroke="#1a1614" stroke-width="7" stroke-linecap="round"/>
+  <!-- free arm reaching / pushing -->
+  <path d="M46 78 L58 70" fill="none" stroke="#1a1614" stroke-width="7" stroke-linecap="round"/>
+  <!-- walker -->
+  <circle cx="92" cy="34" r="8" fill="#e07a5f"/>
+  <path d="M92 46 L84 74 L72 108" fill="none" stroke="#e07a5f" stroke-width="9" stroke-linecap="round" stroke-linejoin="round"/>
+  <path d="M84 74 L100 86 L110 108" fill="none" stroke="#e07a5f" stroke-width="9" stroke-linecap="round" stroke-linejoin="round"/>
+  <path d="M88 56 L106 46" fill="none" stroke="#e07a5f" stroke-width="7" stroke-linecap="round"/>
+</svg>

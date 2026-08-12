@@ -12,6 +12,7 @@ import { InsightsScreen } from './InsightsScreen'
 import { SettingsScreen } from './SettingsScreen'
 import { OnboardingScreen } from './OnboardingScreen'
 import { InstallPrompt } from './InstallPrompt'
+import { BrandTitle } from './BrandTitle'
 import { LegalPage } from './LegalPage'
 import { FeedbackPage } from './FeedbackPage'
 import { SiteFooter } from './SiteFooter'
@@ -674,7 +675,11 @@ export function AppShell() {
   return (
     <div className="app">
       <header className="app-header">
-        <h1 className="app-title">{settingsOpen ? 'Settings' : 'Resuming'}</h1>
+        {settingsOpen ? (
+          <h1 className="app-title">Settings</h1>
+        ) : (
+          <BrandTitle className="app-title" />
+        )}
         <div className="app-header-actions">
           <button
             type="button"

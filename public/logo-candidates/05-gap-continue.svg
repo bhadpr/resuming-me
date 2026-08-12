@@ -1,0 +1,24 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 128 128" role="img" aria-label="Resuming mark: line with gap then continue">
+  <rect width="128" height="128" rx="28" fill="#faf6f0"/>
+  <!-- postponed stretch -->
+  <path
+    d="M24 64 H52"
+    fill="none"
+    stroke="#c9b5a4"
+    stroke-width="14"
+    stroke-linecap="round"
+  />
+  <!-- gap (the pause) -->
+  <!-- resumed stretch + forward tip -->
+  <path
+    d="M72 64 H96"
+    fill="none"
+    stroke="#e07a5f"
+    stroke-width="14"
+    stroke-linecap="round"
+  />
+  <path d="M94 46 L112 64 L94 82 Z" fill="#e07a5f"/>
+  <!-- quiet vertical pause marks in the gap -->
+  <rect x="58" y="50" width="5" height="28" rx="2.5" fill="#1a1614"/>
+  <rect x="66" y="50" width="5" height="28" rx="2.5" fill="#1a1614"/>
+</svg>

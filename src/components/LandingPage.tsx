@@ -1,4 +1,5 @@
 import { useState } from 'react'
+import { BrandTitle } from './BrandTitle'
 import { FeedbackPage } from './FeedbackPage'
 import { LegalPage } from './LegalPage'
 import { SiteFooter } from './SiteFooter'
@@ -58,7 +59,7 @@ export function LandingPage({
     return (
       <div className="landing">
         <div className="landing-card">
-          <h1>Resuming</h1>
+          <BrandTitle size="lg" className="landing-brand" />
           <p className="tagline">Track what you postpone. Resume what matters.</p>
           <div className="notice notice-warning">
             <p>{configError ?? 'Supabase is not configured.'}</p>
@@ -72,7 +73,7 @@ export function LandingPage({
   return (
     <div className="landing">
       <div className="landing-card">
-        <h1>Resuming</h1>
+        <BrandTitle size="lg" className="landing-brand" />
         <p className="tagline">Track what you postpone. Resume what matters.</p>
         <p className="explainer">
           Habit apps optimize one streak. Resuming shows avoidance across everything

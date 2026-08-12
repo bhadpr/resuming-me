@@ -1,0 +1,18 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 128 128" role="img" aria-label="Resuming mark: dawn over rising walker">
+  <rect width="128" height="128" rx="28" fill="#faf6f0"/>
+  <!-- soft dawn -->
+  <circle cx="96" cy="28" r="14" fill="#e07a5f"/>
+  <circle cx="96" cy="28" r="7" fill="#faf6f0"/>
+  <!-- ground -->
+  <path d="M16 106 H54" fill="none" stroke="#c9b5a4" stroke-width="6" stroke-linecap="round"/>
+  <path d="M68 106 H112" fill="none" stroke="#e07a5f" stroke-width="6" stroke-linecap="round"/>
+  <!-- slumped (ink) -->
+  <circle cx="36" cy="62" r="8" fill="#1a1614"/>
+  <path d="M36 72 C26 80, 24 96, 30 106" fill="none" stroke="#1a1614" stroke-width="9" stroke-linecap="round"/>
+  <path d="M34 84 L48 90" fill="none" stroke="#1a1614" stroke-width="7" stroke-linecap="round"/>
+  <!-- walker toward dawn (coral) -->
+  <circle cx="82" cy="48" r="8" fill="#e07a5f"/>
+  <path d="M82 58 L78 78 L70 106" fill="none" stroke="#e07a5f" stroke-width="9" stroke-linecap="round" stroke-linejoin="round"/>
+  <path d="M78 78 L92 88 L100 106" fill="none" stroke="#e07a5f" stroke-width="9" stroke-linecap="round" stroke-linejoin="round"/>
+  <path d="M80 66 L96 58" fill="none" stroke="#e07a5f" stroke-width="7" stroke-linecap="round"/>
+</svg>

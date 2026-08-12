@@ -1,0 +1,12 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 128 128" role="img" aria-label="Resuming mark: waking dawn over a resumed path">
+  <rect width="128" height="128" rx="28" fill="#faf6f0"/>
+  <!-- soft dawn disc: waking up again -->
+  <circle cx="64" cy="48" r="22" fill="#e07a5f"/>
+  <circle cx="64" cy="48" r="12" fill="#faf6f0"/>
+  <!-- horizon as gap then continue -->
+  <path d="M20 86 H48" fill="none" stroke="#c9b5a4" stroke-width="10" stroke-linecap="round"/>
+  <rect x="54" y="76" width="4" height="20" rx="2" fill="#1a1614"/>
+  <rect x="62" y="76" width="4" height="20" rx="2" fill="#1a1614"/>
+  <path d="M74 86 H94" fill="none" stroke="#e07a5f" stroke-width="10" stroke-linecap="round"/>
+  <path d="M92 74 L108 86 L92 98 Z" fill="#e07a5f"/>
+</svg>

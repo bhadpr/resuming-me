@@ -1,0 +1,18 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 128 128" role="img" aria-label="Resuming mark: down then up and walking on a resumed path">
+  <rect width="128" height="128" rx="28" fill="#faf6f0"/>
+  <!-- continuous path with pause gap -->
+  <path d="M14 104 H46" fill="none" stroke="#c9b5a4" stroke-width="8" stroke-linecap="round"/>
+  <rect x="52" y="92" width="4" height="24" rx="2" fill="#1a1614"/>
+  <rect x="60" y="92" width="4" height="24" rx="2" fill="#1a1614"/>
+  <path d="M72 104 H100" fill="none" stroke="#e07a5f" stroke-width="8" stroke-linecap="round"/>
+  <path d="M98 90 L114 104 L98 118" fill="#e07a5f"/>
+  <!-- slumped over muted path -->
+  <circle cx="34" cy="56" r="8" fill="#1a1614"/>
+  <path d="M34 66 C24 78, 22 94, 28 104" fill="none" stroke="#1a1614" stroke-width="9" stroke-linecap="round"/>
+  <path d="M32 78 L46 86" fill="none" stroke="#1a1614" stroke-width="7" stroke-linecap="round"/>
+  <!-- walker on coral path -->
+  <circle cx="86" cy="36" r="8" fill="#e07a5f"/>
+  <path d="M86 48 L80 72 L74 96" fill="none" stroke="#e07a5f" stroke-width="9" stroke-linecap="round" stroke-linejoin="round"/>
+  <path d="M80 72 L94 82 L100 96" fill="none" stroke="#e07a5f" stroke-width="8" stroke-linecap="round" stroke-linejoin="round"/>
+  <path d="M84 58 L98 50" fill="none" stroke="#e07a5f" stroke-width="7" stroke-linecap="round"/>
+</svg>

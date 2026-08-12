@@ -1,0 +1,11 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 128 128" role="img" aria-label="Resuming mark: self in the gap then continue">
+  <rect width="128" height="128" rx="28" fill="#faf6f0"/>
+  <!-- postponed stretch -->
+  <path d="M18 72 H40" fill="none" stroke="#c9b5a4" stroke-width="12" stroke-linecap="round"/>
+  <!-- self standing in the pause -->
+  <circle cx="56" cy="40" r="10" fill="#1a1614"/>
+  <path d="M56 52 C44 56, 40 68, 40 80 L72 80 C72 68, 68 56, 56 52 Z" fill="#1a1614"/>
+  <!-- resumed stretch + tip -->
+  <path d="M78 72 H96" fill="none" stroke="#e07a5f" stroke-width="12" stroke-linecap="round"/>
+  <path d="M94 56 L112 72 L94 88 Z" fill="#e07a5f"/>
+</svg>

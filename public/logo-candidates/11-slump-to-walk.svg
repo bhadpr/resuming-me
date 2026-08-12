@@ -1,0 +1,37 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 128 128" role="img" aria-label="Resuming mark: slumped self then walking self">
+  <rect width="128" height="128" rx="28" fill="#faf6f0"/>
+  <!-- slumped / muted (before) -->
+  <circle cx="34" cy="48" r="8" fill="#c9b5a4"/>
+  <path
+    d="M34 58 C22 72, 24 92, 28 98 L48 92 C46 80, 44 68, 34 58 Z"
+    fill="#c9b5a4"
+  />
+  <!-- small pause ticks between -->
+  <rect x="58" y="54" width="4" height="20" rx="2" fill="#1a1614"/>
+  <rect x="66" y="54" width="4" height="20" rx="2" fill="#1a1614"/>
+  <!-- walking / coral (after) -->
+  <circle cx="92" cy="36" r="8" fill="#e07a5f"/>
+  <path
+    d="M92 46 L84 68 L76 98"
+    fill="none"
+    stroke="#e07a5f"
+    stroke-width="8"
+    stroke-linecap="round"
+    stroke-linejoin="round"
+  />
+  <path
+    d="M84 68 L98 78 L104 98"
+    fill="none"
+    stroke="#e07a5f"
+    stroke-width="8"
+    stroke-linecap="round"
+    stroke-linejoin="round"
+  />
+  <path
+    d="M88 58 L102 52"
+    fill="none"
+    stroke="#e07a5f"
+    stroke-width="7"
+    stroke-linecap="round"
+  />
+</svg>

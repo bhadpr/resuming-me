@@ -1,0 +1,13 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 128 128" role="img" aria-label="Resuming mark: filled silhouette from slumped to walking">
+  <rect width="128" height="128" rx="28" fill="#faf6f0"/>
+  <!-- ground -->
+  <path d="M16 106 H54" fill="none" stroke="#c9b5a4" stroke-width="6" stroke-linecap="round"/>
+  <path d="M70 106 H112" fill="none" stroke="#e07a5f" stroke-width="6" stroke-linecap="round"/>
+  <!-- filled slumped self -->
+  <circle cx="36" cy="54" r="9" fill="#c9b5a4"/>
+  <path d="M36 64 C22 72, 18 92, 24 106 L48 106 C50 90, 48 74, 36 64 Z" fill="#c9b5a4"/>
+  <!-- filled walking self -->
+  <circle cx="90" cy="34" r="9" fill="#e07a5f"/>
+  <path d="M90 44 L78 70 L68 106 L82 106 L88 78 L98 90 L108 106 L118 106 L100 72 L96 56 Z" fill="#e07a5f"/>
+  <path d="M92 52 L108 42 L110 52 L96 58 Z" fill="#e07a5f"/>
+</svg>

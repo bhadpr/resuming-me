@@ -1,0 +1,13 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 128 128" role="img" aria-label="Resuming mark: waking self as play from pause">
+  <rect width="128" height="128" rx="28" fill="#faf6f0"/>
+  <!-- soft person silhouette -->
+  <circle cx="64" cy="36" r="14" fill="#1a1614"/>
+  <path
+    d="M64 54 C42 58, 34 78, 34 98 H94 C94 78, 86 58, 64 54 Z"
+    fill="#1a1614"
+  />
+  <!-- chest: pause then play (the resume inside) -->
+  <rect x="48" y="68" width="7" height="22" rx="3" fill="#faf6f0"/>
+  <rect x="58" y="68" width="7" height="22" rx="3" fill="#faf6f0"/>
+  <path d="M70 68 L86 79 L70 90 Z" fill="#e07a5f"/>
+</svg>

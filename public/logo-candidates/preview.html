@@ -1,0 +1,495 @@
+<!DOCTYPE html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <title>Resuming — logo candidates</title>
+    <link rel="preconnect" href="https://fonts.googleapis.com" />
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+    <link
+      href="https://fonts.googleapis.com/css2?family=DM+Sans:wght@400;500;600&family=Fraunces:opsz,wght@9..144,600&display=swap"
+      rel="stylesheet"
+    />
+    <style>
+      :root {
+        --bg: #faf6f0;
+        --ink: #1a1614;
+        --muted: #7a6f66;
+        --border: #e8d9cc;
+        --coral: #e07a5f;
+        --surface: #ffffff;
+      }
+      * {
+        box-sizing: border-box;
+      }
+      body {
+        margin: 0;
+        min-height: 100vh;
+        background:
+          radial-gradient(
+            ellipse 85% 55% at 50% -8%,
+            color-mix(in srgb, var(--coral) 22%, transparent),
+            transparent 68%
+          ),
+          var(--bg);
+        color: var(--ink);
+        font-family: 'DM Sans', system-ui, sans-serif;
+        padding: 2.5rem 1.25rem 4rem;
+      }
+      main {
+        max-width: 920px;
+        margin: 0 auto;
+      }
+      h1 {
+        font-family: 'Fraunces', Georgia, serif;
+        font-weight: 600;
+        font-size: clamp(1.75rem, 4vw, 2.25rem);
+        letter-spacing: -0.02em;
+        margin: 0 0 0.35rem;
+      }
+      .lede {
+        color: var(--muted);
+        margin: 0 0 2rem;
+        max-width: 40rem;
+        line-height: 1.5;
+      }
+      h2.section {
+        font-family: 'Fraunces', Georgia, serif;
+        font-size: 1.25rem;
+        margin: 2rem 0 0.85rem;
+      }
+      .grid {
+        display: grid;
+        gap: 1.25rem;
+        grid-template-columns: repeat(auto-fill, minmax(260px, 1fr));
+      }
+      article {
+        background: var(--surface);
+        border: 1px solid var(--border);
+        border-radius: 16px;
+        padding: 1.25rem;
+      }
+      article.pick {
+        border-color: color-mix(in srgb, var(--coral) 45%, var(--border));
+        box-shadow: 0 0 0 1px color-mix(in srgb, var(--coral) 20%, transparent);
+      }
+      .sizes {
+        display: flex;
+        align-items: flex-end;
+        gap: 1rem;
+        margin-bottom: 1rem;
+      }
+      .sizes img {
+        display: block;
+        border-radius: 22%;
+        box-shadow: 0 1px 0 color-mix(in srgb, var(--ink) 6%, transparent);
+      }
+      .on-dark {
+        background: #07070b;
+        border-radius: 12px;
+        padding: 0.65rem;
+        display: inline-flex;
+      }
+      .on-dark img {
+        box-shadow: none;
+      }
+      h2 {
+        font-family: 'Fraunces', Georgia, serif;
+        font-size: 1.1rem;
+        font-weight: 600;
+        margin: 0 0 0.35rem;
+      }
+      p {
+        margin: 0;
+        color: var(--muted);
+        font-size: 0.9rem;
+        line-height: 1.45;
+      }
+      .wordmark-row {
+        margin-top: 2rem;
+        background: var(--surface);
+        border: 1px solid var(--border);
+        border-radius: 16px;
+        padding: 1.5rem;
+      }
+      .wordmark-row h2 {
+        margin-bottom: 1rem;
+      }
+      .marks {
+        display: flex;
+        flex-wrap: wrap;
+        gap: 1.5rem 2rem;
+        align-items: center;
+      }
+      .wm {
+        display: flex;
+        align-items: center;
+        gap: 0.65rem;
+      }
+      .wm img {
+        width: 40px;
+        height: 40px;
+        border-radius: 10px;
+      }
+      .wm span {
+        font-family: 'Fraunces', Georgia, serif;
+        font-size: 1.5rem;
+        font-weight: 600;
+        letter-spacing: -0.02em;
+      }
+      code {
+        font-size: 0.8rem;
+        color: var(--muted);
+      }
+    </style>
+  </head>
+  <body>
+    <main>
+      <h1>Resuming — logo candidates</h1>
+      <p class="lede">
+        Shortlist kept #1 and #5. New round folds in <em>self / habit / waking up
+        again</em> while keeping pause → continue. Dev server:
+        <code>http://127.0.0.1:5174/logo-candidates/preview.html</code>
+        (Resuming uses port 5174 so it doesn’t collide with other apps on 5173).
+      </p>
+
+      <h2 class="section">Shortlist</h2>
+      <div class="grid">
+        <article class="pick">
+          <div class="sizes">
+            <img src="01-pause-play.svg" width="96" height="96" alt="" />
+            <img src="01-pause-play.svg" width="48" height="48" alt="" />
+            <img src="01-pause-play.svg" width="32" height="32" alt="" />
+            <div class="on-dark">
+              <img src="01-pause-play.svg" width="40" height="40" alt="" />
+            </div>
+          </div>
+          <h2>01 — Pause → Play</h2>
+          <p>Timer / resume control. Clear, but no “self” yet.</p>
+        </article>
+
+        <article class="pick">
+          <div class="sizes">
+            <img src="20-play-leads.svg" width="96" height="96" alt="" />
+            <img src="20-play-leads.svg" width="48" height="48" alt="" />
+            <img src="20-play-leads.svg" width="32" height="32" alt="" />
+            <div class="on-dark">
+              <img src="20-play-leads.svg" width="40" height="40" alt="" />
+            </div>
+          </div>
+          <h2>20 — Play leads</h2>
+          <p>
+            Same idea as #1, but play is the hero: larger coral triangle, quiet
+            muted pause bars on the left.
+          </p>
+        </article>
+
+        <article class="pick">
+          <div class="sizes">
+            <img src="05-gap-continue.svg" width="96" height="96" alt="" />
+            <img src="05-gap-continue.svg" width="48" height="48" alt="" />
+            <img src="05-gap-continue.svg" width="32" height="32" alt="" />
+            <div class="on-dark">
+              <img src="05-gap-continue.svg" width="40" height="40" alt="" />
+            </div>
+          </div>
+          <h2>05 — Gap → continue</h2>
+          <p>Postponed, paused, resumed. Strong story; still abstract.</p>
+        </article>
+      </div>
+
+      <h2 class="section">Self / habit / waking again</h2>
+      <div class="grid">
+        <article>
+          <div class="sizes">
+            <img src="06-self-pause-play.svg" width="96" height="96" alt="" />
+            <img src="06-self-pause-play.svg" width="48" height="48" alt="" />
+            <img src="06-self-pause-play.svg" width="32" height="32" alt="" />
+            <div class="on-dark">
+              <img src="06-self-pause-play.svg" width="40" height="40" alt="" />
+            </div>
+          </div>
+          <h2>06 — Self + pause → play</h2>
+          <p>
+            Head + body as pause bars, play emerging. #1 with a person — “I’m
+            picking myself back up.”
+          </p>
+        </article>
+
+        <article>
+          <div class="sizes">
+            <img src="07-self-in-gap.svg" width="96" height="96" alt="" />
+            <img src="07-self-in-gap.svg" width="48" height="48" alt="" />
+            <img src="07-self-in-gap.svg" width="32" height="32" alt="" />
+            <div class="on-dark">
+              <img src="07-self-in-gap.svg" width="40" height="40" alt="" />
+            </div>
+          </div>
+          <h2>07 — Self in the gap</h2>
+          <p>
+            You stand in the pause between muted and coral. #5 with a figure —
+            postponement is personal, not abstract.
+          </p>
+        </article>
+
+        <article>
+          <div class="sizes">
+            <img src="08-dawn-resume.svg" width="96" height="96" alt="" />
+            <img src="08-dawn-resume.svg" width="48" height="48" alt="" />
+            <img src="08-dawn-resume.svg" width="32" height="32" alt="" />
+            <div class="on-dark">
+              <img src="08-dawn-resume.svg" width="40" height="40" alt="" />
+            </div>
+          </div>
+          <h2>08 — Dawn resume</h2>
+          <p>
+            Sunrise over a gap → continue horizon. “Waking up again” without a
+            full person silhouette.
+          </p>
+        </article>
+
+        <article>
+          <div class="sizes">
+            <img src="09-self-habit-pulse.svg" width="96" height="96" alt="" />
+            <img src="09-self-habit-pulse.svg" width="48" height="48" alt="" />
+            <img src="09-self-habit-pulse.svg" width="32" height="32" alt="" />
+            <div class="on-dark">
+              <img src="09-self-habit-pulse.svg" width="40" height="40" alt="" />
+            </div>
+          </div>
+          <h2>09 — Self habit pulse</h2>
+          <p>
+            #5’s pulse inside a self ring. Habit as something that lives in you —
+            paused, then resumed.
+          </p>
+        </article>
+
+        <article>
+          <div class="sizes">
+            <img src="10-self-awake.svg" width="96" height="96" alt="" />
+            <img src="10-self-awake.svg" width="48" height="48" alt="" />
+            <img src="10-self-awake.svg" width="32" height="32" alt="" />
+            <div class="on-dark">
+              <img src="10-self-awake.svg" width="40" height="40" alt="" />
+            </div>
+          </div>
+          <h2>10 — Self awake</h2>
+          <p>
+            Full figure with pause → play in the chest. Most literal “self
+            waking”; busiest at favicon size.
+          </p>
+        </article>
+
+        <article>
+          <div class="sizes">
+            <img src="11-slump-to-walk.svg" width="96" height="96" alt="" />
+            <img src="11-slump-to-walk.svg" width="48" height="48" alt="" />
+            <img src="11-slump-to-walk.svg" width="32" height="32" alt="" />
+            <div class="on-dark">
+              <img src="11-slump-to-walk.svg" width="40" height="40" alt="" />
+            </div>
+          </div>
+          <h2>11 — Slump → walk</h2>
+          <p>
+            Muted slumped figure, pause marks, then coral walker. Before / after
+            in one mark — “picking myself back up.”
+          </p>
+        </article>
+
+        <article>
+          <div class="sizes">
+            <img src="12-rise-and-walk.svg" width="96" height="96" alt="" />
+            <img src="12-rise-and-walk.svg" width="48" height="48" alt="" />
+            <img src="12-rise-and-walk.svg" width="32" height="32" alt="" />
+            <div class="on-dark">
+              <img src="12-rise-and-walk.svg" width="40" height="40" alt="" />
+            </div>
+          </div>
+          <h2>12 — Rise and walk</h2>
+          <p>
+            Same story as a scene: ink figure bent over the muted ground, coral
+            figure already in stride on the resumed path.
+          </p>
+        </article>
+
+        <article>
+          <div class="sizes">
+            <img src="13-crouch-to-stride.svg" width="96" height="96" alt="" />
+            <img src="13-crouch-to-stride.svg" width="48" height="48" alt="" />
+            <img src="13-crouch-to-stride.svg" width="32" height="32" alt="" />
+            <div class="on-dark">
+              <img src="13-crouch-to-stride.svg" width="40" height="40" alt="" />
+            </div>
+          </div>
+          <h2>13 — Crouch → stride</h2>
+          <p>
+            Deeper crouch on the left, bigger forward lean on the right. Same #12
+            scene, more motion contrast.
+          </p>
+        </article>
+
+        <article>
+          <div class="sizes">
+            <img src="14-sit-to-walk.svg" width="96" height="96" alt="" />
+            <img src="14-sit-to-walk.svg" width="48" height="48" alt="" />
+            <img src="14-sit-to-walk.svg" width="32" height="32" alt="" />
+            <div class="on-dark">
+              <img src="14-sit-to-walk.svg" width="40" height="40" alt="" />
+            </div>
+          </div>
+          <h2>14 — Sit → walk</h2>
+          <p>
+            Seated slumped figure getting up into a walk. Reads as “I was stuck,
+            now I’m moving.”
+          </p>
+        </article>
+
+        <article>
+          <div class="sizes">
+            <img src="15-path-pause-walk.svg" width="96" height="96" alt="" />
+            <img src="15-path-pause-walk.svg" width="48" height="48" alt="" />
+            <img src="15-path-pause-walk.svg" width="32" height="32" alt="" />
+            <div class="on-dark">
+              <img src="15-path-pause-walk.svg" width="40" height="40" alt="" />
+            </div>
+          </div>
+          <h2>15 — Path pause walk</h2>
+          <p>
+            #12 figures on #5’s path: muted stretch, pause marks, coral resume +
+            tip. Product mechanic + self story together.
+          </p>
+        </article>
+
+        <article>
+          <div class="sizes">
+            <img src="16-silhouettes-walk.svg" width="96" height="96" alt="" />
+            <img src="16-silhouettes-walk.svg" width="48" height="48" alt="" />
+            <img src="16-silhouettes-walk.svg" width="32" height="32" alt="" />
+            <div class="on-dark">
+              <img src="16-silhouettes-walk.svg" width="40" height="40" alt="" />
+            </div>
+          </div>
+          <h2>16 — Silhouettes walk</h2>
+          <p>
+            Filled shapes instead of stick limbs. Softer at a glance; still
+            slumped (muted) → walking (coral).
+          </p>
+        </article>
+
+        <article>
+          <div class="sizes">
+            <img src="17-dawn-walk.svg" width="96" height="96" alt="" />
+            <img src="17-dawn-walk.svg" width="48" height="48" alt="" />
+            <img src="17-dawn-walk.svg" width="32" height="32" alt="" />
+            <div class="on-dark">
+              <img src="17-dawn-walk.svg" width="40" height="40" alt="" />
+            </div>
+          </div>
+          <h2>17 — Dawn walk</h2>
+          <p>
+            #12 scene with a soft sunrise ahead of the walker — waking up again
+            and moving.
+          </p>
+        </article>
+
+        <article class="pick">
+          <div class="sizes">
+            <img src="18-crawl-to-walk.svg" width="96" height="96" alt="" />
+            <img src="18-crawl-to-walk.svg" width="48" height="48" alt="" />
+            <img src="18-crawl-to-walk.svg" width="32" height="32" alt="" />
+            <div class="on-dark">
+              <img src="18-crawl-to-walk.svg" width="40" height="40" alt="" />
+            </div>
+          </div>
+          <h2>18 — Crawl → walk</h2>
+          <p>
+            #12 layout, left figure low and crawling with head lifting — trying
+            to wake up — then coral walker.
+          </p>
+        </article>
+
+        <article class="pick">
+          <div class="sizes">
+            <img src="19-pushup-to-walk.svg" width="96" height="96" alt="" />
+            <img src="19-pushup-to-walk.svg" width="48" height="48" alt="" />
+            <img src="19-pushup-to-walk.svg" width="32" height="32" alt="" />
+            <div class="on-dark">
+              <img src="19-pushup-to-walk.svg" width="40" height="40" alt="" />
+            </div>
+          </div>
+          <h2>19 — Push up → walk</h2>
+          <p>
+            Same idea mid-effort: on all fours, body angled up, arm reaching —
+            the moment of getting yourself going.
+          </p>
+        </article>
+      </div>
+
+      <section class="wordmark-row">
+        <h2>With wordmark (new round)</h2>
+        <div class="marks">
+          <div class="wm">
+            <img src="06-self-pause-play.svg" alt="" />
+            <span>Resuming</span>
+          </div>
+          <div class="wm">
+            <img src="07-self-in-gap.svg" alt="" />
+            <span>Resuming</span>
+          </div>
+          <div class="wm">
+            <img src="08-dawn-resume.svg" alt="" />
+            <span>Resuming</span>
+          </div>
+          <div class="wm">
+            <img src="09-self-habit-pulse.svg" alt="" />
+            <span>Resuming</span>
+          </div>
+          <div class="wm">
+            <img src="10-self-awake.svg" alt="" />
+            <span>Resuming</span>
+          </div>
+          <div class="wm">
+            <img src="11-slump-to-walk.svg" alt="" />
+            <span>Resuming</span>
+          </div>
+          <div class="wm">
+            <img src="12-rise-and-walk.svg" alt="" />
+            <span>Resuming</span>
+          </div>
+          <div class="wm">
+            <img src="13-crouch-to-stride.svg" alt="" />
+            <span>Resuming</span>
+          </div>
+          <div class="wm">
+            <img src="14-sit-to-walk.svg" alt="" />
+            <span>Resuming</span>
+          </div>
+          <div class="wm">
+            <img src="15-path-pause-walk.svg" alt="" />
+            <span>Resuming</span>
+          </div>
+          <div class="wm">
+            <img src="16-silhouettes-walk.svg" alt="" />
+            <span>Resuming</span>
+          </div>
+          <div class="wm">
+            <img src="17-dawn-walk.svg" alt="" />
+            <span>Resuming</span>
+          </div>
+          <div class="wm">
+            <img src="18-crawl-to-walk.svg" alt="" />
+            <span>Resuming</span>
+          </div>
+          <div class="wm">
+            <img src="19-pushup-to-walk.svg" alt="" />
+            <span>Resuming</span>
+          </div>
+          <div class="wm">
+            <img src="20-play-leads.svg" alt="" />
+            <span>Resuming</span>
+          </div>
+        </div>
+      </section>
+    </main>
+  </body>
+</html>
