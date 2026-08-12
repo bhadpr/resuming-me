@@ -27,14 +27,14 @@ export const THEMES: ThemeOption[] = [
   {
     id: 'resuming',
     name: 'Resuming',
-    description: 'Warm cream, soft coral accents — calm and trustworthy.',
+    description: 'Warm paper, coral play accent — calm, readable, and low-noise.',
     themeColor: '#faf6f0',
     colorScheme: 'light',
   },
   {
     id: 'nocturne',
     name: 'Nocturne',
-    description: 'Near-black surfaces, neon yellow accent, machine-voice type.',
+    description: 'Near-black machine UI — neon yellow signals, mono labels, sharp edges.',
     themeColor: '#07070b',
     colorScheme: 'dark',
   },
@@ -76,8 +76,8 @@ export const THEMES: ThemeOption[] = [
   {
     id: 'fresh',
     name: 'Fresh',
-    description: 'Bright calendar blue, white surfaces, and soft pastel cards.',
-    themeColor: '#f4f6fb',
+    description: 'Clean calendar blue — clear hierarchy, readable type, soft card elevation.',
+    themeColor: '#eef2f9',
     colorScheme: 'light',
   },
   {
@@ -90,7 +90,7 @@ export const THEMES: ThemeOption[] = [
   {
     id: 'vault',
     name: 'Vault',
-    description: 'Near-black security UI with lime accents and bold rounded cards.',
+    description: 'Near-black vault UI with lime signals — bold, readable, high-contrast.',
     themeColor: '#0a0a0a',
     colorScheme: 'dark',
   },

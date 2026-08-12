@@ -4,49 +4,80 @@
 [data-theme='resuming'] {
   color-scheme: light;
   --font-display: 'Fraunces', Georgia, serif;
-  --font-mono: 'DM Sans', system-ui, sans-serif;
-  --font-body: 'DM Sans', system-ui, sans-serif;
-  --font-size-root: 16px;
+  --font-mono: 'JetBrains Mono', ui-monospace, monospace;
+  --font-body: 'Plus Jakarta Sans', system-ui, sans-serif;
+  --font-size-root: 17.5px;
   --heading-transform: none;
   --heading-weight: 600;
-  --heading-tracking: -0.02em;
+  --heading-tracking: -0.03em;
+  --brand-tracking: 0.01em;
   --btn-transform: none;
   --btn-tracking: 0;
   --btn-font: var(--font-body);
-  --btn-size: 0.95rem;
+  --btn-size: 1rem;
   --label-font: var(--font-body);
-  --label-tracking: 0.05em;
-  --body-wash: radial-gradient(
-      ellipse 85% 55% at 50% -8%,
-      color-mix(in srgb, var(--color-primary) 22%, transparent),
-      transparent 68%
+  --label-tracking: 0.035em;
+  --label-size: 0.875rem;
+  --nav-label-size: 0.875rem;
+  --nav-label-weight: 700;
+  --nav-label-weight-active: 800;
+  --tagline-transform: none;
+  --tagline-tracking: -0.01em;
+  --tagline-size: 1.125rem;
+  --tagline-weight: 500;
+  --tagline-font: var(--font-display);
+  --tagline-color: var(--color-text-body);
+  --tagline-max-width: 28ch;
+  --nav-active-bg: color-mix(in srgb, var(--color-primary) 12%, transparent);
+  --nav-active-glow: none;
+  --body-wash:
+    radial-gradient(
+      ellipse 90% 50% at 50% -12%,
+      color-mix(in srgb, var(--color-primary) 14%, transparent),
+      transparent 70%
     ),
     radial-gradient(
-      ellipse 45% 35% at 100% 15%,
-      color-mix(in srgb, #c8ddd0 20%, transparent),
-      transparent
+      ellipse 55% 40% at 100% 0%,
+      color-mix(in srgb, #c8ddd0 16%, transparent),
+      transparent 65%
+    ),
+    radial-gradient(
+      ellipse 40% 30% at 0% 100%,
+      color-mix(in srgb, #e8d5c4 18%, transparent),
+      transparent 60%
     );
 
   --color-bg: #faf6f0;
-  --color-surface: #ffffff;
-  --color-surface-raised: #f5ebe0;
-  --color-border: #e8d9cc;
+  --color-surface: #fffcf8;
+  --color-surface-raised: #f3eae0;
+  --color-border: #e6d7c9;
   --color-border-strong: #c9b5a4;
   --color-text: #1a1614;
-  --color-text-body: #3d3530;
-  --color-text-muted: #7a6f66;
+  --color-text-body: #453c36;
+  --color-text-muted: #6a5f56;
   --color-primary: #e07a5f;
-  --color-primary-hover: #c4614a;
+  --color-primary-hover: #c96148;
   --color-primary-soft: #fde8e0;
   --color-danger: #d64545;
   --color-info: #4a8fb8;
   --color-warning-bg: #fff0c8;
-  --color-warning-text: #b87400;
-  --color-success: #3d8b6e;
+  --color-warning-text: #a86a00;
+  --color-success: #2f8a6a;
   --color-on-primary: #ffffff;
-  --color-glow-primary: color-mix(in srgb, #e07a5f 35%, transparent);
-  --radius: 12px;
-  --radius-sm: 8px;
+  --color-glow-primary: color-mix(in srgb, #e07a5f 18%, transparent);
+
+  --shadow-btn: 0 1px 2px color-mix(in srgb, #1a1614 5%, transparent);
+  --shadow-btn-hover:
+    0 6px 18px color-mix(in srgb, var(--color-primary) 26%, transparent),
+    0 1px 2px color-mix(in srgb, #1a1614 6%, transparent);
+  --shadow-row-hover: 0 3px 14px color-mix(in srgb, #1a1614 8%, transparent);
+  --shadow-focus: 0 0 0 3px color-mix(in srgb, var(--color-primary) 30%, transparent);
+  --ease-out: cubic-bezier(0.22, 1, 0.36, 1);
+  --duration-fast: 160ms;
+  --duration-med: 240ms;
+
+  --radius: 14px;
+  --radius-sm: 10px;
 }
 
 [data-theme='nocturne'] {
@@ -54,45 +85,79 @@
   --font-display: 'Rajdhani', system-ui, sans-serif;
   --font-mono: 'JetBrains Mono', ui-monospace, monospace;
   --font-body: 'Rajdhani', system-ui, sans-serif;
-  --font-size-root: 17px;
+  --font-size-root: 18.5px;
   --heading-transform: uppercase;
   --heading-weight: 700;
-  --heading-tracking: 0.02em;
+  --heading-tracking: 0.04em;
+  --brand-tracking: 0.1em;
   --btn-transform: uppercase;
-  --btn-tracking: 0.12em;
+  --btn-tracking: 0.1em;
   --btn-font: var(--font-mono);
-  --btn-size: 0.8rem;
+  --btn-size: 0.8125rem;
   --label-font: var(--font-mono);
-  --label-tracking: 0.18em;
-  --body-wash: radial-gradient(
-      ellipse 70% 40% at 15% 0%,
-      color-mix(in srgb, var(--color-primary) 8%, transparent),
-      transparent
+  --label-tracking: 0.12em;
+  --label-size: 0.75rem;
+  --nav-transform: uppercase;
+  --nav-label-size: 0.78rem;
+  --nav-label-weight: 700;
+  --nav-label-weight-active: 800;
+  --nav-active-bg: color-mix(in srgb, var(--color-primary) 12%, transparent);
+  --nav-active-glow: 0 0 14px var(--color-glow-primary);
+  --tagline-transform: uppercase;
+  --tagline-tracking: 0.1em;
+  --tagline-size: 0.9rem;
+  --tagline-weight: 600;
+  --tagline-font: var(--font-mono);
+  --tagline-color: var(--color-primary);
+  --tagline-max-width: 34ch;
+  --body-wash:
+    radial-gradient(
+      ellipse 70% 45% at 12% -5%,
+      color-mix(in srgb, var(--color-primary) 10%, transparent),
+      transparent 62%
     ),
     radial-gradient(
-      ellipse 50% 35% at 90% 10%,
-      color-mix(in srgb, var(--color-info) 6%, transparent),
-      transparent
+      ellipse 55% 40% at 92% 8%,
+      color-mix(in srgb, var(--color-info) 8%, transparent),
+      transparent 60%
     );
 
   --color-bg: #07070b;
-  --color-surface: #10101a;
-  --color-surface-raised: #2a2a3d;
-  --color-border: #3d3d52;
-  --color-border-strong: #5a5a78;
+  --color-surface: #0e0e16;
+  --color-surface-raised: #1a1a28;
+  --color-border: #2c2c40;
+  --color-border-strong: #4a4a66;
   --color-text: #f4f4f8;
-  --color-text-body: #c4c4d4;
-  --color-text-muted: #8a8aa0;
+  --color-text-body: #c8c8d8;
+  --color-text-muted: #9a9ab0;
   --color-primary: #fcee0a;
-  --color-primary-hover: #ffe94d;
-  --color-primary-soft: #2a2a1a;
+  --color-primary-hover: #fff34a;
+  --color-primary-soft: #222218;
   --color-danger: #ff003c;
   --color-info: #00f0ff;
   --color-warning-bg: #2a2410;
   --color-warning-text: #ff8a00;
   --color-success: #00ff9d;
   --color-on-primary: #07070b;
-  --color-glow-primary: color-mix(in srgb, #fcee0a 35%, transparent);
+  --color-glow-primary: color-mix(in srgb, #fcee0a 40%, transparent);
+
+  --shadow-btn:
+    0 0 0 1px color-mix(in srgb, var(--color-primary) 55%, transparent),
+    0 0 18px color-mix(in srgb, var(--color-primary) 22%, transparent);
+  --shadow-btn-hover:
+    0 0 0 1px var(--color-primary),
+    0 0 28px color-mix(in srgb, var(--color-primary) 40%, transparent);
+  --shadow-row: 0 0 0 1px color-mix(in srgb, var(--color-border) 80%, transparent);
+  --shadow-row-hover:
+    0 0 0 1px color-mix(in srgb, var(--color-primary) 45%, transparent),
+    0 0 22px color-mix(in srgb, var(--color-primary) 12%, transparent);
+  --shadow-focus:
+    0 0 0 2px var(--color-bg),
+    0 0 0 4px color-mix(in srgb, var(--color-primary) 70%, transparent);
+  --ease-out: cubic-bezier(0.22, 1, 0.36, 1);
+  --duration-fast: 140ms;
+  --duration-med: 220ms;
+
   --radius: 4px;
   --radius-sm: 2px;
 }
@@ -160,6 +225,15 @@
   --btn-size: 0.78rem;
   --label-font: 'Libre Franklin', system-ui, sans-serif;
   --label-tracking: 0.12em;
+  --nav-transform: uppercase;
+  --nav-label-size: 0.7rem;
+  --nav-active-bg: transparent;
+  --nav-active-glow: none;
+  --brand-tracking: 0;
+  --tagline-transform: uppercase;
+  --tagline-tracking: 0.1em;
+  --tagline-size: 0.78rem;
+  --tagline-weight: 600;
   --body-wash: linear-gradient(
     180deg,
     color-mix(in srgb, #d0021b 6%, #ffffff) 0%,
@@ -329,48 +403,81 @@
 
 [data-theme='fresh'] {
   color-scheme: light;
-  --font-display: 'Plus Jakarta Sans', system-ui, sans-serif;
-  --font-mono: 'Plus Jakarta Sans', system-ui, sans-serif;
+  --font-display: 'Outfit', system-ui, sans-serif;
+  --font-mono: 'JetBrains Mono', ui-monospace, monospace;
   --font-body: 'Plus Jakarta Sans', system-ui, sans-serif;
-  --font-size-root: 16px;
+  --font-size-root: 17.5px;
   --heading-transform: none;
   --heading-weight: 700;
-  --heading-tracking: -0.03em;
+  --heading-tracking: -0.035em;
+  --brand-tracking: 0.01em;
   --btn-transform: none;
   --btn-tracking: 0;
   --btn-font: var(--font-body);
-  --btn-size: 0.95rem;
+  --btn-size: 1rem;
   --label-font: var(--font-body);
-  --label-tracking: 0.04em;
-  --body-wash: radial-gradient(
-      ellipse 90% 50% at 50% -15%,
-      color-mix(in srgb, var(--color-primary) 18%, transparent),
-      transparent 65%
+  --label-tracking: 0.03em;
+  --label-size: 0.875rem;
+  --nav-label-size: 0.875rem;
+  --nav-label-weight: 700;
+  --nav-label-weight-active: 800;
+  --nav-active-bg: color-mix(in srgb, var(--color-primary) 12%, transparent);
+  --nav-active-glow: none;
+  --tagline-transform: none;
+  --tagline-tracking: -0.02em;
+  --tagline-size: 1.125rem;
+  --tagline-weight: 500;
+  --tagline-font: var(--font-display);
+  --tagline-color: var(--color-text-body);
+  --tagline-max-width: 28ch;
+  --body-wash:
+    radial-gradient(
+      ellipse 95% 55% at 50% -18%,
+      color-mix(in srgb, var(--color-primary) 16%, transparent),
+      transparent 68%
     ),
     radial-gradient(
-      ellipse 45% 35% at 100% 0%,
-      color-mix(in srgb, #c4b5fd 14%, transparent),
-      transparent 55%
+      ellipse 50% 40% at 100% 8%,
+      color-mix(in srgb, #7dd3fc 12%, transparent),
+      transparent 60%
     );
 
-  --color-bg: #f4f6fb;
+  --color-bg: #eef2f9;
   --color-surface: #ffffff;
-  --color-surface-raised: #eef4ff;
-  --color-border: #e4eaf4;
-  --color-border-strong: #c5d4ea;
-  --color-text: #1a2b4a;
-  --color-text-body: #3d4f6f;
-  --color-text-muted: #8b9bb5;
-  --color-primary: #4f7df3;
-  --color-primary-hover: #3d6ae0;
+  --color-surface-raised: #f3f6fc;
+  --color-border: #d8e0ef;
+  --color-border-strong: #b7c6de;
+  --color-text: #15233f;
+  --color-text-body: #3a4a66;
+  --color-text-muted: #5f7190;
+  --color-primary: #3f74f0;
+  --color-primary-hover: #2f5fd6;
   --color-primary-soft: #dce8ff;
-  --color-danger: #ef5a5a;
-  --color-info: #38bdf8;
+  --color-danger: #e5484d;
+  --color-info: #0ea5e9;
   --color-warning-bg: #fff4e5;
-  --color-warning-text: #e8943a;
-  --color-success: #22c997;
+  --color-warning-text: #c87820;
+  --color-success: #12b886;
   --color-on-primary: #ffffff;
-  --color-glow-primary: color-mix(in srgb, #4f7df3 32%, transparent);
+  --color-glow-primary: color-mix(in srgb, #3f74f0 28%, transparent);
+
+  --shadow-btn:
+    0 1px 2px color-mix(in srgb, #15233f 6%, transparent),
+    0 6px 18px color-mix(in srgb, var(--color-primary) 28%, transparent);
+  --shadow-btn-hover:
+    0 2px 4px color-mix(in srgb, #15233f 8%, transparent),
+    0 10px 28px color-mix(in srgb, var(--color-primary) 36%, transparent);
+  --shadow-row:
+    0 1px 2px color-mix(in srgb, #15233f 4%, transparent),
+    0 4px 16px color-mix(in srgb, #15233f 6%, transparent);
+  --shadow-row-hover:
+    0 2px 4px color-mix(in srgb, #15233f 6%, transparent),
+    0 10px 28px color-mix(in srgb, var(--color-primary) 16%, transparent);
+  --shadow-focus: 0 0 0 3px color-mix(in srgb, var(--color-primary) 28%, transparent);
+  --ease-out: cubic-bezier(0.22, 1, 0.36, 1);
+  --duration-fast: 160ms;
+  --duration-med: 240ms;
+
   --radius: 16px;
   --radius-sm: 12px;
 }
@@ -390,6 +497,8 @@
   --btn-size: 0.95rem;
   --label-font: var(--font-body);
   --label-tracking: 0.04em;
+  --nav-active-glow: none;
+  --nav-active-bg: color-mix(in srgb, var(--color-primary) 12%, transparent);
   --body-wash: radial-gradient(
       ellipse 85% 50% at 15% -10%,
       color-mix(in srgb, #a78bfa 28%, transparent),
@@ -426,42 +535,75 @@
 [data-theme='vault'] {
   color-scheme: dark;
   --font-display: 'Outfit', system-ui, sans-serif;
-  --font-mono: 'Outfit', system-ui, sans-serif;
+  --font-mono: 'JetBrains Mono', ui-monospace, monospace;
   --font-body: 'Outfit', system-ui, sans-serif;
-  --font-size-root: 16px;
+  --font-size-root: 17.5px;
   --heading-transform: none;
   --heading-weight: 700;
-  --heading-tracking: -0.03em;
+  --heading-tracking: -0.035em;
+  --brand-tracking: 0.02em;
   --btn-transform: none;
   --btn-tracking: 0;
   --btn-font: var(--font-body);
-  --btn-size: 0.95rem;
+  --btn-size: 1rem;
   --label-font: var(--font-body);
-  --label-tracking: 0.05em;
-  --body-wash: radial-gradient(
-    ellipse 70% 45% at 80% 0%,
-    color-mix(in srgb, #c8f542 10%, transparent),
-    transparent 60%
-  );
+  --label-tracking: 0.04em;
+  --label-size: 0.875rem;
+  --nav-label-size: 0.875rem;
+  --nav-label-weight: 700;
+  --nav-label-weight-active: 800;
+  --nav-active-bg: color-mix(in srgb, var(--color-primary) 14%, transparent);
+  --nav-active-glow: none;
+  --tagline-transform: none;
+  --tagline-tracking: -0.02em;
+  --tagline-size: 1.125rem;
+  --tagline-weight: 500;
+  --tagline-font: var(--font-display);
+  --tagline-color: var(--color-text-body);
+  --tagline-max-width: 28ch;
+  --body-wash:
+    radial-gradient(
+      ellipse 75% 50% at 85% -5%,
+      color-mix(in srgb, #c8f542 12%, transparent),
+      transparent 62%
+    ),
+    radial-gradient(
+      ellipse 50% 40% at 0% 100%,
+      color-mix(in srgb, #c8f542 6%, transparent),
+      transparent 55%
+    );
 
   --color-bg: #0a0a0a;
-  --color-surface: #161616;
-  --color-surface-raised: #222222;
-  --color-border: #2e2e2e;
-  --color-border-strong: #454545;
+  --color-surface: #141414;
+  --color-surface-raised: #1f1f1f;
+  --color-border: #2a2a2a;
+  --color-border-strong: #3f3f3f;
   --color-text: #f5f5f5;
-  --color-text-body: #cfcfcf;
-  --color-text-muted: #8a8a8a;
+  --color-text-body: #d0d0d0;
+  --color-text-muted: #9a9a9a;
   --color-primary: #c8f542;
-  --color-primary-hover: #d6ff6a;
-  --color-primary-soft: #2a3214;
+  --color-primary-hover: #d4ff63;
+  --color-primary-soft: #1f2710;
   --color-danger: #ff6b6b;
-  --color-info: #ffa07a;
+  --color-info: #7dd3fc;
   --color-warning-bg: #2a2410;
   --color-warning-text: #ffa07a;
   --color-success: #c8f542;
   --color-on-primary: #0a0a0a;
-  --color-glow-primary: color-mix(in srgb, #c8f542 28%, transparent);
-  --radius: 24px;
-  --radius-sm: 16px;
+  --color-glow-primary: color-mix(in srgb, #c8f542 32%, transparent);
+
+  --shadow-btn: 0 1px 0 color-mix(in srgb, #ffffff 6%, transparent);
+  --shadow-btn-hover:
+    0 0 0 1px color-mix(in srgb, var(--color-primary) 45%, transparent),
+    0 8px 28px color-mix(in srgb, var(--color-primary) 22%, transparent);
+  --shadow-row-hover:
+    0 0 0 1px color-mix(in srgb, var(--color-primary) 28%, transparent),
+    0 10px 28px color-mix(in srgb, #000000 55%, transparent);
+  --shadow-focus: 0 0 0 3px color-mix(in srgb, var(--color-primary) 40%, transparent);
+  --ease-out: cubic-bezier(0.22, 1, 0.36, 1);
+  --duration-fast: 160ms;
+  --duration-med: 240ms;
+
+  --radius: 22px;
+  --radius-sm: 14px;
 }

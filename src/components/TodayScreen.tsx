@@ -233,12 +233,12 @@ function TodayActivityRow({
           <span className="activity-name">{activity.name}</span>
           <span className="activity-desc">
             {isThisTimer
-              ? `${progressLabel} · live ${formatDuration(timerElapsedSeconds)}${timerPaused ? ' (paused)' : ''}`
+              ? `${progressLabel}${timerPaused ? ' · paused' : ' · running'}`
               : progressLabel}
             {partial ? ' · in progress' : ''}
             {done ? ' · done' : ''}
           </span>
-          {actionKind !== 'deadline' && (
+          {actionKind !== 'deadline' && !isThisTimer && (
             <div className="progress-bar" aria-hidden>
               <div
                 className={`progress-bar-fill ${done ? 'progress-bar-fill-done' : ''}`}
@@ -339,6 +339,28 @@ function TodayActivityRow({
           )}
         </span>
       </div>
+
+      {isThisTimer && (
+        <div
+          className={`today-timer-elapsed ${timerPaused ? 'today-timer-elapsed-paused' : ''}`}
+          aria-live="polite"
+          aria-atomic="true"
+        >
+          <span className="today-timer-elapsed-value">
+            {formatDuration(timerElapsedSeconds)}
+          </span>
+          {actionKind !== 'deadline' && (
+            <div className="progress-bar today-timer-progress" aria-hidden>
+              <div
+                className={`progress-bar-fill ${done ? 'progress-bar-fill-done' : ''}`}
+                style={{
+                  width: `${Math.min(100, (current / Math.max(target, 1)) * 100)}%`,
+                }}
+              />
+            </div>
+          )}
+        </div>
+      )}
 
       {actionKind === 'timer' && (
         <div className="timer-manual">
