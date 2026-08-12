@@ -17,6 +17,8 @@ import { MetricTrendChart } from './MetricTrendChart'
 type Selected =
   | { kind: 'activity'; id: string }
   | { kind: 'metric'; id: string }
+  | { kind: 'skip-days' }
+  | { kind: 'session-times' }
   | null
 
 interface InsightsScreenProps {
@@ -44,7 +46,7 @@ export function InsightsScreen({
   loading,
   error,
 }: InsightsScreenProps) {
-  const [selected, setSelected] = useState<Selected>(null)
+  const [selected, setSelected] = useState<Selected>({ kind: 'skip-days' })
 
   const selectedActivity = useMemo(() => {
     if (selected?.kind !== 'activity') return null
@@ -86,6 +88,10 @@ export function InsightsScreen({
     setSelected((prev) =>
       prev?.kind === 'metric' && prev.id === id ? null : { kind: 'metric', id },
     )
+  }
+
+  function togglePattern(kind: 'skip-days' | 'session-times') {
+    setSelected((prev) => (prev?.kind === kind ? null : { kind }))
   }
 
   return (
@@ -255,58 +261,107 @@ export function InsightsScreen({
           </section>
 
           <section className="today-section">
-            <h3 className="section-label">When you skip</h3>
-            {insights.peakSkipDay ? (
-              <p className="insights-callout">
-                You postpone most often on <strong>{insights.peakSkipDay.label}</strong>s (
-                {insights.peakSkipDay.count} in this window).
-              </p>
-            ) : (
-              <p className="muted-center">No postponements in this window yet.</p>
-            )}
-            <div className="bar-grid">
-              {insights.dayOfWeekSkips.map((d) => (
-                <div key={d.key} className="bar-grid-item">
-                  <div className="bar-grid-track">
-                    <div
-                      className="bar-grid-fill"
-                      style={{
-                        height: `${barHeight(d.count, insights.dayOfWeekSkips)}%`,
-                      }}
-                    />
+            <h3 className="section-label">Patterns</h3>
+            <p className="screen-sub insights-hint">
+              Tap a pattern for its {window} chart.
+            </p>
+            <ul className="insights-list">
+              <li
+                className={`insights-row-wrap ${selected?.kind === 'skip-days' ? 'is-open' : ''}`}
+              >
+                <button
+                  type="button"
+                  className={`insights-row ${selected?.kind === 'skip-days' ? 'insights-row-active' : ''}`}
+                  onClick={() => togglePattern('skip-days')}
+                  aria-expanded={selected?.kind === 'skip-days'}
+                >
+                  <span className="activity-emoji" aria-hidden>
+                    📅
+                  </span>
+                  <span className="activity-meta">
+                    <span className="activity-name">When you skip</span>
+                    <span className="activity-desc">
+                      {insights.peakSkipDay
+                        ? `You postpone most often on ${insights.peakSkipDay.label}s (${insights.peakSkipDay.count} in this window).`
+                        : 'No postponements in this window yet.'}
+                    </span>
+                  </span>
+                  <span className="insights-rate">
+                    {insights.peakSkipDay ? insights.peakSkipDay.label : '—'}
+                  </span>
+                </button>
+                {selected?.kind === 'skip-days' && (
+                  <div className="insights-row-chart">
+                    <div className="insights-pattern-chart">
+                      <div className="bar-grid">
+                        {insights.dayOfWeekSkips.map((d) => (
+                          <div key={d.key} className="bar-grid-item">
+                            <div className="bar-grid-track">
+                              <div
+                                className="bar-grid-fill"
+                                style={{
+                                  height: `${barHeight(d.count, insights.dayOfWeekSkips)}%`,
+                                }}
+                              />
+                            </div>
+                            <span className="bar-grid-label">{d.label}</span>
+                          </div>
+                        ))}
+                      </div>
+                    </div>
                   </div>
-                  <span className="bar-grid-label">{d.label}</span>
-                </div>
-              ))}
-            </div>
-          </section>
+                )}
+              </li>
 
-          <section className="today-section">
-            <h3 className="section-label">When you show up</h3>
-            {insights.peakSessionBucket ? (
-              <p className="insights-callout">
-                Most completions/sessions land in the{' '}
-                <strong>{insights.peakSessionBucket.label}</strong> (
-                {insights.peakSessionBucket.count}).
-              </p>
-            ) : (
-              <p className="muted-center">No timed completions in this window yet.</p>
-            )}
-            <div className="bar-grid bar-grid-4">
-              {insights.sessionTimeBuckets.map((b) => (
-                <div key={b.key} className="bar-grid-item">
-                  <div className="bar-grid-track">
-                    <div
-                      className="bar-grid-fill bar-grid-fill-primary"
-                      style={{
-                        height: `${barHeight(b.count, insights.sessionTimeBuckets)}%`,
-                      }}
-                    />
+              <li
+                className={`insights-row-wrap ${selected?.kind === 'session-times' ? 'is-open' : ''}`}
+              >
+                <button
+                  type="button"
+                  className={`insights-row ${selected?.kind === 'session-times' ? 'insights-row-active' : ''}`}
+                  onClick={() => togglePattern('session-times')}
+                  aria-expanded={selected?.kind === 'session-times'}
+                >
+                  <span className="activity-emoji" aria-hidden>
+                    ⏰
+                  </span>
+                  <span className="activity-meta">
+                    <span className="activity-name">When you show up</span>
+                    <span className="activity-desc">
+                      {insights.peakSessionBucket
+                        ? `Most completions/sessions land in the ${insights.peakSessionBucket.label} (${insights.peakSessionBucket.count}).`
+                        : 'No timed completions in this window yet.'}
+                    </span>
+                  </span>
+                  <span className="insights-rate">
+                    {insights.peakSessionBucket
+                      ? insights.peakSessionBucket.label.slice(0, 3)
+                      : '—'}
+                  </span>
+                </button>
+                {selected?.kind === 'session-times' && (
+                  <div className="insights-row-chart">
+                    <div className="insights-pattern-chart">
+                      <div className="bar-grid bar-grid-4">
+                        {insights.sessionTimeBuckets.map((b) => (
+                          <div key={b.key} className="bar-grid-item">
+                            <div className="bar-grid-track">
+                              <div
+                                className="bar-grid-fill bar-grid-fill-primary"
+                                style={{
+                                  height: `${barHeight(b.count, insights.sessionTimeBuckets)}%`,
+                                }}
+                              />
+                            </div>
+                            <span className="bar-grid-label">{b.label.slice(0, 3)}</span>
+                          </div>
+                        ))}
+                      </div>
+                    </div>
                   </div>
-                  <span className="bar-grid-label">{b.label.slice(0, 3)}</span>
-                </div>
-              ))}
-            </div>
+                )}
+              </li>
+            </ul>
           </section>
         </>
       )}

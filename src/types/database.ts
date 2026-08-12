@@ -196,6 +196,39 @@ export interface Database {
         }
         Relationships: []
       }
+      feedback: {
+        Row: {
+          id: string
+          user_id: string | null
+          rating: number
+          liked: string | null
+          improve: string | null
+          wish: string | null
+          name: string | null
+          email: string | null
+          created_at: string
+        }
+        Insert: {
+          id?: string
+          user_id?: string | null
+          rating: number
+          liked?: string | null
+          improve?: string | null
+          wish?: string | null
+          name?: string | null
+          email?: string | null
+          created_at?: string
+        }
+        Update: {
+          rating?: number
+          liked?: string | null
+          improve?: string | null
+          wish?: string | null
+          name?: string | null
+          email?: string | null
+        }
+        Relationships: []
+      }
     }
     Views: Record<string, never>
     Functions: Record<string, never>

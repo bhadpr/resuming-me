@@ -620,6 +620,221 @@ select.field-input {
   font-weight: 500;
 }
 
+.landing-legal {
+  align-items: flex-start;
+  padding-top: 1.25rem;
+  padding-bottom: 1.25rem;
+}
+
+.landing-card-legal {
+  border-left-color: var(--color-border);
+}
+
+.site-footer {
+  margin-top: 1.5rem;
+  padding-top: 1.25rem;
+  border-top: 1px solid var(--color-border);
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 0.875rem;
+  text-align: center;
+}
+
+.site-footer-compact {
+  margin-top: 2rem;
+}
+
+.site-footer-social {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.625rem;
+  justify-content: center;
+  align-items: center;
+}
+
+.site-footer-nav {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.625rem 1.25rem;
+  justify-content: center;
+  align-items: center;
+}
+
+.site-footer-link {
+  font-size: 0.8125rem;
+  font-weight: 600;
+  color: var(--color-primary);
+  padding: 0;
+  min-height: auto;
+}
+
+.site-footer-link:hover {
+  text-decoration: underline;
+}
+
+.site-footer-social-link {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 2.5rem;
+  height: 2.5rem;
+  border-radius: 999px;
+  border: 1px solid color-mix(in srgb, var(--color-border) 90%, var(--color-text) 10%);
+  background: var(--color-surface, #fff);
+  color: var(--color-text);
+  text-decoration: none;
+  line-height: 0;
+  transition:
+    border-color 0.15s ease,
+    background 0.15s ease,
+    box-shadow 0.15s ease,
+    color 0.15s ease;
+}
+
+.site-footer-social-link:hover {
+  border-color: color-mix(in srgb, var(--color-primary) 40%, var(--color-border));
+  color: var(--color-primary);
+  box-shadow: 0 6px 16px color-mix(in srgb, var(--color-text) 10%, transparent);
+}
+
+.site-footer-social-link:focus-visible {
+  outline: 2px solid var(--color-primary);
+  outline-offset: 2px;
+}
+
+.site-footer-social-link svg {
+  display: block;
+}
+
+.site-footer-copy {
+  margin: 0;
+  font-size: 0.75rem;
+  font-weight: 500;
+  color: var(--color-text-muted);
+  text-align: center;
+}
+
+.legal-page {
+  display: flex;
+  flex-direction: column;
+  gap: 0.25rem;
+}
+
+.legal-article {
+  display: flex;
+  flex-direction: column;
+  gap: 0.875rem;
+  color: var(--color-text-body);
+  font-size: 0.9375rem;
+  line-height: 1.55;
+}
+
+.legal-article h3 {
+  margin: 0.5rem 0 0;
+  font-size: 1rem;
+  font-family: var(--font-body);
+  font-weight: 700;
+  letter-spacing: 0;
+  text-transform: none;
+  color: var(--color-text);
+}
+
+.legal-article p {
+  margin: 0;
+}
+
+.legal-muted {
+  color: var(--color-text-muted);
+  font-size: 0.8125rem;
+}
+
+.legal-page-copy {
+  margin-top: 1.5rem;
+  padding-top: 1rem;
+  border-top: 1px solid var(--color-border);
+  text-align: center;
+}
+
+.feedback-page {
+  display: flex;
+  flex-direction: column;
+  gap: 0.25rem;
+}
+
+.feedback-form {
+  margin-top: 0.25rem;
+}
+
+.feedback-textarea {
+  min-height: 5.5rem;
+  padding: 0.75rem 0.875rem;
+  resize: vertical;
+  line-height: 1.45;
+}
+
+.feedback-stars {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 0.25rem 0.375rem;
+}
+
+.feedback-star {
+  appearance: none;
+  border: none;
+  background: transparent;
+  padding: 0.15rem;
+  margin: 0;
+  min-height: var(--tap-min);
+  min-width: 2.25rem;
+  font-size: 1.75rem;
+  line-height: 1;
+  color: var(--color-border);
+  cursor: pointer;
+}
+
+.feedback-star-filled {
+  color: var(--color-primary);
+}
+
+.feedback-star:hover,
+.feedback-star:focus-visible {
+  color: var(--color-primary);
+}
+
+.feedback-stars-caption {
+  margin-left: 0.35rem;
+  font-size: 0.8125rem;
+  font-weight: 600;
+  color: var(--color-text-muted);
+}
+
+.feedback-thanks {
+  display: flex;
+  flex-direction: column;
+  gap: 0.75rem;
+  margin-top: 0.5rem;
+  padding: 1.25rem;
+  border-radius: var(--radius-md, 12px);
+  border: 1px solid var(--color-border);
+  background: var(--color-surface-raised);
+}
+
+.feedback-thanks h3 {
+  margin: 0;
+  font-size: 1.125rem;
+}
+
+.feedback-thanks p {
+  margin: 0;
+  color: var(--color-text-body);
+}
+
+.feedback-thanks .btn {
+  align-self: flex-start;
+}
+
 .install-prompt {
   display: flex;
   align-items: flex-start;
@@ -1347,6 +1562,13 @@ select.field-input {
 
 .insights-row-chart {
   padding: 0 0.75rem 0.875rem;
+}
+
+.insights-pattern-chart {
+  padding: 0.875rem 0.75rem 0.5rem;
+  background: var(--color-surface-raised);
+  border: 1px solid var(--color-border);
+  border-radius: var(--radius-sm);
 }
 
 .activity-insight-chart,

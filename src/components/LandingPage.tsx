@@ -1,4 +1,8 @@
 import { useState } from 'react'
+import { FeedbackPage } from './FeedbackPage'
+import { LegalPage } from './LegalPage'
+import { SiteFooter } from './SiteFooter'
+import type { SitePageId } from '../lib/site'
 
 interface LandingPageProps {
   configured: boolean
@@ -15,6 +19,7 @@ export function LandingPage({
 }: LandingPageProps) {
   const [error, setError] = useState<string | null>(null)
   const [signingIn, setSigningIn] = useState(false)
+  const [sitePage, setSitePage] = useState<SitePageId | null>(null)
 
   async function handleSignIn() {
     setError(null)
@@ -29,6 +34,26 @@ export function LandingPage({
 
   const displayError = configError || authError || error
 
+  if (sitePage === 'feedback') {
+    return (
+      <div className="landing landing-legal">
+        <div className="landing-card landing-card-legal">
+          <FeedbackPage onBack={() => setSitePage(null)} />
+        </div>
+      </div>
+    )
+  }
+
+  if (sitePage) {
+    return (
+      <div className="landing landing-legal">
+        <div className="landing-card landing-card-legal">
+          <LegalPage page={sitePage} onBack={() => setSitePage(null)} />
+        </div>
+      </div>
+    )
+  }
+
   if (!configured) {
     return (
       <div className="landing">
@@ -38,6 +63,7 @@ export function LandingPage({
           <div className="notice notice-warning">
             <p>{configError ?? 'Supabase is not configured.'}</p>
           </div>
+          <SiteFooter onOpenPage={setSitePage} />
         </div>
       </div>
     )
@@ -96,6 +122,8 @@ export function LandingPage({
         >
           {signingIn ? 'Redirecting…' : 'Continue with Google'}
         </button>
+
+        <SiteFooter onOpenPage={setSitePage} />
       </div>
     </div>
   )

@@ -12,6 +12,10 @@ import { InsightsScreen } from './InsightsScreen'
 import { SettingsScreen } from './SettingsScreen'
 import { OnboardingScreen } from './OnboardingScreen'
 import { InstallPrompt } from './InstallPrompt'
+import { LegalPage } from './LegalPage'
+import { FeedbackPage } from './FeedbackPage'
+import { SiteFooter } from './SiteFooter'
+import type { SitePageId } from '../lib/site'
 import {
   archiveActivity,
   createActivity,
@@ -93,6 +97,7 @@ export function AppShell() {
 
   const [tab, setTab] = useState<Tab>('today')
   const [settingsOpen, setSettingsOpen] = useState(false)
+  const [legalPage, setLegalPage] = useState<SitePageId | null>(null)
   const [activityScreen, setActivityScreen] = useState<ActivityScreen>({ name: 'list' })
   const [metricScreen, setMetricScreen] = useState<MetricScreen>({ name: 'list' })
 
@@ -706,6 +711,16 @@ export function AppShell() {
 
       <main className="app-main">
         <InstallPrompt />
+        {legalPage === 'feedback' ? (
+          <FeedbackPage
+            onBack={() => setLegalPage(null)}
+            defaultName={user?.user_metadata?.full_name ?? user?.user_metadata?.name ?? ''}
+            defaultEmail={user?.email ?? ''}
+          />
+        ) : legalPage ? (
+          <LegalPage page={legalPage} onBack={() => setLegalPage(null)} />
+        ) : (
+          <>
         {settingsOpen ? (
           <SettingsScreen
             onBack={() => setSettingsOpen(false)}
@@ -1105,9 +1120,12 @@ export function AppShell() {
         )}
           </>
         )}
+        <SiteFooter onOpenPage={setLegalPage} compact />
+          </>
+        )}
       </main>
 
-      {!settingsOpen && !showOnboarding && (
+      {!settingsOpen && !showOnboarding && !legalPage && (
       <nav className="app-nav" aria-label="Main">
         <button
           type="button"
