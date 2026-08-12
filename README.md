@@ -132,11 +132,60 @@ npm test -- tests/rls.test.ts
 
 ## Deploy (Cloudflare Pages)
 
-1. Connect this repo to Cloudflare Pages
-2. Build command: `npm run build`
-3. Output directory: `dist`
-4. Environment variables: `VITE_SUPABASE_URL`, `VITE_SUPABASE_ANON_KEY`
-5. SPA routing: handled by `public/_redirects` (`/* /index.html 200`)
+### A. Create the Pages project
+
+1. Open [Cloudflare Dashboard → Workers & Pages](https://dash.cloudflare.com/?to=/:account/workers-and-pages) → **Create** → **Pages** → **Connect to Git**
+2. Select GitHub repo **`bhadpr/resuming-me`**, branch **`main`**
+3. Build settings:
+   - **Framework preset:** Vite (or None)
+   - **Build command:** `npm run build`
+   - **Build output directory:** `dist`
+   - **Root directory:** `/` (default)
+4. **Environment variables** (Production + Preview):
+   - `VITE_SUPABASE_URL` = your Supabase Project URL
+   - `VITE_SUPABASE_ANON_KEY` = your Supabase anon/public key  
+     (same values as local `.env` — never commit them)
+5. Deploy. Note the URL: `https://<project>.pages.dev`
+
+SPA routing uses `wrangler.toml` (`assets.not_found_handling = "single-page-application"`). Security headers ship via `public/_headers`.
+
+### B. Attach custom domain (e.g. `resuming.me`)
+
+1. In the Pages project → **Custom domains** → **Set up a custom domain** → enter `resuming.me` (and optionally `www.resuming.me`)
+2. If the domain is **not** on Cloudflare yet:
+   - Cloudflare → **Add a site** → enter `resuming.me`
+   - Choose a plan (Free is fine)
+   - At your registrar, replace nameservers with the two Cloudflare NS hosts shown
+   - Wait until Cloudflare marks the zone **Active**
+3. Pages will create the required DNS records (`CNAME`/`AAAA` to Pages). Keep the orange cloud **Proxied**.
+4. SSL/TLS (zone) recommended settings:
+   - **SSL/TLS → Overview:** Full (strict) — Pages manages certs
+   - **Edge Certificates:** Always Use HTTPS = On
+   - **Minimum TLS Version:** 1.2
+   - **Automatic HTTPS Rewrites:** On
+   - Optional: enable **HSTS** after the first successful HTTPS load (start with a short max-age)
+
+### C. Wire auth to the production URL
+
+In **Supabase → Authentication → URL Configuration** add:
+
+- Site URL: `https://resuming.me` (or your Pages URL until the domain is live)
+- Redirect URLs:
+  - `http://localhost:5173/**`
+  - `https://<project>.pages.dev/**`
+  - `https://resuming.me/**`
+  - `https://www.resuming.me/**` (if you use www)
+
+Google OAuth Client stays pointed at Supabase only:  
+`https://toeemvcvizpfcyknogph.supabase.co/auth/v1/callback`
+
+### D. Smoke-check after deploy
+
+- [ ] `https://<project>.pages.dev` loads landing
+- [ ] Google sign-in returns to the app (not localhost)
+- [ ] Feedback submit works (feedback migration applied)
+- [ ] Custom domain serves HTTPS with no certificate warning
+- [ ] Response headers include `X-Frame-Options` / `X-Content-Type-Options`
 
 ## Project structure
 
