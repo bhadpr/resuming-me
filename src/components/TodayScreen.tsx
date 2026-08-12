@@ -9,8 +9,7 @@ import { DeadlineOverduePrompt } from './DeadlineOverduePrompt'
 interface TodayScreenProps {
   dateLabel: string
   rows: ActivityTodayProgress[]
-  metricsNeedingLog: Metric[]
-  loggedMetrics: Array<{ metric: Metric; entry: MetricEntry }>
+  metrics: Array<{ metric: Metric; entry: MetricEntry | null }>
   loading: boolean
   busyId: string | null
   error: string | null
@@ -32,8 +31,7 @@ interface TodayScreenProps {
 export function TodayScreen({
   dateLabel,
   rows,
-  metricsNeedingLog,
-  loggedMetrics,
+  metrics,
   loading,
   busyId,
   error,
@@ -103,47 +101,32 @@ export function TodayScreen({
 
           <section className="today-section">
             <h3 className="section-label">Metrics</h3>
-            {metricsNeedingLog.length === 0 && loggedMetrics.length === 0 ? (
+            {metrics.length === 0 ? (
               <p className="muted-center">No metrics yet. Add some from the Metrics tab.</p>
             ) : (
               <ul className="today-list">
-                {metricsNeedingLog.map((metric) => (
-                  <li key={metric.id} className="today-row">
-                    <span className="today-status today-status-idle" aria-hidden />
-                    <span className="activity-emoji" aria-hidden>
-                      {metric.emoji}
-                    </span>
-                    <span className="activity-meta">
-                      <span className="activity-name">{metric.name}</span>
-                      <span className="activity-desc">Log today&apos;s {metric.unit}</span>
-                    </span>
-                    <MetricValueForm
-                      metric={metric}
-                      busy={busyId === metric.id}
-                      onLog={onLogMetric}
-                    />
-                  </li>
-                ))}
-                {loggedMetrics.map(({ metric, entry }) => (
-                  <li key={metric.id} className="today-row today-row-done">
-                    <span className="today-status today-status-done" aria-label="Logged">
-                      ✓
-                    </span>
+                {metrics.map(({ metric, entry }) => (
+                  <li
+                    key={metric.id}
+                    className={`today-row ${entry ? 'today-row-done' : ''}`}
+                  >
                     <span className="activity-emoji" aria-hidden>
                       {metric.emoji}
                     </span>
                     <span className="activity-meta">
                       <span className="activity-name">{metric.name}</span>
                       <span className="activity-desc">
-                        {entry.value} {metric.unit} today
+                        {entry
+                          ? `${entry.value} ${metric.unit} today`
+                          : `Log today's ${metric.unit}`}
                       </span>
                     </span>
                     <MetricValueForm
                       metric={metric}
                       busy={busyId === metric.id}
                       onLog={onLogMetric}
-                      initialValue={String(entry.value)}
-                      submitLabel="Update"
+                      initialValue={entry ? String(entry.value) : ''}
+                      submitLabel={entry ? 'Update' : 'Log'}
                     />
                   </li>
                 ))}
@@ -220,12 +203,7 @@ function TodayActivityRow({
       className={`today-row today-row-stack ${rowStateClass} ${row.overdue ? 'today-row-overdue' : ''}`}
     >
       <div className="today-row-main">
-        <StatusMark
-          done={done}
-          live={timerLive}
-          paused={timerPaused}
-          partial={partial}
-        />
+        <StatusMark live={timerLive} paused={timerPaused} />
         <span className="activity-emoji" aria-hidden>
           {activity.emoji}
         </span>
@@ -417,23 +395,12 @@ function TodayActivityRow({
 }
 
 function StatusMark({
-  done,
   live,
   paused,
-  partial,
 }: {
-  done: boolean
   live: boolean
   paused: boolean
-  partial: boolean
 }) {
-  if (done) {
-    return (
-      <span className="today-status today-status-done" aria-label="Completed">
-        ✓
-      </span>
-    )
-  }
   if (live) {
     return (
       <span className="today-status today-status-live" aria-label="Timer running">
@@ -448,14 +415,7 @@ function StatusMark({
       </span>
     )
   }
-  if (partial) {
-    return (
-      <span className="today-status today-status-partial" aria-label="In progress">
-        ◐
-      </span>
-    )
-  }
-  return <span className="today-status today-status-idle" aria-hidden />
+  return null
 }
 
 function MetricValueForm({

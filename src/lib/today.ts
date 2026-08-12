@@ -269,15 +269,6 @@ export function buildTodayProgress(
     }
   })
 
-  const visible = rows.filter((r) => shouldShowDeadlineOnToday(r.activity, r.done, today))
-
-  visible.sort((a, b) => {
-    if (a.done !== b.done) return a.done ? 1 : -1
-    if (b.postponementStreak !== a.postponementStreak) {
-      return b.postponementStreak - a.postponementStreak
-    }
-    return a.activity.name.localeCompare(b.activity.name)
-  })
-
-  return visible
+  // Keep a stable order so starting or completing an activity does not reshuffle Today.
+  return rows.filter((r) => shouldShowDeadlineOnToday(r.activity, r.done, today))
 }

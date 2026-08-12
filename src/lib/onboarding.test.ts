@@ -11,7 +11,14 @@ import { validateMetricInput } from './metrics'
 describe('getStarterActivityTemplates', () => {
   it('returns reading, gym, and taxes starters', () => {
     const templates = getStarterActivityTemplates('2026-08-12')
-    expect(templates.map((t) => t.id)).toEqual(['reading', 'gym', 'taxes'])
+    expect(templates.map((t) => t.id)).toEqual([
+      'reading',
+      'walk',
+      'run',
+      'gym',
+      'meditation',
+      'taxes',
+    ])
   })
 
   it('produces valid activity inputs', () => {

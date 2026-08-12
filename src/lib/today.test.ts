@@ -103,7 +103,7 @@ describe('buildTodayProgress', () => {
     expect(rows[0].done).toBe(true)
   })
 
-  it('sorts incomplete overdue-feeling activities first', () => {
+  it('preserves activity order when some are completed', () => {
     const fresh = activity({
       id: 'fresh',
       name: 'Fresh',
@@ -114,9 +114,29 @@ describe('buildTodayProgress', () => {
       name: 'Stale',
       created_at: '2026-08-01T00:00:00Z',
     })
-    const rows = buildTodayProgress([fresh, stale], [], [], '2026-08-11')
-    expect(rows[0].activity.id).toBe('stale')
-    expect(rows[1].activity.id).toBe('fresh')
+    const rows = buildTodayProgress(
+      [fresh, stale],
+      [entry({ activity_id: 'fresh', date: '2026-08-11' })],
+      [],
+      '2026-08-11',
+    )
+    expect(rows.map((r) => r.activity.id)).toEqual(['fresh', 'stale'])
+    expect(rows[0].done).toBe(true)
+    expect(rows[1].done).toBe(false)
+  })
+
+  it('keeps completed activities in place instead of moving them to the end', () => {
+    const alpha = activity({ id: 'alpha', name: 'Alpha' })
+    const beta = activity({ id: 'beta', name: 'Beta' })
+    const rows = buildTodayProgress(
+      [alpha, beta],
+      [entry({ activity_id: 'alpha', date: '2026-08-11' })],
+      [],
+      '2026-08-11',
+    )
+    expect(rows.map((r) => r.activity.id)).toEqual(['alpha', 'beta'])
+    expect(rows[0].done).toBe(true)
+    expect(rows[1].done).toBe(false)
   })
 
   it('shows completed deadline checkbox until due date', () => {

@@ -315,7 +315,7 @@ code {
 }
 
 .activity-emoji {
-  font-size: 1.5rem;
+  font-size: 3.24rem;
   line-height: 1;
 }
 
@@ -477,9 +477,9 @@ select.field-input {
 }
 
 .emoji-option {
-  min-height: 40px;
+  min-height: 86px;
   border-radius: var(--radius-sm);
-  font-size: 1.25rem;
+  font-size: 2.7rem;
   background: var(--color-surface);
   border: 1px solid transparent;
   transition:
@@ -544,7 +544,7 @@ select.field-input {
 }
 
 .detail-emoji {
-  font-size: 2.5rem;
+  font-size: 5.4rem;
 }
 
 .detail-facts {
@@ -1118,7 +1118,7 @@ select.field-input {
 }
 
 .empty-state-emoji {
-  font-size: 2.5rem;
+  font-size: 5.4rem;
 }
 
 .empty-state h2 {
@@ -1390,7 +1390,8 @@ select.field-input {
   border-radius: 999px;
   background: var(--color-surface-raised);
   overflow: hidden;
-  max-width: 140px;
+  max-width: 240px;
+  width: 100%;
 }
 
 .progress-bar-fill {
@@ -1460,7 +1461,7 @@ select.field-input {
 
 .today-timer-progress {
   margin-top: 0;
-  max-width: 11rem;
+  max-width: 14rem;
   width: 100%;
 }
 

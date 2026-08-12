@@ -264,18 +264,11 @@ export function AppShell() {
     [metrics],
   )
 
-  const metricsNeedingLog = useMemo(() => {
-    const loggedIds = new Set(metricEntriesToday.map((e) => e.metric_id))
-    return activeMetrics.filter((m) => !loggedIds.has(m.id))
-  }, [activeMetrics, metricEntriesToday])
-
-  const loggedMetrics = useMemo(() => {
-    return activeMetrics
-      .map((metric) => {
-        const entry = metricEntriesToday.find((e) => e.metric_id === metric.id)
-        return entry ? { metric, entry } : null
-      })
-      .filter((x): x is { metric: Metric; entry: MetricEntry } => x != null)
+  const todayMetrics = useMemo(() => {
+    return activeMetrics.map((metric) => {
+      const entry = metricEntriesToday.find((e) => e.metric_id === metric.id) ?? null
+      return { metric, entry }
+    })
   }, [activeMetrics, metricEntriesToday])
 
   function switchTab(next: Tab) {
@@ -743,8 +736,7 @@ export function AppShell() {
           <TodayScreen
             dateLabel={dateLabel}
             rows={todayRows}
-            metricsNeedingLog={metricsNeedingLog}
-            loggedMetrics={loggedMetrics}
+            metrics={todayMetrics}
             loading={loadingToday || loadingActivities || loadingMetrics}
             busyId={busyId}
             error={error}
