@@ -3,9 +3,15 @@ import { DEFAULT_THEME, type ThemeId } from '../lib/themes'
 
 interface SettingsScreenProps {
   onBack: () => void
+  isAdmin?: boolean
+  onOpenAnalytics?: () => void
 }
 
-export function SettingsScreen({ onBack }: SettingsScreenProps) {
+export function SettingsScreen({
+  onBack,
+  isAdmin = false,
+  onOpenAnalytics,
+}: SettingsScreenProps) {
   const { themeId, themes, setThemeId } = useTheme()
 
   return (
@@ -54,6 +60,25 @@ export function SettingsScreen({ onBack }: SettingsScreenProps) {
           })}
         </ul>
       </section>
+
+      {isAdmin && onOpenAnalytics && (
+        <section className="today-section">
+          <h3 className="section-label">Admin</h3>
+          <button
+            type="button"
+            className="theme-option settings-nav-link"
+            onClick={onOpenAnalytics}
+          >
+            <span className="activity-meta">
+              <span className="activity-name">Analytics</span>
+              <span className="activity-desc">Website traffic and page views</span>
+            </span>
+            <span className="activity-chevron" aria-hidden>
+              ›
+            </span>
+          </button>
+        </section>
+      )}
     </div>
   )
 }

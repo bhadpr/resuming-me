@@ -107,7 +107,9 @@ function PrivacyContent() {
           <strong>Technical & device data.</strong> Limited operational data needed to
           run the Service (for example, session tokens and basic request metadata
           processed by our infrastructure providers). We do not run advertising or
-          third-party analytics trackers in the current version of the Service.
+          third-party marketing analytics. We collect first-party page-view events
+          (page path, approximate referrer, browser/device class, and an anonymous
+          visitor id) so site operators can understand usage of the Service.
         </li>
         <li>
           <strong>Local device storage.</strong> On your device we may store session
@@ -124,6 +126,7 @@ function PrivacyContent() {
         <li>Authenticate you and keep you signed in</li>
         <li>Sync your activities and logs and compute Insights from your own data</li>
         <li>Respond to feedback and support requests</li>
+        <li>Understand aggregate website usage through first-party page analytics</li>
         <li>Detect, prevent, and address abuse, security, or technical issues</li>
         <li>Comply with legal obligations</li>
       </ul>

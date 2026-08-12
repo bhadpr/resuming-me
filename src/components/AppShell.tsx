@@ -10,6 +10,7 @@ import { MetricDetail } from './MetricDetail'
 import { TodayScreen } from './TodayScreen'
 import { InsightsScreen } from './InsightsScreen'
 import { SettingsScreen } from './SettingsScreen'
+import { AnalyticsScreen } from './AnalyticsScreen'
 import { OnboardingScreen } from './OnboardingScreen'
 import { InstallPrompt } from './InstallPrompt'
 import { BrandTitle } from './BrandTitle'
@@ -17,6 +18,7 @@ import { LegalPage } from './LegalPage'
 import { FeedbackPage } from './FeedbackPage'
 import { SiteFooter } from './SiteFooter'
 import type { SitePageId } from '../lib/site'
+import { trackPageView } from '../lib/analytics'
 import {
   archiveActivity,
   createActivity,
@@ -93,11 +95,12 @@ type MetricScreen =
   | { name: 'detail'; metricId: string }
 
 export function AppShell() {
-  const { user, signOut } = useAuth()
+  const { user, signOut, isAdmin } = useAuth()
   useProfileSync(user)
 
   const [tab, setTab] = useState<Tab>('today')
   const [settingsOpen, setSettingsOpen] = useState(false)
+  const [analyticsOpen, setAnalyticsOpen] = useState(false)
   const [legalPage, setLegalPage] = useState<SitePageId | null>(null)
   const [activityScreen, setActivityScreen] = useState<ActivityScreen>({ name: 'list' })
   const [metricScreen, setMetricScreen] = useState<MetricScreen>({ name: 'list' })
@@ -274,8 +277,28 @@ export function AppShell() {
   function switchTab(next: Tab) {
     setError(null)
     setSettingsOpen(false)
+    setAnalyticsOpen(false)
     setTab(next)
   }
+
+  useEffect(() => {
+    if (analyticsOpen) {
+      trackPageView('/analytics', 'Analytics')
+      return
+    }
+    if (settingsOpen) {
+      trackPageView('/settings', 'Settings')
+      return
+    }
+    if (legalPage) {
+      trackPageView(`/${legalPage}`, legalPage)
+      return
+    }
+    if (tab === 'today') trackPageView('/app/today', 'Today')
+    else if (tab === 'activities') trackPageView('/app/activities', 'Activities')
+    else if (tab === 'metrics') trackPageView('/app/metrics', 'Metrics')
+    else if (tab === 'insights') trackPageView('/app/insights', 'Insights')
+  }, [tab, settingsOpen, analyticsOpen, legalPage])
 
   const selectedActivity =
     activityScreen.name === 'detail' || activityScreen.name === 'form'
@@ -668,7 +691,9 @@ export function AppShell() {
   return (
     <div className="app">
       <header className="app-header">
-        {settingsOpen ? (
+        {analyticsOpen ? (
+          <h1 className="app-title">Analytics</h1>
+        ) : settingsOpen ? (
           <h1 className="app-title">Settings</h1>
         ) : (
           <BrandTitle className="app-title" />
@@ -676,11 +701,16 @@ export function AppShell() {
         <div className="app-header-actions">
           <button
             type="button"
-            className={`icon-btn ${settingsOpen ? 'icon-btn-active' : ''}`}
-            aria-label={settingsOpen ? 'Close settings' : 'Open settings'}
-            aria-pressed={settingsOpen}
+            className={`icon-btn ${settingsOpen || analyticsOpen ? 'icon-btn-active' : ''}`}
+            aria-label={settingsOpen || analyticsOpen ? 'Close settings' : 'Open settings'}
+            aria-pressed={settingsOpen || analyticsOpen}
             onClick={() => {
               setError(null)
+              if (analyticsOpen) {
+                setAnalyticsOpen(false)
+                setSettingsOpen(false)
+                return
+              }
               setSettingsOpen((v) => !v)
             }}
           >
@@ -717,44 +747,56 @@ export function AppShell() {
           />
         ) : legalPage ? (
           <LegalPage page={legalPage} onBack={() => setLegalPage(null)} />
-        ) : (
-          <>
-        {settingsOpen ? (
-          <SettingsScreen
-            onBack={() => setSettingsOpen(false)}
-          />
-        ) : showOnboarding ? (
-          <OnboardingScreen
-            saving={saving}
-            error={error}
-            onComplete={handleOnboardingComplete}
-            onSkip={handleOnboardingSkip}
+        ) : analyticsOpen ? (
+          <AnalyticsScreen
+            onBack={() => {
+              setAnalyticsOpen(false)
+              setSettingsOpen(true)
+            }}
           />
         ) : (
           <>
-        {tab === 'today' && (
-          <TodayScreen
-            dateLabel={dateLabel}
-            rows={todayRows}
-            metrics={todayMetrics}
-            loading={loadingToday || loadingActivities || loadingMetrics}
-            busyId={busyId}
-            error={error}
-            offlineNotice={offlineNotice}
-            activeTimer={timer.active}
-            timerElapsedSeconds={timer.elapsedSeconds}
-            onCheckOff={handleCheckOff}
-            onUncheck={handleUncheck}
-            onIncrement={handleIncrement}
-            onLogMetric={handleLogMetric}
-            onTimerStart={handleTimerStart}
-            onTimerPause={timer.pause}
-            onTimerResume={timer.resume}
-            onTimerStop={() => void handleTimerStop()}
-            onManualMinutes={handleManualMinutes}
-            onRescheduleDeadline={handleRescheduleDeadline}
-          />
-        )}
+            {settingsOpen ? (
+              <SettingsScreen
+                isAdmin={isAdmin}
+                onOpenAnalytics={() => {
+                  if (!isAdmin) return
+                  setAnalyticsOpen(true)
+                }}
+                onBack={() => setSettingsOpen(false)}
+              />
+            ) : showOnboarding ? (
+              <OnboardingScreen
+                saving={saving}
+                error={error}
+                onComplete={handleOnboardingComplete}
+                onSkip={handleOnboardingSkip}
+              />
+            ) : (
+              <>
+                {tab === 'today' && (
+                  <TodayScreen
+                    dateLabel={dateLabel}
+                    rows={todayRows}
+                    metrics={todayMetrics}
+                    loading={loadingToday || loadingActivities || loadingMetrics}
+                    busyId={busyId}
+                    error={error}
+                    offlineNotice={offlineNotice}
+                    activeTimer={timer.active}
+                    timerElapsedSeconds={timer.elapsedSeconds}
+                    onCheckOff={handleCheckOff}
+                    onUncheck={handleUncheck}
+                    onIncrement={handleIncrement}
+                    onLogMetric={handleLogMetric}
+                    onTimerStart={handleTimerStart}
+                    onTimerPause={timer.pause}
+                    onTimerResume={timer.resume}
+                    onTimerStop={() => void handleTimerStop()}
+                    onManualMinutes={handleManualMinutes}
+                    onRescheduleDeadline={handleRescheduleDeadline}
+                  />
+                )}
 
         {tab === 'activities' && (
           <>
@@ -1122,7 +1164,7 @@ export function AppShell() {
         )}
       </main>
 
-      {!settingsOpen && !showOnboarding && !legalPage && (
+      {!settingsOpen && !analyticsOpen && !showOnboarding && !legalPage && (
       <nav className="app-nav" aria-label="Main">
         <button
           type="button"

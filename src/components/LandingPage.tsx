@@ -1,9 +1,10 @@
-import { useState } from 'react'
+import { useEffect, useState } from 'react'
 import { BrandTitle } from './BrandTitle'
 import { FeedbackPage } from './FeedbackPage'
 import { LegalPage } from './LegalPage'
 import { SiteFooter } from './SiteFooter'
 import type { SitePageId } from '../lib/site'
+import { trackPageView } from '../lib/analytics'
 
 interface LandingPageProps {
   configured: boolean
@@ -21,6 +22,11 @@ export function LandingPage({
   const [error, setError] = useState<string | null>(null)
   const [signingIn, setSigningIn] = useState(false)
   const [sitePage, setSitePage] = useState<SitePageId | null>(null)
+
+  useEffect(() => {
+    if (!sitePage) trackPageView('/', 'Landing')
+    else trackPageView(`/${sitePage}`, sitePage)
+  }, [sitePage])
 
   async function handleSignIn() {
     setError(null)

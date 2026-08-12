@@ -13,6 +13,7 @@ import {
   getSupabaseConfigError,
   isSupabaseConfigured,
 } from '../lib/supabase'
+import { fetchIsAdmin } from '../lib/analytics'
 
 interface AuthContextValue {
   session: Session | null
@@ -21,6 +22,7 @@ interface AuthContextValue {
   configured: boolean
   configError: string | null
   authError: string | null
+  isAdmin: boolean
   signInWithGoogle: () => Promise<void>
   signOut: () => Promise<void>
 }
@@ -51,6 +53,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   const [session, setSession] = useState<Session | null>(null)
   const [loading, setLoading] = useState(configured)
   const [authError, setAuthError] = useState<string | null>(null)
+  const [isAdmin, setIsAdmin] = useState(false)
 
   useEffect(() => {
     if (!configured) {
@@ -107,6 +110,29 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     }
   }, [configured])
 
+  useEffect(() => {
+    if (!configured) {
+      setIsAdmin(false)
+      return
+    }
+    const userId = session?.user?.id
+    if (!userId) {
+      setIsAdmin(false)
+      return
+    }
+    let mounted = true
+    fetchIsAdmin(userId)
+      .then((admin) => {
+        if (mounted) setIsAdmin(admin)
+      })
+      .catch(() => {
+        if (mounted) setIsAdmin(false)
+      })
+    return () => {
+      mounted = false
+    }
+  }, [configured, session?.user?.id])
+
   const signInWithGoogle = useCallback(async () => {
     const client = createSupabaseClient()
     const redirectTo = `${window.location.origin}/`
@@ -131,10 +157,11 @@ export function AuthProvider({ children }: { children: ReactNode }) {
       configured,
       configError,
       authError,
+      isAdmin,
       signInWithGoogle,
       signOut,
     }),
-    [session, loading, configured, configError, authError, signInWithGoogle, signOut],
+    [session, loading, configured, configError, authError, isAdmin, signInWithGoogle, signOut],
   )
 
   return <AuthContext.Provider value={value}>{children}</AuthContext.Provider>

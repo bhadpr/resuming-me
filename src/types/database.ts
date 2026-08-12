@@ -10,17 +10,20 @@ export interface Database {
         Row: {
           id: string
           timezone: string
+          is_admin: boolean
           created_at: string
           updated_at: string
         }
         Insert: {
           id: string
           timezone?: string
+          is_admin?: boolean
           created_at?: string
           updated_at?: string
         }
         Update: {
           timezone?: string
+          is_admin?: boolean
           updated_at?: string
         }
         Relationships: []
@@ -226,6 +229,37 @@ export interface Database {
           wish?: string | null
           name?: string | null
           email?: string | null
+        }
+        Relationships: []
+      }
+      page_views: {
+        Row: {
+          id: string
+          path: string
+          title: string | null
+          visitor_id: string
+          user_id: string | null
+          referrer: string | null
+          user_agent: string | null
+          created_at: string
+        }
+        Insert: {
+          id?: string
+          path: string
+          title?: string | null
+          visitor_id: string
+          user_id?: string | null
+          referrer?: string | null
+          user_agent?: string | null
+          created_at?: string
+        }
+        Update: {
+          path?: string
+          title?: string | null
+          visitor_id?: string
+          user_id?: string | null
+          referrer?: string | null
+          user_agent?: string | null
         }
         Relationships: []
       }
