@@ -1,5 +1,6 @@
 import { useCallback, useEffect, useMemo, useState } from 'react'
 import { useAuth, useProfileSync } from '../hooks/useAuth'
+import { useDailyDigest } from '../hooks/useDailyDigest'
 import { useTimer } from '../hooks/useTimer'
 import { ActivityList } from './ActivityList'
 import { ActivityForm } from './ActivityForm'
@@ -261,6 +262,13 @@ export function AppShell() {
     () => buildTodayProgress(activities, mergedLogEntries, postponedEntries, today),
     [activities, mergedLogEntries, postponedEntries, today],
   )
+
+  useDailyDigest(todayRows, !loadingActivities && !loadingToday, () => {
+    setSettingsOpen(false)
+    setAnalyticsOpen(false)
+    setLegalPage(null)
+    setTab('today')
+  })
 
   const activeMetrics = useMemo(
     () => metrics.filter((m) => !m.archived),
@@ -759,6 +767,10 @@ export function AppShell() {
             {settingsOpen ? (
               <SettingsScreen
                 isAdmin={isAdmin}
+                todayItems={todayRows.map((row) => ({
+                  name: row.activity.name,
+                  done: row.done,
+                }))}
                 onOpenAnalytics={() => {
                   if (!isAdmin) return
                   setAnalyticsOpen(true)

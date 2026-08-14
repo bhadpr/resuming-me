@@ -2107,6 +2107,88 @@ select.field-input {
   box-shadow: inset 3px 0 0 var(--color-primary);
 }
 
+.digest-card {
+  padding: 0.875rem 1rem;
+  background: var(--color-surface);
+  border: 1px solid var(--color-border);
+  border-radius: var(--radius);
+  display: flex;
+  flex-direction: column;
+  gap: 0.75rem;
+}
+
+.digest-toggle {
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: 1rem;
+}
+
+.digest-switch {
+  position: relative;
+  width: 3rem;
+  height: 1.75rem;
+  min-width: 3rem;
+  min-height: 1.75rem;
+  flex-shrink: 0;
+  margin-top: 0.15rem;
+  padding: 0;
+  border-radius: 999px;
+  border: 1px solid var(--color-border);
+  background: color-mix(in srgb, var(--color-text) 12%, var(--color-surface));
+  cursor: pointer;
+}
+
+.digest-switch-on {
+  background: var(--color-primary);
+  border-color: var(--color-primary);
+}
+
+.digest-switch-knob {
+  position: absolute;
+  top: 2px;
+  left: 2px;
+  width: 1.35rem;
+  height: 1.35rem;
+  border-radius: 50%;
+  background: #fff;
+  box-shadow: 0 1px 2px rgb(0 0 0 / 18%);
+  transition: transform var(--duration-fast) var(--ease-out);
+}
+
+.digest-switch-on .digest-switch-knob {
+  transform: translateX(1.2rem);
+}
+
+.digest-switch:disabled {
+  opacity: 0.45;
+  cursor: not-allowed;
+}
+
+.digest-switch:focus-visible {
+  outline: none;
+  box-shadow: var(--shadow-focus, 0 0 0 3px var(--color-glow-primary));
+}
+
+.digest-hint {
+  margin: 0;
+  color: var(--color-text-muted);
+  font-size: 0.875rem;
+  line-height: 1.4;
+}
+
+.digest-schedule,
+.digest-exact {
+  display: flex;
+  flex-direction: column;
+  align-items: flex-start;
+  gap: 0.5rem;
+}
+
+.digest-schedule {
+  color: var(--color-text);
+}
+
 .theme-mode-badge {
   font-size: 0.65rem;
   font-weight: 600;

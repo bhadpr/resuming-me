@@ -1,3 +1,4 @@
+/// <reference types="@capacitor/local-notifications" />
 import type { CapacitorConfig } from '@capacitor/cli'
 
 const config: CapacitorConfig = {
@@ -8,6 +9,10 @@ const config: CapacitorConfig = {
     allowMixedContent: false,
   },
   plugins: {
+    LocalNotifications: {
+      smallIcon: 'ic_stat_resuming',
+      iconColor: '#e07a5f',
+    },
     SplashScreen: {
       launchAutoHide: false,
       backgroundColor: '#faf6f0',

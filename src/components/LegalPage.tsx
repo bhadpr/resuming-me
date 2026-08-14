@@ -113,9 +113,11 @@ function PrivacyContent() {
         </li>
         <li>
           <strong>Local device storage.</strong> On your device we may store session
-          credentials, theme preference, onboarding state, active timer state, and
-          offline sync queues so the app works reliably between visits. See “Cookies
-          &amp; local storage” below.
+          credentials, theme preference, onboarding state, daily reminder preference,
+          active timer state, and offline sync queues so the app works reliably between
+          visits. See “Cookies &amp; local storage” below. On Android, an optional daily
+          reminder is scheduled on the device only; it is not delivered through a cloud
+          push service.
         </li>
       </ul>
 
@@ -170,8 +172,8 @@ function PrivacyContent() {
       <ul>
         <li>Authentication / session storage so you stay signed in</li>
         <li>
-          Local preferences such as theme, onboarding completion, and in-progress timer
-          state
+          Local preferences such as theme, onboarding completion, daily reminder time,
+          and in-progress timer state
         </li>
         <li>
           A service worker / progressive web app cache that stores app assets for faster

@@ -16,8 +16,8 @@ export const COMPANY_NAME = 'Cheerful Games, Inc.'
 export const COPYRIGHT_YEAR = 2026
 export const PRODUCT_NAME = 'Resuming'
 
-/** Public support inbox — confirm this mailbox exists before launch. */
-export const SUPPORT_EMAIL = 'support@cheerfulgames.com'
+/** Public support inbox. */
+export const SUPPORT_EMAIL = 'resuming.me@gmail.com'
 
 /**
  * Governing law for the Terms. Update to the state where Cheerful Games, Inc.
@@ -26,7 +26,7 @@ export const SUPPORT_EMAIL = 'support@cheerfulgames.com'
 export const GOVERNING_LAW = 'the State of Washington, United States'
 
 /** Shown on Privacy / Terms / About as the policy effective date. */
-export const LEGAL_LAST_UPDATED = `August 12, ${COPYRIGHT_YEAR}`
+export const LEGAL_LAST_UPDATED = `August 13, ${COPYRIGHT_YEAR}`
 
 export interface SocialLink {
   id: SocialLinkId

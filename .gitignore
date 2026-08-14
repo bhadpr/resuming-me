@@ -23,3 +23,5 @@ android/.idea
 android/*.iml
 *.keystore
 *.jks
+android/keystore.properties
+android/app/keystore.properties
