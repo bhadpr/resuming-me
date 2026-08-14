@@ -602,7 +602,7 @@ select.field-input {
   display: flex;
   align-items: center;
   justify-content: center;
-  padding: 1.5rem;
+  padding: max(1.5rem, env(safe-area-inset-top, 0px)) 1.5rem max(1.5rem, env(safe-area-inset-bottom, 0px));
   background: var(--body-wash, none), var(--color-bg);
 }
 
@@ -749,8 +749,8 @@ select.field-input {
 
 .landing-legal {
   align-items: flex-start;
-  padding-top: 1.25rem;
-  padding-bottom: 1.25rem;
+  padding-top: max(1.25rem, env(safe-area-inset-top, 0px));
+  padding-bottom: max(1.25rem, env(safe-area-inset-bottom, 0px));
 }
 
 .landing-card-legal {
@@ -1194,6 +1194,8 @@ select.field-input {
   align-items: center;
   justify-content: center;
   color: var(--color-text-muted);
+  padding-top: env(safe-area-inset-top, 0px);
+  padding-bottom: env(safe-area-inset-bottom, 0px);
 }
 
 @media (min-width: 481px) {

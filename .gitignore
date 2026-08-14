@@ -11,3 +11,15 @@ coverage
 .vite
 *.tsbuildinfo
 supabase/.temp
+
+# Android / Capacitor local
+android/.gradle
+android/build
+android/app/build
+android/app/release
+android/captures
+android/local.properties
+android/.idea
+android/*.iml
+*.keystore
+*.jks

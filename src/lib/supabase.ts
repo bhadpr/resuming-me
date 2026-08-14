@@ -1,3 +1,4 @@
+import { Capacitor } from '@capacitor/core'
 import { createClient, type SupabaseClient } from '@supabase/supabase-js'
 import type { Database } from '../types/database'
 
@@ -36,12 +37,15 @@ export function createSupabaseClient(): SupabaseClient<Database> {
     throw new Error(configError)
   }
 
+  const native = Capacitor.isNativePlatform()
   client = createClient<Database>(supabaseUrl!, supabaseAnonKey!, {
     auth: {
       persistSession: true,
       autoRefreshToken: true,
-      detectSessionInUrl: true,
-      flowType: 'implicit',
+      // Custom-scheme callbacks never land on window.location; handle them in nativeAuth.
+      detectSessionInUrl: !native,
+      // PKCE query params survive Android deep links; implicit hash tokens often do not.
+      flowType: native ? 'pkce' : 'implicit',
     },
   })
 

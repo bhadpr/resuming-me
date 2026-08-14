@@ -8,12 +8,18 @@ import {
   type ReactNode,
 } from 'react'
 import type { Session, User } from '@supabase/supabase-js'
+import { Capacitor } from '@capacitor/core'
 import {
   createSupabaseClient,
   getSupabaseConfigError,
   isSupabaseConfigured,
 } from '../lib/supabase'
 import { fetchIsAdmin } from '../lib/analytics'
+import {
+  getAuthRedirectTo,
+  listenForNativeAuthCallback,
+  openNativeOAuthUrl,
+} from '../lib/nativeAuth'
 
 interface AuthContextValue {
   session: Session | null
@@ -104,8 +110,22 @@ export function AuthProvider({ children }: { children: ReactNode }) {
       setLoading(false)
     })
 
+    let removeNativeListener: (() => void) | undefined
+    if (Capacitor.isNativePlatform()) {
+      void listenForNativeAuthCallback(client, (message) => {
+        if (mounted) setAuthError(message)
+      }).then((remove) => {
+        if (!mounted) {
+          remove()
+          return
+        }
+        removeNativeListener = remove
+      })
+    }
+
     return () => {
       mounted = false
+      removeNativeListener?.()
       subscription.unsubscribe()
     }
   }, [configured])
@@ -135,12 +155,19 @@ export function AuthProvider({ children }: { children: ReactNode }) {
 
   const signInWithGoogle = useCallback(async () => {
     const client = createSupabaseClient()
-    const redirectTo = `${window.location.origin}/`
-    const { error } = await client.auth.signInWithOAuth({
+    const native = Capacitor.isNativePlatform()
+    const { data, error } = await client.auth.signInWithOAuth({
       provider: 'google',
-      options: { redirectTo },
+      options: {
+        redirectTo: getAuthRedirectTo(),
+        skipBrowserRedirect: native,
+      },
     })
     if (error) throw error
+    if (native) {
+      if (!data.url) throw new Error('Google sign-in did not return a URL')
+      await openNativeOAuthUrl(data.url)
+    }
   }, [])
 
   const signOut = useCallback(async () => {

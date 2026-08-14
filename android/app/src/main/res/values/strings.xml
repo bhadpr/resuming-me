@@ -1,0 +1,7 @@
+<?xml version='1.0' encoding='utf-8'?>
+<resources>
+    <string name="app_name">Resuming</string>
+    <string name="title_activity_main">Resuming</string>
+    <string name="package_name">com.cheerfulgames.resuming</string>
+    <string name="custom_url_scheme">com.cheerfulgames.resuming</string>
+</resources>

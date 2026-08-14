@@ -1,3 +1,5 @@
+import { syncNativeChrome } from './nativeChrome'
+
 export type ThemeId =
   | 'resuming'
   | 'nocturne'
@@ -129,4 +131,6 @@ export function applyTheme(id: ThemeId): void {
   } catch {
     /* ignore */
   }
+
+  void syncNativeChrome(theme).catch(() => {})
 }

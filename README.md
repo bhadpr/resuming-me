@@ -90,6 +90,7 @@ npm install
    - `http://localhost:5173`
    - `https://YOUR_CLOUDFLARE_PAGES_URL.pages.dev`
    - `https://resuming.me` (when ready)
+   - `com.cheerfulgames.resuming://auth/callback` (Android Capacitor)
 
 **Sprint 7 rollover (optional server schedule):** deploy `supabase/functions/rollover`, then follow the comments in `20260812000000_rollover_cron.sql`. Until cron is wired, the app still writes postponed entries on open via client catch-up.
 
@@ -175,6 +176,7 @@ In **Supabase → Authentication → URL Configuration** add:
   - `https://<project>.pages.dev/**`
   - `https://resuming.me/**`
   - `https://www.resuming.me/**` (if you use www)
+  - `com.cheerfulgames.resuming://auth/callback`
 
 Google OAuth Client stays pointed at Supabase only:  
 `https://toeemvcvizpfcyknogph.supabase.co/auth/v1/callback`
@@ -200,3 +202,16 @@ supabase/
 tests/
   rls.test.ts     # Cross-account isolation test
 ```
+
+## Android (Capacitor)
+
+Package name / app ID (do not change after the first Play upload): `com.cheerfulgames.resuming`
+
+```bash
+npm run build:android   # web build + copy into android/
+npm run open:android    # opens Android Studio
+```
+
+In Android Studio, pick the `Pixel_8_API_36` emulator and Run. After web changes, run `npm run build:android` again (or `npx cap sync android`) before rebuilding the app.
+
+Google sign-in on Android uses the deep link `com.cheerfulgames.resuming://auth/callback`. Add that exact URL under **Supabase → Authentication → URL Configuration → Additional Redirect URLs** before testing **Continue with Google** on the emulator.
