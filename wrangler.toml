@@ -7,3 +7,13 @@ compatibility_date = "2026-08-12"
 [assets]
 directory = "./dist"
 not_found_handling = "single-page-application"
+html_handling = "drop-trailing-slash"
+
+# Apex domain — Chrome flags resuming-me.pages.dev as a lookalike of resuming.me.
+[[routes]]
+pattern = "resuming.me"
+custom_domain = true
+
+[[routes]]
+pattern = "www.resuming.me"
+custom_domain = true

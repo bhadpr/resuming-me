@@ -43,6 +43,19 @@ export function endOfWeekSunday(date: string): string {
   return addDays(startOfWeekMonday(date), 6)
 }
 
+/** First day of the calendar month containing `date`. */
+export function startOfMonth(date: string): string {
+  const [y, m] = date.split('-')
+  return `${y}-${m}-01`
+}
+
+/** Last day of the calendar month containing `date`. */
+export function endOfMonth(date: string): string {
+  const d = parseLocalDate(startOfMonth(date))
+  d.setMonth(d.getMonth() + 1, 0)
+  return todayLocalDate(d)
+}
+
 /** Whole days from `from` to `to` (can be negative). */
 export function daysBetween(from: string, to: string): number {
   const a = parseLocalDate(from).getTime()

@@ -74,13 +74,14 @@ import {
   type InsightsWindow,
 } from '../lib/insights'
 import { requestMicroSteps } from '../lib/microSteps'
+import { enableDailyDigestFromOnboarding } from '../lib/localNotifications'
 import {
-  getStarterActivityTemplates,
-  getStarterMetricTemplates,
   needsOnboarding,
   ONBOARDING_DISMISS_KEY,
   readDismissedFlag,
+  saveDeadlineReminder,
   writeDismissedFlag,
+  type OnboardingCompletePayload,
 } from '../lib/onboarding'
 
 type Tab = 'today' | 'activities' | 'metrics' | 'insights'
@@ -464,6 +465,20 @@ export function AppShell() {
     }
   }
 
+  async function handleQuickAddMetric(input: MetricInput) {
+    if (!user) return
+    setSaving(true)
+    setError(null)
+    try {
+      const created = await createMetric(user.id, input)
+      setMetrics((prev) => [created, ...prev])
+    } catch (err) {
+      setError(err instanceof Error ? err.message : 'Could not add metric')
+    } finally {
+      setSaving(false)
+    }
+  }
+
   async function handleCheckOff(row: ActivityTodayProgress) {
     if (!user) return
     setBusyId(row.activity.id)
@@ -639,25 +654,19 @@ export function AppShell() {
     }
   }
 
-  async function handleOnboardingComplete(selection: {
-    activityIds: string[]
-    metricIds: string[]
-  }) {
+  async function handleOnboardingComplete(payload: OnboardingCompletePayload) {
     if (!user) return
     setSaving(true)
     setError(null)
     try {
-      const activityTemplates = getStarterActivityTemplates(today)
-      const metricTemplates = getStarterMetricTemplates()
-      for (const id of selection.activityIds) {
-        const template = activityTemplates.find((t) => t.id === id)
-        if (!template) continue
-        await createActivity(user.id, template.input)
+      for (const item of payload.activities) {
+        const created = await createActivity(user.id, item.input)
+        if (item.deadlineCadence) {
+          saveDeadlineReminder(created.id, item.deadlineCadence)
+        }
       }
-      for (const id of selection.metricIds) {
-        const template = metricTemplates.find((t) => t.id === id)
-        if (!template) continue
-        await createMetric(user.id, template.input)
+      if (payload.digest.enabled) {
+        await enableDailyDigestFromOnboarding(payload.digest.hour, payload.digest.minute)
       }
       const acts = await listActivities(true)
       const mets = await listMetrics(true)
@@ -807,6 +816,10 @@ export function AppShell() {
                     onTimerStop={() => void handleTimerStop()}
                     onManualMinutes={handleManualMinutes}
                     onRescheduleDeadline={handleRescheduleDeadline}
+                    onEmptySetup={() => {
+                      writeDismissedFlag(ONBOARDING_DISMISS_KEY, false)
+                      setOnboardingDismissed(false)
+                    }}
                   />
                 )}
 
@@ -1049,6 +1062,7 @@ export function AppShell() {
                     setError(null)
                     setMetricScreen({ name: 'form' })
                   }}
+                  onQuickAdd={(input) => void handleQuickAddMetric(input)}
                 />
               </>
             )}
@@ -1167,6 +1181,12 @@ export function AppShell() {
             today={today}
             loading={loadingInsights}
             error={error}
+            onAddActivity={() => {
+              setError(null)
+              setTab('activities')
+              setActivityScreen({ name: 'form' })
+            }}
+            onAddMetric={(input) => void handleQuickAddMetric(input)}
           />
         )}
           </>

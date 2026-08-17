@@ -4,7 +4,9 @@ import type { MetricEntry } from './metricEntries'
 import {
   addDays,
   daysBetween,
+  endOfMonth,
   endOfWeekSunday,
+  startOfMonth,
   startOfWeekMonday,
   todayLocalDate,
 } from './dates'
@@ -73,6 +75,22 @@ function weekMet(
   return count >= target
 }
 
+function monthMet(
+  activity: Activity,
+  entries: LogEntry[],
+  monthStart: string,
+): boolean {
+  const monthEnd = endOfMonth(monthStart)
+  const count = entries.filter(
+    (e) =>
+      e.activity_id === activity.id &&
+      e.type === 'completed' &&
+      e.date >= monthStart &&
+      e.date <= monthEnd,
+  ).length
+  return count >= 1
+}
+
 function hadPostponementOnDate(
   entries: LogEntry[],
   activityId: string,
@@ -114,6 +132,28 @@ export function computeCurrentStreak(
       if (postponed || !weekMet(activity, entries, weekStart)) break
       streak += 1
       weekStart = addDays(weekStart, -7)
+    }
+    return streak
+  }
+
+  if (activity.type === 'monthly') {
+    let streak = 0
+    let monthStart = startOfMonth(today)
+    if (!monthMet(activity, entries, monthStart)) {
+      monthStart = startOfMonth(addDays(monthStart, -1))
+    }
+    while (streak < 24) {
+      const monthEnd = endOfMonth(monthStart)
+      const postponed = entries.some(
+        (e) =>
+          e.activity_id === activity.id &&
+          e.type === 'postponed' &&
+          e.date >= monthStart &&
+          e.date <= monthEnd,
+      )
+      if (postponed || !monthMet(activity, entries, monthStart)) break
+      streak += 1
+      monthStart = startOfMonth(addDays(monthStart, -1))
     }
     return streak
   }

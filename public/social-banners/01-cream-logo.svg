@@ -1,0 +1,20 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="1500" height="500" viewBox="0 0 1500 500" role="img" aria-label="Resuming.me cover">
+  <defs>
+    <linearGradient id="bg" x1="0" y1="0" x2="1" y2="1">
+      <stop offset="0%" stop-color="#faf6f0"/>
+      <stop offset="100%" stop-color="#f3e6dc"/>
+    </linearGradient>
+  </defs>
+  <rect width="1500" height="500" fill="url(#bg)"/>
+  <!-- logo mark -->
+  <g transform="translate(96,170)">
+    <rect width="140" height="140" rx="30" fill="#faf6f0" stroke="#1a1614" stroke-width="6"/>
+    <rect x="28" y="54" width="10" height="32" rx="4" fill="#c9b5a4"/>
+    <rect x="44" y="54" width="10" height="32" rx="4" fill="#c9b5a4"/>
+    <path d="M66 30 L122 70 L66 110 Z" fill="#e07a5f"/>
+  </g>
+  <text x="280" y="250" font-family="Georgia, 'Times New Roman', serif" font-size="92" font-weight="600" fill="#1a1614">Resuming</text>
+  <text x="735" y="250" font-family="Georgia, 'Times New Roman', serif" font-size="72" font-weight="500" fill="#8a7466">.me</text>
+  <rect x="280" y="278" width="120" height="5" rx="2" fill="#e07a5f"/>
+  <text x="280" y="340" font-family="Helvetica, Arial, sans-serif" font-size="28" fill="#5c5048">Track what you postpone. Resume what matters.</text>
+</svg>

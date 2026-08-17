@@ -1,6 +1,6 @@
 import { describe, it, expect } from 'vitest'
 import { targetFieldsChanged, validateActivityInput } from './activities'
-import { todayLocalDate, yesterdayLocalDate } from './dates'
+import { todayLocalDate, yesterdayLocalDate, startOfMonth, endOfMonth } from './dates'
 import type { Activity } from './activities'
 
 function baseActivity(overrides: Partial<Activity> = {}): Activity {
@@ -125,5 +125,11 @@ describe('dates', () => {
 
   it('formats yesterday relative to given now', () => {
     expect(yesterdayLocalDate(new Date(2026, 7, 11))).toBe('2026-08-10')
+  })
+
+  it('finds start and end of a calendar month', () => {
+    expect(startOfMonth('2026-08-17')).toBe('2026-08-01')
+    expect(endOfMonth('2026-08-17')).toBe('2026-08-31')
+    expect(endOfMonth('2026-02-01')).toBe('2026-02-28')
   })
 })

@@ -1,7 +1,19 @@
 export type SitePageId = 'about' | 'privacy' | 'terms' | 'feedback'
 
+export const SITE_PAGE_IDS: readonly SitePageId[] = [
+  'about',
+  'privacy',
+  'terms',
+  'feedback',
+]
+
 /** @deprecated Prefer SitePageId — kept for existing legal-only imports. */
 export type LegalPageId = Exclude<SitePageId, 'feedback'>
+
+export function sitePageFromPath(pathname: string): SitePageId | null {
+  const id = pathname.replace(/^\/+|\/+$/g, '')
+  return (SITE_PAGE_IDS as readonly string[]).includes(id) ? (id as SitePageId) : null
+}
 
 export type SocialLinkId =
   | 'facebook'

@@ -44,6 +44,20 @@ function endOfWeekSunday(date: string): string {
   return addDays(startOfWeekMonday(date), 6)
 }
 
+function startOfMonth(date: string): string {
+  const [y, m] = date.split('-')
+  return `${y}-${m}-01`
+}
+
+function endOfMonth(date: string): string {
+  const [y, m] = startOfMonth(date).split('-').map(Number)
+  const dt = new Date(y, m, 0, 12, 0, 0, 0)
+  const yy = dt.getFullYear()
+  const mm = String(dt.getMonth() + 1).padStart(2, '0')
+  const dd = String(dt.getDate()).padStart(2, '0')
+  return `${yy}-${mm}-${dd}`
+}
+
 type Activity = {
   id: string
   user_id: string
@@ -107,6 +121,18 @@ function weeklyMet(a: Activity, entries: LogEntry[], weekStart: string): boolean
   return count >= target
 }
 
+function monthlyMet(a: Activity, entries: LogEntry[], monthStart: string): boolean {
+  const monthEnd = endOfMonth(monthStart)
+  const count = entries.filter(
+    (e) =>
+      e.activity_id === a.id &&
+      e.type === 'completed' &&
+      e.date >= monthStart &&
+      e.date <= monthEnd,
+  ).length
+  return count >= 1
+}
+
 Deno.serve(async (req) => {
   if (req.method === 'OPTIONS') {
     return new Response('ok', { headers: corsHeaders })
@@ -130,7 +156,9 @@ Deno.serve(async (req) => {
       const timezone = profile.timezone || 'UTC'
       const localToday = localDateInTimeZone(nowUtc, timezone)
       const yesterday = addDays(localToday, -1)
-      const from = addDays(yesterday, -14)
+      const dailyFrom = addDays(yesterday, -14)
+      const monthlyFrom = startOfMonth(addDays(startOfMonth(localToday), -40))
+      const from = dailyFrom < monthlyFrom ? dailyFrom : monthlyFrom
 
       const { data: activities } = await admin
         .from('activities')
@@ -200,6 +228,29 @@ Deno.serve(async (req) => {
           })
           postponedDates.add(`${a.id}:${sunday}`)
         }
+      }
+
+      let monthEnd = endOfMonth(addDays(startOfMonth(localToday), -1))
+      for (let m = 0; m < 2; m++) {
+        if (monthEnd > yesterday) {
+          monthEnd = endOfMonth(addDays(startOfMonth(monthEnd), -1))
+          continue
+        }
+        const monthStart = startOfMonth(monthEnd)
+        for (const a of acts) {
+          if (a.type !== 'monthly') continue
+          if (monthEnd < a.created_at.slice(0, 10)) continue
+          if (postponedDates.has(`${a.id}:${monthEnd}`)) continue
+          if (monthlyMet(a, logs, monthStart)) continue
+          toInsert.push({
+            user_id: profile.id,
+            activity_id: a.id,
+            type: 'postponed',
+            date: monthEnd,
+          })
+          postponedDates.add(`${a.id}:${monthEnd}`)
+        }
+        monthEnd = endOfMonth(addDays(monthStart, -1))
       }
 
       if (toInsert.length > 0) {

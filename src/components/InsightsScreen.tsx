@@ -1,7 +1,7 @@
 import { useEffect, useMemo, useState } from 'react'
 import type { Activity } from '../lib/activities'
 import type { LogEntry } from '../lib/logs'
-import type { Metric } from '../lib/metrics'
+import { STARTER_METRICS, type Metric, type MetricInput } from '../lib/metrics'
 import type { MetricEntry } from '../lib/metricEntries'
 import {
   buildActivityInsightSeries,
@@ -33,6 +33,8 @@ interface InsightsScreenProps {
   today: string
   loading: boolean
   error: string | null
+  onAddActivity: () => void
+  onAddMetric: (input: MetricInput) => void
 }
 
 export function InsightsScreen({
@@ -46,6 +48,8 @@ export function InsightsScreen({
   today,
   loading,
   error,
+  onAddActivity,
+  onAddMetric,
 }: InsightsScreenProps) {
   const [openKeys, setOpenKeys] = useState<Set<string>>(() => new Set())
   const [didInitOpen, setDidInitOpen] = useState(false)
@@ -54,6 +58,12 @@ export function InsightsScreen({
     () => metrics.filter((m) => !m.archived),
     [metrics],
   )
+  const activeActivities = useMemo(
+    () => activities.filter((a) => !a.archived),
+    [activities],
+  )
+  const empty =
+    !loading && activeActivities.length === 0 && activeMetrics.length === 0
 
   useEffect(() => {
     if (didInitOpen || loading || !insights) return
@@ -89,29 +99,51 @@ export function InsightsScreen({
         </div>
       </div>
 
-      <div className="segmented window-toggle">
-        <button
-          type="button"
-          className={`segmented-btn ${window === 'week' ? 'segmented-btn-active' : ''}`}
-          onClick={() => onWindowChange('week')}
-        >
-          Week
-        </button>
-        <button
-          type="button"
-          className={`segmented-btn ${window === 'month' ? 'segmented-btn-active' : ''}`}
-          onClick={() => onWindowChange('month')}
-        >
-          Month
-        </button>
-      </div>
-
       {error && <p className="error">{error}</p>}
 
-      {loading || !insights ? (
+      {loading ? (
+        <p className="muted-center">Loading insights…</p>
+      ) : empty ? (
+        <section className="empty-state">
+          <p className="empty-state-emoji">📊</p>
+          <h2>No insights yet</h2>
+          <p>Add something to resume, or track a number like Weight or Sleep.</p>
+          <div className="onboarding-chips">
+            {STARTER_METRICS.map((metric) => (
+              <button
+                key={metric.name}
+                type="button"
+                className="onboarding-chip"
+                onClick={() => onAddMetric(metric)}
+              >
+                {metric.emoji} {metric.name}
+              </button>
+            ))}
+          </div>
+          <button type="button" className="btn btn-primary" onClick={onAddActivity}>
+            Add activity
+          </button>
+        </section>
+      ) : !insights ? (
         <p className="muted-center">Loading insights…</p>
       ) : (
         <>
+          <div className="segmented window-toggle">
+            <button
+              type="button"
+              className={`segmented-btn ${window === 'week' ? 'segmented-btn-active' : ''}`}
+              onClick={() => onWindowChange('week')}
+            >
+              Week
+            </button>
+            <button
+              type="button"
+              className={`segmented-btn ${window === 'month' ? 'segmented-btn-active' : ''}`}
+              onClick={() => onWindowChange('month')}
+            >
+              Month
+            </button>
+          </div>
           <section className="insights-summary">
             <p>{insights.summary}</p>
             <p className="screen-sub">

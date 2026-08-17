@@ -1,7 +1,7 @@
 import type { Activity } from './activities'
 import type { LogEntry } from './logs'
-import { addDays, parseLocalDate, todayLocalDate } from './dates'
-import { dailyTargetMet, weeklyTargetMet } from './rollover'
+import { addDays, endOfMonth, parseLocalDate, startOfMonth, todayLocalDate } from './dates'
+import { dailyTargetMet, monthlyTargetMet, weeklyTargetMet } from './rollover'
 import { endOfWeekSunday, startOfWeekMonday } from './dates'
 import { sumSessionSeconds } from './timer'
 
@@ -133,6 +133,35 @@ export function buildActivityInsightSeries(
     return points
   }
 
+  if (activity.type === 'monthly') {
+    const points: ActivitySeriesPoint[] = []
+    let monthStart = startOfMonth(from)
+    while (monthStart <= to) {
+      const monthEnd = endOfMonth(monthStart)
+      if (monthEnd >= created) {
+        const postponed = hasPostponedOn(entries, activity.id, monthEnd)
+        const met = !postponed && monthlyTargetMet(activity, entries, monthStart)
+        const completions = entries.filter(
+          (e) =>
+            e.activity_id === activity.id &&
+            e.type === 'completed' &&
+            e.date >= monthStart &&
+            e.date <= monthEnd,
+        ).length
+        points.push({
+          key: monthStart,
+          label: shortDateLabel(monthStart),
+          date: monthStart,
+          status: postponed ? 'postponed' : met ? 'met' : 'open',
+          value: completions,
+          unit: '×',
+        })
+      }
+      monthStart = startOfMonth(addDays(monthEnd, 1))
+    }
+    return points
+  }
+
   // daily
   const start = created > from ? created : from
   const isTimer = activity.tracking_mode === 'timer'
@@ -219,6 +248,34 @@ function analyzeWeekly(
       }
     }
     weekStart = addDays(weekStart, 7)
+  }
+
+  return { scheduled, postponed, met }
+}
+
+function analyzeMonthly(
+  activity: Activity,
+  entries: LogEntry[],
+  from: string,
+  to: string,
+): Pick<ActivityInsight, 'scheduled' | 'postponed' | 'met'> {
+  const created = activity.created_at.slice(0, 10)
+  let scheduled = 0
+  let postponed = 0
+  let met = 0
+
+  let monthStart = startOfMonth(from)
+  while (monthStart <= to) {
+    const monthEnd = endOfMonth(monthStart)
+    if (monthEnd >= created) {
+      scheduled += 1
+      if (hasPostponedOn(entries, activity.id, monthEnd)) {
+        postponed += 1
+      } else if (monthlyTargetMet(activity, entries, monthStart)) {
+        met += 1
+      }
+    }
+    monthStart = startOfMonth(addDays(monthEnd, 1))
   }
 
   return { scheduled, postponed, met }
@@ -317,14 +374,18 @@ export function computeInsights(
 ): InsightsResult {
   const { from, to } = windowRange(window, today)
   const trackable = activities.filter(
-    (a) => !a.archived && (a.type === 'daily' || a.type === 'weekly_n'),
+    (a) =>
+      !a.archived &&
+      (a.type === 'daily' || a.type === 'weekly_n' || a.type === 'monthly'),
   )
 
   const activityInsights: ActivityInsight[] = trackable.map((activity) => {
     const stats =
       activity.type === 'weekly_n'
         ? analyzeWeekly(activity, entries, from, to)
-        : analyzeDaily(activity, entries, from, to)
+        : activity.type === 'monthly'
+          ? analyzeMonthly(activity, entries, from, to)
+          : analyzeDaily(activity, entries, from, to)
     const postponementRate =
       stats.scheduled === 0 ? 0 : stats.postponed / stats.scheduled
     return {

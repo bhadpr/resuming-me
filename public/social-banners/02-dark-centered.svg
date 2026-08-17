@@ -1,0 +1,15 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="1500" height="500" viewBox="0 0 1500 500" role="img" aria-label="Resuming.me cover">
+  <rect width="1500" height="500" fill="#1a1614"/>
+  <circle cx="1280" cy="90" r="220" fill="#e07a5f" opacity="0.12"/>
+  <circle cx="140" cy="430" r="180" fill="#c9b5a4" opacity="0.08"/>
+  <g transform="translate(670,70) scale(0.55)">
+    <rect width="140" height="140" rx="30" fill="#faf6f0" stroke="#faf6f0" stroke-width="0"/>
+    <rect width="140" height="140" rx="30" fill="#241f1c"/>
+    <rect x="28" y="54" width="10" height="32" rx="4" fill="#c9b5a4"/>
+    <rect x="44" y="54" width="10" height="32" rx="4" fill="#c9b5a4"/>
+    <path d="M66 30 L122 70 L66 110 Z" fill="#e07a5f"/>
+  </g>
+  <text x="750" y="280" text-anchor="middle" font-family="Georgia, 'Times New Roman', serif" font-size="96" font-weight="600" fill="#faf6f0">Resuming.me</text>
+  <rect x="690" y="308" width="120" height="4" rx="2" fill="#e07a5f"/>
+  <text x="750" y="370" text-anchor="middle" font-family="Helvetica, Arial, sans-serif" font-size="26" fill="#c9b5a4">Resume what matters.</text>
+</svg>

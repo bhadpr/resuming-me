@@ -1,5 +1,11 @@
 import { describe, it, expect } from 'vitest'
-import { buildTodayProgress, completedCountInWindow, shouldShowDeadlineOnToday } from './today'
+import {
+  buildTodayProgress,
+  completedCountInWindow,
+  pickHeroRow,
+  partitionTodayRows,
+  shouldShowDeadlineOnToday,
+} from './today'
 import { startOfWeekMonday, endOfWeekSunday, daysBetween } from './dates'
 import type { Activity } from './activities'
 import type { LogEntry } from './logs'
@@ -103,6 +109,53 @@ describe('buildTodayProgress', () => {
     expect(rows[0].done).toBe(true)
   })
 
+  it('tracks twice-a-day count toward the daily target', () => {
+    const kids = activity({
+      id: 'kids',
+      name: 'Play with kids',
+      tracking_mode: 'count',
+      target_value: 2,
+    })
+    const one = buildTodayProgress(
+      [kids],
+      [entry({ id: '1', activity_id: 'kids', date: '2026-08-11' })],
+      [],
+      '2026-08-11',
+    )
+    expect(one[0].current).toBe(1)
+    expect(one[0].done).toBe(false)
+    const two = buildTodayProgress(
+      [kids],
+      [
+        entry({ id: '1', activity_id: 'kids', date: '2026-08-11' }),
+        entry({ id: '2', activity_id: 'kids', date: '2026-08-11' }),
+      ],
+      [],
+      '2026-08-11',
+    )
+    expect(two[0].done).toBe(true)
+  })
+
+  it('tracks monthly checkbox through the calendar month', () => {
+    const bills = activity({
+      id: 'bills',
+      name: 'Pay bills',
+      type: 'monthly',
+      tracking_mode: 'checkbox',
+    })
+    const open = buildTodayProgress([bills], [], [], '2026-08-17')
+    expect(open[0].done).toBe(false)
+    expect(open[0].progressLabel).toBe('Not yet this month')
+    const done = buildTodayProgress(
+      [bills],
+      [entry({ activity_id: 'bills', date: '2026-08-03' })],
+      [],
+      '2026-08-17',
+    )
+    expect(done[0].done).toBe(true)
+    expect(done[0].progressLabel).toBe('Done this month')
+  })
+
   it('preserves activity order when some are completed', () => {
     const fresh = activity({
       id: 'fresh',
@@ -185,5 +238,61 @@ describe('buildTodayProgress', () => {
     expect(shouldShowDeadlineOnToday(taxes, true, '2026-08-11')).toBe(true)
     expect(shouldShowDeadlineOnToday(taxes, true, '2026-08-20')).toBe(true)
     expect(shouldShowDeadlineOnToday(taxes, true, '2026-08-21')).toBe(false)
+  })
+})
+
+describe('pickHeroRow', () => {
+  const walk = activity({ id: 'walk', name: 'Walk' })
+  const read = activity({
+    id: 'read',
+    name: 'Reading',
+    tracking_mode: 'timer',
+    target_value: 10,
+    target_unit: 'minutes',
+  })
+  const taxes = activity({
+    id: 'taxes',
+    name: 'Taxes',
+    type: 'deadline',
+    tracking_mode: 'checkbox',
+    deadline: '2026-08-01',
+  })
+
+  it('prefers a running timer', () => {
+    const rows = buildTodayProgress([walk, read], [], [], '2026-08-11')
+    expect(pickHeroRow(rows, 'read')?.activity.id).toBe('read')
+  })
+
+  it('prefers an overdue deadline over an open walk', () => {
+    const rows = buildTodayProgress([walk, taxes], [], [], '2026-08-11')
+    expect(pickHeroRow(rows, null)?.activity.id).toBe('taxes')
+  })
+
+  it('prefers a recently postponed activity', () => {
+    const rows = buildTodayProgress(
+      [walk, read],
+      [],
+      [entry({ activity_id: 'read', type: 'postponed', date: '2026-08-10' })],
+      '2026-08-11',
+    )
+    expect(pickHeroRow(rows, null)?.activity.id).toBe('read')
+    expect(rows.find((r) => r.activity.id === 'read')?.recentlyPostponed).toBe(true)
+  })
+})
+
+describe('partitionTodayRows', () => {
+  it('splits hero, also due, and done', () => {
+    const walk = activity({ id: 'walk', name: 'Walk' })
+    const read = activity({ id: 'read', name: 'Reading' })
+    const rows = buildTodayProgress(
+      [walk, read],
+      [entry({ activity_id: 'walk', date: '2026-08-11' })],
+      [],
+      '2026-08-11',
+    )
+    const parts = partitionTodayRows(rows, null)
+    expect(parts.hero?.activity.id).toBe('read')
+    expect(parts.done.map((r) => r.activity.id)).toEqual(['walk'])
+    expect(parts.alsoDue).toEqual([])
   })
 })

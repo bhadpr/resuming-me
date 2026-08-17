@@ -3,6 +3,7 @@ import {
   dailyTargetMet,
   isDeadlineOverdue,
   localDateInTimeZone,
+  monthlyTargetMet,
   planRollover,
   weeklyTargetMet,
 } from './rollover'
@@ -198,6 +199,28 @@ describe('planRollover', () => {
       lookbackDays: 7,
     })
     expect(plans.filter((p) => p.activityId === 'gym')).toEqual([])
+  })
+
+  it('plans postponed for an unmet closed month', () => {
+    const nowUtc = new Date('2026-08-17T15:00:00.000Z')
+    const bills = activity({
+      id: 'bills',
+      type: 'monthly',
+      tracking_mode: 'checkbox',
+      created_at: '2026-07-01T00:00:00Z',
+    })
+    expect(monthlyTargetMet(bills, [], '2026-07-01')).toBe(false)
+    const plans = planRollover({
+      userId: 'u1',
+      timezone: 'America/Los_Angeles',
+      nowUtc,
+      activities: [bills],
+      entries: [],
+      lookbackDays: 7,
+    })
+    expect(plans.some((p) => p.reason === 'monthly' && p.date === '2026-07-31')).toBe(
+      true,
+    )
   })
 })
 

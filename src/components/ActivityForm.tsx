@@ -58,6 +58,12 @@ export function ActivityForm({
           next.targetValue = null
           next.targetUnit = null
           next.weeklyTarget = null
+        } else if (type === 'monthly') {
+          next.trackingMode = 'checkbox'
+          next.targetValue = null
+          next.targetUnit = null
+          next.weeklyTarget = null
+          next.deadline = null
         } else if (type === 'weekly_n') {
           next.weeklyTarget = next.weeklyTarget ?? 2
           next.deadline = null
@@ -96,6 +102,7 @@ export function ActivityForm({
 
   const showTarget =
     input.type !== 'deadline' &&
+    input.type !== 'monthly' &&
     (input.trackingMode === 'timer' || input.trackingMode === 'count')
 
   return (
@@ -124,6 +131,7 @@ export function ActivityForm({
             [
               ['daily', 'Daily'],
               ['weekly_n', 'Weekly'],
+              ['monthly', 'Monthly'],
               ['deadline', 'Deadline'],
             ] as const
           ).map(([value, label]) => (
@@ -139,7 +147,7 @@ export function ActivityForm({
         </div>
       </fieldset>
 
-      {input.type !== 'deadline' && (
+      {input.type !== 'deadline' && input.type !== 'monthly' && (
         <fieldset className="field">
           <legend className="field-label">Tracking</legend>
           <div className="segmented">

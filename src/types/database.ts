@@ -1,4 +1,4 @@
-export type ActivityType = 'daily' | 'weekly_n' | 'deadline'
+export type ActivityType = 'daily' | 'weekly_n' | 'deadline' | 'monthly'
 export type TrackingMode = 'timer' | 'count' | 'checkbox'
 export type LogEntryType = 'session' | 'postponed' | 'completed'
 export type SessionSource = 'timer' | 'manual'

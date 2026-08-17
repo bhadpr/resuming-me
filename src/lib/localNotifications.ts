@@ -4,6 +4,7 @@ import {
   buildDigestNotifications,
   digestNotificationIds,
   loadDailyDigestPrefs,
+  saveDailyDigestPrefs,
   type DigestItem,
 } from './dailyDigest'
 
@@ -14,6 +15,24 @@ function nativePluginAvailable(): boolean {
   return (
     Capacitor.isNativePlatform() && Capacitor.isPluginAvailable('LocalNotifications')
   )
+}
+
+/** Turn the daily reminder on from Get started. No-ops permission on web. */
+export async function enableDailyDigestFromOnboarding(
+  hour: number,
+  minute: number,
+): Promise<void> {
+  saveDailyDigestPrefs({ enabled: true, hour, minute })
+  if (!nativePluginAvailable()) return
+
+  const granted = await requestDailyDigestPermission()
+  if (!granted) {
+    saveDailyDigestPrefs({ enabled: false, hour, minute })
+    throw new Error(
+      'Notifications are off for Resuming. You can turn them on in system settings.',
+    )
+  }
+  await requestExactAlarms()
 }
 
 export async function requestDailyDigestPermission(): Promise<boolean> {

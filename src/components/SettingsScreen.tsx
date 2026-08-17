@@ -4,7 +4,9 @@ import { useTheme } from '../hooks/useTheme'
 import { DEFAULT_THEME, type ThemeId } from '../lib/themes'
 import {
   digestScheduleHint,
+  formatTimeInput,
   loadDailyDigestPrefs,
+  parseTimeInput,
   saveDailyDigestPrefs,
   type DailyDigestPrefs,
   type DigestItem,
@@ -16,25 +18,11 @@ import {
   scheduleTestDigest,
 } from '../lib/localNotifications'
 
-const HOURS = Array.from({ length: 24 }, (_, hour) => hour)
-const MINUTES = Array.from({ length: 12 }, (_, i) => i * 5)
-
 interface SettingsScreenProps {
   onBack: () => void
   isAdmin?: boolean
   onOpenAnalytics?: () => void
   todayItems?: DigestItem[]
-}
-
-function hourLabel(hour: number): string {
-  const suffix = hour >= 12 ? 'PM' : 'AM'
-  const h = hour % 12 === 0 ? 12 : hour % 12
-  return `${h} ${suffix}`
-}
-
-function minuteOptions(current: number): number[] {
-  if (MINUTES.includes(current)) return MINUTES
-  return [...MINUTES, current].sort((a, b) => a - b)
 }
 
 export function SettingsScreen({
@@ -155,36 +143,17 @@ export function SettingsScreen({
               <span className="field-label" id="digest-time-label">
                 Time
               </span>
-              <div className="field-row" role="group" aria-labelledby="digest-time-label">
-                <select
-                  className="field-input field-grow"
-                  value={String(digest.hour)}
-                  aria-label="Hour"
-                  onChange={(event) =>
-                    void updateDigest({ hour: Number(event.target.value) })
-                  }
-                >
-                  {HOURS.map((hour) => (
-                    <option key={hour} value={String(hour)}>
-                      {hourLabel(hour)}
-                    </option>
-                  ))}
-                </select>
-                <select
-                  className="field-input field-grow"
-                  value={String(digest.minute)}
-                  aria-label="Minute"
-                  onChange={(event) =>
-                    void updateDigest({ minute: Number(event.target.value) })
-                  }
-                >
-                  {minuteOptions(digest.minute).map((minute) => (
-                    <option key={minute} value={String(minute)}>
-                      {String(minute).padStart(2, '0')}
-                    </option>
-                  ))}
-                </select>
-              </div>
+              <input
+                className="field-input time-input"
+                type="time"
+                value={formatTimeInput(digest.hour, digest.minute)}
+                aria-labelledby="digest-time-label"
+                onChange={(event) => {
+                  const parsed = parseTimeInput(event.target.value)
+                  if (!parsed) return
+                  void updateDigest(parsed)
+                }}
+              />
               <p className="digest-hint">
                 If everything due today is done before this time, you&apos;ll get nothing.
               </p>

@@ -3,7 +3,9 @@ import type { LogEntry } from './logs'
 import {
   addDays,
   daysBetween,
+  endOfMonth,
   endOfWeekSunday,
+  startOfMonth,
   startOfWeekMonday,
   todayLocalDate,
 } from './dates'
@@ -31,6 +33,8 @@ export interface ActivityTodayProgress {
   /** For deadline activities. */
   daysRemaining: number | null
   overdue: boolean
+  /** True when the previous day/week was logged postponed. */
+  recentlyPostponed: boolean
   /** Longer = more overdue-feeling; used for sorting. */
   postponementStreak: number
   /** Label for the progress row. */
@@ -43,6 +47,7 @@ function isDueOnToday(activity: Activity): boolean {
   if (activity.archived) return false
   if (activity.type === 'daily') return true
   if (activity.type === 'weekly_n') return true
+  if (activity.type === 'monthly') return true
   if (activity.type === 'deadline') {
     return true
   }
@@ -66,11 +71,15 @@ function periodWindow(
   if (activity.type === 'weekly_n') {
     return { from: startOfWeekMonday(today), to: endOfWeekSunday(today) }
   }
+  if (activity.type === 'monthly') {
+    return { from: startOfMonth(today), to: endOfMonth(today) }
+  }
   return { from: today, to: today }
 }
 
 function periodTarget(activity: Activity): number {
   if (activity.type === 'deadline') return 1
+  if (activity.type === 'monthly') return 1
   if (activity.tracking_mode === 'timer') {
     if (activity.type === 'weekly_n') return activity.weekly_target ?? 1
     return targetToSeconds(activity)
@@ -141,6 +150,21 @@ export function computePostponementStreak(
       if (!hit) break
       streak += 1
       cursor = addDays(weekStart, -1)
+    }
+    return streak
+  }
+
+  if (activity.type === 'monthly') {
+    let cursor = addDays(startOfMonth(today), -1)
+    while (streak < 24) {
+      const monthStart = startOfMonth(cursor)
+      const monthEnd = endOfMonth(cursor)
+      const hit = [...postponedDates].some(
+        (d) => d >= monthStart && d <= monthEnd,
+      )
+      if (!hit) break
+      streak += 1
+      cursor = addDays(monthStart, -1)
     }
     return streak
   }
@@ -240,6 +264,8 @@ export function buildTodayProgress(
       else progressLabel = `${daysRemaining}d left`
     } else if (activity.type === 'weekly_n') {
       progressLabel = `${current}/${target} this week`
+    } else if (activity.type === 'monthly') {
+      progressLabel = done ? 'Done this month' : 'Not yet this month'
     } else if (actionKind === 'checkbox') {
       progressLabel = done ? 'Done today' : 'Not yet'
     }
@@ -263,6 +289,7 @@ export function buildTodayProgress(
       done,
       daysRemaining,
       overdue,
+      recentlyPostponed: postponementStreak > 0,
       postponementStreak: sortKey,
       progressLabel,
       periodCompletedEntries,
@@ -271,4 +298,47 @@ export function buildTodayProgress(
 
   // Keep a stable order so starting or completing an activity does not reshuffle Today.
   return rows.filter((r) => shouldShowDeadlineOnToday(r.activity, r.done, today))
+}
+
+/**
+ * One next action for Today. Priority: live/paused timer, overdue deadline,
+ * recently postponed, then most-overdue-feeling open row.
+ */
+export function pickHeroRow(
+  rows: ActivityTodayProgress[],
+  timerActivityId: string | null,
+): ActivityTodayProgress | null {
+  if (timerActivityId) {
+    const live = rows.find((row) => row.activity.id === timerActivityId)
+    if (live) return live
+  }
+
+  const open = rows.filter((row) => !row.done)
+  if (open.length === 0) return null
+
+  const overdue = open.find((row) => row.overdue)
+  if (overdue) return overdue
+
+  const postponed = open
+    .filter((row) => row.recentlyPostponed)
+    .sort((a, b) => b.postponementStreak - a.postponementStreak)
+  if (postponed[0]) return postponed[0]
+
+  return [...open].sort((a, b) => b.postponementStreak - a.postponementStreak)[0]
+}
+
+export function partitionTodayRows(
+  rows: ActivityTodayProgress[],
+  timerActivityId: string | null,
+): {
+  hero: ActivityTodayProgress | null
+  alsoDue: ActivityTodayProgress[]
+  done: ActivityTodayProgress[]
+} {
+  const hero = pickHeroRow(rows, timerActivityId)
+  const done = rows.filter((row) => row.done && row.activity.id !== hero?.activity.id)
+  const alsoDue = rows.filter(
+    (row) => !row.done && row.activity.id !== hero?.activity.id,
+  )
+  return { hero, alsoDue, done }
 }

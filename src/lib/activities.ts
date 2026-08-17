@@ -62,9 +62,12 @@ function toInsertRow(userId: string, input: ActivityInput, effectiveFrom: string
     emoji: input.emoji.trim(),
     type: input.type,
     tracking_mode: input.trackingMode,
-    target_value: input.type === 'deadline' ? null : input.targetValue,
+    target_value:
+      input.type === 'deadline' || input.type === 'monthly' ? null : input.targetValue,
     target_unit:
-      input.type === 'deadline' || input.trackingMode === 'checkbox'
+      input.type === 'deadline' ||
+      input.type === 'monthly' ||
+      input.trackingMode === 'checkbox'
         ? null
         : input.targetUnit,
     target_effective_from: effectiveFrom,
@@ -152,9 +155,12 @@ export async function updateActivity(
     emoji: input.emoji.trim(),
     type: input.type,
     tracking_mode: input.trackingMode,
-    target_value: input.type === 'deadline' ? null : input.targetValue,
+    target_value:
+      input.type === 'deadline' || input.type === 'monthly' ? null : input.targetValue,
     target_unit:
-      input.type === 'deadline' || input.trackingMode === 'checkbox'
+      input.type === 'deadline' ||
+      input.type === 'monthly' ||
+      input.trackingMode === 'checkbox'
         ? null
         : input.targetUnit,
     weekly_target: input.type === 'weekly_n' ? input.weeklyTarget : null,
@@ -256,6 +262,7 @@ export function describeActivity(activity: Activity): string {
     }
     return `${activity.weekly_target}× / week`
   }
+  if (activity.type === 'monthly') return 'Once a month'
   // daily
   if (activity.tracking_mode === 'checkbox') return 'Daily'
   if (activity.tracking_mode === 'count') {

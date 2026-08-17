@@ -436,6 +436,7 @@ select.field-input {
 
 .segmented {
   display: flex;
+  flex-wrap: wrap;
   gap: 0.25rem;
   background: var(--color-surface);
   padding: 0.25rem;
@@ -758,7 +759,7 @@ select.field-input {
 }
 
 .site-footer {
-  margin-top: 1.5rem;
+  margin-top: auto;
   padding-top: 1.25rem;
   border-top: 1px solid var(--color-border);
   display: flex;
@@ -769,7 +770,8 @@ select.field-input {
 }
 
 .site-footer-compact {
-  margin-top: 2rem;
+  margin-top: auto;
+  padding-top: 1.5rem;
 }
 
 .site-footer-social {
@@ -1043,6 +1045,110 @@ select.field-input {
   margin-top: 0.5rem;
 }
 
+.onboarding-screen {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  text-align: center;
+  width: 100%;
+  flex: 1;
+}
+
+.onboarding-figure {
+  width: min(100%, 280px);
+  margin: 0 0 1.25rem;
+  border-radius: var(--radius);
+  overflow: hidden;
+  border: 1px solid var(--color-border);
+}
+
+.onboarding-figure img {
+  display: block;
+  width: 100%;
+  height: 140px;
+  object-fit: cover;
+}
+
+.onboarding-screen .screen-heading {
+  justify-content: center;
+  text-align: center;
+}
+
+.onboarding-screen .screen-heading > div {
+  width: 100%;
+}
+
+.onboarding-screen .template-list,
+.onboarding-screen .field,
+.onboarding-actions {
+  width: 100%;
+}
+
+.onboarding-kicker {
+  margin: 0 0 0.35rem;
+  font-size: 0.75rem;
+  letter-spacing: 0.04em;
+  text-transform: uppercase;
+  color: var(--color-text-muted);
+}
+
+.onboarding-chips {
+  display: flex;
+  flex-wrap: wrap;
+  justify-content: center;
+  gap: 0.5rem;
+  margin-bottom: 1.25rem;
+}
+
+.onboarding-chip {
+  min-height: var(--tap-min);
+  padding: 0.5rem 0.95rem;
+  border: 1px solid var(--color-border);
+  border-radius: 999px;
+  background: var(--color-surface);
+  color: var(--color-text);
+}
+
+.onboarding-chip:hover:not(:disabled) {
+  background: var(--color-surface-raised);
+}
+
+.onboarding-chip-selected {
+  border-color: var(--color-primary);
+  background: color-mix(in srgb, var(--color-primary) 12%, var(--color-surface));
+}
+
+.onboarding-chip:focus-visible {
+  outline: 2px solid var(--color-primary);
+  outline-offset: 2px;
+}
+
+.onboarding-hint {
+  margin: 0.75rem 0 0;
+  font-size: 0.875rem;
+  color: var(--color-text-muted);
+  line-height: 1.4;
+}
+
+.onboarding-added {
+  cursor: default;
+}
+
+.onboarding-screen .field-label {
+  text-align: left;
+}
+
+.onboarding-screen .field-input {
+  text-align: left;
+}
+
+.time-input {
+  width: 100%;
+  max-width: 11rem;
+  font-size: 1.25rem;
+  font-variant-numeric: tabular-nums;
+}
+
 .error {
   color: var(--color-danger);
   font-size: 0.875rem;
@@ -1105,7 +1211,14 @@ select.field-input {
 
 .app-main {
   flex: 1;
+  display: flex;
+  flex-direction: column;
+  min-height: 0;
   padding: 1.35rem 1rem 1.75rem;
+}
+
+.app:has(.onboarding-screen) {
+  padding-bottom: env(safe-area-inset-bottom, 0px);
 }
 
 .empty-state {
@@ -1303,6 +1416,52 @@ select.field-input {
 
 .today-row-overdue {
   border-color: color-mix(in srgb, var(--color-danger) 45%, transparent);
+}
+
+.today-row-hero {
+  border-color: color-mix(in srgb, var(--color-primary) 45%, var(--color-border));
+  background: color-mix(in srgb, var(--color-primary) 7%, var(--color-surface));
+  padding: 1.15rem 1.1rem;
+}
+
+.today-empty {
+  display: flex;
+  flex-direction: column;
+  gap: 0.75rem;
+  padding: 1.5rem 0.25rem 2rem;
+}
+
+.today-empty-title {
+  font-family: var(--font-display);
+  font-size: 1.25rem;
+  font-weight: 650;
+  color: var(--color-text);
+}
+
+.today-empty-copy {
+  color: var(--color-text-muted);
+  line-height: 1.45;
+}
+
+.today-empty .btn {
+  align-self: flex-start;
+}
+
+.today-done {
+  margin-bottom: 1.75rem;
+}
+
+.today-done-summary {
+  cursor: pointer;
+  list-style: none;
+}
+
+.today-done-summary::-webkit-details-marker {
+  display: none;
+}
+
+.today-checkin {
+  opacity: 0.92;
 }
 
 .today-status {

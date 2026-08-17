@@ -94,7 +94,13 @@ export function ActivityDetail({
           <dd>
             {activity.type === 'deadline'
               ? '—'
-              : `${stats.currentStreak} ${activity.type === 'weekly_n' ? 'wk' : 'day'}${stats.currentStreak === 1 ? '' : 's'}`}
+              : `${stats.currentStreak} ${
+                  activity.type === 'weekly_n'
+                    ? 'wk'
+                    : activity.type === 'monthly'
+                      ? 'mo'
+                      : 'day'
+                }${stats.currentStreak === 1 ? '' : 's'}`}
           </dd>
         </div>
         <div>

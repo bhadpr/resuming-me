@@ -9,6 +9,11 @@ export interface MetricInput {
   unit: string
 }
 
+export const STARTER_METRICS: MetricInput[] = [
+  { name: 'Weight', emoji: '⚖️', unit: 'lbs' },
+  { name: 'Sleep', emoji: '💤', unit: 'hrs' },
+]
+
 export function validateMetricInput(input: MetricInput): string | null {
   if (!input.name.trim()) return 'Name is required'
   if (!input.emoji.trim()) return 'Pick an emoji'

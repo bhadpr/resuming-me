@@ -2,7 +2,9 @@ import type { Activity } from './activities'
 import type { LogEntry } from './logs'
 import {
   addDays,
+  endOfMonth,
   endOfWeekSunday,
+  startOfMonth,
   startOfWeekMonday,
 } from './dates'
 import { sumSessionSeconds, targetToSeconds } from './timer'
@@ -114,11 +116,30 @@ export function weeklyTargetMet(
   return count >= target
 }
 
+/** Whether a monthly activity was completed in its calendar month. */
+export function monthlyTargetMet(
+  activity: Activity,
+  entries: LogEntry[],
+  monthStart: string,
+): boolean {
+  if (activity.type !== 'monthly' || activity.archived) return true
+
+  const monthEnd = endOfMonth(monthStart)
+  const count = entries.filter(
+    (e) =>
+      e.activity_id === activity.id &&
+      e.type === 'completed' &&
+      e.date >= monthStart &&
+      e.date <= monthEnd,
+  ).length
+  return count >= 1
+}
+
 export interface PostponementPlan {
   activityId: string
   userId: string
   date: string
-  reason: 'daily' | 'weekly'
+  reason: 'daily' | 'weekly' | 'monthly'
 }
 
 export interface RolloverPlanInput {
@@ -196,6 +217,30 @@ export function planRollover(input: RolloverPlanInput): PostponementPlan[] {
         reason: 'weekly',
       })
     }
+  }
+
+  // Monthly: roll calendar months that ended on or before yesterday.
+  let monthEnd = endOfMonth(addDays(startOfMonth(localToday), -1))
+  for (let m = 0; m < 2; m++) {
+    if (monthEnd > yesterday) {
+      monthEnd = endOfMonth(addDays(startOfMonth(monthEnd), -1))
+      continue
+    }
+    const monthStart = startOfMonth(monthEnd)
+    for (const activity of active) {
+      if (activity.type !== 'monthly') continue
+      const createdDay = activity.created_at.slice(0, 10)
+      if (monthEnd < createdDay) continue
+      if (hasPostponedEntry(entries, activity.id, monthEnd)) continue
+      if (monthlyTargetMet(activity, entries, monthStart)) continue
+      plans.push({
+        activityId: activity.id,
+        userId,
+        date: monthEnd,
+        reason: 'monthly',
+      })
+    }
+    monthEnd = endOfMonth(addDays(monthStart, -1))
   }
 
   return plans

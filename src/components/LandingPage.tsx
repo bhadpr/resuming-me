@@ -3,7 +3,7 @@ import { BrandTitle } from './BrandTitle'
 import { FeedbackPage } from './FeedbackPage'
 import { LegalPage } from './LegalPage'
 import { SiteFooter } from './SiteFooter'
-import type { SitePageId } from '../lib/site'
+import { sitePageFromPath, type SitePageId } from '../lib/site'
 import { trackPageView } from '../lib/analytics'
 
 interface LandingPageProps {
@@ -21,12 +21,28 @@ export function LandingPage({
 }: LandingPageProps) {
   const [error, setError] = useState<string | null>(null)
   const [signingIn, setSigningIn] = useState(false)
-  const [sitePage, setSitePage] = useState<SitePageId | null>(null)
+  const [sitePage, setSitePage] = useState<SitePageId | null>(() =>
+    sitePageFromPath(window.location.pathname),
+  )
 
   useEffect(() => {
     if (!sitePage) trackPageView('/', 'Landing')
     else trackPageView(`/${sitePage}`, sitePage)
   }, [sitePage])
+
+  useEffect(() => {
+    const onPopState = () => setSitePage(sitePageFromPath(window.location.pathname))
+    window.addEventListener('popstate', onPopState)
+    return () => window.removeEventListener('popstate', onPopState)
+  }, [])
+
+  function openSitePage(id: SitePageId | null) {
+    setSitePage(id)
+    const next = id ? `/${id}` : '/'
+    if (window.location.pathname !== next) {
+      window.history.pushState(null, '', next)
+    }
+  }
 
   async function handleSignIn() {
     setError(null)
@@ -45,7 +61,7 @@ export function LandingPage({
     return (
       <div className="landing landing-legal">
         <div className="landing-card landing-card-legal">
-          <FeedbackPage onBack={() => setSitePage(null)} />
+          <FeedbackPage onBack={() => openSitePage(null)} />
         </div>
       </div>
     )
@@ -55,7 +71,7 @@ export function LandingPage({
     return (
       <div className="landing landing-legal">
         <div className="landing-card landing-card-legal">
-          <LegalPage page={sitePage} onBack={() => setSitePage(null)} />
+          <LegalPage page={sitePage} onBack={() => openSitePage(null)} />
         </div>
       </div>
     )
@@ -70,7 +86,7 @@ export function LandingPage({
           <div className="notice notice-warning">
             <p>{configError ?? 'Supabase is not configured.'}</p>
           </div>
-          <SiteFooter onOpenPage={setSitePage} />
+          <SiteFooter onOpenPage={openSitePage} />
         </div>
       </div>
     )
@@ -130,7 +146,7 @@ export function LandingPage({
           {signingIn ? 'Redirecting…' : 'Continue with Google'}
         </button>
 
-        <SiteFooter onOpenPage={setSitePage} />
+        <SiteFooter onOpenPage={openSitePage} />
       </div>
     </div>
   )

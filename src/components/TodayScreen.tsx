@@ -1,5 +1,6 @@
-import { useEffect, useState, type FormEvent } from 'react'
+import { useEffect, useMemo, useState, type FormEvent } from 'react'
 import type { ActivityTodayProgress } from '../lib/today'
+import { partitionTodayRows } from '../lib/today'
 import type { Metric } from '../lib/metrics'
 import type { MetricEntry } from '../lib/metricEntries'
 import type { ActiveTimerState } from '../lib/timerStorage'
@@ -26,6 +27,7 @@ interface TodayScreenProps {
   onTimerStop: () => void
   onManualMinutes: (row: ActivityTodayProgress, minutes: number) => void
   onRescheduleDeadline: (row: ActivityTodayProgress, newDeadline: string) => void
+  onEmptySetup?: () => void
 }
 
 export function TodayScreen({
@@ -48,7 +50,15 @@ export function TodayScreen({
   onTimerStop,
   onManualMinutes,
   onRescheduleDeadline,
+  onEmptySetup,
 }: TodayScreenProps) {
+  const { hero, alsoDue, done } = useMemo(
+    () => partitionTodayRows(rows, activeTimer?.activityId ?? null),
+    [rows, activeTimer?.activityId],
+  )
+  const pendingMetrics = metrics.filter(({ entry }) => !entry)
+  const loggedMetrics = metrics.filter(({ entry }) => entry)
+
   return (
     <div className="today-screen">
       <div className="screen-heading">
@@ -67,17 +77,50 @@ export function TodayScreen({
 
       {loading ? (
         <p className="muted-center">Loading…</p>
+      ) : rows.length === 0 ? (
+        <div className="today-empty">
+          <p className="today-empty-title">Nothing to resume yet</p>
+          <p className="today-empty-copy">
+            What’s one thing you’ve been putting off? Set that up, then come back
+            here to start.
+          </p>
+          {onEmptySetup && (
+            <button type="button" className="btn btn-primary" onClick={onEmptySetup}>
+              Get started
+            </button>
+          )}
+        </div>
       ) : (
         <>
-          <section className="today-section">
-            <h3 className="section-label">Activities</h3>
-            {rows.length === 0 ? (
-              <p className="muted-center">
-                No active activities. Add some from the Activities tab.
-              </p>
-            ) : (
+          {hero && (
+            <section className="today-section">
+              <h3 className="section-label">{heroKicker(hero, activeTimer)}</h3>
               <ul className="today-list">
-                {rows.map((row) => (
+                <TodayActivityRow
+                  row={hero}
+                  hero
+                  busy={busyId === hero.activity.id}
+                  activeTimer={activeTimer}
+                  timerElapsedSeconds={timerElapsedSeconds}
+                  onCheckOff={() => onCheckOff(hero)}
+                  onUncheck={() => onUncheck(hero)}
+                  onIncrement={() => onIncrement(hero)}
+                  onTimerStart={() => onTimerStart(hero)}
+                  onTimerPause={onTimerPause}
+                  onTimerResume={onTimerResume}
+                  onTimerStop={onTimerStop}
+                  onManualMinutes={(minutes) => onManualMinutes(hero, minutes)}
+                  onRescheduleDeadline={(date) => onRescheduleDeadline(hero, date)}
+                />
+              </ul>
+            </section>
+          )}
+
+          {alsoDue.length > 0 && (
+            <section className="today-section">
+              <h3 className="section-label">Also due</h3>
+              <ul className="today-list">
+                {alsoDue.map((row) => (
                   <TodayActivityRow
                     key={row.activity.id}
                     row={row}
@@ -96,16 +139,42 @@ export function TodayScreen({
                   />
                 ))}
               </ul>
-            )}
-          </section>
+            </section>
+          )}
 
-          <section className="today-section">
-            <h3 className="section-label">Metrics</h3>
-            {metrics.length === 0 ? (
-              <p className="muted-center">No metrics yet. Add some from the Metrics tab.</p>
-            ) : (
+          {done.length > 0 && (
+            <details className="today-done">
+              <summary className="section-label today-done-summary">
+                Done today · {done.length}
+              </summary>
               <ul className="today-list">
-                {metrics.map(({ metric, entry }) => (
+                {done.map((row) => (
+                  <TodayActivityRow
+                    key={row.activity.id}
+                    row={row}
+                    busy={busyId === row.activity.id}
+                    activeTimer={activeTimer}
+                    timerElapsedSeconds={timerElapsedSeconds}
+                    onCheckOff={() => onCheckOff(row)}
+                    onUncheck={() => onUncheck(row)}
+                    onIncrement={() => onIncrement(row)}
+                    onTimerStart={() => onTimerStart(row)}
+                    onTimerPause={onTimerPause}
+                    onTimerResume={onTimerResume}
+                    onTimerStop={onTimerStop}
+                    onManualMinutes={(minutes) => onManualMinutes(row, minutes)}
+                    onRescheduleDeadline={(date) => onRescheduleDeadline(row, date)}
+                  />
+                ))}
+              </ul>
+            </details>
+          )}
+
+          {metrics.length > 0 && (
+            <section className="today-section today-checkin">
+              <h3 className="section-label">Check-in</h3>
+              <ul className="today-list">
+                {[...pendingMetrics, ...loggedMetrics].map(({ metric, entry }) => (
                   <li
                     key={metric.id}
                     className={`today-row ${entry ? 'today-row-done' : ''}`}
@@ -131,16 +200,27 @@ export function TodayScreen({
                   </li>
                 ))}
               </ul>
-            )}
-          </section>
+            </section>
+          )}
         </>
       )}
     </div>
   )
 }
 
+function heroKicker(
+  row: ActivityTodayProgress,
+  activeTimer: ActiveTimerState | null,
+): string {
+  if (activeTimer?.activityId === row.activity.id) return 'In progress'
+  if (row.overdue) return 'Needs a decision'
+  if (row.recentlyPostponed) return 'Resume now'
+  return 'On Today'
+}
+
 function TodayActivityRow({
   row,
+  hero = false,
   busy,
   activeTimer,
   timerElapsedSeconds,
@@ -155,6 +235,7 @@ function TodayActivityRow({
   onRescheduleDeadline,
 }: {
   row: ActivityTodayProgress
+  hero?: boolean
   busy: boolean
   activeTimer: ActiveTimerState | null
   timerElapsedSeconds: number
@@ -174,12 +255,26 @@ function TodayActivityRow({
   const timerPaused = isThisTimer && activeTimer?.status === 'paused'
   const partial =
     !done && !isThisTimer && current > 0 && actionKind !== 'deadline' && actionKind !== 'checkbox'
+  const postponeNote =
+    !done && row.recentlyPostponed
+      ? row.activity.type === 'weekly_n'
+        ? 'Put off last week'
+        : row.activity.type === 'monthly'
+          ? 'Put off last month'
+          : 'Put off yesterday'
+      : null
+  const desc = isThisTimer
+    ? `${progressLabel}${timerPaused ? ' · paused' : ' · running'}`
+    : postponeNote
+      ? `${progressLabel} · ${postponeNote}`
+      : progressLabel
+  const timerIdleLabel = postponeNote || partial ? 'Resume' : 'Start'
   const [showManual, setShowManual] = useState(false)
   const [manualMinutes, setManualMinutes] = useState('')
 
   if (row.activity.type === 'deadline' && row.overdue) {
     return (
-      <li className="today-row today-row-stack today-row-overdue">
+      <li className={`today-row today-row-stack today-row-overdue ${hero ? 'today-row-hero' : ''}`}>
         <DeadlineOverduePrompt
           activity={activity}
           busy={busy}
@@ -200,7 +295,7 @@ function TodayActivityRow({
 
   return (
     <li
-      className={`today-row today-row-stack ${rowStateClass} ${row.overdue ? 'today-row-overdue' : ''}`}
+      className={`today-row today-row-stack ${hero ? 'today-row-hero' : ''} ${rowStateClass} ${row.overdue ? 'today-row-overdue' : ''}`}
     >
       <div className="today-row-main">
         <StatusMark live={timerLive} paused={timerPaused} />
@@ -210,9 +305,7 @@ function TodayActivityRow({
         <span className="activity-meta">
           <span className="activity-name">{activity.name}</span>
           <span className="activity-desc">
-            {isThisTimer
-              ? `${progressLabel}${timerPaused ? ' · paused' : ' · running'}`
-              : progressLabel}
+            {desc}
             {partial ? ' · in progress' : ''}
             {done ? ' · done' : ''}
           </span>
@@ -272,7 +365,7 @@ function TodayActivityRow({
                     : 'Start timer'
               }
             >
-              {done ? 'Done' : 'Start'}
+              {done ? 'Done' : timerIdleLabel}
             </button>
           )}
           {actionKind === 'timer' && isThisTimer && activeTimer?.status === 'running' && (
