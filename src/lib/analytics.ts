@@ -30,7 +30,7 @@ const PATH_LABELS: Record<string, string> = {
   '/': 'Landing',
   '/app/today': 'Today',
   '/app/activities': 'Activities',
-  '/app/metrics': 'Metrics',
+  '/app/metrics': 'Numbers',
   '/app/insights': 'Insights',
   '/settings': 'Settings',
   '/analytics': 'Analytics',

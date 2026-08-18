@@ -101,8 +101,8 @@ export function LandingPage({
         <p className="tagline">Track what you postpone. Resume what matters.</p>
         {!native && (
           <p className="explainer">
-            Habit apps optimize one streak. Resuming shows avoidance across everything
-            you&apos;re putting off — so the pattern stops being invisible.
+            Most apps count one streak. Resuming shows everything you&apos;re putting
+            off.
           </p>
         )}
 

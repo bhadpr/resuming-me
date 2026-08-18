@@ -1,6 +1,6 @@
 import { useEffect, useMemo, useState, type FormEvent } from 'react'
 import type { ActivityTodayProgress } from '../lib/today'
-import { partitionTodayRows } from '../lib/today'
+import { partitionTodayRows, todayEmptyKind } from '../lib/today'
 import type { Metric } from '../lib/metrics'
 import type { MetricEntry } from '../lib/metricEntries'
 import type { ActiveTimerState } from '../lib/timerStorage'
@@ -27,6 +27,7 @@ interface TodayScreenProps {
   onTimerStop: () => void
   onManualMinutes: (row: ActivityTodayProgress, minutes: number) => void
   onRescheduleDeadline: (row: ActivityTodayProgress, newDeadline: string) => void
+  hasActivities?: boolean
   onEmptySetup?: () => void
 }
 
@@ -50,6 +51,7 @@ export function TodayScreen({
   onTimerStop,
   onManualMinutes,
   onRescheduleDeadline,
+  hasActivities = false,
   onEmptySetup,
 }: TodayScreenProps) {
   const { hero, alsoDue, done } = useMemo(
@@ -58,6 +60,10 @@ export function TodayScreen({
   )
   const pendingMetrics = metrics.filter(({ entry }) => !entry)
   const loggedMetrics = metrics.filter(({ entry }) => entry)
+  const emptyKind = todayEmptyKind({
+    hasActivities,
+    dueCount: rows.length,
+  })
 
   return (
     <div className="today-screen">
@@ -77,96 +83,111 @@ export function TodayScreen({
 
       {loading ? (
         <p className="muted-center">Loading…</p>
-      ) : rows.length === 0 ? (
-        <div className="today-empty">
-          <p className="today-empty-title">Today is waiting</p>
-          <p className="today-empty-copy">
-            Add one thing you’ve been putting off. It will show up here.
-          </p>
-          {onEmptySetup && (
-            <button type="button" className="btn btn-primary" onClick={onEmptySetup}>
-              Get started
-            </button>
-          )}
-        </div>
       ) : (
         <>
-          {hero && (
-            <section className="today-section">
-              <h3 className="section-label">{heroKicker(hero, activeTimer)}</h3>
-              <ul className="today-list">
-                <TodayActivityRow
-                  row={hero}
-                  hero
-                  busy={busyId === hero.activity.id}
-                  activeTimer={activeTimer}
-                  timerElapsedSeconds={timerElapsedSeconds}
-                  onCheckOff={() => onCheckOff(hero)}
-                  onUncheck={() => onUncheck(hero)}
-                  onIncrement={() => onIncrement(hero)}
-                  onTimerStart={() => onTimerStart(hero)}
-                  onTimerPause={onTimerPause}
-                  onTimerResume={onTimerResume}
-                  onTimerStop={onTimerStop}
-                  onManualMinutes={(minutes) => onManualMinutes(hero, minutes)}
-                  onRescheduleDeadline={(date) => onRescheduleDeadline(hero, date)}
-                />
-              </ul>
-            </section>
+          {emptyKind === 'setup' && (
+            <div className="today-empty">
+              <p className="today-empty-title">Today is waiting</p>
+              <p className="today-empty-copy">
+                Add one thing you’ve been putting off. It will show up here.
+              </p>
+              {onEmptySetup && (
+                <button type="button" className="btn btn-primary" onClick={onEmptySetup}>
+                  Get started
+                </button>
+              )}
+            </div>
           )}
 
-          {alsoDue.length > 0 && (
-            <section className="today-section">
-              <h3 className="section-label">Also on Today</h3>
-              <ul className="today-list">
-                {alsoDue.map((row) => (
-                  <TodayActivityRow
-                    key={row.activity.id}
-                    row={row}
-                    busy={busyId === row.activity.id}
-                    activeTimer={activeTimer}
-                    timerElapsedSeconds={timerElapsedSeconds}
-                    onCheckOff={() => onCheckOff(row)}
-                    onUncheck={() => onUncheck(row)}
-                    onIncrement={() => onIncrement(row)}
-                    onTimerStart={() => onTimerStart(row)}
-                    onTimerPause={onTimerPause}
-                    onTimerResume={onTimerResume}
-                    onTimerStop={onTimerStop}
-                    onManualMinutes={(minutes) => onManualMinutes(row, minutes)}
-                    onRescheduleDeadline={(date) => onRescheduleDeadline(row, date)}
-                  />
-                ))}
-              </ul>
-            </section>
+          {emptyKind === 'clear' && (
+            <div className="today-empty">
+              <p className="today-empty-title">Nothing due today</p>
+              <p className="today-empty-copy">
+                Weekly and monthly things will show up here when they’re open.
+              </p>
+            </div>
           )}
 
-          {done.length > 0 && (
-            <details className="today-done">
-              <summary className="section-label today-done-summary">
-                Done today · {done.length}
-              </summary>
-              <ul className="today-list">
-                {done.map((row) => (
-                  <TodayActivityRow
-                    key={row.activity.id}
-                    row={row}
-                    busy={busyId === row.activity.id}
-                    activeTimer={activeTimer}
-                    timerElapsedSeconds={timerElapsedSeconds}
-                    onCheckOff={() => onCheckOff(row)}
-                    onUncheck={() => onUncheck(row)}
-                    onIncrement={() => onIncrement(row)}
-                    onTimerStart={() => onTimerStart(row)}
-                    onTimerPause={onTimerPause}
-                    onTimerResume={onTimerResume}
-                    onTimerStop={onTimerStop}
-                    onManualMinutes={(minutes) => onManualMinutes(row, minutes)}
-                    onRescheduleDeadline={(date) => onRescheduleDeadline(row, date)}
-                  />
-                ))}
-              </ul>
-            </details>
+          {emptyKind === null && (
+            <>
+              {hero && (
+                <section className="today-section">
+                  <h3 className="section-label">{heroKicker(hero, activeTimer)}</h3>
+                  <ul className="today-list">
+                    <TodayActivityRow
+                      row={hero}
+                      hero
+                      busy={busyId === hero.activity.id}
+                      activeTimer={activeTimer}
+                      timerElapsedSeconds={timerElapsedSeconds}
+                      onCheckOff={() => onCheckOff(hero)}
+                      onUncheck={() => onUncheck(hero)}
+                      onIncrement={() => onIncrement(hero)}
+                      onTimerStart={() => onTimerStart(hero)}
+                      onTimerPause={onTimerPause}
+                      onTimerResume={onTimerResume}
+                      onTimerStop={onTimerStop}
+                      onManualMinutes={(minutes) => onManualMinutes(hero, minutes)}
+                      onRescheduleDeadline={(date) => onRescheduleDeadline(hero, date)}
+                    />
+                  </ul>
+                </section>
+              )}
+
+              {alsoDue.length > 0 && (
+                <section className="today-section">
+                  <h3 className="section-label">Also on Today</h3>
+                  <ul className="today-list">
+                    {alsoDue.map((row) => (
+                      <TodayActivityRow
+                        key={row.activity.id}
+                        row={row}
+                        busy={busyId === row.activity.id}
+                        activeTimer={activeTimer}
+                        timerElapsedSeconds={timerElapsedSeconds}
+                        onCheckOff={() => onCheckOff(row)}
+                        onUncheck={() => onUncheck(row)}
+                        onIncrement={() => onIncrement(row)}
+                        onTimerStart={() => onTimerStart(row)}
+                        onTimerPause={onTimerPause}
+                        onTimerResume={onTimerResume}
+                        onTimerStop={onTimerStop}
+                        onManualMinutes={(minutes) => onManualMinutes(row, minutes)}
+                        onRescheduleDeadline={(date) => onRescheduleDeadline(row, date)}
+                      />
+                    ))}
+                  </ul>
+                </section>
+              )}
+
+              {done.length > 0 && (
+                <details className="today-done">
+                  <summary className="section-label today-done-summary">
+                    Done today · {done.length}
+                  </summary>
+                  <ul className="today-list">
+                    {done.map((row) => (
+                      <TodayActivityRow
+                        key={row.activity.id}
+                        row={row}
+                        busy={busyId === row.activity.id}
+                        activeTimer={activeTimer}
+                        timerElapsedSeconds={timerElapsedSeconds}
+                        onCheckOff={() => onCheckOff(row)}
+                        onUncheck={() => onUncheck(row)}
+                        onIncrement={() => onIncrement(row)}
+                        onTimerStart={() => onTimerStart(row)}
+                        onTimerPause={onTimerPause}
+                        onTimerResume={onTimerResume}
+                        onTimerStop={onTimerStop}
+                        onManualMinutes={(minutes) => onManualMinutes(row, minutes)}
+                        onRescheduleDeadline={(date) => onRescheduleDeadline(row, date)}
+                      />
+                    ))}
+                  </ul>
+                </details>
+              )}
+            </>
           )}
 
           {metrics.length > 0 && (

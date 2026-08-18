@@ -218,12 +218,12 @@ export function InsightsScreen({
           </section>
 
           <section className="today-section">
-            <h3 className="section-label">Metrics</h3>
+            <h3 className="section-label">Numbers</h3>
             <p className="screen-sub insights-hint">
-              Tap a metric for its {window} trend.
+              Tap a number for its {window} trend.
             </p>
             {activeMetrics.length === 0 ? (
-              <p className="muted-center">Add a number from Metrics.</p>
+              <p className="muted-center">Add Weight or Sleep, or your own.</p>
             ) : (
               <ul className="insights-list">
                 {activeMetrics.map((m) => {

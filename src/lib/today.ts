@@ -327,6 +327,17 @@ export function pickHeroRow(
   return [...open].sort((a, b) => b.postponementStreak - a.postponementStreak)[0]
 }
 
+/** Empty Today: first-run setup vs already tracking but nothing due. */
+export type TodayEmptyKind = 'setup' | 'clear'
+
+export function todayEmptyKind(opts: {
+  hasActivities: boolean
+  dueCount: number
+}): TodayEmptyKind | null {
+  if (opts.dueCount > 0) return null
+  return opts.hasActivities ? 'clear' : 'setup'
+}
+
 export function partitionTodayRows(
   rows: ActivityTodayProgress[],
   timerActivityId: string | null,

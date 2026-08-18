@@ -162,7 +162,7 @@ export function AppShell() {
     try {
       setMetrics(await listMetrics(true))
     } catch (err) {
-      setError(err instanceof Error ? err.message : 'Failed to load metrics')
+      setError(err instanceof Error ? err.message : 'Failed to load numbers')
     } finally {
       setLoadingMetrics(false)
     }
@@ -308,7 +308,7 @@ export function AppShell() {
     }
     if (tab === 'today') trackPageView('/app/today', 'Today')
     else if (tab === 'activities') trackPageView('/app/activities', 'Activities')
-    else if (tab === 'metrics') trackPageView('/app/metrics', 'Metrics')
+    else if (tab === 'metrics') trackPageView('/app/metrics', 'Numbers')
     else if (tab === 'insights') trackPageView('/app/insights', 'Insights')
   }, [tab, settingsOpen, analyticsOpen, legalPage])
 
@@ -375,7 +375,7 @@ export function AppShell() {
       })
       .catch((err) => {
         if (!cancelled) {
-          setError(err instanceof Error ? err.message : 'Failed to load metric history')
+          setError(err instanceof Error ? err.message : 'Failed to load number history')
         }
       })
       .finally(() => {
@@ -476,7 +476,7 @@ export function AppShell() {
       const created = await createMetric(user.id, input)
       setMetrics((prev) => [created, ...prev])
     } catch (err) {
-      setError(err instanceof Error ? err.message : 'Could not add metric')
+      setError(err instanceof Error ? err.message : 'Could not add number')
     } finally {
       setSaving(false)
     }
@@ -566,7 +566,7 @@ export function AppShell() {
         return [...without, entry]
       })
     } catch (err) {
-      setError(err instanceof Error ? err.message : 'Could not log metric')
+      setError(err instanceof Error ? err.message : 'Could not log number')
     } finally {
       setBusyId(null)
     }
@@ -810,6 +810,7 @@ export function AppShell() {
                     onTimerStop={() => void handleTimerStop()}
                     onManualMinutes={handleManualMinutes}
                     onRescheduleDeadline={handleRescheduleDeadline}
+                    hasActivities={activeActivityCount > 0}
                     onEmptySetup={() => {
                       writeDismissedFlag(ONBOARDING_DISMISS_KEY, false)
                       setOnboardingDismissed(false)
@@ -1077,7 +1078,7 @@ export function AppShell() {
                   ← Back
                 </button>
                 <h2 className="form-title">
-                  {metricScreen.metric ? 'Edit metric' : 'Add metric'}
+                  {metricScreen.metric ? 'Edit number' : 'Add number'}
                 </h2>
                 <MetricForm
                   initial={metricScreen.metric ?? null}
@@ -1150,7 +1151,7 @@ export function AppShell() {
 
             {metricScreen.name === 'detail' && !selectedMetric && !loadingMetrics && (
               <section className="empty-state">
-                <p>Metric not found.</p>
+                <p>Number not found.</p>
                 <button
                   type="button"
                   className="btn btn-primary"

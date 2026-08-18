@@ -112,7 +112,7 @@ export function MetricDetail({
 
       <div className="detail-actions">
         <button type="button" className="btn btn-primary" onClick={onEdit} disabled={busy}>
-          Edit metric
+          Edit number
         </button>
 
         {metric.archived ? (

@@ -5,6 +5,7 @@ import {
   pickHeroRow,
   partitionTodayRows,
   shouldShowDeadlineOnToday,
+  todayEmptyKind,
 } from './today'
 import { startOfWeekMonday, endOfWeekSunday, daysBetween } from './dates'
 import type { Activity } from './activities'
@@ -277,6 +278,21 @@ describe('pickHeroRow', () => {
     )
     expect(pickHeroRow(rows, null)?.activity.id).toBe('read')
     expect(rows.find((r) => r.activity.id === 'read')?.recentlyPostponed).toBe(true)
+  })
+})
+
+describe('todayEmptyKind', () => {
+  it('asks to get started when there are no activities', () => {
+    expect(todayEmptyKind({ hasActivities: false, dueCount: 0 })).toBe('setup')
+  })
+
+  it('is a quiet clear day when activities exist but nothing is due', () => {
+    expect(todayEmptyKind({ hasActivities: true, dueCount: 0 })).toBe('clear')
+  })
+
+  it('is not empty when something is due', () => {
+    expect(todayEmptyKind({ hasActivities: true, dueCount: 2 })).toBeNull()
+    expect(todayEmptyKind({ hasActivities: false, dueCount: 1 })).toBeNull()
   })
 })
 

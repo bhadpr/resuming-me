@@ -51,7 +51,7 @@ function AboutContent() {
       <p>
         <strong>{PRODUCT_NAME}</strong> is a personal multi-activity tracker from{' '}
         {COMPANY_NAME}. It helps you notice what you keep postponing — across habits,
-        deadlines, and daily metrics — so avoidance stops being invisible.
+        deadlines, and daily numbers — so avoidance stops being invisible.
       </p>
       <p>
         Unlike streak-first habit apps, Resuming focuses on the pattern: what you skip,
@@ -94,7 +94,7 @@ function PrivacyContent() {
           provided), and a stable account identifier.
         </li>
         <li>
-          <strong>App content you create.</strong> Activities, metrics, log entries,
+          <strong>App content you create.</strong> Activities, numbers, log entries,
           timers, micro-steps, timezone preferences, and related settings you enter in
           the Service.
         </li>
@@ -313,7 +313,7 @@ function TermsContent() {
 
       <h3>Your content</h3>
       <p>
-        You retain ownership of the activities, metrics, logs, feedback, and other
+        You retain ownership of the activities, numbers, logs, feedback, and other
         content you submit (“Your Content”). You grant {COMPANY_NAME} a worldwide,
         non-exclusive, royalty-free license to host, store, process, transmit, and
         display Your Content solely as needed to operate, maintain, and improve the

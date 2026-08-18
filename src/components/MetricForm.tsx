@@ -80,7 +80,7 @@ export function MetricForm({
           value={input.emoji}
           onChange={(emoji) => setInput((prev) => ({ ...prev, emoji }))}
           options={METRIC_EMOJIS}
-          label="Metric emoji"
+          label="Number emoji"
         />
       </div>
 
@@ -112,7 +112,7 @@ export function MetricForm({
       </div>
 
       <p className="form-hint">
-        Metrics are numbers you log once a day from Today. No target.
+        A number you log once a day from Today. No target.
       </p>
 
       {error && <p className="error">{error}</p>}
@@ -122,7 +122,7 @@ export function MetricForm({
           Cancel
         </button>
         <button type="submit" className="btn btn-primary" disabled={saving}>
-          {saving ? 'Saving…' : initial ? 'Save changes' : 'Create metric'}
+          {saving ? 'Saving…' : initial ? 'Save changes' : 'Add number'}
         </button>
       </div>
     </form>

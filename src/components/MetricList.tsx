@@ -31,7 +31,7 @@ export function MetricList({
     <div className="activity-list-screen">
       <div className="screen-heading">
         <div>
-          <h2>Metrics</h2>
+          <h2>Numbers</h2>
           <p className="screen-sub">Daily numbers, once a day. Weight and Sleep, or your own.</p>
         </div>
         <button type="button" className="btn btn-primary btn-compact" onClick={onAdd}>
