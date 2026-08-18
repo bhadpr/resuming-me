@@ -1,4 +1,5 @@
 import { describeMetric, STARTER_METRICS, type Metric, type MetricInput } from '../lib/metrics'
+import { ArchivedFilter } from './ArchivedFilter'
 
 interface MetricListProps {
   metrics: Metric[]
@@ -20,6 +21,7 @@ export function MetricList({
   onQuickAdd,
 }: MetricListProps) {
   const visible = showArchived ? metrics : metrics.filter((m) => !m.archived)
+  const archivedCount = metrics.filter((m) => m.archived).length
   const existingNames = new Set(visible.map((m) => m.name.toLowerCase()))
   const starters = STARTER_METRICS.filter(
     (metric) => !existingNames.has(metric.name.toLowerCase()),
@@ -30,25 +32,26 @@ export function MetricList({
       <div className="screen-heading">
         <div>
           <h2>Metrics</h2>
-          <p className="screen-sub">Track daily numbers like weight or mood.</p>
+          <p className="screen-sub">Daily numbers, once a day. Weight and Sleep, or your own.</p>
         </div>
         <button type="button" className="btn btn-primary btn-compact" onClick={onAdd}>
           Add
         </button>
       </div>
 
-      <label className="toggle-row">
-        <input type="checkbox" checked={showArchived} onChange={onToggleArchived} />
-        <span>Show archived</span>
-      </label>
+      <ArchivedFilter
+        showArchived={showArchived}
+        archivedCount={archivedCount}
+        onToggle={onToggleArchived}
+      />
 
       {loading ? (
         <p className="muted-center">Loading…</p>
       ) : visible.length === 0 ? (
         <section className="empty-state">
           <p className="empty-state-emoji">⚖️</p>
-          <h2>No metrics yet</h2>
-          <p>Start with Weight or Sleep. You can add more later.</p>
+          <h2>A number a day</h2>
+          <p>No target. Start with Weight or Sleep, or add your own.</p>
           <div className="onboarding-chips">
             {starters.map((metric) => (
               <button

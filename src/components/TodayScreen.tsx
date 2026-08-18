@@ -79,10 +79,9 @@ export function TodayScreen({
         <p className="muted-center">Loading…</p>
       ) : rows.length === 0 ? (
         <div className="today-empty">
-          <p className="today-empty-title">Nothing to resume yet</p>
+          <p className="today-empty-title">Today is waiting</p>
           <p className="today-empty-copy">
-            What’s one thing you’ve been putting off? Set that up, then come back
-            here to start.
+            Add one thing you’ve been putting off. It will show up here.
           </p>
           {onEmptySetup && (
             <button type="button" className="btn btn-primary" onClick={onEmptySetup}>
@@ -118,7 +117,7 @@ export function TodayScreen({
 
           {alsoDue.length > 0 && (
             <section className="today-section">
-              <h3 className="section-label">Also due</h3>
+              <h3 className="section-label">Also on Today</h3>
               <ul className="today-list">
                 {alsoDue.map((row) => (
                   <TodayActivityRow
@@ -172,7 +171,7 @@ export function TodayScreen({
 
           {metrics.length > 0 && (
             <section className="today-section today-checkin">
-              <h3 className="section-label">Check-in</h3>
+              <h3 className="section-label">Numbers</h3>
               <ul className="today-list">
                 {[...pendingMetrics, ...loggedMetrics].map(({ metric, entry }) => (
                   <li
@@ -187,7 +186,7 @@ export function TodayScreen({
                       <span className="activity-desc">
                         {entry
                           ? `${entry.value} ${metric.unit} today`
-                          : `Log today's ${metric.unit}`}
+                          : `Today’s ${metric.unit}`}
                       </span>
                     </span>
                     <MetricValueForm

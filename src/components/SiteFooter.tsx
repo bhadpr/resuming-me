@@ -11,6 +11,8 @@ import {
 interface SiteFooterProps {
   onOpenPage: (id: SitePageId) => void
   compact?: boolean
+  /** Native welcome: Privacy only, no social or marketing cluster. */
+  privacyOnly?: boolean
 }
 
 const SOCIAL_ICONS: Record<SocialLinkId, ReactNode> = {
@@ -72,7 +74,27 @@ const SOCIAL_ICONS: Record<SocialLinkId, ReactNode> = {
   ),
 }
 
-export function SiteFooter({ onOpenPage, compact = false }: SiteFooterProps) {
+export function SiteFooter({
+  onOpenPage,
+  compact = false,
+  privacyOnly = false,
+}: SiteFooterProps) {
+  if (privacyOnly) {
+    return (
+      <footer className="site-footer site-footer-privacy">
+        <nav className="site-footer-nav" aria-label="Legal">
+          <button
+            type="button"
+            className="site-footer-link"
+            onClick={() => onOpenPage('privacy')}
+          >
+            Privacy
+          </button>
+        </nav>
+      </footer>
+    )
+  }
+
   return (
     <footer className={`site-footer ${compact ? 'site-footer-compact' : ''}`}>
       <nav className="site-footer-social" aria-label="Social media">

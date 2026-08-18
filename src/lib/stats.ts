@@ -256,7 +256,7 @@ export function describeLogEntry(entry: LogEntry): string {
   }
   if (entry.type === 'completed') return 'Completed'
   if (entry.type === 'postponed') {
-    return entry.note ? `Postponed — ${entry.note}` : 'Postponed'
+    return entry.note ? `Put off — ${entry.note}` : 'Put off'
   }
   return entry.type
 }

@@ -6,10 +6,16 @@ import {
   describeLogEntry,
   formatAvgSession,
 } from '../lib/stats'
+import {
+  buildActivityInsightSeriesForDays,
+  computeActivitySeriesStats,
+  type ActivityChartWindowDays,
+} from '../lib/insights'
 import { isDeadlineOverdue } from '../lib/rollover'
 import { todayLocalDate } from '../lib/dates'
 import { DeadlineOverduePrompt } from './DeadlineOverduePrompt'
 import { MicroStepsSection } from './MicroStepsSection'
+import { ActivityInsightChart } from './ActivityInsightChart'
 import type { MicroStep } from '../lib/microSteps'
 
 interface ActivityDetailProps {
@@ -52,13 +58,25 @@ export function ActivityDetail({
 }: ActivityDetailProps) {
   const [confirmDelete, setConfirmDelete] = useState(false)
   const [editingId, setEditingId] = useState<string | null>(null)
+  const [windowDays, setWindowDays] = useState<ActivityChartWindowDays>(30)
 
   const stats = useMemo(
     () => computeActivityStats(activity, entries),
     [activity, entries],
   )
 
+  const series = useMemo(
+    () => buildActivityInsightSeriesForDays(activity, entries, windowDays),
+    [activity, entries, windowDays],
+  )
+
+  const seriesStats = useMemo(
+    () => computeActivitySeriesStats(series, windowDays),
+    [series, windowDays],
+  )
+
   const overdue = isDeadlineOverdue(activity, entries, todayLocalDate())
+  const showChart = activity.type !== 'deadline'
 
   return (
     <div className="activity-detail">
@@ -88,29 +106,83 @@ export function ActivityDetail({
         <MicroStepsSection activity={activity} busy={busy} onBreakDown={onBreakDown} />
       )}
 
+      {showChart && (
+        <>
+          <div className="segmented window-toggle">
+            {([7, 30, 90] as const).map((days) => (
+              <button
+                key={days}
+                type="button"
+                className={`segmented-btn ${windowDays === days ? 'segmented-btn-active' : ''}`}
+                onClick={() => setWindowDays(days)}
+              >
+                {days}d
+              </button>
+            ))}
+          </div>
+
+          {loadingEntries ? (
+            <p className="muted-center">Loading trend…</p>
+          ) : (
+            <>
+              <ActivityInsightChart points={series} windowLabel={`${windowDays}-day`} />
+
+              <dl className="detail-facts">
+                <div>
+                  <dt>Done</dt>
+                  <dd>{seriesStats.done}</dd>
+                </div>
+                <div>
+                  <dt>Skipped</dt>
+                  <dd>{seriesStats.skipped}</dd>
+                </div>
+                <div>
+                  <dt>Open</dt>
+                  <dd>{seriesStats.open}</dd>
+                </div>
+                {seriesStats.min != null && (
+                  <>
+                    <div>
+                      <dt>Min</dt>
+                      <dd>{formatSeriesValue(seriesStats.min, seriesStats.unit)}</dd>
+                    </div>
+                    <div>
+                      <dt>Max</dt>
+                      <dd>{formatSeriesValue(seriesStats.max!, seriesStats.unit)}</dd>
+                    </div>
+                    <div>
+                      <dt>Avg</dt>
+                      <dd>{formatSeriesValue(seriesStats.avg!, seriesStats.unit)}</dd>
+                    </div>
+                  </>
+                )}
+              </dl>
+            </>
+          )}
+        </>
+      )}
+
       <dl className="detail-facts">
         <div>
-          <dt>Current streak</dt>
-          <dd>
-            {activity.type === 'deadline'
-              ? '—'
-              : `${stats.currentStreak} ${
-                  activity.type === 'weekly_n'
-                    ? 'wk'
-                    : activity.type === 'monthly'
-                      ? 'mo'
-                      : 'day'
-                }${stats.currentStreak === 1 ? '' : 's'}`}
-          </dd>
-        </div>
-        <div>
-          <dt>Postponed (30d)</dt>
+          <dt>Put off (30d)</dt>
           <dd>{stats.postponementsLast30}</dd>
         </div>
         <div>
-          <dt>Postponed (all)</dt>
+          <dt>Put off (all)</dt>
           <dd>{stats.postponementsAllTime}</dd>
         </div>
+        {activity.type !== 'deadline' && (
+          <div>
+            <dt>
+              {activity.type === 'weekly_n'
+                ? 'Weeks in a row'
+                : activity.type === 'monthly'
+                  ? 'Months in a row'
+                  : 'Days in a row'}
+            </dt>
+            <dd>{stats.currentStreak}</dd>
+          </div>
+        )}
         {activity.tracking_mode === 'timer' && (
           <div>
             <dt>Avg session</dt>
@@ -259,6 +331,14 @@ export function ActivityDetail({
       </div>
     </div>
   )
+}
+
+function formatSeriesValue(value: number, unit: string): string {
+  const n = Number.isInteger(value) ? value : Math.round(value * 10) / 10
+  if (unit === 'min') return `${n} min`
+  if (unit === '×') return `${n}×`
+  if (unit === 'done') return String(n)
+  return String(n)
 }
 
 function LogEntryEditor({

@@ -144,7 +144,7 @@ export function ActivityInsightChart({
       </svg>
       <div className="activity-insight-chart-caption">
         <span>
-          {met} met · {postponed} postponed · {points.length}{' '}
+          {met} done · {postponed} skipped · {points.length}{' '}
           {unit === '×' ? 'weeks' : 'days'}
           {showAverage ? ` · avg ${formatAvg(avg, unit)}${unit === '×' ? '/wk' : '/day'}` : ''}
           {showAverage && avgLogged != null && unit === 'min'
@@ -152,7 +152,7 @@ export function ActivityInsightChart({
             : ''}
         </span>
         <span className="activity-insight-legend">
-          <span className="legend-swatch legend-met" /> Met
+          <span className="legend-swatch legend-met" /> Done
           <span className="legend-swatch legend-postponed" /> Skipped
           <span className="legend-swatch legend-open" /> Open
         </span>
@@ -176,7 +176,7 @@ function formatAvg(value: number, unit: string): string {
 
 function tooltip(p: ActivitySeriesPoint): string {
   const status =
-    p.status === 'met' ? 'met' : p.status === 'postponed' ? 'postponed' : 'open'
+    p.status === 'met' ? 'done' : p.status === 'postponed' ? 'skipped' : 'open'
   if (p.unit === 'min') return `${p.date}: ${p.value} min (${status})`
   if (p.unit === '×') return `${p.date}: ${p.value}× (${status})`
   return `${p.date}: ${status}`

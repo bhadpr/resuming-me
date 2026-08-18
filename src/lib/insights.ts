@@ -7,6 +7,8 @@ import { sumSessionSeconds } from './timer'
 
 export type InsightsWindow = 'week' | 'month'
 
+export type ActivityChartWindowDays = 7 | 30 | 90
+
 export const INSIGHTS_WINDOW_DAYS: Record<InsightsWindow, number> = {
   week: 7,
   month: 30,
@@ -88,6 +90,38 @@ function dayLabel(date: string, window: InsightsWindow): string {
   return shortDateLabel(date)
 }
 
+export interface ActivitySeriesStats {
+  windowDays: ActivityChartWindowDays
+  done: number
+  skipped: number
+  open: number
+  min: number | null
+  max: number | null
+  avg: number | null
+  unit: string
+}
+
+export function computeActivitySeriesStats(
+  points: ActivitySeriesPoint[],
+  windowDays: ActivityChartWindowDays,
+): ActivitySeriesStats {
+  const done = points.filter((p) => p.status === 'met').length
+  const skipped = points.filter((p) => p.status === 'postponed').length
+  const open = points.filter((p) => p.status === 'open').length
+  const unit = points[0]?.unit ?? ''
+  const logged = points.filter((p) => p.value > 0).map((p) => p.value)
+
+  if (logged.length === 0) {
+    return { windowDays, done, skipped, open, min: null, max: null, avg: null, unit }
+  }
+
+  const min = Math.min(...logged)
+  const max = Math.max(...logged)
+  const avg = logged.reduce((a, b) => a + b, 0) / logged.length
+
+  return { windowDays, done, skipped, open, min, max, avg, unit }
+}
+
 /**
  * Day-by-day (or week-by-week for weekly_n) series for the Insights window chart.
  */
@@ -98,6 +132,30 @@ export function buildActivityInsightSeries(
   today = todayLocalDate(),
 ): ActivitySeriesPoint[] {
   const { from, to } = windowRange(window, today)
+  return buildActivityInsightSeriesInRange(activity, entries, from, to, window)
+}
+
+/** Activity detail chart — supports 7 / 30 / 90 day windows. */
+export function buildActivityInsightSeriesForDays(
+  activity: Activity,
+  entries: LogEntry[],
+  windowDays: ActivityChartWindowDays,
+  today = todayLocalDate(),
+): ActivitySeriesPoint[] {
+  if (activity.type === 'deadline') return []
+  const from = addDays(today, -(windowDays - 1))
+  const to = today
+  const labelWindow: InsightsWindow = windowDays === 7 ? 'week' : 'month'
+  return buildActivityInsightSeriesInRange(activity, entries, from, to, labelWindow)
+}
+
+function buildActivityInsightSeriesInRange(
+  activity: Activity,
+  entries: LogEntry[],
+  from: string,
+  to: string,
+  labelWindow: InsightsWindow,
+): ActivitySeriesPoint[] {
   const created = activity.created_at.slice(0, 10)
 
   if (activity.type === 'weekly_n') {
@@ -177,7 +235,7 @@ export function buildActivityInsightSeries(
     ).length
     return {
       key: date,
-      label: dayLabel(date, window),
+      label: dayLabel(date, labelWindow),
       date,
       status: postponed ? 'postponed' : met ? 'met' : 'open',
       value: isTimer ? minutes : completions,
@@ -347,7 +405,7 @@ function buildSummary(
 ): string {
   const period = window === 'week' ? 'this week' : 'this month'
   if (total === 0) {
-    return `No scheduled activities ${period} yet. Log a few days and Insights will fill in.`
+    return `No repeating activities ${period} yet. Log a few days and Insights will fill in.`
   }
 
   const top = mostPostponed
@@ -355,13 +413,13 @@ function buildSummary(
     .slice(0, 2)
     .map((a) => a.name)
 
-  let text = `You completed ${completed}/${total} scheduled activities ${period}.`
+  let text = `${completed} of ${total} done ${period}.`
   if (top.length === 1) {
-    text += ` ${top[0]} is your most-postponed item.`
+    text += ` ${top[0]} is the one you keep putting off.`
   } else if (top.length >= 2) {
-    text += ` ${top[0]} and ${top[1]} are your two most-postponed items.`
+    text += ` ${top[0]} and ${top[1]} are the ones you keep putting off.`
   } else {
-    text += ` No postponements logged in this window.`
+    text += ` Nothing put off in this window.`
   }
   return text
 }

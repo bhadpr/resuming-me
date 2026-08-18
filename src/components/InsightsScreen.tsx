@@ -95,19 +95,19 @@ export function InsightsScreen({
       <div className="screen-heading">
         <div>
           <h2>Insights</h2>
-          <p className="screen-sub">The shape of avoidance across everything.</p>
+          <p className="screen-sub">Where skips pile up.</p>
         </div>
       </div>
 
       {error && <p className="error">{error}</p>}
 
       {loading ? (
-        <p className="muted-center">Loading insights…</p>
+        <p className="muted-center">Loading…</p>
       ) : empty ? (
         <section className="empty-state">
           <p className="empty-state-emoji">📊</p>
-          <h2>No insights yet</h2>
-          <p>Add something to resume, or track a number like Weight or Sleep.</p>
+          <h2>Insights need a few days</h2>
+          <p>Add something you’ve been putting off, or log Weight or Sleep.</p>
           <div className="onboarding-chips">
             {STARTER_METRICS.map((metric) => (
               <button
@@ -121,11 +121,11 @@ export function InsightsScreen({
             ))}
           </div>
           <button type="button" className="btn btn-primary" onClick={onAddActivity}>
-            Add activity
+            Add something to resume
           </button>
         </section>
       ) : !insights ? (
-        <p className="muted-center">Loading insights…</p>
+        <p className="muted-center">Loading…</p>
       ) : (
         <>
           <div className="segmented window-toggle">
@@ -152,12 +152,12 @@ export function InsightsScreen({
           </section>
 
           <section className="today-section">
-            <h3 className="section-label">Postponement rate</h3>
+            <h3 className="section-label">Skipped</h3>
             <p className="screen-sub insights-hint">
               Tap an activity for its {window} chart.
             </p>
             {insights.activities.length === 0 ? (
-              <p className="muted-center">No active daily/weekly activities yet.</p>
+              <p className="muted-center">No repeating activities on Insights yet.</p>
             ) : (
               <ul className="insights-list">
                 {insights.activities.map((a) => {
@@ -185,8 +185,9 @@ export function InsightsScreen({
                         <span className="activity-meta">
                           <span className="activity-name">{a.name}</span>
                           <span className="activity-desc">
-                            {a.postponed} postponed · {a.met} met · {a.scheduled}{' '}
-                            scheduled
+                            {a.scheduled === 0
+                              ? 'Nothing scheduled yet'
+                              : `Skipped ${a.postponed} of ${a.scheduled} this ${window}`}
                           </span>
                           <div className="progress-bar" aria-hidden>
                             <div
@@ -222,7 +223,7 @@ export function InsightsScreen({
               Tap a metric for its {window} trend.
             </p>
             {activeMetrics.length === 0 ? (
-              <p className="muted-center">No metrics yet. Add one from the Metrics tab.</p>
+              <p className="muted-center">Add a number from Metrics.</p>
             ) : (
               <ul className="insights-list">
                 {activeMetrics.map((m) => {
@@ -303,11 +304,11 @@ export function InsightsScreen({
                     📅
                   </span>
                   <span className="activity-meta">
-                    <span className="activity-name">When you skip</span>
+                    <span className="activity-name">When you put things off</span>
                     <span className="activity-desc">
                       {insights.peakSkipDay
-                        ? `You postpone most often on ${insights.peakSkipDay.label}s (${insights.peakSkipDay.count} in this window).`
-                        : 'No postponements in this window yet.'}
+                        ? `${insights.peakSkipDay.label} shows up most (${insights.peakSkipDay.count} this ${window}).`
+                        : 'Nothing put off in this window yet.'}
                     </span>
                   </span>
                   <span className="insights-rate">

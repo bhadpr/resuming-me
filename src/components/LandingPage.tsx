@@ -1,4 +1,5 @@
 import { useEffect, useState } from 'react'
+import { Capacitor } from '@capacitor/core'
 import { BrandTitle } from './BrandTitle'
 import { FeedbackPage } from './FeedbackPage'
 import { LegalPage } from './LegalPage'
@@ -19,6 +20,7 @@ export function LandingPage({
   authError = null,
   onSignIn,
 }: LandingPageProps) {
+  const native = Capacitor.isNativePlatform()
   const [error, setError] = useState<string | null>(null)
   const [signingIn, setSigningIn] = useState(false)
   const [sitePage, setSitePage] = useState<SitePageId | null>(() =>
@@ -86,7 +88,7 @@ export function LandingPage({
           <div className="notice notice-warning">
             <p>{configError ?? 'Supabase is not configured.'}</p>
           </div>
-          <SiteFooter onOpenPage={openSitePage} />
+          <SiteFooter onOpenPage={openSitePage} privacyOnly={native} />
         </div>
       </div>
     )
@@ -97,10 +99,12 @@ export function LandingPage({
       <div className="landing-card">
         <BrandTitle size="lg" className="landing-brand" />
         <p className="tagline">Track what you postpone. Resume what matters.</p>
-        <p className="explainer">
-          Habit apps optimize one streak. Resuming shows avoidance across everything
-          you&apos;re putting off — so the pattern stops being invisible.
-        </p>
+        {!native && (
+          <p className="explainer">
+            Habit apps optimize one streak. Resuming shows avoidance across everything
+            you&apos;re putting off — so the pattern stops being invisible.
+          </p>
+        )}
 
         <figure className="landing-figure">
           <img
@@ -146,7 +150,7 @@ export function LandingPage({
           {signingIn ? 'Redirecting…' : 'Continue with Google'}
         </button>
 
-        <SiteFooter onOpenPage={openSitePage} />
+        <SiteFooter onOpenPage={openSitePage} privacyOnly={native} />
       </div>
     </div>
   )

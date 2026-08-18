@@ -411,12 +411,16 @@ export function OnboardingScreen({
                 ? `${added[0].name} is set up`
                 : `${added.length} things are set up`
             }
-            sub="Nothing is running. Add the next thing you’ve been putting off, or go to Today and start later."
+            sub={
+              added.length === 1
+                ? `${added[0].name} is on Today. Add another, or go there when you are ready.`
+                : `They’re on Today. Add another, or go there when you are ready.`
+            }
           />
           <ul className="template-list">
             {added.map((item, index) => (
               <li key={`${item.chipId}-${index}`}>
-                <div className="template-option template-option-selected onboarding-added">
+                <div className="template-option onboarding-added">
                   <span className="activity-emoji" aria-hidden>
                     {item.emoji}
                   </span>
@@ -429,7 +433,7 @@ export function OnboardingScreen({
             ))}
           </ul>
           {added.length < 3 && (
-            <p className="onboarding-hint">You can add more. Three is plenty for day one.</p>
+            <p className="onboarding-hint">You can add more later.</p>
           )}
           {error && <p className="error">{error}</p>}
           <Actions
@@ -449,7 +453,7 @@ export function OnboardingScreen({
           <Kicker text="Optional" />
           <Header
             title="Want a daily reminder?"
-            sub="One ping a day if something is still open. Silent if you’re done. Same reminder as Settings — not one alert per activity."
+            sub="One ping a day if something is still open. Silent if you’re done."
           />
           <label className="field">
             <span className="field-label">What time?</span>
@@ -791,9 +795,13 @@ function Choice({
         <span className="activity-name">{title}</span>
         {meta ? <span className="activity-desc">{meta}</span> : null}
       </span>
-      <span className="theme-check" aria-hidden>
-        {selected ? '●' : '○'}
-      </span>
+      {selected ? (
+        <span className="theme-check" aria-hidden>
+          ✓
+        </span>
+      ) : (
+        <span className="theme-check theme-check-empty" aria-hidden />
+      )}
     </button>
   )
 }

@@ -6,7 +6,7 @@
   --font-display: 'Fraunces', Georgia, serif;
   --font-mono: 'JetBrains Mono', ui-monospace, monospace;
   --font-body: 'Plus Jakarta Sans', system-ui, sans-serif;
-  --font-size-root: 17.5px;
+  --font-size-root: 16px;
   --heading-transform: none;
   --heading-weight: 600;
   --heading-tracking: -0.03em;
@@ -23,7 +23,7 @@
   --nav-label-weight-active: 800;
   --tagline-transform: none;
   --tagline-tracking: -0.01em;
-  --tagline-size: 1.125rem;
+  --tagline-size: 1rem;
   --tagline-weight: 500;
   --tagline-font: var(--font-display);
   --tagline-color: var(--color-text-body);
@@ -85,7 +85,7 @@
   --font-display: 'Rajdhani', system-ui, sans-serif;
   --font-mono: 'JetBrains Mono', ui-monospace, monospace;
   --font-body: 'Rajdhani', system-ui, sans-serif;
-  --font-size-root: 18.5px;
+  --font-size-root: 16px;
   --heading-transform: uppercase;
   --heading-weight: 700;
   --heading-tracking: 0.04em;
@@ -406,7 +406,7 @@
   --font-display: 'Outfit', system-ui, sans-serif;
   --font-mono: 'JetBrains Mono', ui-monospace, monospace;
   --font-body: 'Plus Jakarta Sans', system-ui, sans-serif;
-  --font-size-root: 17.5px;
+  --font-size-root: 16px;
   --heading-transform: none;
   --heading-weight: 700;
   --heading-tracking: -0.035em;
@@ -425,7 +425,7 @@
   --nav-active-glow: none;
   --tagline-transform: none;
   --tagline-tracking: -0.02em;
-  --tagline-size: 1.125rem;
+  --tagline-size: 1rem;
   --tagline-weight: 500;
   --tagline-font: var(--font-display);
   --tagline-color: var(--color-text-body);
@@ -537,7 +537,7 @@
   --font-display: 'Outfit', system-ui, sans-serif;
   --font-mono: 'JetBrains Mono', ui-monospace, monospace;
   --font-body: 'Outfit', system-ui, sans-serif;
-  --font-size-root: 17.5px;
+  --font-size-root: 16px;
   --heading-transform: none;
   --heading-weight: 700;
   --heading-tracking: -0.035em;
@@ -556,7 +556,7 @@
   --nav-active-glow: none;
   --tagline-transform: none;
   --tagline-tracking: -0.02em;
-  --tagline-size: 1.125rem;
+  --tagline-size: 1rem;
   --tagline-weight: 500;
   --tagline-font: var(--font-display);
   --tagline-color: var(--color-text-body);

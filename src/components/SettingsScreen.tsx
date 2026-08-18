@@ -23,6 +23,8 @@ interface SettingsScreenProps {
   isAdmin?: boolean
   onOpenAnalytics?: () => void
   todayItems?: DigestItem[]
+  onSignOut: () => void
+  onOpenPrivacy: () => void
 }
 
 export function SettingsScreen({
@@ -30,6 +32,8 @@ export function SettingsScreen({
   isAdmin = false,
   onOpenAnalytics,
   todayItems = [],
+  onSignOut,
+  onOpenPrivacy,
 }: SettingsScreenProps) {
   const { themeId, themes, setThemeId } = useTheme()
   const native = Capacitor.isNativePlatform()
@@ -103,13 +107,6 @@ export function SettingsScreen({
       <button type="button" className="btn btn-ghost btn-sm back-btn" onClick={onBack}>
         ← Back
       </button>
-
-      <div className="screen-heading">
-        <div>
-          <h2>Settings</h2>
-          <p className="screen-sub">Theme, and a daily reminder if you want one.</p>
-        </div>
-      </div>
 
       <section className="today-section">
         <h3 className="section-label">Reminders</h3>
@@ -213,9 +210,13 @@ export function SettingsScreen({
                     </span>
                     <span className="activity-desc">{theme.description}</span>
                   </span>
-                  <span className="theme-check" aria-hidden>
-                    {selected ? '●' : '○'}
-                  </span>
+                  {selected ? (
+                    <span className="theme-check" aria-hidden>
+                      ✓
+                    </span>
+                  ) : (
+                    <span className="theme-check theme-check-empty" aria-hidden />
+                  )}
                 </button>
               </li>
             )
@@ -241,6 +242,26 @@ export function SettingsScreen({
           </button>
         </section>
       )}
+
+      <section className="today-section">
+        <h3 className="section-label">Account</h3>
+        <button
+          type="button"
+          className="theme-option settings-nav-link"
+          onClick={onOpenPrivacy}
+        >
+          <span className="activity-meta">
+            <span className="activity-name">Privacy</span>
+            <span className="activity-desc">How Resuming uses your data</span>
+          </span>
+          <span className="activity-chevron" aria-hidden>
+            ›
+          </span>
+        </button>
+        <button type="button" className="btn btn-ghost settings-sign-out" onClick={() => void onSignOut()}>
+          Sign out
+        </button>
+      </section>
     </div>
   )
 }

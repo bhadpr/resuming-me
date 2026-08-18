@@ -57,7 +57,7 @@ export const THEMES: ThemeOption[] = [
   {
     id: 'sage',
     name: 'Sage',
-    description: 'Fresh green wellness palette for habits that want to feel alive.',
+    description: 'Sage green paper — calm, readable, and low-noise.',
     themeColor: '#eef8ec',
     colorScheme: 'light',
   },

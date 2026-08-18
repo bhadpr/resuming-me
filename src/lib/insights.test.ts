@@ -1,6 +1,8 @@
 import { describe, it, expect } from 'vitest'
 import {
   buildActivityInsightSeries,
+  buildActivityInsightSeriesForDays,
+  computeActivitySeriesStats,
   computeInsights,
   formatPercent,
 } from './insights'
@@ -81,8 +83,8 @@ describe('computeInsights', () => {
     expect(walkInsight.met).toBe(1)
     expect(walkInsight.postponementRate).toBeCloseTo(2 / 7)
 
-    expect(result.summary).toContain('this week')
-    expect(result.summary).toContain('Walk')
+    expect(result.summary).toContain('done this week')
+    expect(result.summary).toContain('Walk is the one you keep putting off')
   })
 
   it('builds day-of-week skip correlation', () => {
@@ -169,5 +171,72 @@ describe('computeInsights', () => {
     const month = buildActivityInsightSeries(reading, entries, 'month', '2026-08-11')
     expect(month).toHaveLength(11) // created Aug 1 → Aug 11
     expect(month[0]?.date).toBe('2026-08-01')
+  })
+
+  it('buildActivityInsightSeriesForDays supports 7 / 30 / 90 day windows', () => {
+    const reading = activity({
+      id: 'reading',
+      tracking_mode: 'timer',
+      created_at: '2026-07-01T00:00:00Z',
+    })
+    const entries = [
+      entry({
+        id: '1',
+        activity_id: 'reading',
+        type: 'session',
+        date: '2026-08-11',
+        duration_seconds: 600,
+      }),
+    ]
+
+    const week = buildActivityInsightSeriesForDays(reading, entries, 7, '2026-08-11')
+    expect(week).toHaveLength(7)
+
+    const month = buildActivityInsightSeriesForDays(reading, entries, 30, '2026-08-11')
+    expect(month.length).toBeGreaterThan(7)
+
+    const quarter = buildActivityInsightSeriesForDays(reading, entries, 90, '2026-08-11')
+    expect(quarter.length).toBeGreaterThan(month.length)
+  })
+
+  it('buildActivityInsightSeriesForDays returns empty for deadline activities', () => {
+    const task = activity({ type: 'deadline', deadline: '2026-08-15' })
+    expect(buildActivityInsightSeriesForDays(task, [], 30, '2026-08-11')).toEqual([])
+  })
+
+  it('computeActivitySeriesStats summarizes done/skipped/open and logged values', () => {
+    const points = [
+      {
+        key: 'a',
+        label: 'Mon',
+        date: '2026-08-09',
+        status: 'met' as const,
+        value: 10,
+        unit: 'min',
+      },
+      {
+        key: 'b',
+        label: 'Tue',
+        date: '2026-08-10',
+        status: 'postponed' as const,
+        value: 0,
+        unit: 'min',
+      },
+      {
+        key: 'c',
+        label: 'Wed',
+        date: '2026-08-11',
+        status: 'open' as const,
+        value: 20,
+        unit: 'min',
+      },
+    ]
+    const stats = computeActivitySeriesStats(points, 7)
+    expect(stats.done).toBe(1)
+    expect(stats.skipped).toBe(1)
+    expect(stats.open).toBe(1)
+    expect(stats.min).toBe(10)
+    expect(stats.max).toBe(20)
+    expect(stats.avg).toBe(15)
   })
 })

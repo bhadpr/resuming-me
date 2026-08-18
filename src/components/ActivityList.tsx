@@ -1,4 +1,5 @@
 import { describeActivity, type Activity } from '../lib/activities'
+import { ArchivedFilter } from './ArchivedFilter'
 
 interface ActivityListProps {
   activities: Activity[]
@@ -20,35 +21,33 @@ export function ActivityList({
   const visible = showArchived
     ? activities
     : activities.filter((a) => !a.archived)
+  const archivedCount = activities.filter((a) => a.archived).length
 
   return (
     <div className="activity-list-screen">
       <div className="screen-heading">
         <div>
           <h2>Activities</h2>
-          <p className="screen-sub">Create and manage what you want to resume.</p>
+          <p className="screen-sub">What you want to pick back up.</p>
         </div>
         <button type="button" className="btn btn-primary btn-compact" onClick={onAdd}>
           Add
         </button>
       </div>
 
-      <label className="toggle-row">
-        <input
-          type="checkbox"
-          checked={showArchived}
-          onChange={onToggleArchived}
-        />
-        <span>Show archived</span>
-      </label>
+      <ArchivedFilter
+        showArchived={showArchived}
+        archivedCount={archivedCount}
+        onToggle={onToggleArchived}
+      />
 
       {loading ? (
         <p className="muted-center">Loading…</p>
       ) : visible.length === 0 ? (
         <section className="empty-state">
           <p className="empty-state-emoji">📌</p>
-          <h2>No activities yet</h2>
-          <p>Add a daily habit, weekly goal, or deadline to get started.</p>
+          <h2>Nothing here yet</h2>
+          <p>Add a walk, a weekly practice, or a task with a due date.</p>
           <button type="button" className="btn btn-primary" onClick={onAdd}>
             Add activity
           </button>

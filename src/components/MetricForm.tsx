@@ -112,7 +112,7 @@ export function MetricForm({
       </div>
 
       <p className="form-hint">
-        Metrics are numbers you log once a day from Today — no targets or streaks.
+        Metrics are numbers you log once a day from Today. No target.
       </p>
 
       {error && <p className="error">{error}</p>}

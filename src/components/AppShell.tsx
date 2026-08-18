@@ -1,4 +1,5 @@
 import { useCallback, useEffect, useMemo, useState } from 'react'
+import { Capacitor } from '@capacitor/core'
 import { useAuth, useProfileSync } from '../hooks/useAuth'
 import { useDailyDigest } from '../hooks/useDailyDigest'
 import { useTimer } from '../hooks/useTimer'
@@ -17,6 +18,7 @@ import { InstallPrompt } from './InstallPrompt'
 import { BrandTitle } from './BrandTitle'
 import { LegalPage } from './LegalPage'
 import { FeedbackPage } from './FeedbackPage'
+import { BottomNav } from './BottomNav'
 import { SiteFooter } from './SiteFooter'
 import type { SitePageId } from '../lib/site'
 import { trackPageView } from '../lib/analytics'
@@ -98,6 +100,7 @@ type MetricScreen =
 
 export function AppShell() {
   const { user, signOut, isAdmin } = useAuth()
+  const native = Capacitor.isNativePlatform()
   useProfileSync(user)
 
   const [tab, setTab] = useState<Tab>('today')
@@ -723,8 +726,9 @@ export function AppShell() {
             aria-pressed={settingsOpen || analyticsOpen}
             onClick={() => {
               setError(null)
-              if (analyticsOpen) {
+              if (analyticsOpen || legalPage) {
                 setAnalyticsOpen(false)
+                setLegalPage(null)
                 setSettingsOpen(false)
                 return
               }
@@ -744,18 +748,11 @@ export function AppShell() {
               />
             </svg>
           </button>
-          <button
-            type="button"
-            className="btn btn-ghost btn-sm"
-            onClick={() => void signOut()}
-          >
-            Sign out
-          </button>
         </div>
       </header>
 
       <main className="app-main">
-        <InstallPrompt />
+        {!showOnboarding && <InstallPrompt />}
         {legalPage === 'feedback' ? (
           <FeedbackPage
             onBack={() => setLegalPage(null)}
@@ -765,12 +762,7 @@ export function AppShell() {
         ) : legalPage ? (
           <LegalPage page={legalPage} onBack={() => setLegalPage(null)} />
         ) : analyticsOpen ? (
-          <AnalyticsScreen
-            onBack={() => {
-              setAnalyticsOpen(false)
-              setSettingsOpen(true)
-            }}
-          />
+          <AnalyticsScreen />
         ) : (
           <>
             {settingsOpen ? (
@@ -780,11 +772,13 @@ export function AppShell() {
                   name: row.activity.name,
                   done: row.done,
                 }))}
+                onBack={() => setSettingsOpen(false)}
                 onOpenAnalytics={() => {
                   if (!isAdmin) return
                   setAnalyticsOpen(true)
                 }}
-                onBack={() => setSettingsOpen(false)}
+                onOpenPrivacy={() => setLegalPage('privacy')}
+                onSignOut={() => void signOut()}
               />
             ) : showOnboarding ? (
               <OnboardingScreen
@@ -1191,42 +1185,13 @@ export function AppShell() {
         )}
           </>
         )}
-        <SiteFooter onOpenPage={setLegalPage} compact />
+        {!native && !showOnboarding && <SiteFooter onOpenPage={setLegalPage} compact />}
           </>
         )}
       </main>
 
       {!settingsOpen && !analyticsOpen && !showOnboarding && !legalPage && (
-      <nav className="app-nav" aria-label="Main">
-        <button
-          type="button"
-          className={`nav-item ${tab === 'today' ? 'nav-item-active' : ''}`}
-          onClick={() => switchTab('today')}
-        >
-          Today
-        </button>
-        <button
-          type="button"
-          className={`nav-item ${tab === 'activities' ? 'nav-item-active' : ''}`}
-          onClick={() => switchTab('activities')}
-        >
-          Activities
-        </button>
-        <button
-          type="button"
-          className={`nav-item ${tab === 'metrics' ? 'nav-item-active' : ''}`}
-          onClick={() => switchTab('metrics')}
-        >
-          Metrics
-        </button>
-        <button
-          type="button"
-          className={`nav-item ${tab === 'insights' ? 'nav-item-active' : ''}`}
-          onClick={() => switchTab('insights')}
-        >
-          Insights
-        </button>
-      </nav>
+        <BottomNav tab={tab} onTabChange={switchTab} />
       )}
     </div>
   )

@@ -23,8 +23,8 @@ export function DeadlineOverduePrompt({
         {activity.emoji} {activity.name} is overdue
       </p>
       <p className="deadline-prompt-body">
-        Deadline was <strong>{activity.deadline}</strong>. Mark it complete if it got done, or
-        set a new deadline — it won&apos;t disappear on its own.
+        Still open{activity.deadline ? ` — due ${activity.deadline}` : ''}. Mark it
+        done, or pick a new date.
       </p>
 
       {!showReschedule ? (
@@ -35,7 +35,7 @@ export function DeadlineOverduePrompt({
             disabled={busy}
             onClick={onMarkComplete}
           >
-            Mark complete
+            Mark done
           </button>
           <button
             type="button"

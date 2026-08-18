@@ -7,11 +7,7 @@ import {
   type NamedCount,
 } from '../lib/analytics'
 
-interface AnalyticsScreenProps {
-  onBack: () => void
-}
-
-export function AnalyticsScreen({ onBack }: AnalyticsScreenProps) {
+export function AnalyticsScreen() {
   const [window, setWindow] = useState<AnalyticsWindow>('7d')
   const [summary, setSummary] = useState<AnalyticsSummary | null>(null)
   const [loading, setLoading] = useState(true)
@@ -41,16 +37,7 @@ export function AnalyticsScreen({ onBack }: AnalyticsScreenProps) {
 
   return (
     <div className="analytics-screen">
-      <button type="button" className="btn btn-ghost btn-sm back-btn" onClick={onBack}>
-        ← Back
-      </button>
-
-      <div className="screen-heading">
-        <div>
-          <h2>Analytics</h2>
-          <p className="screen-sub">First-party website traffic for Resuming.</p>
-        </div>
-      </div>
+      <p className="screen-sub settings-lead">First-party website traffic for Resuming.</p>
 
       <div className="segmented window-toggle">
         <button
