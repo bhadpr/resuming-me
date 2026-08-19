@@ -272,7 +272,7 @@ export function AppShell() {
 
   useDailyDigest(todayRows, !loadingActivities && !loadingToday, () => {
     setSettingsOpen(false)
-    setAnalyticsOpen(false)
+    setAdminPage(null)
     setLegalPage(null)
     setTab('today')
   })
