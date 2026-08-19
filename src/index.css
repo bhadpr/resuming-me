@@ -589,6 +589,16 @@ select.field-input {
   gap: 0.75rem;
 }
 
+.detail-archive {
+  display: flex;
+  flex-direction: column;
+  gap: 0.35rem;
+}
+
+.detail-archive .activity-desc {
+  padding-left: 0.1rem;
+}
+
 .confirm-delete {
   padding: 1rem;
   border-radius: var(--radius);
@@ -1543,6 +1553,29 @@ select.field-input {
   align-self: flex-start;
 }
 
+.today-welcome {
+  display: flex;
+  flex-direction: column;
+  gap: 0.4rem;
+  margin-bottom: 1.25rem;
+  padding: 0.95rem 1rem;
+  background: var(--color-surface);
+  border: 1px solid var(--color-border);
+  border-radius: var(--radius);
+}
+
+.today-welcome .today-empty-title {
+  font-size: 1.1rem;
+}
+
+.today-welcome-actions {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 0.5rem 0.75rem;
+  margin-top: 0.35rem;
+}
+
 .today-done {
   margin-bottom: 1.75rem;
 }
@@ -1927,6 +1960,16 @@ select.field-input {
   margin-bottom: 1.25rem;
   padding: 1rem 0;
   border-bottom: 1px solid var(--color-border);
+}
+
+.insights-quiet {
+  margin: 0 0 1rem;
+  padding: 0.85rem 1rem;
+  background: var(--color-surface);
+  border: 1px solid var(--color-border);
+  border-radius: var(--radius);
+  color: var(--color-text-body);
+  line-height: 1.45;
 }
 
 .insights-summary p:first-child {

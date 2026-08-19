@@ -274,23 +274,31 @@ export function ActivityDetail({
         </button>
 
         {activity.archived ? (
-          <button
-            type="button"
-            className="btn btn-secondary"
-            onClick={() => onUnarchive()}
-            disabled={busy}
-          >
-            Unarchive
-          </button>
+          <div className="detail-archive">
+            <button
+              type="button"
+              className="btn btn-secondary"
+              onClick={() => onUnarchive()}
+              disabled={busy}
+            >
+              Show on Today again
+            </button>
+            <p className="activity-desc">Hidden from Today. History was never lost.</p>
+          </div>
         ) : (
-          <button
-            type="button"
-            className="btn btn-secondary"
-            onClick={() => onArchive()}
-            disabled={busy}
-          >
-            Archive
-          </button>
+          <div className="detail-archive">
+            <button
+              type="button"
+              className="btn btn-secondary"
+              onClick={() => onArchive()}
+              disabled={busy}
+            >
+              Hide from Today
+            </button>
+            <p className="activity-desc">
+              Hide from Today. History stays. Delete is what removes it.
+            </p>
+          </div>
         )}
 
         {!confirmDelete ? (

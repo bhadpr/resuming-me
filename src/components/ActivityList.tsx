@@ -39,6 +39,7 @@ export function ActivityList({
         showArchived={showArchived}
         archivedCount={archivedCount}
         onToggle={onToggleArchived}
+        showLabel="Show hidden from Today"
       />
 
       {loading ? (
@@ -47,7 +48,7 @@ export function ActivityList({
         <section className="empty-state">
           <p className="empty-state-emoji">📌</p>
           <h2>Nothing here yet</h2>
-          <p>Add a walk, a weekly practice, or a task with a due date.</p>
+          <p>Not chores to clear. A walk, a weekly practice, or a due date you keep moving.</p>
           <button type="button" className="btn btn-primary" onClick={onAdd}>
             Add activity
           </button>

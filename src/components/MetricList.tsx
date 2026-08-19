@@ -43,6 +43,7 @@ export function MetricList({
         showArchived={showArchived}
         archivedCount={archivedCount}
         onToggle={onToggleArchived}
+        showLabel="Show hidden from Numbers"
       />
 
       {loading ? (

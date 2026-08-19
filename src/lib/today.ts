@@ -341,12 +341,23 @@ export function todayEmptyKind(opts: {
 export function partitionTodayRows(
   rows: ActivityTodayProgress[],
   timerActivityId: string | null,
+  preferredHeroId?: string | null,
 ): {
   hero: ActivityTodayProgress | null
   alsoDue: ActivityTodayProgress[]
   done: ActivityTodayProgress[]
 } {
-  const hero = pickHeroRow(rows, timerActivityId)
+  let hero: ActivityTodayProgress | null = null
+  if (timerActivityId) {
+    hero = rows.find((row) => row.activity.id === timerActivityId) ?? null
+  }
+  if (!hero && preferredHeroId) {
+    const preferred = rows.find(
+      (row) => row.activity.id === preferredHeroId && !row.done,
+    )
+    if (preferred) hero = preferred
+  }
+  if (!hero) hero = pickHeroRow(rows, timerActivityId)
   const done = rows.filter((row) => row.done && row.activity.id !== hero?.activity.id)
   const alsoDue = rows.filter(
     (row) => !row.done && row.activity.id !== hero?.activity.id,

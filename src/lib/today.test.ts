@@ -311,4 +311,19 @@ describe('partitionTodayRows', () => {
     expect(parts.done.map((r) => r.activity.id)).toEqual(['walk'])
     expect(parts.alsoDue).toEqual([])
   })
+
+  it('can prefer a suggested hero during re-entry', () => {
+    const walk = activity({ id: 'walk', name: 'Walk' })
+    const read = activity({
+      id: 'read',
+      name: 'Reading',
+      tracking_mode: 'timer',
+      target_value: 10,
+      target_unit: 'min',
+    })
+    const rows = buildTodayProgress([walk, read], [], [], '2026-08-11')
+    const parts = partitionTodayRows(rows, null, 'read')
+    expect(parts.hero?.activity.id).toBe('read')
+    expect(parts.alsoDue.map((r) => r.activity.id)).toEqual(['walk'])
+  })
 })

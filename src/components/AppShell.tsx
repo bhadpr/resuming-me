@@ -22,6 +22,7 @@ import { FeedbackPage } from './FeedbackPage'
 import { BottomNav } from './BottomNav'
 import { SiteFooter } from './SiteFooter'
 import type { SitePageId } from '../lib/site'
+import { isQuietReentry, applyEasyWins, addEasyWinId, removeEasyWinId, loadEasyWinIds, buildQuietInsightLine } from '../lib/reentry'
 import { trackPageView } from '../lib/analytics'
 import {
   archiveActivity,
@@ -126,6 +127,7 @@ export function AppShell() {
   const [loadingToday, setLoadingToday] = useState(true)
   const [saving, setSaving] = useState(false)
   const [busyId, setBusyId] = useState<string | null>(null)
+  const [easyWinVersion, setEasyWinVersion] = useState(0)
   const [error, setError] = useState<string | null>(null)
   const [offlineNotice, setOfflineNotice] = useState<string | null>(null)
   const [queueVersion, setQueueVersion] = useState(0)
@@ -265,17 +267,36 @@ export function AppShell() {
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [logEntries, queueVersion])
 
-  const todayRows = useMemo(
-    () => buildTodayProgress(activities, mergedLogEntries, postponedEntries, today),
-    [activities, mergedLogEntries, postponedEntries, today],
+  const todayRows = useMemo(() => {
+    const rows = buildTodayProgress(
+      activities,
+      mergedLogEntries,
+      postponedEntries,
+      today,
+    )
+    return applyEasyWins(rows, loadEasyWinIds(today))
+  }, [activities, mergedLogEntries, postponedEntries, today, easyWinVersion])
+
+  const quietSchedule = useMemo(
+    () => ({
+      activities,
+      entries: mergedLogEntries,
+      today,
+    }),
+    [activities, mergedLogEntries, today],
   )
 
-  useDailyDigest(todayRows, !loadingActivities && !loadingToday, () => {
-    setSettingsOpen(false)
-    setAdminPage(null)
-    setLegalPage(null)
-    setTab('today')
-  })
+  useDailyDigest(
+    todayRows,
+    !loadingActivities && !loadingToday,
+    () => {
+      setSettingsOpen(false)
+      setAdminPage(null)
+      setLegalPage(null)
+      setTab('today')
+    },
+    quietSchedule,
+  )
 
   const activeMetrics = useMemo(
     () => metrics.filter((m) => !m.archived),
@@ -532,6 +553,8 @@ export function AppShell() {
           ),
         )
       }
+      removeEasyWinId(today, row.activity.id)
+      setEasyWinVersion((v) => v + 1)
     } catch (err) {
       setError(err instanceof Error ? err.message : 'Could not undo')
     } finally {
@@ -620,7 +643,7 @@ export function AppShell() {
   }
 
   async function handleManualMinutes(row: ActivityTodayProgress, minutes: number) {
-    if (!user) return
+    if (!user) return false
     setBusyId(row.activity.id)
     setError(null)
     try {
@@ -640,11 +663,20 @@ export function AppShell() {
       if (queued) {
         setOfflineNotice('Saved offline. Will sync when you reconnect.')
       }
+      return true
     } catch (err) {
       setError(err instanceof Error ? err.message : 'Could not log minutes')
+      return false
     } finally {
       setBusyId(null)
     }
+  }
+
+  async function handleShrinkToday(row: ActivityTodayProgress, minutes: number) {
+    const saved = await handleManualMinutes(row, minutes)
+    if (!saved) return
+    addEasyWinId(today, row.activity.id)
+    setEasyWinVersion((v) => v + 1)
   }
 
   async function handleRescheduleDeadline(row: ActivityTodayProgress, newDeadline: string) {
@@ -824,8 +856,14 @@ export function AppShell() {
                     onTimerResume={timer.resume}
                     onTimerStop={() => void handleTimerStop()}
                     onManualMinutes={handleManualMinutes}
+                    onShrinkToday={handleShrinkToday}
                     onRescheduleDeadline={handleRescheduleDeadline}
                     hasActivities={activeActivityCount > 0}
+                    quietReentry={isQuietReentry({
+                      activities,
+                      entries: mergedLogEntries,
+                      today,
+                    })}
                     onEmptySetup={() => {
                       writeDismissedFlag(ONBOARDING_DISMISS_KEY, false)
                       setOnboardingDismissed(false)
@@ -926,8 +964,13 @@ export function AppShell() {
                   setSaving(true)
                   setError(null)
                   try {
+                    const removed = detailLogEntries.find((entry) => entry.id === entryId)
                     await deleteLogEntry(entryId)
                     setDetailLogEntries((prev) => prev.filter((e) => e.id !== entryId))
+                    if (removed?.date === today) {
+                      removeEasyWinId(today, selectedActivity.id)
+                      setEasyWinVersion((v) => v + 1)
+                    }
                     await refreshTodayData(activities)
                   } catch (err) {
                     setError(err instanceof Error ? err.message : 'Could not delete entry')
@@ -1197,6 +1240,12 @@ export function AppShell() {
               setActivityScreen({ name: 'form' })
             }}
             onAddMetric={(input) => void handleQuickAddMetric(input)}
+            quietLine={buildQuietInsightLine({
+              activities,
+              entries: mergedLogEntries,
+              today,
+              rows: todayRows,
+            })}
           />
         )}
           </>

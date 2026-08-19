@@ -35,6 +35,7 @@ interface InsightsScreenProps {
   error: string | null
   onAddActivity: () => void
   onAddMetric: (input: MetricInput) => void
+  quietLine?: string | null
 }
 
 export function InsightsScreen({
@@ -50,6 +51,7 @@ export function InsightsScreen({
   error,
   onAddActivity,
   onAddMetric,
+  quietLine = null,
 }: InsightsScreenProps) {
   const [openKeys, setOpenKeys] = useState<Set<string>>(() => new Set())
   const [didInitOpen, setDidInitOpen] = useState(false)
@@ -128,6 +130,9 @@ export function InsightsScreen({
         <p className="muted-center">Loading…</p>
       ) : (
         <>
+          {quietLine && (
+            <p className="insights-quiet">{quietLine}</p>
+          )}
           <div className="segmented window-toggle">
             <button
               type="button"

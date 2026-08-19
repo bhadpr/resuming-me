@@ -99,12 +99,11 @@ export function LandingPage({
       <div className="landing-card">
         <BrandTitle size="lg" className="landing-brand" />
         <p className="tagline">Track what you postpone. Resume what matters.</p>
-        {!native && (
-          <p className="explainer">
-            Micro habits are how change starts. Resuming helps you begin small and pick
-            things back up when you&apos;re ready.
-          </p>
-        )}
+        <p className="explainer">
+          Not a to-do list to empty. These are things that keep coming back.
+          Skip them, see the pattern, and pick one small thing up when a few
+          days go by.
+        </p>
 
         <figure className="landing-figure">
           <img
@@ -119,7 +118,7 @@ export function LandingPage({
 
         <div className="landing-diagram" aria-hidden>
           <div className="landing-diagram-row landing-diagram-skip">
-            <span>Gym</span>
+            <span>Meditation</span>
             <span className="landing-diagram-bar" />
             <span>skipped</span>
           </div>
@@ -133,7 +132,9 @@ export function LandingPage({
             <span className="landing-diagram-bar" />
             <span>done</span>
           </div>
-          <p className="landing-diagram-caption">Insights ties those skips together.</p>
+          <p className="landing-diagram-caption">
+            Skips are the point. Insights shows the pattern — not a list to finish.
+          </p>
         </div>
 
         {displayError && (

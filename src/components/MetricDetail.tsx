@@ -116,23 +116,31 @@ export function MetricDetail({
         </button>
 
         {metric.archived ? (
-          <button
-            type="button"
-            className="btn btn-secondary"
-            onClick={() => onUnarchive()}
-            disabled={busy}
-          >
-            Unarchive
-          </button>
+          <div className="detail-archive">
+            <button
+              type="button"
+              className="btn btn-secondary"
+              onClick={() => onUnarchive()}
+              disabled={busy}
+            >
+              Show on Numbers again
+            </button>
+            <p className="activity-desc">Hidden from Numbers. Logged values stay.</p>
+          </div>
         ) : (
-          <button
-            type="button"
-            className="btn btn-secondary"
-            onClick={() => onArchive()}
-            disabled={busy}
-          >
-            Archive
-          </button>
+          <div className="detail-archive">
+            <button
+              type="button"
+              className="btn btn-secondary"
+              onClick={() => onArchive()}
+              disabled={busy}
+            >
+              Hide from Numbers
+            </button>
+            <p className="activity-desc">
+              Hide from the list. Logged values stay. Delete is what removes them.
+            </p>
+          </div>
         )}
 
         {!confirmDelete ? (

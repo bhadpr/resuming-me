@@ -6,7 +6,11 @@ import {
   loadDailyDigestPrefs,
   saveDailyDigestPrefs,
   type DigestItem,
+  type DigestNotification,
 } from './dailyDigest'
+import { REENTRY_NOTIFICATION_ID, buildReentryNotification } from './reentry'
+import type { Activity } from './activities'
+import type { LogEntry } from './logs'
 
 const CHANNEL_ID = 'daily-digest'
 const TEST_NOTIFICATION_ID = 7199
@@ -87,17 +91,36 @@ async function ensureDigestChannel(): Promise<void> {
 
 async function cancelDigestNotifications(): Promise<void> {
   await LocalNotifications.cancel({
-    notifications: digestNotificationIds().map((id) => ({ id })),
+    notifications: [
+      ...digestNotificationIds().map((id) => ({ id })),
+      { id: REENTRY_NOTIFICATION_ID },
+    ],
   })
 }
 
-export async function syncDailyDigestSchedule(rows: DigestItem[]): Promise<void> {
+export interface QuietScheduleInput {
+  activities: Array<Pick<Activity, 'id' | 'archived' | 'created_at'>>
+  entries: Array<Pick<LogEntry, 'activity_id' | 'type' | 'date' | 'duration_seconds'>>
+  today: string
+}
+
+export async function syncDailyDigestSchedule(
+  rows: DigestItem[],
+  quiet?: QuietScheduleInput | null,
+): Promise<void> {
   if (!nativePluginAvailable()) return
 
   await cancelDigestNotifications()
 
   const prefs = loadDailyDigestPrefs()
-  const notifications = buildDigestNotifications(rows, prefs, new Date())
+  const now = new Date()
+  const notifications: DigestNotification[] = [
+    ...buildDigestNotifications(rows, prefs, now),
+  ]
+  const reentry = quiet
+    ? buildReentryNotification({ ...quiet, prefs, now })
+    : null
+  if (reentry) notifications.push(reentry)
   if (notifications.length === 0) return
 
   const permission = await LocalNotifications.checkPermissions()

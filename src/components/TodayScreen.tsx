@@ -1,6 +1,13 @@
 import { useEffect, useMemo, useState, type FormEvent } from 'react'
 import type { ActivityTodayProgress } from '../lib/today'
 import { partitionTodayRows, todayEmptyKind } from '../lib/today'
+import {
+  canShrinkToday,
+  pickEasiestReentryRow,
+  reentryPrimaryLabel,
+  reentrySuggestLine,
+  SMALLER_TODAY_MINUTES,
+} from '../lib/reentry'
 import type { Metric } from '../lib/metrics'
 import type { MetricEntry } from '../lib/metricEntries'
 import type { ActiveTimerState } from '../lib/timerStorage'
@@ -28,7 +35,9 @@ interface TodayScreenProps {
   onManualMinutes: (row: ActivityTodayProgress, minutes: number) => void
   onRescheduleDeadline: (row: ActivityTodayProgress, newDeadline: string) => void
   hasActivities?: boolean
+  quietReentry?: boolean
   onEmptySetup?: () => void
+  onShrinkToday?: (row: ActivityTodayProgress, minutes: number) => void
 }
 
 export function TodayScreen({
@@ -52,11 +61,19 @@ export function TodayScreen({
   onManualMinutes,
   onRescheduleDeadline,
   hasActivities = false,
+  quietReentry = false,
   onEmptySetup,
+  onShrinkToday,
 }: TodayScreenProps) {
+  const suggested = quietReentry ? pickEasiestReentryRow(rows) : null
   const { hero, alsoDue, done } = useMemo(
-    () => partitionTodayRows(rows, activeTimer?.activityId ?? null),
-    [rows, activeTimer?.activityId],
+    () =>
+      partitionTodayRows(
+        rows,
+        activeTimer?.activityId ?? null,
+        suggested?.activity.id ?? null,
+      ),
+    [rows, activeTimer?.activityId, suggested?.activity.id],
   )
   const pendingMetrics = metrics.filter(({ entry }) => !entry)
   const loggedMetrics = metrics.filter(({ entry }) => entry)
@@ -89,7 +106,7 @@ export function TodayScreen({
             <div className="today-empty">
               <p className="today-empty-title">Today is waiting</p>
               <p className="today-empty-copy">
-                Add one thing you’ve been putting off. It will show up here.
+                Add one thing you’ve been putting off. It isn’t a list to finish.
               </p>
               {onEmptySetup && (
                 <button type="button" className="btn btn-primary" onClick={onEmptySetup}>
@@ -99,7 +116,66 @@ export function TodayScreen({
             </div>
           )}
 
-          {emptyKind === 'clear' && (
+          {quietReentry && emptyKind !== 'setup' && (
+            <div className="today-welcome">
+              <p className="today-empty-title">It’s been a few days — that’s okay.</p>
+              {suggested && !suggested.done ? (
+                <>
+                  <p className="today-empty-copy">{reentrySuggestLine(suggested)}</p>
+                  <div className="today-welcome-actions">
+                    {suggested.actionKind === 'timer' &&
+                    activeTimer?.activityId === suggested.activity.id ? (
+                      <p className="today-empty-copy">
+                        Timer is running below. Stop it when you&apos;re finished.
+                      </p>
+                    ) : (
+                      <>
+                        <button
+                          type="button"
+                          className="btn btn-primary"
+                          disabled={busyId === suggested.activity.id}
+                          onPointerDown={(event) => {
+                            if (event.button !== 0) return
+                            event.preventDefault()
+                            runReentryPrimary(suggested, {
+                              onCheckOff,
+                              onIncrement,
+                              onTimerStart,
+                            })
+                          }}
+                          onClick={() =>
+                            runReentryPrimary(suggested, {
+                              onCheckOff,
+                              onIncrement,
+                              onTimerStart,
+                            })
+                          }
+                        >
+                          {reentryPrimaryLabel(suggested)}
+                        </button>
+                        {canShrinkToday(suggested) && onShrinkToday && (
+                          <button
+                            type="button"
+                            className="btn btn-ghost"
+                            disabled={busyId === suggested.activity.id}
+                            onClick={() =>
+                              onShrinkToday(suggested, SMALLER_TODAY_MINUTES)
+                            }
+                          >
+                            Make it even smaller today
+                          </button>
+                        )}
+                      </>
+                    )}
+                  </div>
+                </>
+              ) : (
+                <p className="today-empty-copy">Want to pick one small thing today?</p>
+              )}
+            </div>
+          )}
+
+          {emptyKind === 'clear' && !quietReentry && (
             <div className="today-empty">
               <p className="today-empty-title">Nothing due today</p>
               <p className="today-empty-copy">
@@ -112,7 +188,11 @@ export function TodayScreen({
             <>
               {hero && (
                 <section className="today-section">
-                  <h3 className="section-label">{heroKicker(hero, activeTimer)}</h3>
+                  <h3 className="section-label">
+                    {quietReentry && suggested?.activity.id === hero.activity.id
+                      ? 'Start here'
+                      : heroKicker(hero, activeTimer)}
+                  </h3>
                   <ul className="today-list">
                     <TodayActivityRow
                       row={hero}
@@ -226,6 +306,22 @@ export function TodayScreen({
       )}
     </div>
   )
+}
+
+function runReentryPrimary(
+  row: ActivityTodayProgress,
+  actions: {
+    onCheckOff: (row: ActivityTodayProgress) => void
+    onIncrement: (row: ActivityTodayProgress) => void
+    onTimerStart: (row: ActivityTodayProgress) => void
+  },
+): void {
+  if (row.actionKind === 'timer' || row.activity.tracking_mode === 'timer') {
+    actions.onTimerStart(row)
+    return
+  }
+  if (row.actionKind === 'count') actions.onIncrement(row)
+  else actions.onCheckOff(row)
 }
 
 function heroKicker(

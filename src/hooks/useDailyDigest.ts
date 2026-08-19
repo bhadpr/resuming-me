@@ -4,6 +4,7 @@ import { DAILY_DIGEST_CHANGED } from '../lib/dailyDigest'
 import {
   listenForDigestNotificationTap,
   syncDailyDigestSchedule,
+  type QuietScheduleInput,
 } from '../lib/localNotifications'
 import type { ActivityTodayProgress } from '../lib/today'
 
@@ -11,6 +12,7 @@ export function useDailyDigest(
   rows: ActivityTodayProgress[],
   ready: boolean,
   onOpenToday?: () => void,
+  quiet?: QuietScheduleInput | null,
 ): void {
   const onOpenTodayRef = useRef(onOpenToday)
   onOpenTodayRef.current = onOpenToday
@@ -21,18 +23,20 @@ export function useDailyDigest(
   )
   const digestItemsRef = useRef(digestItems)
   digestItemsRef.current = digestItems
+  const quietRef = useRef(quiet)
+  quietRef.current = quiet
   const readyRef = useRef(ready)
   readyRef.current = ready
 
   useEffect(() => {
     if (!ready) return
-    void syncDailyDigestSchedule(digestItems).catch(() => {})
-  }, [ready, digestItems])
+    void syncDailyDigestSchedule(digestItems, quiet).catch(() => {})
+  }, [ready, digestItems, quiet])
 
   useEffect(() => {
     function reschedule() {
       if (!readyRef.current) return
-      void syncDailyDigestSchedule(digestItemsRef.current).catch(() => {})
+      void syncDailyDigestSchedule(digestItemsRef.current, quietRef.current).catch(() => {})
     }
 
     window.addEventListener(DAILY_DIGEST_CHANGED, reschedule)
