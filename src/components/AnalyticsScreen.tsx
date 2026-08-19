@@ -1,16 +1,21 @@
 import { useEffect, useState } from 'react'
 import {
   fetchPageViewsForAnalytics,
+  fetchSignedInEmails,
+  formatSignInTime,
   summarizePageViews,
   type AnalyticsSummary,
   type AnalyticsWindow,
   type NamedCount,
+  type SignedInAccount,
 } from '../lib/analytics'
 
 export function AnalyticsScreen() {
   const [window, setWindow] = useState<AnalyticsWindow>('7d')
   const [summary, setSummary] = useState<AnalyticsSummary | null>(null)
+  const [accounts, setAccounts] = useState<SignedInAccount[]>([])
   const [loading, setLoading] = useState(true)
+  const [accountsError, setAccountsError] = useState<string | null>(null)
   const [error, setError] = useState<string | null>(null)
 
   useEffect(() => {
@@ -34,6 +39,26 @@ export function AnalyticsScreen() {
       mounted = false
     }
   }, [window])
+
+  useEffect(() => {
+    let mounted = true
+    setAccountsError(null)
+    fetchSignedInEmails()
+      .then((rows) => {
+        if (!mounted) return
+        setAccounts(rows)
+      })
+      .catch((err) => {
+        if (!mounted) return
+        setAccounts([])
+        setAccountsError(
+          err instanceof Error ? err.message : 'Could not load signed-in emails',
+        )
+      })
+    return () => {
+      mounted = false
+    }
+  }, [])
 
   return (
     <div className="analytics-screen">
@@ -110,6 +135,38 @@ export function AnalyticsScreen() {
           </section>
         </>
       )}
+
+      <section className="today-section">
+        <h3 className="section-label">Signed-in Google accounts</h3>
+        <p className="screen-sub insights-hint">
+          {accounts.length === 0
+            ? 'Emails from Google sign-in.'
+            : `${accounts.length} account${accounts.length === 1 ? '' : 's'}`}
+        </p>
+        {accountsError ? (
+          <p className="error">{accountsError}</p>
+        ) : accounts.length === 0 ? (
+          <p className="muted-center">No Google sign-ins yet.</p>
+        ) : (
+          <ul className="analytics-rank-list">
+            {accounts.map((account) => (
+              <li key={account.email} className="analytics-rank-row">
+                <div className="analytics-rank-meta">
+                  <span className="activity-name analytics-email">{account.email}</span>
+                  <span className="insights-rate">
+                    {formatSignInTime(account.lastSignInAt)}
+                  </span>
+                </div>
+                <p className="analytics-account-counts">
+                  {formatCount(account.activityCount, 'activity', 'activities')}
+                  {' · '}
+                  {formatCount(account.metricCount, 'number', 'numbers')}
+                </p>
+              </li>
+            ))}
+          </ul>
+        )}
+      </section>
     </div>
   )
 }
@@ -164,4 +221,8 @@ function barHeight(count: number, all: number[]): number {
 
 function formatInt(n: number): string {
   return new Intl.NumberFormat().format(n)
+}
+
+function formatCount(n: number, one: string, many: string): string {
+  return `${formatInt(n)} ${n === 1 ? one : many}`
 }

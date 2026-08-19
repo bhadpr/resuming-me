@@ -22,6 +22,7 @@ interface SettingsScreenProps {
   onBack: () => void
   isAdmin?: boolean
   onOpenAnalytics?: () => void
+  onOpenFeedback?: () => void
   todayItems?: DigestItem[]
   onSignOut: () => void
   onOpenPrivacy: () => void
@@ -31,6 +32,7 @@ export function SettingsScreen({
   onBack,
   isAdmin = false,
   onOpenAnalytics,
+  onOpenFeedback,
   todayItems = [],
   onSignOut,
   onOpenPrivacy,
@@ -224,24 +226,41 @@ export function SettingsScreen({
         </ul>
       </section>
 
-      {isAdmin && onOpenAnalytics && (
+      {(isAdmin && onOpenAnalytics) || (isAdmin && onOpenFeedback) ? (
         <section className="today-section">
           <h3 className="section-label">Admin</h3>
-          <button
-            type="button"
-            className="theme-option settings-nav-link"
-            onClick={onOpenAnalytics}
-          >
-            <span className="activity-meta">
-              <span className="activity-name">Analytics</span>
-              <span className="activity-desc">Website traffic and page views</span>
-            </span>
-            <span className="activity-chevron" aria-hidden>
-              ›
-            </span>
-          </button>
+          {onOpenAnalytics && (
+            <button
+              type="button"
+              className="theme-option settings-nav-link"
+              onClick={onOpenAnalytics}
+            >
+              <span className="activity-meta">
+                <span className="activity-name">Analytics</span>
+                <span className="activity-desc">Website traffic and page views</span>
+              </span>
+              <span className="activity-chevron" aria-hidden>
+                ›
+              </span>
+            </button>
+          )}
+          {onOpenFeedback && (
+            <button
+              type="button"
+              className="theme-option settings-nav-link"
+              onClick={onOpenFeedback}
+            >
+              <span className="activity-meta">
+                <span className="activity-name">Feedback</span>
+                <span className="activity-desc">Ratings and comments people sent</span>
+              </span>
+              <span className="activity-chevron" aria-hidden>
+                ›
+              </span>
+            </button>
+          )}
         </section>
-      )}
+      ) : null}
 
       <section className="today-section">
         <h3 className="section-label">Account</h3>
@@ -258,7 +277,7 @@ export function SettingsScreen({
             ›
           </span>
         </button>
-        <button type="button" className="btn btn-ghost settings-sign-out" onClick={() => void onSignOut()}>
+        <button type="button" className="btn btn-primary btn-lg settings-sign-out" onClick={() => void onSignOut()}>
           Sign out
         </button>
       </section>

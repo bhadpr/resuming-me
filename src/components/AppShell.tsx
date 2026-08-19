@@ -13,6 +13,7 @@ import { TodayScreen } from './TodayScreen'
 import { InsightsScreen } from './InsightsScreen'
 import { SettingsScreen } from './SettingsScreen'
 import { AnalyticsScreen } from './AnalyticsScreen'
+import { AdminFeedbackScreen } from './AdminFeedbackScreen'
 import { OnboardingScreen } from './OnboardingScreen'
 import { InstallPrompt } from './InstallPrompt'
 import { BrandTitle } from './BrandTitle'
@@ -98,6 +99,8 @@ type MetricScreen =
   | { name: 'form'; metric?: Metric }
   | { name: 'detail'; metricId: string }
 
+type AdminPage = 'analytics' | 'feedback'
+
 export function AppShell() {
   const { user, signOut, isAdmin } = useAuth()
   const native = Capacitor.isNativePlatform()
@@ -105,7 +108,7 @@ export function AppShell() {
 
   const [tab, setTab] = useState<Tab>('today')
   const [settingsOpen, setSettingsOpen] = useState(false)
-  const [analyticsOpen, setAnalyticsOpen] = useState(false)
+  const [adminPage, setAdminPage] = useState<AdminPage | null>(null)
   const [legalPage, setLegalPage] = useState<SitePageId | null>(null)
   const [activityScreen, setActivityScreen] = useState<ActivityScreen>({ name: 'list' })
   const [metricScreen, setMetricScreen] = useState<MetricScreen>({ name: 'list' })
@@ -289,13 +292,17 @@ export function AppShell() {
   function switchTab(next: Tab) {
     setError(null)
     setSettingsOpen(false)
-    setAnalyticsOpen(false)
+    setAdminPage(null)
     setTab(next)
   }
 
   useEffect(() => {
-    if (analyticsOpen) {
+    if (adminPage === 'analytics') {
       trackPageView('/analytics', 'Analytics')
+      return
+    }
+    if (adminPage === 'feedback') {
+      trackPageView('/admin/feedback', 'Admin feedback')
       return
     }
     if (settingsOpen) {
@@ -310,7 +317,7 @@ export function AppShell() {
     else if (tab === 'activities') trackPageView('/app/activities', 'Activities')
     else if (tab === 'metrics') trackPageView('/app/metrics', 'Numbers')
     else if (tab === 'insights') trackPageView('/app/insights', 'Insights')
-  }, [tab, settingsOpen, analyticsOpen, legalPage])
+  }, [tab, settingsOpen, adminPage, legalPage])
 
   const selectedActivity =
     activityScreen.name === 'detail' || activityScreen.name === 'form'
@@ -711,8 +718,10 @@ export function AppShell() {
   return (
     <div className="app">
       <header className="app-header">
-        {analyticsOpen ? (
+        {adminPage === 'analytics' ? (
           <h1 className="app-title">Analytics</h1>
+        ) : adminPage === 'feedback' ? (
+          <h1 className="app-title">Feedback</h1>
         ) : settingsOpen ? (
           <h1 className="app-title">Settings</h1>
         ) : (
@@ -721,13 +730,13 @@ export function AppShell() {
         <div className="app-header-actions">
           <button
             type="button"
-            className={`icon-btn ${settingsOpen || analyticsOpen ? 'icon-btn-active' : ''}`}
-            aria-label={settingsOpen || analyticsOpen ? 'Close settings' : 'Open settings'}
-            aria-pressed={settingsOpen || analyticsOpen}
+            className={`icon-btn ${settingsOpen || adminPage ? 'icon-btn-active' : ''}`}
+            aria-label={settingsOpen || adminPage ? 'Close settings' : 'Open settings'}
+            aria-pressed={Boolean(settingsOpen || adminPage)}
             onClick={() => {
               setError(null)
-              if (analyticsOpen || legalPage) {
-                setAnalyticsOpen(false)
+              if (adminPage || legalPage) {
+                setAdminPage(null)
                 setLegalPage(null)
                 setSettingsOpen(false)
                 return
@@ -761,8 +770,10 @@ export function AppShell() {
           />
         ) : legalPage ? (
           <LegalPage page={legalPage} onBack={() => setLegalPage(null)} />
-        ) : analyticsOpen ? (
+        ) : adminPage === 'analytics' ? (
           <AnalyticsScreen />
+        ) : adminPage === 'feedback' ? (
+          <AdminFeedbackScreen />
         ) : (
           <>
             {settingsOpen ? (
@@ -775,7 +786,11 @@ export function AppShell() {
                 onBack={() => setSettingsOpen(false)}
                 onOpenAnalytics={() => {
                   if (!isAdmin) return
-                  setAnalyticsOpen(true)
+                  setAdminPage('analytics')
+                }}
+                onOpenFeedback={() => {
+                  if (!isAdmin) return
+                  setAdminPage('feedback')
                 }}
                 onOpenPrivacy={() => setLegalPage('privacy')}
                 onSignOut={() => void signOut()}
@@ -1191,7 +1206,7 @@ export function AppShell() {
         )}
       </main>
 
-      {!settingsOpen && !analyticsOpen && !showOnboarding && !legalPage && (
+      {!settingsOpen && !adminPage && !showOnboarding && !legalPage && (
         <BottomNav tab={tab} onTabChange={switchTab} />
       )}
     </div>

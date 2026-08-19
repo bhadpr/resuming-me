@@ -101,8 +101,8 @@ export function LandingPage({
         <p className="tagline">Track what you postpone. Resume what matters.</p>
         {!native && (
           <p className="explainer">
-            Most apps count one streak. Resuming shows everything you&apos;re putting
-            off.
+            Micro habits are how change starts. Resuming helps you begin small and pick
+            things back up when you&apos;re ready.
           </p>
         )}
 

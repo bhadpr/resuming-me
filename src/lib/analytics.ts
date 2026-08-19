@@ -21,6 +21,7 @@ export type AppAnalyticsPath =
   | '/app/insights'
   | '/settings'
   | '/analytics'
+  | '/admin/feedback'
   | '/about'
   | '/privacy'
   | '/terms'
@@ -34,6 +35,7 @@ const PATH_LABELS: Record<string, string> = {
   '/app/insights': 'Insights',
   '/settings': 'Settings',
   '/analytics': 'Analytics',
+  '/admin/feedback': 'Admin feedback',
   '/about': 'About',
   '/privacy': 'Privacy',
   '/terms': 'Terms',
@@ -271,6 +273,55 @@ export async function fetchPageViewsForAnalytics(
 
   if (error) throw error
   return data ?? []
+}
+
+export interface SignedInAccount {
+  email: string
+  lastSignInAt: string | null
+  createdAt: string
+  activityCount: number
+  metricCount: number
+}
+
+function asCount(value: number | string | null | undefined): number {
+  const n = typeof value === 'string' ? Number(value) : value
+  return Number.isFinite(n) ? Math.max(0, Math.trunc(n as number)) : 0
+}
+
+export async function fetchSignedInEmails(): Promise<SignedInAccount[]> {
+  const client = createSupabaseClient()
+  const { data, error } = await client.rpc('list_signed_in_emails')
+  if (error) {
+    if (error.code === '42883' || /list_signed_in_emails/i.test(error.message)) {
+      throw new Error(
+        'Apply supabase/migrations/20260818190000_signed_in_account_counts.sql in the Supabase SQL Editor.',
+      )
+    }
+    throw error
+  }
+
+  return (data ?? [])
+    .filter((row) => Boolean(row.email?.trim()))
+    .map((row) => ({
+      email: row.email.trim(),
+      lastSignInAt: row.last_sign_in_at,
+      createdAt: row.created_at,
+      activityCount: asCount(row.activity_count),
+      metricCount: asCount(row.metric_count),
+    }))
+}
+
+export function formatSignInTime(iso: string | null): string {
+  if (!iso) return 'Never signed in'
+  const d = new Date(iso)
+  if (Number.isNaN(d.getTime())) return 'Unknown'
+  return d.toLocaleString(undefined, {
+    month: 'short',
+    day: 'numeric',
+    year: 'numeric',
+    hour: 'numeric',
+    minute: '2-digit',
+  })
 }
 
 export async function fetchIsAdmin(userId: string): Promise<boolean> {

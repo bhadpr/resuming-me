@@ -1,4 +1,4 @@
-import { summarizePageViews } from './analytics'
+import { formatSignInTime, summarizePageViews } from './analytics'
 import { describe, expect, it } from 'vitest'
 
 describe('summarizePageViews', () => {
@@ -40,5 +40,16 @@ describe('summarizePageViews', () => {
     expect(summary.devices.some((d) => d.key === 'Mobile' && d.count === 2)).toBe(true)
     expect(summary.browsers.some((b) => b.key === 'Chrome')).toBe(true)
     expect(summary.topReferrers.some((r) => r.key === 'google.com')).toBe(true)
+  })
+})
+
+describe('formatSignInTime', () => {
+  it('labels missing timestamps', () => {
+    expect(formatSignInTime(null)).toBe('Never signed in')
+    expect(formatSignInTime('not-a-date')).toBe('Unknown')
+  })
+
+  it('formats a real timestamp', () => {
+    expect(formatSignInTime('2026-08-18T17:00:00.000Z')).toMatch(/Aug/)
   })
 })

@@ -3,13 +3,9 @@ import { syncNativeChrome } from './nativeChrome'
 export type ThemeId =
   | 'resuming'
   | 'nocturne'
-  | 'modernist'
-  | 'broadsheet'
-  | 'sage'
   | 'slate'
   | 'dawn'
   | 'fresh'
-  | 'pulse'
   | 'vault'
 
 export interface ThemeOption {
@@ -21,7 +17,7 @@ export interface ThemeOption {
   colorScheme: 'dark' | 'light'
 }
 
-export const DEFAULT_THEME: ThemeId = 'resuming'
+export const DEFAULT_THEME: ThemeId = 'dawn'
 
 export const THEME_STORAGE_KEY = 'resuming-theme'
 
@@ -39,27 +35,6 @@ export const THEMES: ThemeOption[] = [
     description: 'Near-black machine UI — neon yellow signals, mono labels, sharp edges.',
     themeColor: '#07070b',
     colorScheme: 'dark',
-  },
-  {
-    id: 'modernist',
-    name: 'Modernist',
-    description: 'Claude warm cream with vivid coral CTAs and soft peach light.',
-    themeColor: '#fff8f0',
-    colorScheme: 'light',
-  },
-  {
-    id: 'broadsheet',
-    name: 'Broadsheet',
-    description: 'Newsprint calm with bold masthead red — hairlines and serif decks.',
-    themeColor: '#fffcf7',
-    colorScheme: 'light',
-  },
-  {
-    id: 'sage',
-    name: 'Sage',
-    description: 'Sage green paper — calm, readable, and low-noise.',
-    themeColor: '#eef8ec',
-    colorScheme: 'light',
   },
   {
     id: 'slate',
@@ -83,13 +58,6 @@ export const THEMES: ThemeOption[] = [
     colorScheme: 'light',
   },
   {
-    id: 'pulse',
-    name: 'Pulse',
-    description: 'Soft lavender task-app look — calm cards and violet CTAs.',
-    themeColor: '#f3f0ff',
-    colorScheme: 'light',
-  },
-  {
     id: 'vault',
     name: 'Vault',
     description: 'Near-black vault UI with lime signals — bold, readable, high-contrast.',
@@ -106,10 +74,18 @@ export function getTheme(id: ThemeId): ThemeOption {
   return THEMES.find((t) => t.id === id) ?? THEMES[0]
 }
 
+const RETIRED_THEMES: Record<string, ThemeId> = {
+  modernist: 'dawn',
+  broadsheet: 'dawn',
+  sage: 'dawn',
+  pulse: 'dawn',
+}
+
 export function readStoredTheme(): ThemeId {
   try {
     const raw = localStorage.getItem(THEME_STORAGE_KEY)
     if (raw === 'pixloo') return 'fresh'
+    if (raw && raw in RETIRED_THEMES) return RETIRED_THEMES[raw]
     if (isThemeId(raw)) return raw
   } catch {
     /* ignore */

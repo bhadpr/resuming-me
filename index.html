@@ -1,34 +1,36 @@
 <!doctype html>
-<html lang="en" data-theme="resuming">
+<html lang="en" data-theme="dawn">
   <head>
     <meta charset="UTF-8" />
     <link rel="icon" type="image/svg+xml" href="/favicon.svg" />
     <link rel="apple-touch-icon" href="/logo.svg" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover" />
-    <meta name="theme-color" content="#faf6f0" />
+    <meta name="theme-color" content="#fff4e8" />
     <meta name="description" content="Track what you postpone. Resume what matters." />
     <script>
       (() => {
         try {
           const stored = localStorage.getItem('resuming-theme')
-          const allowed = ['resuming', 'nocturne', 'modernist', 'broadsheet', 'sage', 'slate', 'dawn', 'fresh', 'pulse', 'vault']
-          const migrated = stored === 'pixloo' ? 'fresh' : stored
-          const theme = allowed.includes(migrated) ? migrated : 'resuming'
+          const allowed = ['resuming', 'nocturne', 'slate', 'dawn', 'fresh', 'vault']
+          const retired = { modernist: 'dawn', broadsheet: 'dawn', sage: 'dawn', pulse: 'dawn' }
+          const migrated =
+            stored === 'pixloo'
+              ? 'fresh'
+              : stored && retired[stored]
+                ? retired[stored]
+                : stored
+          const theme = allowed.includes(migrated) ? migrated : 'dawn'
           document.documentElement.setAttribute('data-theme', theme)
           const meta = document.querySelector('meta[name="theme-color"]')
           const colors = {
             resuming: '#faf6f0',
             nocturne: '#07070b',
-            modernist: '#fff8f0',
-            broadsheet: '#fffcf7',
-            sage: '#eef8ec',
             slate: '#0f1218',
             dawn: '#fff4e8',
             fresh: '#eef2f9',
-            pulse: '#f3f0ff',
             vault: '#0a0a0a',
           }
-          if (meta) meta.setAttribute('content', colors[theme] || colors.resuming)
+          if (meta) meta.setAttribute('content', colors[theme] || colors.dawn)
           document.documentElement.style.colorScheme =
             theme === 'nocturne' || theme === 'slate' || theme === 'vault' ? 'dark' : 'light'
         } catch (_) {}

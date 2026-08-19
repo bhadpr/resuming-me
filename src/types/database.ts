@@ -265,7 +265,22 @@ export interface Database {
       }
     }
     Views: Record<string, never>
-    Functions: Record<string, never>
+    Functions: {
+      is_current_user_admin: {
+        Args: Record<string, never>
+        Returns: boolean
+      }
+      list_signed_in_emails: {
+        Args: Record<string, never>
+        Returns: {
+          email: string
+          last_sign_in_at: string | null
+          created_at: string
+          activity_count: number
+          metric_count: number
+        }[]
+      }
+    }
     Enums: Record<string, never>
     CompositeTypes: Record<string, never>
   }
