@@ -7,6 +7,7 @@ import {
   buildActivityInsightSeries,
   formatPercent,
   INSIGHTS_WINDOW_DAYS,
+  type DayStatusOpts,
   type InsightsResult,
   type InsightsWindow,
 } from '../lib/insights'
@@ -33,6 +34,7 @@ interface InsightsScreenProps {
   today: string
   loading: boolean
   error: string | null
+  dayStatusOpts?: DayStatusOpts
   onAddActivity: () => void
   onAddMetric: (input: MetricInput) => void
   quietLine?: string | null
@@ -49,6 +51,7 @@ export function InsightsScreen({
   today,
   loading,
   error,
+  dayStatusOpts,
   onAddActivity,
   onAddMetric,
   quietLine = null,
@@ -171,7 +174,7 @@ export function InsightsScreen({
                   const activity = activities.find((x) => x.id === a.activityId)
                   const series =
                     open && activity
-                      ? buildActivityInsightSeries(activity, entries, window, today)
+                      ? buildActivityInsightSeries(activity, entries, window, today, dayStatusOpts)
                       : []
                   return (
                     <li

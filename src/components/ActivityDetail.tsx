@@ -10,17 +10,31 @@ import {
   buildActivityInsightSeriesForDays,
   computeActivitySeriesStats,
   type ActivityChartWindowDays,
+  type DayStatusOpts,
 } from '../lib/insights'
 import { isDeadlineOverdue } from '../lib/rollover'
 import { todayLocalDate } from '../lib/dates'
+import {
+  findActivePause,
+  type ActivityPauseRow,
+  type PauseDuration,
+} from '../lib/activityPauses'
 import { DeadlineOverduePrompt } from './DeadlineOverduePrompt'
 import { MicroStepsSection } from './MicroStepsSection'
 import { ActivityInsightChart } from './ActivityInsightChart'
 import type { MicroStep } from '../lib/microSteps'
 
+const PAUSE_OPTIONS: { duration: PauseDuration; label: string }[] = [
+  { duration: '1_week', label: '1 week' },
+  { duration: '2_weeks', label: '2 weeks' },
+  { duration: 'until_resume', label: 'Until I resume' },
+]
+
 interface ActivityDetailProps {
   activity: Activity
   entries: LogEntry[]
+  pauses?: ActivityPauseRow[]
+  dayStatusOpts?: DayStatusOpts
   loadingEntries?: boolean
   busy?: boolean
   error?: string | null
@@ -37,11 +51,15 @@ interface ActivityDetailProps {
   onMarkDeadlineComplete?: () => Promise<void>
   onRescheduleDeadline?: (newDeadline: string) => Promise<void>
   onBreakDown?: () => Promise<{ steps?: MicroStep[]; error?: string }>
+  onPause?: (duration: PauseDuration) => Promise<void>
+  onResume?: () => Promise<void>
 }
 
 export function ActivityDetail({
   activity,
   entries,
+  pauses = [],
+  dayStatusOpts,
   loadingEntries = false,
   busy = false,
   error = null,
@@ -55,10 +73,16 @@ export function ActivityDetail({
   onMarkDeadlineComplete,
   onRescheduleDeadline,
   onBreakDown,
+  onPause,
+  onResume,
 }: ActivityDetailProps) {
   const [confirmDelete, setConfirmDelete] = useState(false)
   const [editingId, setEditingId] = useState<string | null>(null)
   const [windowDays, setWindowDays] = useState<ActivityChartWindowDays>(30)
+  const [pauseOpen, setPauseOpen] = useState(false)
+
+  const today = todayLocalDate()
+  const activePause = findActivePause(pauses, activity.id, today)
 
   const stats = useMemo(
     () => computeActivityStats(activity, entries),
@@ -66,8 +90,15 @@ export function ActivityDetail({
   )
 
   const series = useMemo(
-    () => buildActivityInsightSeriesForDays(activity, entries, windowDays),
-    [activity, entries, windowDays],
+    () =>
+      buildActivityInsightSeriesForDays(
+        activity,
+        entries,
+        windowDays,
+        today,
+        dayStatusOpts,
+      ),
+    [activity, entries, windowDays, today, dayStatusOpts],
   )
 
   const seriesStats = useMemo(
@@ -75,8 +106,10 @@ export function ActivityDetail({
     [series, windowDays],
   )
 
-  const overdue = isDeadlineOverdue(activity, entries, todayLocalDate())
+  const overdue = isDeadlineOverdue(activity, entries, today)
   const showChart = activity.type !== 'deadline'
+  const canPause = Boolean(onPause) && !activity.archived && activity.type !== 'deadline'
+  const canResume = Boolean(onResume) && Boolean(activePause)
 
   return (
     <div className="activity-detail">
@@ -91,7 +124,68 @@ export function ActivityDetail({
         <h2>{activity.name}</h2>
         <p className="screen-sub">{describeActivity(activity)}</p>
         {activity.archived && <span className="badge">Archived</span>}
+        {activePause && <span className="badge">Paused</span>}
       </div>
+
+      {(canPause || canResume) && (
+        <div className="detail-pause">
+          {canResume ? (
+            <button
+              type="button"
+              className="btn btn-secondary"
+              disabled={busy}
+              onClick={() => void onResume?.()}
+            >
+              Resume activity
+            </button>
+          ) : pauseOpen ? (
+            <div className="detail-pause-sheet">
+              <p className="activity-desc">Pause for</p>
+              <div className="detail-pause-options">
+                {PAUSE_OPTIONS.map(({ duration, label }) => (
+                  <button
+                    key={duration}
+                    type="button"
+                    className="btn btn-secondary"
+                    disabled={busy}
+                    onClick={() => {
+                      void onPause?.(duration)
+                      setPauseOpen(false)
+                    }}
+                  >
+                    {label}
+                  </button>
+                ))}
+              </div>
+              <button
+                type="button"
+                className="btn btn-ghost btn-sm"
+                onClick={() => setPauseOpen(false)}
+              >
+                Cancel
+              </button>
+            </div>
+          ) : (
+            <button
+              type="button"
+              className="btn btn-secondary"
+              disabled={busy}
+              onClick={() => setPauseOpen(true)}
+            >
+              Pause
+            </button>
+          )}
+          {activePause && (
+            <p className="activity-desc">
+              Hidden from Today
+              {activePause.paused_until
+                ? ` until ${activePause.paused_until}`
+                : ' until you resume'}
+              .
+            </p>
+          )}
+        </div>
+      )}
 
       {overdue && onMarkDeadlineComplete && onRescheduleDeadline && (
         <DeadlineOverduePrompt

@@ -65,15 +65,16 @@ export type DayStatusResult = {
   target: number
 }
 
-/** Auto-backfilled put-offs (P1-04 will set source='auto'; null is treated as auto for now). */
+/** Historical auto-backfilled put-offs (source='auto' after P1-04 migration). */
 export function isAutoPostponed(entry: DayStatusEntry): boolean {
   if (entry.type !== 'postponed') return false
-  return entry.source === 'auto' || entry.source == null
+  return entry.source === 'auto'
 }
 
+/** Explicit user Skip today (source null or any non-auto value). */
 export function isUserSkipped(entry: DayStatusEntry): boolean {
   if (entry.type !== 'postponed') return false
-  return entry.source !== 'auto' && entry.source != null
+  return entry.source !== 'auto'
 }
 
 function periodEntries(
@@ -179,7 +180,7 @@ function progressAndTarget(
   return { value, target, met: value >= target }
 }
 
-function isPausedOnDate(
+export function isPausedOnDate(
   activityId: string,
   date: string,
   pauses: readonly ActivityPause[] | undefined,

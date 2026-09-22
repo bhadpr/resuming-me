@@ -23,3 +23,12 @@ export function formatMetricUndoMessage(
 ): string {
   return `Logged ${value} ${unit} · ${metricName}`
 }
+
+export function formatSkipUndoMessage(activityName: string): string {
+  return `Skipped ${activityName}`
+}
+
+export function formatRestDayUndoMessage(): string {
+  return 'Rest day marked'
+}
+

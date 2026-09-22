@@ -6,8 +6,14 @@ import {
   getDayStatus,
   isUserSkipped,
   showedUp,
+  type ActivityPause,
   type DayStatus,
 } from './dayStatus'
+
+export type DayStatusOpts = {
+  restDates?: ReadonlySet<string>
+  pauses?: readonly ActivityPause[]
+}
 
 export type InsightsWindow = 'week' | 'month'
 
@@ -156,9 +162,18 @@ export function buildActivityInsightSeries(
   entries: LogEntry[],
   window: InsightsWindow,
   today = todayLocalDate(),
+  opts?: DayStatusOpts,
 ): ActivitySeriesPoint[] {
   const { from, to } = windowRange(window, today)
-  return buildActivityInsightSeriesInRange(activity, entries, from, to, window, today)
+  return buildActivityInsightSeriesInRange(
+    activity,
+    entries,
+    from,
+    to,
+    window,
+    today,
+    opts,
+  )
 }
 
 /** Activity detail chart — supports 7 / 30 / 90 day windows. */
@@ -167,6 +182,7 @@ export function buildActivityInsightSeriesForDays(
   entries: LogEntry[],
   windowDays: ActivityChartWindowDays,
   today = todayLocalDate(),
+  opts?: DayStatusOpts,
 ): ActivitySeriesPoint[] {
   if (activity.type === 'deadline') return []
   const from = addDays(today, -(windowDays - 1))
@@ -179,6 +195,7 @@ export function buildActivityInsightSeriesForDays(
     to,
     labelWindow,
     today,
+    opts,
   )
 }
 
@@ -187,6 +204,7 @@ function statusForPeriod(
   entries: LogEntry[],
   date: string,
   today: string,
+  opts?: DayStatusOpts,
 ): { status: DayStatus; value: number; target: number } {
   return getDayStatus({
     activity,
@@ -194,6 +212,8 @@ function statusForPeriod(
     date,
     today,
     timezone: 'UTC',
+    restDates: opts?.restDates,
+    pauses: opts?.pauses,
   })
 }
 
@@ -204,6 +224,7 @@ function buildActivityInsightSeriesInRange(
   to: string,
   labelWindow: InsightsWindow,
   today = to,
+  opts?: DayStatusOpts,
 ): ActivitySeriesPoint[] {
   const created = activity.created_at.slice(0, 10)
 
@@ -218,6 +239,7 @@ function buildActivityInsightSeriesInRange(
           entries,
           weekStart,
           today,
+          opts,
         )
         const isTimer = activity.tracking_mode === 'timer'
         points.push({
@@ -257,6 +279,7 @@ function buildActivityInsightSeriesInRange(
           entries,
           monthStart,
           today,
+          opts,
         )
         points.push({
           key: monthStart,
@@ -276,7 +299,13 @@ function buildActivityInsightSeriesInRange(
   const start = created > from ? created : from
   const isTimer = activity.tracking_mode === 'timer'
   return eachDateInclusive(start, to).map((date) => {
-    const { status, value } = statusForPeriod(activity, entries, date, today)
+    const { status, value } = statusForPeriod(
+      activity,
+      entries,
+      date,
+      today,
+      opts,
+    )
     return {
       key: date,
       label: dayLabel(date, labelWindow),
@@ -293,6 +322,7 @@ function analyzePeriod(
   entries: LogEntry[],
   dates: string[],
   today: string,
+  opts?: DayStatusOpts,
 ): Pick<ActivityInsight, 'scheduled' | 'postponed' | 'met' | 'showedUp'> {
   let scheduled = 0
   let postponed = 0
@@ -300,8 +330,9 @@ function analyzePeriod(
   let showed = 0
 
   for (const date of dates) {
+    const { status } = statusForPeriod(activity, entries, date, today, opts)
+    if (status === 'rest' || status === 'paused') continue
     scheduled += 1
-    const { status } = statusForPeriod(activity, entries, date, today)
     if (status === 'skipped') postponed += 1
     if (status === 'done') met += 1
     if (showedUp(status)) showed += 1
@@ -316,10 +347,17 @@ function analyzeDaily(
   from: string,
   to: string,
   today: string,
+  opts?: DayStatusOpts,
 ): Pick<ActivityInsight, 'scheduled' | 'postponed' | 'met' | 'showedUp'> {
   const created = activity.created_at.slice(0, 10)
   const start = created > from ? created : from
-  return analyzePeriod(activity, entries, eachDateInclusive(start, to), today)
+  return analyzePeriod(
+    activity,
+    entries,
+    eachDateInclusive(start, to),
+    today,
+    opts,
+  )
 }
 
 function analyzeWeekly(
@@ -328,6 +366,7 @@ function analyzeWeekly(
   from: string,
   to: string,
   today: string,
+  opts?: DayStatusOpts,
 ): Pick<ActivityInsight, 'scheduled' | 'postponed' | 'met' | 'showedUp'> {
   const created = activity.created_at.slice(0, 10)
   const dates: string[] = []
@@ -337,7 +376,7 @@ function analyzeWeekly(
     if (weekEnd >= created) dates.push(weekStart)
     weekStart = addDays(weekStart, 7)
   }
-  return analyzePeriod(activity, entries, dates, today)
+  return analyzePeriod(activity, entries, dates, today, opts)
 }
 
 function analyzeMonthly(
@@ -346,6 +385,7 @@ function analyzeMonthly(
   from: string,
   to: string,
   today: string,
+  opts?: DayStatusOpts,
 ): Pick<ActivityInsight, 'scheduled' | 'postponed' | 'met' | 'showedUp'> {
   const created = activity.created_at.slice(0, 10)
   const dates: string[] = []
@@ -355,7 +395,7 @@ function analyzeMonthly(
     if (monthEnd >= created) dates.push(monthStart)
     monthStart = startOfMonth(addDays(monthEnd, 1))
   }
-  return analyzePeriod(activity, entries, dates, today)
+  return analyzePeriod(activity, entries, dates, today, opts)
 }
 
 function buildDayOfWeekSkips(entries: LogEntry[], from: string, to: string): DayCount[] {
@@ -451,6 +491,7 @@ export function computeInsights(
   entries: LogEntry[],
   window: InsightsWindow,
   today = todayLocalDate(),
+  opts?: DayStatusOpts,
 ): InsightsResult {
   const { from, to } = windowRange(window, today)
   const trackable = activities.filter(
@@ -462,10 +503,10 @@ export function computeInsights(
   const activityInsights: ActivityInsight[] = trackable.map((activity) => {
     const stats =
       activity.type === 'weekly_n'
-        ? analyzeWeekly(activity, entries, from, to, today)
+        ? analyzeWeekly(activity, entries, from, to, today, opts)
         : activity.type === 'monthly'
-          ? analyzeMonthly(activity, entries, from, to, today)
-          : analyzeDaily(activity, entries, from, to, today)
+          ? analyzeMonthly(activity, entries, from, to, today, opts)
+          : analyzeDaily(activity, entries, from, to, today, opts)
     const postponementRate =
       stats.scheduled === 0 ? 0 : stats.postponed / stats.scheduled
     return {

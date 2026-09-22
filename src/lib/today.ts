@@ -15,7 +15,7 @@ import {
   sumSessionSeconds,
   targetToSeconds,
 } from './timer'
-import { getDayStatus, type DayStatus } from './dayStatus'
+import { getDayStatus, isPausedOnDate, type ActivityPause, type DayStatus } from './dayStatus'
 
 export type TodayActionKind = 'checkbox' | 'count' | 'timer' | 'deadline'
 
@@ -209,8 +209,18 @@ export function buildTodayProgress(
   entries: LogEntry[],
   postponedEntries: LogEntry[],
   today = todayLocalDate(),
+  opts?: {
+    restDates?: ReadonlySet<string>
+    pauses?: readonly ActivityPause[]
+  },
 ): ActivityTodayProgress[] {
-  const active = activities.filter((a) => isDueOnToday(a))
+  const restDates = opts?.restDates
+  const pauses = opts?.pauses
+  const active = activities.filter((a) => {
+    if (!isDueOnToday(a)) return false
+    if (pauses && isPausedOnDate(a.id, today, pauses)) return false
+    return true
+  })
 
   const rows: ActivityTodayProgress[] = active.map((activity) => {
     const actionKind = getActionKind(activity)
@@ -270,17 +280,24 @@ export function buildTodayProgress(
       progressLabel = current >= 1 ? 'Done today' : 'Not yet'
     }
 
-    // TODO(P1-03): timezone from profile — todayLocalDate is browser-local today.
     const dayStatus = getDayStatus({
       activity,
       entriesForDay: entries,
       date: activity.type === 'weekly_n' || activity.type === 'monthly' ? from : today,
       today,
       timezone: Intl.DateTimeFormat().resolvedOptions().timeZone,
+      restDates,
+      pauses,
     })
     const done = dayStatus.status === 'done'
     if (dayStatus.status === 'partial' && actionKind === 'timer' && activity.type === 'daily') {
       progressLabel = `${formatSecondsAsTargetUnit(current, activity.target_unit)} / ${activity.target_value ?? 0} ${activity.target_unit ?? 'minutes'}`
+    }
+    if (dayStatus.status === 'skipped') {
+      progressLabel = 'Skipped today'
+    }
+    if (dayStatus.status === 'rest') {
+      progressLabel = 'Rest day'
     }
 
     const postponementStreak = computePostponementStreak(
@@ -314,6 +331,10 @@ export function buildTodayProgress(
   return rows.filter((r) => shouldShowDeadlineOnToday(r.activity, r.done, today))
 }
 
+function isSettledToday(row: ActivityTodayProgress): boolean {
+  return row.done || row.status === 'skipped' || row.status === 'rest'
+}
+
 /**
  * One next action for Today. Priority: live/paused timer, overdue deadline,
  * recently postponed, then most-overdue-feeling open row.
@@ -327,7 +348,7 @@ export function pickHeroRow(
     if (live) return live
   }
 
-  const open = rows.filter((row) => !row.done)
+  const open = rows.filter((row) => !isSettledToday(row))
   if (open.length === 0) return null
 
   const overdue = open.find((row) => row.overdue)
@@ -367,14 +388,16 @@ export function partitionTodayRows(
   }
   if (!hero && preferredHeroId) {
     const preferred = rows.find(
-      (row) => row.activity.id === preferredHeroId && !row.done,
+      (row) => row.activity.id === preferredHeroId && !isSettledToday(row),
     )
     if (preferred) hero = preferred
   }
   if (!hero) hero = pickHeroRow(rows, timerActivityId)
-  const done = rows.filter((row) => row.done && row.activity.id !== hero?.activity.id)
+  const done = rows.filter(
+    (row) => isSettledToday(row) && row.activity.id !== hero?.activity.id,
+  )
   const alsoDue = rows.filter(
-    (row) => !row.done && row.activity.id !== hero?.activity.id,
+    (row) => !isSettledToday(row) && row.activity.id !== hero?.activity.id,
   )
   return { hero, alsoDue, done }
 }

@@ -3295,3 +3295,82 @@ select.field-input {
   outline: none;
   box-shadow: var(--shadow-focus);
 }
+
+/* P1-04: skip today / rest day / pause */
+.btn-today-more {
+  min-width: var(--tap-min);
+  padding: 0 0.35rem;
+  letter-spacing: 0.08em;
+  color: var(--color-text-muted);
+}
+
+.today-skip-sheet {
+  display: flex;
+  flex-direction: column;
+  gap: 0.5rem;
+  padding: 0.35rem 0.15rem 0.15rem;
+}
+
+.today-skip-label {
+  margin: 0;
+  font-size: 0.875rem;
+  color: var(--color-text-muted);
+}
+
+.today-skip-chips {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.4rem;
+}
+
+.today-skip-chip {
+  min-height: var(--tap-min);
+  padding: 0.4rem 0.85rem;
+  border: 1px solid var(--color-border);
+  border-radius: var(--radius);
+  background: var(--color-surface);
+  color: var(--color-text);
+  font: inherit;
+}
+
+.today-skip-chip:hover:not(:disabled) {
+  background: var(--color-surface-raised);
+}
+
+.today-rest-day {
+  margin-top: 1.5rem;
+  padding-bottom: 0.5rem;
+  text-align: center;
+}
+
+.today-rest-day-btn {
+  color: var(--color-text-muted);
+  text-decoration: underline;
+  text-underline-offset: 0.2em;
+}
+
+.today-rest-day-note {
+  margin: 0;
+  font-size: 0.9375rem;
+  color: var(--color-text-muted);
+}
+
+.detail-pause {
+  display: flex;
+  flex-direction: column;
+  gap: 0.5rem;
+  margin-bottom: 1rem;
+}
+
+.detail-pause-sheet {
+  display: flex;
+  flex-direction: column;
+  gap: 0.5rem;
+}
+
+.detail-pause-options {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.5rem;
+}
+

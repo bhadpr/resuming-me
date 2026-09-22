@@ -30,13 +30,15 @@ import {
   JUST_STARTED_MIN_SECONDS,
   type SmallerChoiceMinutes,
 } from '../lib/reentry'
-import type { ReentryFollowUp } from './TodayScreen'
+import type { ReentryFollowUp, SkipReason } from './TodayScreen'
 import { useUndoToast } from '../hooks/useUndoToast'
 import {
   formatCompletedUndoMessage,
   formatCountUndoMessage,
   formatMetricUndoMessage,
+  formatRestDayUndoMessage,
   formatSessionUndoMessage,
+  formatSkipUndoMessage,
 } from '../lib/undoMessages'
 import { trackPageView } from '../lib/analytics'
 import {
@@ -87,9 +89,26 @@ import { removeQueuedSession } from '../lib/timerStorage'
 import { addDays, startOfWeekMonday, todayLocalDate } from '../lib/dates'
 import { buildTodayProgress, type ActivityTodayProgress } from '../lib/today'
 import {
+  insertPostponedEntry,
   rescheduleDeadline,
   runClientRolloverCatchUp,
 } from '../lib/rolloverClient'
+import {
+  createActivityPause,
+  endActivityPause,
+  findActivePause,
+  listActivityPauses,
+  pauseRowToPause,
+  type ActivityPauseRow,
+  type PauseDuration,
+} from '../lib/activityPauses'
+import {
+  listRestDays,
+  markRestDay,
+  restDayDates,
+  unmarkRestDay,
+  type RestDay,
+} from '../lib/restDays'
 import {
   computeInsights,
   type InsightsWindow,
@@ -136,6 +155,8 @@ export function AppShell() {
   const [logEntries, setLogEntries] = useState<LogEntry[]>([])
   const [postponedEntries, setPostponedEntries] = useState<LogEntry[]>([])
   const [metricEntriesToday, setMetricEntriesToday] = useState<MetricEntry[]>([])
+  const [activityPauses, setActivityPauses] = useState<ActivityPauseRow[]>([])
+  const [restDays, setRestDays] = useState<RestDay[]>([])
 
   const [showArchivedActivities, setShowArchivedActivities] = useState(false)
   const [showArchivedMetrics, setShowArchivedMetrics] = useState(false)
@@ -198,14 +219,18 @@ export function AppShell() {
       try {
         const activeIds = activityList.filter((a) => !a.archived).map((a) => a.id)
         const from = addDays(startOfWeekMonday(today), -90)
-        const [logs, postponed, metricRows] = await Promise.all([
+        const [logs, postponed, metricRows, pauses, rests] = await Promise.all([
           listLogEntriesForActivities(activeIds, from, today),
           listRecentPostponed(activeIds, from),
           listMetricEntriesForDate(today),
+          listActivityPauses(from),
+          listRestDays(from, today),
         ])
         setLogEntries(logs)
         setPostponedEntries(postponed)
         setMetricEntriesToday(metricRows)
+        setActivityPauses(pauses)
+        setRestDays(rests)
         setQueueVersion((v) => v + 1)
       } catch (err) {
         setError(err instanceof Error ? err.message : 'Failed to load Today')
@@ -286,14 +311,22 @@ export function AppShell() {
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [logEntries, queueVersion])
 
+  const dayStatusOpts = useMemo(() => {
+    return {
+      restDates: restDayDates(restDays),
+      pauses: activityPauses.map(pauseRowToPause),
+    }
+  }, [restDays, activityPauses])
+
   const todayRows = useMemo(() => {
     return buildTodayProgress(
       activities,
       mergedLogEntries,
       postponedEntries,
       today,
+      dayStatusOpts,
     )
-  }, [activities, mergedLogEntries, postponedEntries, today])
+  }, [activities, mergedLogEntries, postponedEntries, today, dayStatusOpts])
 
   const quietSchedule = useMemo(
     () => ({
@@ -463,8 +496,15 @@ export function AppShell() {
   }, [tab, activities, metrics, today])
 
   const insights = useMemo(
-    () => computeInsights(activities, insightsEntries, insightsWindow, today),
-    [activities, insightsEntries, insightsWindow, today],
+    () =>
+      computeInsights(
+        activities,
+        insightsEntries,
+        insightsWindow,
+        today,
+        dayStatusOpts,
+      ),
+    [activities, insightsEntries, insightsWindow, today, dayStatusOpts],
   )
 
   async function handleActivitySave(input: ActivityInput) {
@@ -639,6 +679,90 @@ export function AppShell() {
       setError(err instanceof Error ? err.message : 'Could not add +1')
     } finally {
       setBusyId(null)
+    }
+  }
+
+
+  async function handleSkipToday(row: ActivityTodayProgress, reason: SkipReason) {
+    if (!user) return
+    setBusyId(row.activity.id)
+    setError(null)
+    try {
+      const created = await insertPostponedEntry({
+        userId: user.id,
+        activityId: row.activity.id,
+        date: today,
+        note: reason,
+      })
+      if (!created) return
+      setLogEntries((prev) => [created, ...prev])
+      setPostponedEntries((prev) => [created, ...prev])
+      undoToast.show(formatSkipUndoMessage(row.activity.name), () =>
+        undoLogEntry({ entryId: created.id, activityId: row.activity.id }),
+      )
+    } catch (err) {
+      setError(err instanceof Error ? err.message : 'Could not skip today')
+    } finally {
+      setBusyId(null)
+    }
+  }
+
+  async function handleTakeRestDay() {
+    if (!user) return
+    setBusyId('rest-day')
+    setError(null)
+    try {
+      const created = await markRestDay({ userId: user.id, date: today })
+      setRestDays((prev) => {
+        if (prev.some((r) => r.id === created.id)) return prev
+        return [...prev, created]
+      })
+      undoToast.show(formatRestDayUndoMessage(), async () => {
+        await unmarkRestDay(created.id)
+        setRestDays((prev) => prev.filter((r) => r.id !== created.id))
+      })
+    } catch (err) {
+      setError(err instanceof Error ? err.message : 'Could not mark rest day')
+    } finally {
+      setBusyId(null)
+    }
+  }
+
+  async function handlePauseActivity(duration: PauseDuration) {
+    if (!user || activityScreen.name !== 'detail') return
+    const activityId = activityScreen.activityId
+    setSaving(true)
+    setError(null)
+    try {
+      const created = await createActivityPause({
+        userId: user.id,
+        activityId,
+        duration,
+      })
+      setActivityPauses((prev) => [created, ...prev])
+    } catch (err) {
+      setError(err instanceof Error ? err.message : 'Could not pause activity')
+    } finally {
+      setSaving(false)
+    }
+  }
+
+  async function handleResumeActivity() {
+    if (activityScreen.name !== 'detail') return
+    const activityId = activityScreen.activityId
+    const active = findActivePause(activityPauses, activityId, today)
+    if (!active) return
+    setSaving(true)
+    setError(null)
+    try {
+      const updated = await endActivityPause(active.id)
+      setActivityPauses((prev) =>
+        prev.map((p) => (p.id === updated.id ? updated : p)),
+      )
+    } catch (err) {
+      setError(err instanceof Error ? err.message : 'Could not resume activity')
+    } finally {
+      setSaving(false)
     }
   }
 
@@ -1014,6 +1138,9 @@ export function AppShell() {
                     onStartSmallerSession={handleStartSmallerSession}
                     onShrinkRunningTimer={handleShrinkRunningTimer}
                     onRescheduleDeadline={handleRescheduleDeadline}
+                    onSkipToday={handleSkipToday}
+                    onTakeRestDay={() => void handleTakeRestDay()}
+                    isRestDay={dayStatusOpts.restDates.has(today)}
                     hasActivities={activeActivityCount > 0}
                     quietReentry={isQuietReentry({
                       activities,
@@ -1086,6 +1213,8 @@ export function AppShell() {
               <ActivityDetail
                 activity={selectedActivity}
                 entries={detailLogEntries}
+                pauses={activityPauses}
+                dayStatusOpts={dayStatusOpts}
                 loadingEntries={loadingDetailEntries}
                 busy={saving}
                 error={error}
@@ -1094,6 +1223,8 @@ export function AppShell() {
                   setError(null)
                   setActivityScreen({ name: 'form', activity: selectedActivity })
                 }}
+                onPause={handlePauseActivity}
+                onResume={handleResumeActivity}
                 onUpdateEntry={async (entryId, updates) => {
                   setSaving(true)
                   setError(null)
@@ -1383,6 +1514,7 @@ export function AppShell() {
             metrics={metrics}
             metricEntries={insightsMetricEntries}
             today={today}
+            dayStatusOpts={dayStatusOpts}
             loading={loadingInsights}
             error={error}
             onAddActivity={() => {

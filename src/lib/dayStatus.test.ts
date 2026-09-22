@@ -101,18 +101,23 @@ describe('getDayStatus — daily timer', () => {
     ).toBe('missed')
   })
 
-  it('treats null-source postponed as auto/missed (pre-migration)', () => {
+  it('treats null-source postponed as user skip (after migration)', () => {
     expect(
       getDayStatus({
         activity: activity(),
         entriesForDay: [
-          entry({ type: 'postponed', source: null, duration_seconds: null }),
+          entry({
+            type: 'postponed',
+            source: null,
+            duration_seconds: null,
+            note: 'Too tired',
+          }),
         ],
-        date: '2026-09-20',
+        date: today,
         today,
         timezone: tz,
       }).status,
-    ).toBe('missed')
+    ).toBe('skipped')
   })
 
   it('skipped for explicit user postpone (non-auto source)', () => {
@@ -124,7 +129,7 @@ describe('getDayStatus — daily timer', () => {
             type: 'postponed',
             source: 'manual',
             duration_seconds: null,
-            note: 'Too tired',
+            note: 'No time',
           }),
         ],
         date: today,
