@@ -1,15 +1,14 @@
 import type { ReactNode } from 'react'
+import { Link } from 'react-router-dom'
 import {
   COMPANY_NAME,
   COPYRIGHT_YEAR,
   FOOTER_NAV,
   SOCIAL_LINKS,
-  type SitePageId,
   type SocialLinkId,
 } from '../lib/site'
 
 interface SiteFooterProps {
-  onOpenPage: (id: SitePageId) => void
   compact?: boolean
   /** Native welcome: Privacy only, no social or marketing cluster. */
   privacyOnly?: boolean
@@ -75,7 +74,6 @@ const SOCIAL_ICONS: Record<SocialLinkId, ReactNode> = {
 }
 
 export function SiteFooter({
-  onOpenPage,
   compact = false,
   privacyOnly = false,
 }: SiteFooterProps) {
@@ -83,16 +81,9 @@ export function SiteFooter({
     return (
       <footer className="site-footer site-footer-privacy">
         <nav className="site-footer-nav" aria-label="Legal">
-          <a
-            className="site-footer-link"
-            href="/privacy"
-            onClick={(e) => {
-              e.preventDefault()
-              onOpenPage('privacy')
-            }}
-          >
+          <Link to="/privacy" className="site-footer-link">
             Privacy
-          </a>
+          </Link>
         </nav>
       </footer>
     )
@@ -118,17 +109,9 @@ export function SiteFooter({
 
       <nav className="site-footer-nav" aria-label="Company">
         {FOOTER_NAV.map((item) => (
-          <a
-            key={item.id}
-            className="site-footer-link"
-            href={`/${item.id}`}
-            onClick={(e) => {
-              e.preventDefault()
-              onOpenPage(item.id)
-            }}
-          >
+          <Link key={item.id} to={`/${item.id}`} className="site-footer-link">
             {item.label}
-          </a>
+          </Link>
         ))}
       </nav>
 

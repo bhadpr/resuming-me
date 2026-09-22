@@ -45,6 +45,7 @@ function postponed(date: string): LogEntry {
   return {
     ...completed(date, `p-${date}`),
     type: 'postponed',
+    source: 'auto',
   }
 }
 

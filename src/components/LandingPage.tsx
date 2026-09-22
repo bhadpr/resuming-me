@@ -1,14 +1,7 @@
-import { lazy, Suspense, useEffect, useState } from 'react'
+import { useEffect, useState } from 'react'
 import { Capacitor } from '@capacitor/core'
 import { BrandTitle } from './BrandTitle'
 import { SiteFooter } from './SiteFooter'
-import {
-  COMPANY_NAME,
-  PRODUCT_NAME,
-  SITE_PAGE_TITLES,
-  sitePageFromPath,
-  type SitePageId,
-} from '../lib/site'
 import { trackPageView } from '../lib/analytics'
 import { consumeAccountDeletedFlag } from '../lib/clearLocalData'
 import {
@@ -18,26 +11,11 @@ import {
 } from '../hooks/useDocumentMeta'
 import { track } from '../lib/track'
 
-const FeedbackPage = lazy(() =>
-  import('./FeedbackPage').then((m) => ({ default: m.FeedbackPage })),
-)
-const LegalPage = lazy(() =>
-  import('./LegalPage').then((m) => ({ default: m.LegalPage })),
-)
-const DeleteAccountPage = lazy(() =>
-  import('./DeleteAccountPage').then((m) => ({ default: m.DeleteAccountPage })),
-)
-
 interface LandingPageProps {
   configured: boolean
   configError?: string | null
   authError?: string | null
   onSignIn: () => Promise<void>
-}
-
-function truncateReferrer(value: string | null): string | null {
-  if (!value) return null
-  return value.length <= 200 ? value : value.slice(0, 200)
 }
 
 export function LandingPage({
@@ -49,83 +27,25 @@ export function LandingPage({
   const native = Capacitor.isNativePlatform()
   const [error, setError] = useState<string | null>(null)
   const [signingIn, setSigningIn] = useState(false)
-  const [accountDeleted, setAccountDeleted] = useState(() => consumeAccountDeletedFlag())
-  const [sitePage, setSitePage] = useState<SitePageId | null>(() =>
-    sitePageFromPath(window.location.pathname),
-  )
+  const [accountDeleted] = useState(() => consumeAccountDeletedFlag())
 
-  useDocumentMeta(
-    sitePage
-      ? {
-          title: SITE_PAGE_TITLES[sitePage],
-          path: `/${sitePage}`,
-        }
-      : {
-          title: DEFAULT_TITLE,
-          description: DEFAULT_DESCRIPTION,
-          path: '/',
-        },
-  )
+  useDocumentMeta({
+    title: DEFAULT_TITLE,
+    description: DEFAULT_DESCRIPTION,
+    path: '/',
+  })
 
   useEffect(() => {
-    if (!sitePage) {
-      trackPageView('/', 'Landing')
-      track('landing_viewed', {
-        referrer: truncateReferrer(document.referrer || null),
-      })
-    } else {
-      trackPageView(`/${sitePage}`, sitePage)
-    }
-  }, [sitePage])
-
-  useEffect(() => {
-    if (sitePage) return
-    const existing = document.getElementById('resuming-jsonld')
-    if (existing) return
-    const script = document.createElement('script')
-    script.id = 'resuming-jsonld'
-    script.type = 'application/ld+json'
-    script.text = JSON.stringify({
-      '@context': 'https://schema.org',
-      '@type': 'SoftwareApplication',
-      name: PRODUCT_NAME,
-      description: DEFAULT_DESCRIPTION,
-      applicationCategory: 'LifestyleApplication',
-      operatingSystem: 'Web, Android',
-      offers: {
-        '@type': 'Offer',
-        price: '0',
-        priceCurrency: 'USD',
-      },
-      publisher: {
-        '@type': 'Organization',
-        name: COMPANY_NAME,
-      },
+    trackPageView('/', 'Landing')
+    track('landing_viewed', {
+      referrer: document.referrer ? document.referrer.slice(0, 200) : null,
     })
-    document.head.appendChild(script)
-    return () => {
-      script.remove()
-    }
-  }, [sitePage])
-
-  useEffect(() => {
-    const onPopState = () => setSitePage(sitePageFromPath(window.location.pathname))
-    window.addEventListener('popstate', onPopState)
-    return () => window.removeEventListener('popstate', onPopState)
   }, [])
 
-  function openSitePage(id: SitePageId | null) {
-    setSitePage(id)
-    const next = id ? `/${id}` : '/'
-    if (window.location.pathname !== next) {
-      window.history.pushState(null, '', next)
-    }
-  }
-
   async function handleSignIn() {
+    track('signin_clicked')
     setError(null)
     setSigningIn(true)
-    track('signin_clicked')
     try {
       await onSignIn()
     } catch (err) {
@@ -136,42 +56,6 @@ export function LandingPage({
 
   const displayError = configError || authError || error
 
-  if (sitePage === 'feedback') {
-    return (
-      <div className="landing landing-legal">
-        <div className="landing-card landing-card-legal">
-          <Suspense fallback={<p className="muted-center">Loading…</p>}>
-            <FeedbackPage onBack={() => openSitePage(null)} />
-          </Suspense>
-        </div>
-      </div>
-    )
-  }
-
-  if (sitePage === 'delete-account') {
-    return (
-      <div className="landing landing-legal">
-        <div className="landing-card landing-card-legal">
-          <Suspense fallback={<p className="muted-center">Loading…</p>}>
-            <DeleteAccountPage onBack={() => openSitePage(null)} />
-          </Suspense>
-        </div>
-      </div>
-    )
-  }
-
-  if (sitePage) {
-    return (
-      <div className="landing landing-legal">
-        <div className="landing-card landing-card-legal">
-          <Suspense fallback={<p className="muted-center">Loading…</p>}>
-            <LegalPage page={sitePage} onBack={() => openSitePage(null)} />
-          </Suspense>
-        </div>
-      </div>
-    )
-  }
-
   if (!configured) {
     return (
       <div className="landing">
@@ -181,7 +65,7 @@ export function LandingPage({
           <div className="notice notice-warning">
             <p>{configError ?? 'Supabase is not configured.'}</p>
           </div>
-          <SiteFooter onOpenPage={openSitePage} privacyOnly={native} />
+          <SiteFooter privacyOnly={native} />
         </div>
       </div>
     )
@@ -192,19 +76,6 @@ export function LandingPage({
       <div className="landing-card">
         <BrandTitle size="lg" className="landing-brand" />
         <p className="tagline">Track what you postpone. Resume what matters.</p>
-
-        {accountDeleted && (
-          <div className="notice" role="status">
-            <p>Your account has been deleted.</p>
-            <button
-              type="button"
-              className="btn btn-ghost btn-sm"
-              onClick={() => setAccountDeleted(false)}
-            >
-              Dismiss
-            </button>
-          </div>
-        )}
         <p className="explainer">
           Not a to-do list to empty. These are things that keep coming back.
           Skip them, see the pattern, and pick one small thing up when a few
@@ -246,6 +117,11 @@ export function LandingPage({
           </p>
         </div>
 
+        {accountDeleted && (
+          <div className="notice" role="status">
+            <p>Your account has been deleted.</p>
+          </div>
+        )}
         {displayError && (
           <div className="notice notice-warning">
             <p>{displayError}</p>
@@ -260,7 +136,7 @@ export function LandingPage({
           {signingIn ? 'Redirecting…' : 'Continue with Google'}
         </button>
 
-        <SiteFooter onOpenPage={openSitePage} privacyOnly={native} />
+        <SiteFooter privacyOnly={native} />
       </div>
     </div>
   )
