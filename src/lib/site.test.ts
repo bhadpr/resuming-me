@@ -1,7 +1,12 @@
 import { readFileSync } from 'node:fs'
 import { describe, expect, it } from 'vitest'
 import { CONTACT_EMAIL } from '../config'
-import { COMPANY_NAME, PRODUCT_NAME, sitePageFromPath } from './site'
+import {
+  COMPANY_NAME,
+  PRODUCT_NAME,
+  isKnownPath,
+  sitePageFromPath,
+} from './site'
 
 describe('sitePageFromPath', () => {
   it('maps legal and feedback paths', () => {
@@ -33,5 +38,35 @@ describe('sitePageFromPath', () => {
     expect(html).toContain('Delete your account')
     expect(html).toContain(CONTACT_EMAIL)
     expect(html).toContain('DELETE')
+  })
+})
+
+describe('isKnownPath', () => {
+  it('accepts home, public pages, and app prefixes', () => {
+    expect(isKnownPath('/')).toBe(true)
+    expect(isKnownPath('/about')).toBe(true)
+    expect(isKnownPath('/today')).toBe(true)
+    expect(isKnownPath('/activities/abc')).toBe(true)
+  })
+
+  it('rejects unknown paths', () => {
+    expect(isKnownPath('/does-not-exist')).toBe(false)
+  })
+})
+
+describe('SEO static files', () => {
+  it('ships robots.txt and sitemap.xml', () => {
+    const robots = readFileSync('public/robots.txt', 'utf8')
+    expect(robots).toContain('Sitemap: https://resuming.me/sitemap.xml')
+    expect(robots).toContain('Disallow: /today')
+    const sitemap = readFileSync('public/sitemap.xml', 'utf8')
+    expect(sitemap).toContain('https://resuming.me/about')
+  })
+
+  it('prerenders About for crawlers', () => {
+    const html = readFileSync('public/about/index.html', 'utf8')
+    expect(html).toContain('About')
+    expect(html).toContain(PRODUCT_NAME)
+    expect(html).toContain('no-shame')
   })
 })

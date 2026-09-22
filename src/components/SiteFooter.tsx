@@ -83,13 +83,16 @@ export function SiteFooter({
     return (
       <footer className="site-footer site-footer-privacy">
         <nav className="site-footer-nav" aria-label="Legal">
-          <button
-            type="button"
+          <a
             className="site-footer-link"
-            onClick={() => onOpenPage('privacy')}
+            href="/privacy"
+            onClick={(e) => {
+              e.preventDefault()
+              onOpenPage('privacy')
+            }}
           >
             Privacy
-          </button>
+          </a>
         </nav>
       </footer>
     )
@@ -115,14 +118,17 @@ export function SiteFooter({
 
       <nav className="site-footer-nav" aria-label="Company">
         {FOOTER_NAV.map((item) => (
-          <button
+          <a
             key={item.id}
-            type="button"
             className="site-footer-link"
-            onClick={() => onOpenPage(item.id)}
+            href={`/${item.id}`}
+            onClick={(e) => {
+              e.preventDefault()
+              onOpenPage(item.id)
+            }}
           >
             {item.label}
-          </button>
+          </a>
         ))}
       </nav>
 
