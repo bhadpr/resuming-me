@@ -15,6 +15,8 @@ import { LandingPage } from './components/LandingPage'
 import { LegalPage } from './components/LegalPage'
 import { FeedbackPage } from './components/FeedbackPage'
 import { NotFoundPage } from './components/NotFoundPage'
+import { StartPage } from './components/StartPage'
+import { GuestMergeBanner } from './components/GuestMergeBanner'
 import { hideNativeSplash } from './lib/nativeChrome'
 import { navigateBack, safeNextPath, stashAuthNext, takeAuthNext } from './lib/navigation'
 import type { SitePageId } from './lib/site'
@@ -33,6 +35,7 @@ function RootLayout() {
   return (
     <>
       <ScrollRestoration />
+      <GuestMergeBanner />
       <Outlet />
     </>
   )
@@ -158,6 +161,7 @@ export const appRouteObjects = [
     element: <RootLayout />,
     children: [
       { path: '/', element: <IndexRoute /> },
+      { path: '/start', element: <StartPage /> },
       { path: '/about', element: <PublicLegalRoute page="about" /> },
       { path: '/privacy', element: <PublicLegalRoute page="privacy" /> },
       { path: '/terms', element: <PublicLegalRoute page="terms" /> },

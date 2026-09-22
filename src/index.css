@@ -1238,6 +1238,32 @@ select.field-input {
   color: var(--color-warning-text);
 }
 
+.onboarding-dots {
+  display: flex;
+  gap: 0.4rem;
+  margin-bottom: 1rem;
+}
+
+.onboarding-dot {
+  width: 0.5rem;
+  height: 0.5rem;
+  border-radius: 999px;
+  background: var(--color-border);
+}
+
+.onboarding-dot-active {
+  background: var(--color-primary);
+}
+
+.guest-merge-banner {
+  position: fixed;
+  left: 50%;
+  bottom: calc(var(--nav-height, 64px) + env(safe-area-inset-bottom, 0px) + 12px);
+  transform: translateX(-50%);
+  z-index: 40;
+  width: min(28rem, calc(100% - 2rem));
+}
+
 .app-toast {
   position: fixed;
   left: 50%;

@@ -11,6 +11,10 @@ export interface Database {
           id: string
           timezone: string
           is_admin: boolean
+          reminder_time: string | null
+          slip_answer: unknown
+          onboarding_completed_at: string | null
+          merged_guest_id: string | null
           created_at: string
           updated_at: string
         }
@@ -18,12 +22,20 @@ export interface Database {
           id: string
           timezone?: string
           is_admin?: boolean
+          reminder_time?: string | null
+          slip_answer?: unknown
+          onboarding_completed_at?: string | null
+          merged_guest_id?: string | null
           created_at?: string
           updated_at?: string
         }
         Update: {
           timezone?: string
           is_admin?: boolean
+          reminder_time?: string | null
+          slip_answer?: unknown
+          onboarding_completed_at?: string | null
+          merged_guest_id?: string | null
           updated_at?: string
         }
         Relationships: []
@@ -279,6 +291,10 @@ export interface Database {
           activity_count: number
           metric_count: number
         }[]
+      }
+      merge_guest_draft: {
+        Args: { payload: Record<string, unknown> }
+        Returns: { ok: boolean; alreadyMerged?: boolean; activities?: number }
       }
     }
     Enums: Record<string, never>
