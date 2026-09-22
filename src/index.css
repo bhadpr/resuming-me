@@ -377,6 +377,8 @@ code {
   display: flex;
   flex-direction: column;
   gap: 1rem;
+  max-width: 100%;
+  overflow-x: hidden;
 }
 
 .field {
@@ -480,16 +482,22 @@ select.field-input {
 
 .emoji-picker {
   display: grid;
-  grid-template-columns: repeat(8, 1fr);
-  gap: 0.25rem;
+  grid-template-columns: repeat(auto-fill, minmax(40px, 1fr));
+  gap: 0.35rem;
+  width: 100%;
+  max-width: 100%;
+  box-sizing: border-box;
 }
 
 .emoji-option {
-  min-height: 86px;
+  min-height: var(--tap-min);
+  aspect-ratio: 1;
   border-radius: var(--radius-sm);
-  font-size: 2.7rem;
+  font-size: 1.35rem;
+  line-height: 1;
   background: var(--color-surface);
   border: 1px solid transparent;
+  overflow: hidden;
   transition:
     background var(--duration-fast) var(--ease-out),
     border-color var(--duration-fast) var(--ease-out),
@@ -1287,7 +1295,9 @@ select.field-input {
   margin: 0 auto;
   display: flex;
   flex-direction: column;
-  padding-bottom: calc(var(--nav-height) + env(safe-area-inset-bottom, 0px));
+  padding-bottom: calc(
+    var(--nav-height) + env(safe-area-inset-bottom, 0px) + 16px
+  );
 }
 
 .app:has(.settings-screen) {
@@ -1846,6 +1856,34 @@ select.field-input {
   margin-top: 0.25rem;
 }
 
+.history-groups {
+  display: flex;
+  flex-direction: column;
+  gap: 0.75rem;
+}
+
+.history-month {
+  display: flex;
+  flex-direction: column;
+  gap: 0.375rem;
+}
+
+.history-month-header {
+  position: sticky;
+  top: var(--header-height, 56px);
+  z-index: 2;
+  margin: 0;
+  padding: 0.4rem 0.15rem;
+  font-size: 0.75rem;
+  font-weight: 600;
+  letter-spacing: 0.04em;
+  text-transform: uppercase;
+  color: var(--color-text-muted);
+  background: color-mix(in srgb, var(--color-bg) 92%, transparent);
+  backdrop-filter: blur(8px);
+  -webkit-backdrop-filter: blur(8px);
+}
+
 .history-list {
   list-style: none;
   margin: 0;
@@ -1867,6 +1905,12 @@ select.field-input {
   color: inherit;
   text-align: left;
   min-height: var(--tap-min);
+}
+
+.history-row-quiet {
+  color: var(--color-text-muted);
+  font-style: italic;
+  cursor: default;
 }
 
 .history-date {

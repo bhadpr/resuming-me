@@ -373,21 +373,35 @@ function buildDayOfWeekSkips(entries: LogEntry[], from: string, to: string): Day
   }))
 }
 
-function hourBucket(hour: number): string {
+type TimeBucketKey = 'morning' | 'afternoon' | 'evening' | 'night'
+
+const TIME_BUCKET_LABELS: Record<TimeBucketKey, string> = {
+  morning: 'Morning',
+  afternoon: 'Afternoon',
+  evening: 'Evening',
+  night: 'Night',
+}
+
+function hourBucket(hour: number): TimeBucketKey {
   if (hour >= 5 && hour < 12) return 'morning'
   if (hour >= 12 && hour < 17) return 'afternoon'
   if (hour >= 17 && hour < 21) return 'evening'
   return 'night'
 }
 
-const BUCKET_ORDER = ['morning', 'afternoon', 'evening', 'night'] as const
+const BUCKET_ORDER: TimeBucketKey[] = [
+  'morning',
+  'afternoon',
+  'evening',
+  'night',
+]
 
 function buildSessionTimeBuckets(
   entries: LogEntry[],
   from: string,
   to: string,
 ): DayCount[] {
-  const counts: Record<string, number> = {
+  const counts: Record<TimeBucketKey, number> = {
     morning: 0,
     afternoon: 0,
     evening: 0,
@@ -403,10 +417,10 @@ function buildSessionTimeBuckets(
     counts[hourBucket(hour)] += 1
   }
 
-  return BUCKET_ORDER.map((label) => ({
-    key: label,
-    label,
-    count: counts[label],
+  return BUCKET_ORDER.map((key) => ({
+    key,
+    label: TIME_BUCKET_LABELS[key],
+    count: counts[key],
   }))
 }
 

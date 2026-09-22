@@ -130,7 +130,7 @@ describe('computeInsights', () => {
       'week',
       '2026-08-11',
     )
-    expect(result.peakSessionBucket?.label).toBe('evening')
+    expect(result.peakSessionBucket?.label).toBe('Evening')
   })
 
   it('formats percent', () => {

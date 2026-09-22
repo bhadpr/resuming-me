@@ -11,6 +11,11 @@ import {
   computeActivitySeriesStats,
   type ActivityChartWindowDays,
 } from '../lib/insights'
+import {
+  buildActivityHistory,
+  formatHistoryDay,
+  formatQuietRange,
+} from '../lib/activityHistory'
 import { isDeadlineOverdue } from '../lib/rollover'
 import { todayLocalDate } from '../lib/dates'
 import { DeadlineOverduePrompt } from './DeadlineOverduePrompt'
@@ -73,6 +78,11 @@ export function ActivityDetail({
   const seriesStats = useMemo(
     () => computeActivitySeriesStats(series, windowDays),
     [series, windowDays],
+  )
+
+  const historyGroups = useMemo(
+    () => buildActivityHistory(entries, todayLocalDate()),
+    [entries],
   )
 
   const overdue = isDeadlineOverdue(activity, entries, todayLocalDate())
@@ -177,14 +187,8 @@ export function ActivityDetail({
         </div>
         {activity.type !== 'deadline' && (
           <div>
-            <dt>
-              {activity.type === 'weekly_n'
-                ? 'Weeks in a row'
-                : activity.type === 'monthly'
-                  ? 'Months in a row'
-                  : 'Days in a row'}
-            </dt>
-            <dd>{stats.currentStreak}</dd>
+            <dt>Comebacks (30d)</dt>
+            <dd>{stats.comebacksLast30}</dd>
           </div>
         )}
         {activity.tracking_mode === 'timer' && (
@@ -228,45 +232,66 @@ export function ActivityDetail({
         <h3 className="section-label">History</h3>
         {loadingEntries ? (
           <p className="muted-center">Loading history…</p>
-        ) : entries.length === 0 ? (
+        ) : historyGroups.length === 0 ? (
           <p className="muted-center">No log entries yet.</p>
         ) : (
-          <ul className="history-list">
-            {entries.map((entry) => (
-              <li key={entry.id} className="history-item">
-                {editingId === entry.id ? (
-                  <LogEntryEditor
-                    entry={entry}
-                    busy={busy}
-                    onCancel={() => setEditingId(null)}
-                    onSave={async (updates) => {
-                      await onUpdateEntry(entry.id, updates)
-                      setEditingId(null)
-                    }}
-                    onDelete={async () => {
-                      await onDeleteEntry(entry.id)
-                      setEditingId(null)
-                    }}
-                  />
-                ) : (
-                  <button
-                    type="button"
-                    className="history-row"
-                    onClick={() => setEditingId(entry.id)}
-                  >
-                    <span className="history-date">{entry.date}</span>
-                    <span className="history-desc">
-                      {describeLogEntry(entry)}
-                      {entry.updated_at && <span className="badge">edited</span>}
-                    </span>
-                    <span className="activity-chevron" aria-hidden>
-                      ›
-                    </span>
-                  </button>
-                )}
-              </li>
+          <div className="history-groups">
+            {historyGroups.map((group) => (
+              <section key={group.monthKey} className="history-month">
+                <h4 className="history-month-header">{group.monthLabel}</h4>
+                <ul className="history-list">
+                  {group.rows.map((row) =>
+                    row.kind === 'quiet' ? (
+                      <li key={row.id} className="history-item history-item-quiet">
+                        <span className="history-row history-row-quiet">
+                          <span className="history-date">
+                            {formatQuietRange(row.from, row.to)}
+                          </span>
+                        </span>
+                      </li>
+                    ) : editingId === row.entry.id ? (
+                      <li key={row.entry.id} className="history-item">
+                        <LogEntryEditor
+                          entry={row.entry}
+                          busy={busy}
+                          onCancel={() => setEditingId(null)}
+                          onSave={async (updates) => {
+                            await onUpdateEntry(row.entry.id, updates)
+                            setEditingId(null)
+                          }}
+                          onDelete={async () => {
+                            await onDeleteEntry(row.entry.id)
+                            setEditingId(null)
+                          }}
+                        />
+                      </li>
+                    ) : (
+                      <li key={row.entry.id} className="history-item">
+                        <button
+                          type="button"
+                          className="history-row"
+                          onClick={() => setEditingId(row.entry.id)}
+                        >
+                          <span className="history-date">
+                            {formatHistoryDay(row.entry.date)}
+                          </span>
+                          <span className="history-desc">
+                            {describeLogEntry(row.entry)}
+                            {row.entry.updated_at && (
+                              <span className="badge">edited</span>
+                            )}
+                          </span>
+                          <span className="activity-chevron" aria-hidden>
+                            ›
+                          </span>
+                        </button>
+                      </li>
+                    ),
+                  )}
+                </ul>
+              </section>
             ))}
-          </ul>
+          </div>
         )}
       </section>
 

@@ -1,9 +1,5 @@
 import { describe, it, expect } from 'vitest'
-import {
-  computeActivityStats,
-  computeCurrentStreak,
-  computeMetricTrendStats,
-} from './stats'
+import { computeActivityStats, computeMetricTrendStats } from './stats'
 import type { Activity } from './activities'
 import type { LogEntry } from './logs'
 import type { MetricEntry } from './metricEntries'
@@ -52,28 +48,8 @@ function postponed(date: string): LogEntry {
   }
 }
 
-describe('computeCurrentStreak', () => {
-  it('counts consecutive completed days ending today', () => {
-    const streak = computeCurrentStreak(
-      activity(),
-      [completed('2026-08-09'), completed('2026-08-10'), completed('2026-08-11')],
-      '2026-08-11',
-    )
-    expect(streak).toBe(3)
-  })
-
-  it('breaks on postponed day', () => {
-    const streak = computeCurrentStreak(
-      activity(),
-      [completed('2026-08-09'), postponed('2026-08-10'), completed('2026-08-11')],
-      '2026-08-11',
-    )
-    expect(streak).toBe(1)
-  })
-})
-
 describe('computeActivityStats', () => {
-  it('counts postponements and average session length', () => {
+  it('counts postponements, average session length, and comebacks', () => {
     const timer = activity({
       tracking_mode: 'timer',
       target_value: 10,
@@ -114,6 +90,8 @@ describe('computeActivityStats', () => {
     expect(stats.postponementsLast30).toBe(2)
     expect(stats.averageSessionSeconds).toBe(450)
     expect(stats.sessionCount).toBe(2)
+    expect(stats.comebacksLast30).toBe(1)
+    expect('currentStreak' in stats).toBe(false)
   })
 })
 
