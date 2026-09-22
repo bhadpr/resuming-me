@@ -133,6 +133,28 @@ describe('computeInsights', () => {
     expect(result.peakSessionBucket?.label).toBe('Evening')
   })
 
+  it('uses full Night label for late-night sessions (not truncated nig)', () => {
+    const walk = activity({ tracking_mode: 'timer', target_value: 10, target_unit: 'minutes' })
+    const result = computeInsights(
+      [walk],
+      [
+        entry({
+          id: 'n1',
+          type: 'session',
+          source: 'timer',
+          duration_seconds: 300,
+          date: '2026-08-11',
+          started_at: '2026-08-11T23:15:00',
+          created_at: '2026-08-11T23:20:00',
+        }),
+      ],
+      'week',
+      '2026-08-11',
+    )
+    expect(result.peakSessionBucket?.label).toBe('Night')
+    expect(result.peakSessionBucket?.label).not.toBe('nig')
+  })
+
   it('formats percent', () => {
     expect(formatPercent(0.8)).toBe('80%')
   })

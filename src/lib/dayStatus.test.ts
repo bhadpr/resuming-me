@@ -189,6 +189,45 @@ describe('getDayStatus — daily checkbox / count', () => {
       }),
     ).toMatchObject({ status: 'partial', value: 1, target: 3 })
   })
+
+  it('count done / open / missed', () => {
+    const count = activity({
+      tracking_mode: 'count',
+      target_value: 3,
+      target_unit: null,
+    })
+    expect(
+      getDayStatus({
+        activity: count,
+        entriesForDay: [
+          entry({ id: '1', type: 'completed', source: null, duration_seconds: null }),
+          entry({ id: '2', type: 'completed', source: null, duration_seconds: null }),
+          entry({ id: '3', type: 'completed', source: null, duration_seconds: null }),
+        ],
+        date: today,
+        today,
+        timezone: tz,
+      }),
+    ).toMatchObject({ status: 'done', value: 3, target: 3 })
+    expect(
+      getDayStatus({
+        activity: count,
+        entriesForDay: [],
+        date: today,
+        today,
+        timezone: tz,
+      }).status,
+    ).toBe('open')
+    expect(
+      getDayStatus({
+        activity: count,
+        entriesForDay: [],
+        date: '2026-09-20',
+        today,
+        timezone: tz,
+      }).status,
+    ).toBe('missed')
+  })
 })
 
 describe('getDayStatus — weekly / monthly / deadline', () => {
@@ -220,6 +259,43 @@ describe('getDayStatus — weekly / monthly / deadline', () => {
     expect(result.status).toBe('done')
     expect(result.value).toBe(2)
     expect(result.target).toBe(2)
+  })
+
+  it('weekly open / partial / missed', () => {
+    const weekly = activity({
+      type: 'weekly_n',
+      target_value: 10,
+      weekly_target: 2,
+    })
+    expect(
+      getDayStatus({
+        activity: weekly,
+        entriesForDay: [],
+        date: '2026-09-21',
+        today,
+        timezone: tz,
+      }).status,
+    ).toBe('open')
+    expect(
+      getDayStatus({
+        activity: weekly,
+        entriesForDay: [
+          entry({ id: '1', date: '2026-09-21', duration_seconds: 600 }),
+        ],
+        date: '2026-09-21',
+        today,
+        timezone: tz,
+      }),
+    ).toMatchObject({ status: 'partial', value: 1, target: 2 })
+    expect(
+      getDayStatus({
+        activity: weekly,
+        entriesForDay: [],
+        date: '2026-09-14',
+        today: '2026-09-22',
+        timezone: tz,
+      }).status,
+    ).toBe('missed')
   })
 
   it('monthly open until completed', () => {
@@ -254,6 +330,24 @@ describe('getDayStatus — weekly / monthly / deadline', () => {
         timezone: tz,
       }).status,
     ).toBe('done')
+  })
+
+  it('monthly missed when past month with no completion', () => {
+    const monthly = activity({
+      type: 'monthly',
+      tracking_mode: 'checkbox',
+      target_value: null,
+      target_unit: null,
+    })
+    expect(
+      getDayStatus({
+        activity: monthly,
+        entriesForDay: [],
+        date: '2026-08-01',
+        today: '2026-09-22',
+        timezone: tz,
+      }).status,
+    ).toBe('missed')
   })
 
   it('deadline done / open / missed', () => {
@@ -296,12 +390,22 @@ describe('getDayStatus — weekly / monthly / deadline', () => {
   })
 })
 
-describe('getDayStatus — rest / paused stubs', () => {
-  it('rest and paused take priority', () => {
+describe('getDayStatus — rest / paused', () => {
+  it('rest and paused take priority over open and progress', () => {
     expect(
       getDayStatus({
         activity: activity(),
         entriesForDay: [],
+        date: today,
+        today,
+        timezone: tz,
+        restDates: new Set([today]),
+      }).status,
+    ).toBe('rest')
+    expect(
+      getDayStatus({
+        activity: activity(),
+        entriesForDay: [entry({ duration_seconds: 300 })],
         date: today,
         today,
         timezone: tz,
@@ -318,5 +422,28 @@ describe('getDayStatus — rest / paused stubs', () => {
         pauses: [{ activityId: 'a1', from: '2026-09-20', until: null }],
       }).status,
     ).toBe('paused')
+    expect(
+      getDayStatus({
+        activity: activity(),
+        entriesForDay: [entry({ duration_seconds: 120 })],
+        date: today,
+        today,
+        timezone: tz,
+        pauses: [{ activityId: 'a1', from: today, until: '2026-09-28' }],
+      }).status,
+    ).toBe('paused')
+  })
+
+  it('paused does not apply to other activities', () => {
+    expect(
+      getDayStatus({
+        activity: activity({ id: 'a2' }),
+        entriesForDay: [],
+        date: today,
+        today,
+        timezone: tz,
+        pauses: [{ activityId: 'a1', from: today, until: null }],
+      }).status,
+    ).toBe('open')
   })
 })
