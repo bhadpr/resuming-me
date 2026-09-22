@@ -17,6 +17,7 @@ import type { Metric } from '../lib/metrics'
 import type { MetricEntry } from '../lib/metricEntries'
 import type { ActiveTimerState } from '../lib/timerStorage'
 import { formatDuration } from '../lib/timer'
+import { smallerChoiceProp, track } from '../lib/track'
 import { DeadlineOverduePrompt } from './DeadlineOverduePrompt'
 
 export type ReentryFollowUp = {
@@ -440,6 +441,7 @@ function ReentryWelcomeCard({
                 smallerChoiceCopy(activeSuggestion.activity.name, minutes),
               )
               setSmallerOpen(false)
+              track('smaller_chosen', { choice: smallerChoiceProp(minutes) })
               onStartSmallerSession(activeSuggestion, minutes)
             }}
             onCancel={() => setSmallerOpen(false)}
@@ -465,7 +467,10 @@ function ReentryWelcomeCard({
                 type="button"
                 className="btn btn-ghost"
                 disabled={busyId === activeSuggestion.activity.id}
-                onClick={() => setSmallerOpen(true)}
+                onClick={() => {
+                  setSmallerOpen(true)
+                  track('smaller_opened')
+                }}
               >
                 Make it even smaller today
               </button>
@@ -851,7 +856,10 @@ function TodayActivityRow({
             <button
               type="button"
               className="btn btn-ghost btn-sm"
-              onClick={() => setShrinkOpen(true)}
+              onClick={() => {
+                setShrinkOpen(true)
+                track('smaller_opened')
+              }}
             >
               Make it even smaller
             </button>
@@ -860,6 +868,7 @@ function TodayActivityRow({
               selected={selectedMinutes}
               onPick={(minutes) => {
                 setSelectedMinutes(minutes)
+                track('smaller_chosen', { choice: smallerChoiceProp(minutes) })
                 onShrinkRunningTimer(minutes)
                 setShrinkOpen(false)
               }}

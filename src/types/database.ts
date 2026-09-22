@@ -3,6 +3,14 @@ export type TrackingMode = 'timer' | 'count' | 'checkbox'
 export type LogEntryType = 'session' | 'postponed' | 'completed'
 export type SessionSource = 'timer' | 'manual' | 'auto'
 
+export type Json =
+  | string
+  | number
+  | boolean
+  | null
+  | { [key: string]: Json | undefined }
+  | Json[]
+
 export interface Database {
   public: {
     Tables: {
@@ -304,6 +312,40 @@ export interface Database {
         }
         Relationships: []
       }
+      events: {
+        Row: {
+          id: string
+          created_at: string
+          user_id: string | null
+          anon_id: string
+          name: string
+          props: Json
+          path: string | null
+          app_version: string | null
+          platform: string | null
+        }
+        Insert: {
+          id?: string
+          created_at?: string
+          user_id?: string | null
+          anon_id: string
+          name: string
+          props?: Json
+          path?: string | null
+          app_version?: string | null
+          platform?: string | null
+        }
+        Update: {
+          user_id?: string | null
+          anon_id?: string
+          name?: string
+          props?: Json
+          path?: string | null
+          app_version?: string | null
+          platform?: string | null
+        }
+        Relationships: []
+      }
     }
     Views: Record<string, never>
     Functions: {
@@ -319,6 +361,18 @@ export interface Database {
           created_at: string
           activity_count: number
           metric_count: number
+        }[]
+      }
+      product_analytics_summary: {
+        Args: { p_days: number }
+        Returns: {
+          signups: number
+          d1_retention: number | null
+          d7_retention: number | null
+          logs_per_active_user: number | null
+          comeback_count: number
+          active_users: number
+          log_events: number
         }[]
       }
     }

@@ -340,3 +340,51 @@ export async function fetchIsAdmin(userId: string): Promise<boolean> {
   }
   return Boolean(data?.is_admin)
 }
+
+export interface ProductAnalyticsSummary {
+  signups: number
+  d1Retention: number | null
+  d7Retention: number | null
+  logsPerActiveUser: number | null
+  comebackCount: number
+  activeUsers: number
+  logEvents: number
+}
+
+export async function fetchProductAnalytics(
+  window: AnalyticsWindow,
+): Promise<ProductAnalyticsSummary> {
+  const client = createSupabaseClient()
+  const days = ANALYTICS_WINDOW_DAYS[window]
+  const { data, error } = await client.rpc('product_analytics_summary', {
+    p_days: days,
+  })
+
+  if (error) {
+    if (error.code === '42883' || /product_analytics_summary/i.test(error.message)) {
+      throw new Error(
+        'Apply supabase/migrations/20260922000000_product_events.sql in the Supabase SQL Editor.',
+      )
+    }
+    throw error
+  }
+
+  const row = data?.[0]
+  return {
+    signups: asCount(row?.signups),
+    d1Retention:
+      row?.d1_retention == null ? null : Number(row.d1_retention),
+    d7Retention:
+      row?.d7_retention == null ? null : Number(row.d7_retention),
+    logsPerActiveUser:
+      row?.logs_per_active_user == null ? null : Number(row.logs_per_active_user),
+    comebackCount: asCount(row?.comeback_count),
+    activeUsers: asCount(row?.active_users),
+    logEvents: asCount(row?.log_events),
+  }
+}
+
+export function formatRetentionRate(rate: number | null): string {
+  if (rate == null || !Number.isFinite(rate)) return '—'
+  return `${Math.round(rate * 100)}%`
+}

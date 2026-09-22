@@ -1,22 +1,28 @@
 import { useEffect, useState } from 'react'
 import {
   fetchPageViewsForAnalytics,
+  fetchProductAnalytics,
   fetchSignedInEmails,
+  formatRetentionRate,
   formatSignInTime,
   summarizePageViews,
   type AnalyticsSummary,
   type AnalyticsWindow,
   type NamedCount,
+  type ProductAnalyticsSummary,
   type SignedInAccount,
 } from '../lib/analytics'
 
 export function AnalyticsScreen() {
   const [window, setWindow] = useState<AnalyticsWindow>('7d')
   const [summary, setSummary] = useState<AnalyticsSummary | null>(null)
+  const [product, setProduct] = useState<ProductAnalyticsSummary | null>(null)
   const [accounts, setAccounts] = useState<SignedInAccount[]>([])
   const [loading, setLoading] = useState(true)
+  const [productLoading, setProductLoading] = useState(true)
   const [accountsError, setAccountsError] = useState<string | null>(null)
   const [error, setError] = useState<string | null>(null)
+  const [productError, setProductError] = useState<string | null>(null)
 
   useEffect(() => {
     let mounted = true
@@ -34,6 +40,30 @@ export function AnalyticsScreen() {
       })
       .finally(() => {
         if (mounted) setLoading(false)
+      })
+    return () => {
+      mounted = false
+    }
+  }, [window])
+
+  useEffect(() => {
+    let mounted = true
+    setProductLoading(true)
+    setProductError(null)
+    fetchProductAnalytics(window)
+      .then((rows) => {
+        if (!mounted) return
+        setProduct(rows)
+      })
+      .catch((err) => {
+        if (!mounted) return
+        setProduct(null)
+        setProductError(
+          err instanceof Error ? err.message : 'Could not load product analytics',
+        )
+      })
+      .finally(() => {
+        if (mounted) setProductLoading(false)
       })
     return () => {
       mounted = false
@@ -80,6 +110,51 @@ export function AnalyticsScreen() {
           30 days
         </button>
       </div>
+
+      <section className="today-section">
+        <h3 className="section-label">Product</h3>
+        <p className="screen-sub insights-hint">
+          Sign-ups, retention, logs, and comebacks from first-party events.
+        </p>
+        {productError && <p className="error">{productError}</p>}
+        {productLoading || !product ? (
+          <p className="muted-center">
+            {productLoading ? 'Loading product metrics…' : 'No product data yet.'}
+          </p>
+        ) : (
+          <section className="analytics-overview">
+            <StatCard
+              label="Sign-ups"
+              value={formatInt(product.signups)}
+              hint="signup_completed"
+            />
+            <StatCard
+              label="D1 retention"
+              value={formatRetentionRate(product.d1Retention)}
+              hint="Returned next day"
+            />
+            <StatCard
+              label="D7 retention"
+              value={formatRetentionRate(product.d7Retention)}
+              hint="Returned on day 7"
+            />
+            <StatCard
+              label="Logs / active user"
+              value={
+                product.logsPerActiveUser == null
+                  ? '—'
+                  : formatDecimal(product.logsPerActiveUser)
+              }
+              hint={`${formatInt(product.logEvents)} logs · ${formatInt(product.activeUsers)} users`}
+            />
+            <StatCard
+              label="Comebacks"
+              value={formatInt(product.comebackCount)}
+              hint="After 3+ day gap"
+            />
+          </section>
+        )}
+      </section>
 
       {error && <p className="error">{error}</p>}
 
@@ -221,6 +296,13 @@ function barHeight(count: number, all: number[]): number {
 
 function formatInt(n: number): string {
   return new Intl.NumberFormat().format(n)
+}
+
+function formatDecimal(n: number): string {
+  return new Intl.NumberFormat(undefined, {
+    maximumFractionDigits: 1,
+    minimumFractionDigits: 0,
+  }).format(n)
 }
 
 function formatCount(n: number, one: string, many: string): string {

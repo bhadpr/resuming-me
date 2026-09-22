@@ -19,12 +19,18 @@ import {
   DEFAULT_TITLE,
   useDocumentMeta,
 } from '../hooks/useDocumentMeta'
+import { track } from '../lib/track'
 
 interface LandingPageProps {
   configured: boolean
   configError?: string | null
   authError?: string | null
   onSignIn: () => Promise<void>
+}
+
+function truncateReferrer(value: string | null): string | null {
+  if (!value) return null
+  return value.length <= 200 ? value : value.slice(0, 200)
 }
 
 export function LandingPage({
@@ -55,8 +61,14 @@ export function LandingPage({
   )
 
   useEffect(() => {
-    if (!sitePage) trackPageView('/', 'Landing')
-    else trackPageView(`/${sitePage}`, sitePage)
+    if (!sitePage) {
+      trackPageView('/', 'Landing')
+      track('landing_viewed', {
+        referrer: truncateReferrer(document.referrer || null),
+      })
+    } else {
+      trackPageView(`/${sitePage}`, sitePage)
+    }
   }, [sitePage])
 
   useEffect(() => {
@@ -106,6 +118,7 @@ export function LandingPage({
   async function handleSignIn() {
     setError(null)
     setSigningIn(true)
+    track('signin_clicked')
     try {
       await onSignIn()
     } catch (err) {

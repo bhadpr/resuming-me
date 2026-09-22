@@ -20,6 +20,7 @@ import {
   listenForNativeAuthCallback,
   openNativeOAuthUrl,
 } from '../lib/nativeAuth'
+import { track } from '../lib/track'
 
 interface AuthContextValue {
   session: Session | null
@@ -202,7 +203,10 @@ export function useAuth(): AuthContextValue {
   return ctx
 }
 
-async function ensureProfile(userId: string, timezone: string): Promise<void> {
+async function ensureProfile(
+  userId: string,
+  timezone: string,
+): Promise<'created' | 'updated'> {
   const client = createSupabaseClient()
 
   const { data: existing } = await client
@@ -213,10 +217,11 @@ async function ensureProfile(userId: string, timezone: string): Promise<void> {
 
   if (existing) {
     await client.from('profiles').update({ timezone }).eq('id', userId)
-    return
+    return 'updated'
   }
 
   await client.from('profiles').insert({ id: userId, timezone })
+  return 'created'
 }
 
 export function useProfileSync(user: User | null): void {
@@ -224,6 +229,10 @@ export function useProfileSync(user: User | null): void {
     if (!user || !isSupabaseConfigured()) return
 
     const timezone = Intl.DateTimeFormat().resolvedOptions().timeZone
-    ensureProfile(user.id, timezone).catch(console.error)
+    ensureProfile(user.id, timezone)
+      .then((result) => {
+        if (result === 'created') track('signup_completed')
+      })
+      .catch(console.error)
   }, [user])
 }
