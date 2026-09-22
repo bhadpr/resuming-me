@@ -358,6 +358,15 @@ export function AppShell() {
     else if (tab === 'insights') trackPageView('/app/insights', 'Insights')
   }, [tab, settingsOpen, adminPage, legalPage])
 
+  // P1-11: never leave admin screens open if the profile is not admin.
+  useEffect(() => {
+    if (!isAdmin && adminPage) {
+      setAdminPage(null)
+      setSettingsOpen(false)
+      setTab('today')
+    }
+  }, [isAdmin, adminPage])
+
   const selectedActivity =
     activityScreen.name === 'detail' || activityScreen.name === 'form'
       ? activities.find(

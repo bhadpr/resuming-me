@@ -28,9 +28,6 @@ export const COMPANY_NAME = 'Cheerful Games, Inc.'
 export const COPYRIGHT_YEAR = 2026
 export const PRODUCT_NAME = 'Resuming'
 
-/** Public support inbox. */
-export const SUPPORT_EMAIL = 'resuming.me@gmail.com'
-
 /**
  * Governing law for the Terms. Update to the state where Cheerful Games, Inc.
  * is incorporated or principally operates.

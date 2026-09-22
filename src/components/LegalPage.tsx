@@ -4,9 +4,9 @@ import {
   GOVERNING_LAW,
   LEGAL_LAST_UPDATED,
   PRODUCT_NAME,
-  SUPPORT_EMAIL,
   type LegalPageId,
 } from '../lib/site'
+import { CONTACT_EMAIL } from '../config'
 
 interface LegalPageProps {
   page: LegalPageId
@@ -81,7 +81,7 @@ function PrivacyContent() {
       <p>
         {PRODUCT_NAME} is operated by {COMPANY_NAME}. For privacy questions or requests,
         contact us at{' '}
-        <a href={`mailto:${SUPPORT_EMAIL}`}>{SUPPORT_EMAIL}</a>.
+        <a href={`mailto:${CONTACT_EMAIL}`}>{CONTACT_EMAIL}</a>.
       </p>
 
       <h3>Information we collect</h3>
@@ -217,7 +217,7 @@ function PrivacyContent() {
         You can edit or delete many records directly in the app, and you can sign out at
         any time. For a full account deletion, data export, or other privacy request,
         email{' '}
-        <a href={`mailto:${SUPPORT_EMAIL}`}>{SUPPORT_EMAIL}</a>. We may need to verify
+        <a href={`mailto:${CONTACT_EMAIL}`}>{CONTACT_EMAIL}</a>. We may need to verify
         your identity before fulfilling a request. You may also have the right to lodge a
         complaint with a data protection authority in your region.
       </p>
@@ -249,7 +249,7 @@ function PrivacyContent() {
       <h3>Contact</h3>
       <p>
         Privacy requests and questions:{' '}
-        <a href={`mailto:${SUPPORT_EMAIL}`}>{SUPPORT_EMAIL}</a>
+        <a href={`mailto:${CONTACT_EMAIL}`}>{CONTACT_EMAIL}</a>
       </p>
       <p className="legal-muted">Last updated: {LEGAL_LAST_UPDATED}</p>
     </>
@@ -391,7 +391,7 @@ function TermsContent() {
       <p>
         You may stop using the Service at any time and may request account deletion by
         contacting{' '}
-        <a href={`mailto:${SUPPORT_EMAIL}`}>{SUPPORT_EMAIL}</a>. We may suspend or end
+        <a href={`mailto:${CONTACT_EMAIL}`}>{CONTACT_EMAIL}</a>. We may suspend or end
         access to the Service, including for inactivity, risk, or Terms violations.
         Provisions that by their nature should survive (including ownership, disclaimers,
         limitations of liability, and indemnity) will survive termination.
@@ -427,7 +427,7 @@ function TermsContent() {
       <h3>Contact</h3>
       <p>
         Questions about these Terms:{' '}
-        <a href={`mailto:${SUPPORT_EMAIL}`}>{SUPPORT_EMAIL}</a>
+        <a href={`mailto:${CONTACT_EMAIL}`}>{CONTACT_EMAIL}</a>
       </p>
       <p className="legal-muted">Last updated: {LEGAL_LAST_UPDATED}</p>
     </>
