@@ -7,6 +7,7 @@ import {
   loadActiveTimer,
   saveActiveTimer,
   type ActiveTimerState,
+  type TimerStartOptions,
 } from '../lib/timerStorage'
 
 export function useTimer(
@@ -57,7 +58,7 @@ export function useTimer(
       })
     : 0
 
-  const start = useCallback((activityId: string) => {
+  const start = useCallback((activityId: string, options?: TimerStartOptions) => {
     const existing = loadActiveTimer()
     if (existing && existing.activityId !== activityId) {
       throw new Error('Stop the current timer before starting another activity.')
@@ -75,10 +76,27 @@ export function useTimer(
       accumulatedSeconds: 0,
       segmentStartedAt: now,
       sessionStartedAt: now,
+      ...(options && 'sessionTargetSeconds' in options
+        ? { sessionTargetSeconds: options.sessionTargetSeconds }
+        : {}),
+      ...(options?.fromReentry ? { fromReentry: true } : {}),
     }
     saveActiveTimer(next)
     setActive(next)
     setNowMs(Date.now())
+  }, [])
+
+  const setSessionTarget = useCallback((sessionTargetSeconds: number | null) => {
+    setActive((prev) => {
+      if (!prev) return prev
+      const next: ActiveTimerState = {
+        ...prev,
+        sessionTargetSeconds,
+        fromReentry: true,
+      }
+      saveActiveTimer(next)
+      return next
+    })
   }, [])
 
   const pause = useCallback(() => {
@@ -119,6 +137,8 @@ export function useTimer(
     date: string
     durationSeconds: number
     startedAt: string
+    sessionTargetSeconds?: number | null
+    fromReentry?: boolean
   } | null => {
     const prev = loadActiveTimer()
     if (!prev) return null
@@ -135,8 +155,10 @@ export function useTimer(
     return {
       activityId: prev.activityId,
       date: prev.date,
-      durationSeconds: Math.max(1, durationSeconds),
+      durationSeconds: Math.max(0, Math.floor(durationSeconds)),
       startedAt: prev.sessionStartedAt,
+      sessionTargetSeconds: prev.sessionTargetSeconds,
+      fromReentry: prev.fromReentry,
     }
   }, [])
 
@@ -149,6 +171,7 @@ export function useTimer(
     active,
     elapsedSeconds,
     start,
+    setSessionTarget,
     pause,
     resume,
     stop,

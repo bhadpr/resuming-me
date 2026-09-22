@@ -13,6 +13,20 @@ export interface ActiveTimerState {
   segmentStartedAt: string | null
   /** ISO timestamp of the original Start for this session. */
   sessionStartedAt: string
+  /**
+   * Optional session goal for this run.
+   * - omitted / undefined: use the activity's normal target
+   * - null: free-run ("Just get started") — no target
+   * - number: override target in seconds (e.g. 120 for 2 minutes)
+   */
+  sessionTargetSeconds?: number | null
+  /** True when started from the smaller / reentry path (celebration + follow-up). */
+  fromReentry?: boolean
+}
+
+export type TimerStartOptions = {
+  sessionTargetSeconds?: number | null
+  fromReentry?: boolean
 }
 
 export interface QueuedSession {

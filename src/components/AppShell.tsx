@@ -22,7 +22,14 @@ import { FeedbackPage } from './FeedbackPage'
 import { BottomNav } from './BottomNav'
 import { SiteFooter } from './SiteFooter'
 import type { SitePageId } from '../lib/site'
-import { isQuietReentry, applyEasyWins, addEasyWinId, removeEasyWinId, loadEasyWinIds, buildQuietInsightLine } from '../lib/reentry'
+import {
+  activityTargetMinutes,
+  isQuietReentry,
+  buildQuietInsightLine,
+  JUST_STARTED_MIN_SECONDS,
+  type SmallerChoiceMinutes,
+} from '../lib/reentry'
+import type { ReentryFollowUp } from './TodayScreen'
 import { trackPageView } from '../lib/analytics'
 import {
   archiveActivity,
@@ -127,9 +134,10 @@ export function AppShell() {
   const [loadingToday, setLoadingToday] = useState(true)
   const [saving, setSaving] = useState(false)
   const [busyId, setBusyId] = useState<string | null>(null)
-  const [easyWinVersion, setEasyWinVersion] = useState(0)
   const [error, setError] = useState<string | null>(null)
   const [offlineNotice, setOfflineNotice] = useState<string | null>(null)
+  const [softNotice, setSoftNotice] = useState<string | null>(null)
+  const [reentryFollowUp, setReentryFollowUp] = useState<ReentryFollowUp | null>(null)
   const [queueVersion, setQueueVersion] = useState(0)
   const [detailLogEntries, setDetailLogEntries] = useState<LogEntry[]>([])
   const [detailMetricEntries, setDetailMetricEntries] = useState<MetricEntry[]>([])
@@ -268,14 +276,13 @@ export function AppShell() {
   }, [logEntries, queueVersion])
 
   const todayRows = useMemo(() => {
-    const rows = buildTodayProgress(
+    return buildTodayProgress(
       activities,
       mergedLogEntries,
       postponedEntries,
       today,
     )
-    return applyEasyWins(rows, loadEasyWinIds(today))
-  }, [activities, mergedLogEntries, postponedEntries, today, easyWinVersion])
+  }, [activities, mergedLogEntries, postponedEntries, today])
 
   const quietSchedule = useMemo(
     () => ({
@@ -553,8 +560,6 @@ export function AppShell() {
           ),
         )
       }
-      removeEasyWinId(today, row.activity.id)
-      setEasyWinVersion((v) => v + 1)
     } catch (err) {
       setError(err instanceof Error ? err.message : 'Could not undo')
     } finally {
@@ -602,13 +607,31 @@ export function AppShell() {
     }
   }
 
-  function handleTimerStart(row: ActivityTodayProgress) {
+  function handleTimerStart(row: ActivityTodayProgress, options?: {
+    sessionTargetSeconds?: number | null
+    fromReentry?: boolean
+  }) {
     setError(null)
+    setSoftNotice(null)
     try {
-      timer.start(row.activity.id)
+      timer.start(row.activity.id, options)
     } catch (err) {
       setError(err instanceof Error ? err.message : 'Could not start timer')
     }
+  }
+
+  function handleStartSmallerSession(
+    row: ActivityTodayProgress,
+    minutes: SmallerChoiceMinutes,
+  ) {
+    handleTimerStart(row, {
+      sessionTargetSeconds: minutes == null ? null : minutes * 60,
+      fromReentry: true,
+    })
+  }
+
+  function handleShrinkRunningTimer(minutes: SmallerChoiceMinutes) {
+    timer.setSessionTarget(minutes == null ? null : minutes * 60)
   }
 
   async function handleTimerStop() {
@@ -616,14 +639,22 @@ export function AppShell() {
     const stopped = timer.stop()
     if (!stopped) return
 
+    const isFreeRun = stopped.sessionTargetSeconds === null
+    if (isFreeRun && stopped.durationSeconds < JUST_STARTED_MIN_SECONDS) {
+      setSoftNotice('No worries. Try again anytime.')
+      return
+    }
+
+    const durationSeconds = Math.max(1, stopped.durationSeconds)
     setBusyId(stopped.activityId)
     setError(null)
+    setSoftNotice(null)
     try {
       const { entry, queued } = await writeSessionEntry({
         userId: user.id,
         activityId: stopped.activityId,
         date: stopped.date,
-        durationSeconds: stopped.durationSeconds,
+        durationSeconds,
         startedAt: stopped.startedAt,
         source: 'timer',
       })
@@ -634,6 +665,25 @@ export function AppShell() {
       setQueueVersion((v) => v + 1)
       if (queued) {
         setOfflineNotice('Saved offline. Will sync when you reconnect.')
+      }
+
+      if (stopped.fromReentry) {
+        const activity = activities.find((a) => a.id === stopped.activityId)
+        const row = todayRows.find((r) => r.activity.id === stopped.activityId)
+        const maxMinutes =
+          (row && activityTargetMinutes(row)) ??
+          (activity?.target_value != null
+            ? activity.target_unit === 'seconds'
+              ? activity.target_value / 60
+              : activity.target_value
+            : null)
+        if (activity && maxMinutes != null) {
+          setReentryFollowUp({
+            activityName: activity.name,
+            maxTargetMinutes: maxMinutes,
+            excludeActivityId: stopped.activityId,
+          })
+        }
       }
     } catch (err) {
       setError(err instanceof Error ? err.message : 'Could not save session')
@@ -670,13 +720,6 @@ export function AppShell() {
     } finally {
       setBusyId(null)
     }
-  }
-
-  async function handleShrinkToday(row: ActivityTodayProgress, minutes: number) {
-    const saved = await handleManualMinutes(row, minutes)
-    if (!saved) return
-    addEasyWinId(today, row.activity.id)
-    setEasyWinVersion((v) => v + 1)
   }
 
   async function handleRescheduleDeadline(row: ActivityTodayProgress, newDeadline: string) {
@@ -845,8 +888,10 @@ export function AppShell() {
                     busyId={busyId}
                     error={error}
                     offlineNotice={offlineNotice}
+                    softNotice={softNotice}
                     activeTimer={timer.active}
                     timerElapsedSeconds={timer.elapsedSeconds}
+                    reentryFollowUp={reentryFollowUp}
                     onCheckOff={handleCheckOff}
                     onUncheck={handleUncheck}
                     onIncrement={handleIncrement}
@@ -856,7 +901,8 @@ export function AppShell() {
                     onTimerResume={timer.resume}
                     onTimerStop={() => void handleTimerStop()}
                     onManualMinutes={handleManualMinutes}
-                    onShrinkToday={handleShrinkToday}
+                    onStartSmallerSession={handleStartSmallerSession}
+                    onShrinkRunningTimer={handleShrinkRunningTimer}
                     onRescheduleDeadline={handleRescheduleDeadline}
                     hasActivities={activeActivityCount > 0}
                     quietReentry={isQuietReentry({
@@ -964,13 +1010,8 @@ export function AppShell() {
                   setSaving(true)
                   setError(null)
                   try {
-                    const removed = detailLogEntries.find((entry) => entry.id === entryId)
                     await deleteLogEntry(entryId)
                     setDetailLogEntries((prev) => prev.filter((e) => e.id !== entryId))
-                    if (removed?.date === today) {
-                      removeEasyWinId(today, selectedActivity.id)
-                      setEasyWinVersion((v) => v + 1)
-                    }
                     await refreshTodayData(activities)
                   } catch (err) {
                     setError(err instanceof Error ? err.message : 'Could not delete entry')

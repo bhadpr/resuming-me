@@ -11,10 +11,25 @@ import {
 
 export const QUIET_DAYS_THRESHOLD = 5
 export const SMALLER_TODAY_MINUTES = 2
+export const SMALLER_ONE_MINUTE = 1
+/** Free-run ("Just get started") sessions shorter than this are discarded, not logged. */
+export const JUST_STARTED_MIN_SECONDS = 30
 export const EASY_WIN_STORAGE_KEY = 'resuming-easy-wins'
 export const REENTRY_NOTIFICATION_ID = 7198
 export const REENTRY_NOTIFICATION_BODY =
   "Still here when you're ready. One small thing is enough."
+
+/** Choice from the "Make it even smaller" sheet. `null` = free-run, no target. */
+export type SmallerChoiceMinutes = typeof SMALLER_TODAY_MINUTES | typeof SMALLER_ONE_MINUTE | null
+
+export const SMALLER_CHOICES: Array<{
+  minutes: SmallerChoiceMinutes
+  label: string
+}> = [
+  { minutes: SMALLER_TODAY_MINUTES, label: '2 minutes' },
+  { minutes: SMALLER_ONE_MINUTE, label: '1 minute' },
+  { minutes: null, label: 'Just get started' },
+]
 
 function isWinEntry(entry: Pick<LogEntry, 'type' | 'duration_seconds'>): boolean {
   if (entry.type === 'completed') return true
@@ -171,6 +186,39 @@ export function canShrinkToday(row: ActivityTodayProgress): boolean {
   return targetToSeconds(row.activity) > SMALLER_TODAY_MINUTES * 60
 }
 
+/** Daily timer target in minutes (seconds-unit activities convert). */
+export function activityTargetMinutes(row: ActivityTodayProgress): number | null {
+  if (row.actionKind !== 'timer' || row.activity.type === 'weekly_n') return null
+  const seconds = targetToSeconds(row.activity)
+  if (seconds <= 0) return null
+  return seconds / 60
+}
+
+/**
+ * TODO(P1-03): replace with getDayStatus.
+ * Soft partial for Today only: some progress logged, target not met.
+ */
+export function isPartialToday(
+  activity: Pick<Activity, 'tracking_mode' | 'type' | 'target_value' | 'target_unit'>,
+  currentSeconds: number,
+): boolean {
+  if (activity.tracking_mode !== 'timer') return false
+  if (activity.type === 'weekly_n' || activity.type === 'deadline') return false
+  const target = targetToSeconds(activity as Activity)
+  if (target <= 0) return false
+  return currentSeconds > 0 && currentSeconds < target
+}
+
+export function smallerChoiceCopy(
+  activityName: string,
+  minutes: SmallerChoiceMinutes,
+): string {
+  if (minutes == null) {
+    return `Just get started on ${activityName}. That counts.`
+  }
+  return `Just ${minutes} minute${minutes === 1 ? '' : 's'} of ${activityName}. That counts.`
+}
+
 export function reentrySuggestLine(row: ActivityTodayProgress): string {
   const name = row.activity.name
   if (row.actionKind === 'timer' && row.activity.type !== 'weekly_n') {
@@ -189,21 +237,36 @@ export function reentryPrimaryLabel(row: ActivityTodayProgress): string {
   return 'Start'
 }
 
+/**
+ * Next quiet-day suggestion after a session: timer activities only,
+ * whose target minutes are ≤ maxTargetMinutes.
+ */
+export function pickFollowUpReentryRow(
+  rows: ActivityTodayProgress[],
+  maxTargetMinutes: number,
+  excludeActivityId?: string | null,
+): ActivityTodayProgress | null {
+  const open = rows.filter((row) => {
+    if (row.done) return false
+    if (excludeActivityId && row.activity.id === excludeActivityId) return false
+    const minutes = activityTargetMinutes(row)
+    if (minutes == null) return false
+    return minutes <= maxTargetMinutes
+  })
+  if (open.length === 0) return null
+  return [...open].sort((a, b) => {
+    const diff = easeScore(a) - easeScore(b)
+    if (diff !== 0) return diff
+    return a.activity.name.localeCompare(b.activity.name)
+  })[0]
+}
+
+/** @deprecated P1-01: no longer forces done. Kept for localStorage cleanup only. */
 export function applyEasyWins(
   rows: ActivityTodayProgress[],
-  easyWinIds: Set<string>,
+  _easyWinIds: Set<string>,
 ): ActivityTodayProgress[] {
-  if (easyWinIds.size === 0) return rows
-  return rows.map((row) => {
-    if (!easyWinIds.has(row.activity.id) || row.done) return row
-    // Deleting today's session should undo the smaller-today shortcut.
-    if (row.current <= 0) return row
-    return {
-      ...row,
-      done: true,
-      progressLabel: 'Enough for today',
-    }
-  })
+  return rows
 }
 
 export function loadEasyWinIds(today: string): Set<string> {

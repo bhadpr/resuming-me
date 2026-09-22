@@ -1,14 +1,16 @@
 import { describe, it, expect } from 'vitest'
 import {
-  applyEasyWins,
   buildQuietInsightLine,
   buildReentryNotification,
   canShrinkToday,
+  isPartialToday,
   isQuietReentry,
   lastActivityWinDate,
   pickEasiestReentryRow,
+  pickFollowUpReentryRow,
   reentryPrimaryLabel,
   reentrySuggestLine,
+  smallerChoiceCopy,
   trackingStartDate,
   QUIET_DAYS_THRESHOLD,
   REENTRY_NOTIFICATION_BODY,
@@ -283,36 +285,95 @@ describe('reentry copy', () => {
   })
 })
 
-describe('applyEasyWins', () => {
-  it('marks a today-only smaller session as done', () => {
+describe('isPartialToday', () => {
+  it('is true when some minutes are logged below the target', () => {
+    expect(
+      isPartialToday(
+        activity({ target_value: 5, target_unit: 'min' }),
+        120,
+      ),
+    ).toBe(true)
+  })
+
+  it('is false when target is met', () => {
+    expect(
+      isPartialToday(
+        activity({ target_value: 5, target_unit: 'min' }),
+        300,
+      ),
+    ).toBe(false)
+  })
+
+  it('is false with no progress', () => {
+    expect(
+      isPartialToday(
+        activity({ target_value: 5, target_unit: 'min' }),
+        0,
+      ),
+    ).toBe(false)
+  })
+})
+
+describe('pickFollowUpReentryRow', () => {
+  it('only suggests timer activities at or below the last target', () => {
     const rows = buildTodayProgress(
-      [activity({ id: 'read', name: 'Reading', target_value: 10 })],
       [
-        entry({
-          activity_id: 'read',
-          type: 'session',
-          duration_seconds: 120,
-          date: '2026-08-19',
+        activity({
+          id: 'med',
+          name: 'Meditation',
+          target_value: 5,
+        }),
+        activity({
+          id: 'walk',
+          name: 'Walk',
+          target_value: 20,
+        }),
+        activity({
+          id: 'read',
+          name: 'Reading',
+          target_value: 5,
+        }),
+        activity({
+          id: 'box',
+          name: 'Floss',
+          tracking_mode: 'checkbox',
+          target_value: null,
+          target_unit: null,
         }),
       ],
       [],
+      [],
       '2026-08-19',
     )
-    expect(rows[0].done).toBe(false)
-    const next = applyEasyWins(rows, new Set(['read']))
-    expect(next[0].done).toBe(true)
-    expect(next[0].progressLabel).toBe('Enough for today')
+    const next = pickFollowUpReentryRow(rows, 5, 'med')
+    expect(next?.activity.id).toBe('read')
   })
 
-  it('does not stay done after today\'s session is gone', () => {
+  it('returns null when every remaining timer is larger', () => {
     const rows = buildTodayProgress(
-      [activity({ id: 'read', name: 'Reading', target_value: 10 })],
+      [
+        activity({ id: 'med', name: 'Meditation', target_value: 5 }),
+        activity({ id: 'walk', name: 'Walk', target_value: 20 }),
+      ],
       [],
       [],
       '2026-08-19',
     )
-    const next = applyEasyWins(rows, new Set(['read']))
-    expect(next[0].done).toBe(false)
+    expect(pickFollowUpReentryRow(rows, 5, 'med')).toBeNull()
+  })
+})
+
+describe('smallerChoiceCopy', () => {
+  it('celebrates the chosen size', () => {
+    expect(smallerChoiceCopy('Meditate', 2)).toBe(
+      'Just 2 minutes of Meditate. That counts.',
+    )
+    expect(smallerChoiceCopy('Meditate', 1)).toBe(
+      'Just 1 minute of Meditate. That counts.',
+    )
+    expect(smallerChoiceCopy('Meditate', null)).toBe(
+      'Just get started on Meditate. That counts.',
+    )
   })
 })
 

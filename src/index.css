@@ -1576,6 +1576,42 @@ select.field-input {
   margin-top: 0.35rem;
 }
 
+.smaller-choice-sheet {
+  display: flex;
+  flex-direction: column;
+  gap: 0.55rem;
+  width: 100%;
+}
+
+.smaller-choice-options {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.4rem;
+}
+
+.smaller-choice {
+  border: 1px solid var(--color-border);
+}
+
+.smaller-choice-selected {
+  background: var(--color-accent-soft, var(--color-surface-2, var(--color-surface)));
+  border-color: var(--color-accent, var(--color-text));
+  color: var(--color-text);
+}
+
+.smaller-choice-actions {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.4rem;
+  align-items: center;
+}
+
+.today-timer-target-hint {
+  font-size: 0.85em;
+  font-weight: 400;
+  opacity: 0.75;
+}
+
 .today-done {
   margin-bottom: 1.75rem;
 }

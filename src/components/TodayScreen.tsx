@@ -3,16 +3,28 @@ import type { ActivityTodayProgress } from '../lib/today'
 import { partitionTodayRows, todayEmptyKind } from '../lib/today'
 import {
   canShrinkToday,
+  isPartialToday,
   pickEasiestReentryRow,
+  pickFollowUpReentryRow,
   reentryPrimaryLabel,
   reentrySuggestLine,
+  SMALLER_CHOICES,
+  SMALLER_ONE_MINUTE,
   SMALLER_TODAY_MINUTES,
+  smallerChoiceCopy,
+  type SmallerChoiceMinutes,
 } from '../lib/reentry'
 import type { Metric } from '../lib/metrics'
 import type { MetricEntry } from '../lib/metricEntries'
 import type { ActiveTimerState } from '../lib/timerStorage'
 import { formatDuration } from '../lib/timer'
 import { DeadlineOverduePrompt } from './DeadlineOverduePrompt'
+
+export type ReentryFollowUp = {
+  activityName: string
+  maxTargetMinutes: number
+  excludeActivityId: string
+}
 
 interface TodayScreenProps {
   dateLabel: string
@@ -22,22 +34,31 @@ interface TodayScreenProps {
   busyId: string | null
   error: string | null
   offlineNotice?: string | null
+  softNotice?: string | null
   activeTimer: ActiveTimerState | null
   timerElapsedSeconds: number
+  reentryFollowUp?: ReentryFollowUp | null
   onCheckOff: (row: ActivityTodayProgress) => void
   onUncheck: (row: ActivityTodayProgress) => void
   onIncrement: (row: ActivityTodayProgress) => void
   onLogMetric: (metricId: string, value: number) => void
-  onTimerStart: (row: ActivityTodayProgress) => void
+  onTimerStart: (
+    row: ActivityTodayProgress,
+    options?: { fromReentry?: boolean },
+  ) => void
   onTimerPause: () => void
   onTimerResume: () => void
   onTimerStop: () => void
   onManualMinutes: (row: ActivityTodayProgress, minutes: number) => void
   onRescheduleDeadline: (row: ActivityTodayProgress, newDeadline: string) => void
+  onStartSmallerSession: (
+    row: ActivityTodayProgress,
+    minutes: SmallerChoiceMinutes,
+  ) => void
+  onShrinkRunningTimer: (minutes: SmallerChoiceMinutes) => void
   hasActivities?: boolean
   quietReentry?: boolean
   onEmptySetup?: () => void
-  onShrinkToday?: (row: ActivityTodayProgress, minutes: number) => void
 }
 
 export function TodayScreen({
@@ -48,8 +69,10 @@ export function TodayScreen({
   busyId,
   error,
   offlineNotice = null,
+  softNotice = null,
   activeTimer,
   timerElapsedSeconds,
+  reentryFollowUp = null,
   onCheckOff,
   onUncheck,
   onIncrement,
@@ -60,12 +83,21 @@ export function TodayScreen({
   onTimerStop,
   onManualMinutes,
   onRescheduleDeadline,
+  onStartSmallerSession,
+  onShrinkRunningTimer,
   hasActivities = false,
   quietReentry = false,
   onEmptySetup,
-  onShrinkToday,
 }: TodayScreenProps) {
-  const suggested = quietReentry ? pickEasiestReentryRow(rows) : null
+  const quietSuggested = quietReentry ? pickEasiestReentryRow(rows) : null
+  const followUpSuggested = reentryFollowUp
+    ? pickFollowUpReentryRow(
+        rows,
+        reentryFollowUp.maxTargetMinutes,
+        reentryFollowUp.excludeActivityId,
+      )
+    : null
+  const suggested = quietSuggested ?? followUpSuggested
   const { hero, alsoDue, done } = useMemo(
     () =>
       partitionTodayRows(
@@ -81,6 +113,7 @@ export function TodayScreen({
     hasActivities,
     dueCount: rows.length,
   })
+  const showWelcome = (quietReentry || reentryFollowUp) && emptyKind !== 'setup'
 
   return (
     <div className="today-screen">
@@ -94,6 +127,11 @@ export function TodayScreen({
       {offlineNotice && (
         <div className="notice notice-warning">
           <p>{offlineNotice}</p>
+        </div>
+      )}
+      {softNotice && (
+        <div className="notice">
+          <p>{softNotice}</p>
         </div>
       )}
       {error && <p className="error">{error}</p>}
@@ -116,66 +154,20 @@ export function TodayScreen({
             </div>
           )}
 
-          {quietReentry && emptyKind !== 'setup' && (
-            <div className="today-welcome">
-              <p className="today-empty-title">It’s been a few days — that’s okay.</p>
-              {suggested && !suggested.done ? (
-                <>
-                  <p className="today-empty-copy">{reentrySuggestLine(suggested)}</p>
-                  <div className="today-welcome-actions">
-                    {suggested.actionKind === 'timer' &&
-                    activeTimer?.activityId === suggested.activity.id ? (
-                      <p className="today-empty-copy">
-                        Timer is running below. Stop it when you&apos;re finished.
-                      </p>
-                    ) : (
-                      <>
-                        <button
-                          type="button"
-                          className="btn btn-primary"
-                          disabled={busyId === suggested.activity.id}
-                          onPointerDown={(event) => {
-                            if (event.button !== 0) return
-                            event.preventDefault()
-                            runReentryPrimary(suggested, {
-                              onCheckOff,
-                              onIncrement,
-                              onTimerStart,
-                            })
-                          }}
-                          onClick={() =>
-                            runReentryPrimary(suggested, {
-                              onCheckOff,
-                              onIncrement,
-                              onTimerStart,
-                            })
-                          }
-                        >
-                          {reentryPrimaryLabel(suggested)}
-                        </button>
-                        {canShrinkToday(suggested) && onShrinkToday && (
-                          <button
-                            type="button"
-                            className="btn btn-ghost"
-                            disabled={busyId === suggested.activity.id}
-                            onClick={() =>
-                              onShrinkToday(suggested, SMALLER_TODAY_MINUTES)
-                            }
-                          >
-                            Make it even smaller today
-                          </button>
-                        )}
-                      </>
-                    )}
-                  </div>
-                </>
-              ) : (
-                <p className="today-empty-copy">Want to pick one small thing today?</p>
-              )}
-            </div>
+          {showWelcome && (
+            <ReentryWelcomeCard
+              followUp={reentryFollowUp}
+              suggested={suggested}
+              busyId={busyId}
+              activeTimer={activeTimer}
+              onCheckOff={onCheckOff}
+              onIncrement={onIncrement}
+              onTimerStart={onTimerStart}
+              onStartSmallerSession={onStartSmallerSession}
+            />
           )}
 
-          {emptyKind === 'clear' && !quietReentry && (
+          {emptyKind === 'clear' && !showWelcome && (
             <div className="today-empty">
               <p className="today-empty-title">Nothing due today</p>
               <p className="today-empty-copy">
@@ -189,7 +181,7 @@ export function TodayScreen({
               {hero && (
                 <section className="today-section">
                   <h3 className="section-label">
-                    {quietReentry && suggested?.activity.id === hero.activity.id
+                    {suggested?.activity.id === hero.activity.id
                       ? 'Start here'
                       : heroKicker(hero, activeTimer)}
                   </h3>
@@ -209,6 +201,7 @@ export function TodayScreen({
                       onTimerStop={onTimerStop}
                       onManualMinutes={(minutes) => onManualMinutes(hero, minutes)}
                       onRescheduleDeadline={(date) => onRescheduleDeadline(hero, date)}
+                      onShrinkRunningTimer={onShrinkRunningTimer}
                     />
                   </ul>
                 </section>
@@ -234,6 +227,7 @@ export function TodayScreen({
                         onTimerStop={onTimerStop}
                         onManualMinutes={(minutes) => onManualMinutes(row, minutes)}
                         onRescheduleDeadline={(date) => onRescheduleDeadline(row, date)}
+                        onShrinkRunningTimer={onShrinkRunningTimer}
                       />
                     ))}
                   </ul>
@@ -262,6 +256,7 @@ export function TodayScreen({
                         onTimerStop={onTimerStop}
                         onManualMinutes={(minutes) => onManualMinutes(row, minutes)}
                         onRescheduleDeadline={(date) => onRescheduleDeadline(row, date)}
+                        onShrinkRunningTimer={onShrinkRunningTimer}
                       />
                     ))}
                   </ul>
@@ -308,6 +303,172 @@ export function TodayScreen({
   )
 }
 
+function ReentryWelcomeCard({
+  followUp,
+  suggested,
+  busyId,
+  activeTimer,
+  onCheckOff,
+  onIncrement,
+  onTimerStart,
+  onStartSmallerSession,
+}: {
+  followUp: ReentryFollowUp | null
+  suggested: ActivityTodayProgress | null
+  busyId: string | null
+  activeTimer: ActiveTimerState | null
+  onCheckOff: (row: ActivityTodayProgress) => void
+  onIncrement: (row: ActivityTodayProgress) => void
+  onTimerStart: (
+    row: ActivityTodayProgress,
+    options?: { fromReentry?: boolean },
+  ) => void
+  onStartSmallerSession: (
+    row: ActivityTodayProgress,
+    minutes: SmallerChoiceMinutes,
+  ) => void
+}) {
+  const [smallerOpen, setSmallerOpen] = useState(false)
+  const [chosenCopy, setChosenCopy] = useState<string | null>(null)
+  const [selectedMinutes, setSelectedMinutes] =
+    useState<SmallerChoiceMinutes>(SMALLER_TODAY_MINUTES)
+
+  useEffect(() => {
+    setSmallerOpen(false)
+    setChosenCopy(null)
+    setSelectedMinutes(SMALLER_TODAY_MINUTES)
+  }, [suggested?.activity.id, followUp?.excludeActivityId])
+
+  const title = followUp
+    ? `You resumed ${followUp.activityName}.`
+    : 'It’s been a few days — that’s okay.'
+
+  if (followUp && !suggested) {
+    return (
+      <div className="today-welcome">
+        <p className="today-empty-title">{title}</p>
+        <p className="today-empty-copy">That&apos;s enough for today. Nice.</p>
+      </div>
+    )
+  }
+
+  if (!suggested || suggested.done) {
+    return (
+      <div className="today-welcome">
+        <p className="today-empty-title">{title}</p>
+        <p className="today-empty-copy">Want to pick one small thing today?</p>
+      </div>
+    )
+  }
+
+  const timerRunningHere = activeTimer?.activityId === suggested.activity.id
+
+  function startPrimary() {
+    runReentryPrimary(suggested, {
+      onCheckOff,
+      onIncrement,
+      onTimerStart: (row) => onTimerStart(row, { fromReentry: true }),
+    })
+  }
+
+  return (
+    <div className="today-welcome">
+      <p className="today-empty-title">{title}</p>
+      {chosenCopy ? (
+        <p className="today-empty-copy">{chosenCopy}</p>
+      ) : (
+        <p className="today-empty-copy">{reentrySuggestLine(suggested)}</p>
+      )}
+      <div className="today-welcome-actions">
+        {suggested.actionKind === 'timer' && timerRunningHere ? (
+          <p className="today-empty-copy">
+            Timer is running below. Stop it when you&apos;re finished.
+          </p>
+        ) : smallerOpen ? (
+          <SmallerChoiceSheet
+            selected={selectedMinutes}
+            onPick={(minutes) => {
+              setSelectedMinutes(minutes)
+              setChosenCopy(smallerChoiceCopy(suggested.activity.name, minutes))
+              setSmallerOpen(false)
+              onStartSmallerSession(suggested, minutes)
+            }}
+            onCancel={() => setSmallerOpen(false)}
+            disabled={busyId === suggested.activity.id}
+          />
+        ) : (
+          <>
+            <button
+              type="button"
+              className="btn btn-primary"
+              disabled={busyId === suggested.activity.id}
+              onPointerDown={(event) => {
+                if (event.button !== 0) return
+                event.preventDefault()
+                startPrimary()
+              }}
+              onClick={startPrimary}
+            >
+              {reentryPrimaryLabel(suggested)}
+            </button>
+            {canShrinkToday(suggested) && (
+              <button
+                type="button"
+                className="btn btn-ghost"
+                disabled={busyId === suggested.activity.id}
+                onClick={() => setSmallerOpen(true)}
+              >
+                Make it even smaller today
+              </button>
+            )}
+          </>
+        )}
+      </div>
+    </div>
+  )
+}
+
+function SmallerChoiceSheet({
+  selected,
+  onPick,
+  onCancel,
+  disabled,
+}: {
+  selected: SmallerChoiceMinutes
+  onPick: (minutes: SmallerChoiceMinutes) => void
+  onCancel: () => void
+  disabled?: boolean
+}) {
+  return (
+    <div className="smaller-choice-sheet" role="group" aria-label="Make it even smaller">
+      <div className="smaller-choice-options">
+        {SMALLER_CHOICES.map((choice) => (
+          <button
+            key={choice.label}
+            type="button"
+            className={`btn btn-sm smaller-choice ${
+              selected === choice.minutes ? 'smaller-choice-selected' : 'btn-ghost'
+            }`}
+            disabled={disabled}
+            aria-pressed={selected === choice.minutes}
+            onClick={() => onPick(choice.minutes)}
+          >
+            {choice.label}
+          </button>
+        ))}
+      </div>
+      <button
+        type="button"
+        className="btn btn-ghost btn-sm"
+        disabled={disabled}
+        onClick={onCancel}
+      >
+        Cancel
+      </button>
+    </div>
+  )
+}
+
 function runReentryPrimary(
   row: ActivityTodayProgress,
   actions: {
@@ -349,6 +510,7 @@ function TodayActivityRow({
   onTimerStop,
   onManualMinutes,
   onRescheduleDeadline,
+  onShrinkRunningTimer,
 }: {
   row: ActivityTodayProgress
   hero?: boolean
@@ -364,13 +526,18 @@ function TodayActivityRow({
   onTimerStop: () => void
   onManualMinutes: (minutes: number) => void
   onRescheduleDeadline: (newDeadline: string) => void
+  onShrinkRunningTimer: (minutes: SmallerChoiceMinutes) => void
 }) {
   const { activity, actionKind, done, progressLabel, current, target } = row
   const isThisTimer = activeTimer?.activityId === activity.id
   const timerLive = isThisTimer && activeTimer?.status === 'running'
   const timerPaused = isThisTimer && activeTimer?.status === 'paused'
+  // TODO(P1-03): replace with getDayStatus
   const partial =
-    !done && !isThisTimer && current > 0 && actionKind !== 'deadline' && actionKind !== 'checkbox'
+    !done &&
+    !isThisTimer &&
+    actionKind === 'timer' &&
+    isPartialToday(activity, current)
   const postponeNote =
     !done && row.recentlyPostponed
       ? row.activity.type === 'weekly_n'
@@ -387,6 +554,27 @@ function TodayActivityRow({
   const timerIdleLabel = postponeNote || partial ? 'Resume' : 'Start'
   const [showManual, setShowManual] = useState(false)
   const [manualMinutes, setManualMinutes] = useState('')
+  const [shrinkOpen, setShrinkOpen] = useState(false)
+  const [selectedMinutes, setSelectedMinutes] =
+    useState<SmallerChoiceMinutes>(SMALLER_TODAY_MINUTES)
+
+  const sessionTarget =
+    isThisTimer && activeTimer && 'sessionTargetSeconds' in activeTimer
+      ? activeTimer.sessionTargetSeconds
+      : undefined
+  const progressTarget =
+    typeof sessionTarget === 'number' && sessionTarget > 0 ? sessionTarget : target
+  const progressCurrent = isThisTimer
+    ? Math.max(current, timerElapsedSeconds)
+    : current
+  const canShrinkRunning =
+    isThisTimer &&
+    row.actionKind === 'timer' &&
+    row.activity.type !== 'weekly_n' &&
+    !done &&
+    (sessionTarget === undefined ||
+      sessionTarget === null ||
+      sessionTarget > SMALLER_ONE_MINUTE * 60)
 
   if (row.activity.type === 'deadline' && row.overdue) {
     return (
@@ -422,7 +610,7 @@ function TodayActivityRow({
           <span className="activity-name">{activity.name}</span>
           <span className="activity-desc">
             {desc}
-            {partial ? ' · in progress' : ''}
+            {partial ? ' · partial' : ''}
             {done ? ' · done' : ''}
           </span>
           {actionKind !== 'deadline' && !isThisTimer && (
@@ -535,16 +723,53 @@ function TodayActivityRow({
         >
           <span className="today-timer-elapsed-value">
             {formatDuration(timerElapsedSeconds)}
+            {typeof sessionTarget === 'number' && (
+              <span className="today-timer-target-hint">
+                {' '}
+                / {formatDuration(sessionTarget)}
+              </span>
+            )}
+            {sessionTarget === null && (
+              <span className="today-timer-target-hint"> · no target</span>
+            )}
           </span>
-          {actionKind !== 'deadline' && (
+          {actionKind !== 'deadline' && sessionTarget !== null && (
             <div className="progress-bar today-timer-progress" aria-hidden>
               <div
                 className={`progress-bar-fill ${done ? 'progress-bar-fill-done' : ''}`}
                 style={{
-                  width: `${Math.min(100, (current / Math.max(target, 1)) * 100)}%`,
+                  width: `${Math.min(
+                    100,
+                    (progressCurrent / Math.max(progressTarget, 1)) * 100,
+                  )}%`,
                 }}
               />
             </div>
+          )}
+        </div>
+      )}
+
+      {canShrinkRunning && (
+        <div className="timer-manual">
+          {!shrinkOpen ? (
+            <button
+              type="button"
+              className="btn btn-ghost btn-sm"
+              onClick={() => setShrinkOpen(true)}
+            >
+              Make it even smaller
+            </button>
+          ) : (
+            <SmallerChoiceSheet
+              selected={selectedMinutes}
+              onPick={(minutes) => {
+                setSelectedMinutes(minutes)
+                onShrinkRunningTimer(minutes)
+                setShrinkOpen(false)
+              }}
+              onCancel={() => setShrinkOpen(false)}
+              disabled={busy}
+            />
           )}
         </div>
       )}
