@@ -361,10 +361,11 @@ function ReentryWelcomeCard({
     )
   }
 
-  const timerRunningHere = activeTimer?.activityId === suggested.activity.id
+  const activeSuggestion = suggested
+  const timerRunningHere = activeTimer?.activityId === activeSuggestion.activity.id
 
   function startPrimary() {
-    runReentryPrimary(suggested, {
+    runReentryPrimary(activeSuggestion, {
       onCheckOff,
       onIncrement,
       onTimerStart: (row) => onTimerStart(row, { fromReentry: true }),
@@ -377,10 +378,10 @@ function ReentryWelcomeCard({
       {chosenCopy ? (
         <p className="today-empty-copy">{chosenCopy}</p>
       ) : (
-        <p className="today-empty-copy">{reentrySuggestLine(suggested)}</p>
+        <p className="today-empty-copy">{reentrySuggestLine(activeSuggestion)}</p>
       )}
       <div className="today-welcome-actions">
-        {suggested.actionKind === 'timer' && timerRunningHere ? (
+        {activeSuggestion.actionKind === 'timer' && timerRunningHere ? (
           <p className="today-empty-copy">
             Timer is running below. Stop it when you&apos;re finished.
           </p>
@@ -389,19 +390,21 @@ function ReentryWelcomeCard({
             selected={selectedMinutes}
             onPick={(minutes) => {
               setSelectedMinutes(minutes)
-              setChosenCopy(smallerChoiceCopy(suggested.activity.name, minutes))
+              setChosenCopy(
+                smallerChoiceCopy(activeSuggestion.activity.name, minutes),
+              )
               setSmallerOpen(false)
-              onStartSmallerSession(suggested, minutes)
+              onStartSmallerSession(activeSuggestion, minutes)
             }}
             onCancel={() => setSmallerOpen(false)}
-            disabled={busyId === suggested.activity.id}
+            disabled={busyId === activeSuggestion.activity.id}
           />
         ) : (
           <>
             <button
               type="button"
               className="btn btn-primary"
-              disabled={busyId === suggested.activity.id}
+              disabled={busyId === activeSuggestion.activity.id}
               onPointerDown={(event) => {
                 if (event.button !== 0) return
                 event.preventDefault()
@@ -409,13 +412,13 @@ function ReentryWelcomeCard({
               }}
               onClick={startPrimary}
             >
-              {reentryPrimaryLabel(suggested)}
+              {reentryPrimaryLabel(activeSuggestion)}
             </button>
-            {canShrinkToday(suggested) && (
+            {canShrinkToday(activeSuggestion) && (
               <button
                 type="button"
                 className="btn btn-ghost"
-                disabled={busyId === suggested.activity.id}
+                disabled={busyId === activeSuggestion.activity.id}
                 onClick={() => setSmallerOpen(true)}
               >
                 Make it even smaller today
