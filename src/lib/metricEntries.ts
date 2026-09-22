@@ -75,3 +75,9 @@ export async function upsertMetricEntry(params: {
   if (error) throw error
   return data
 }
+
+export async function deleteMetricEntry(id: string): Promise<void> {
+  const client = createSupabaseClient()
+  const { error } = await client.from('metric_entries').delete().eq('id', id)
+  if (error) throw error
+}

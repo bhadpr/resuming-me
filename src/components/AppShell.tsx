@@ -20,6 +20,7 @@ import { BrandTitle } from './BrandTitle'
 import { LegalPage } from './LegalPage'
 import { FeedbackPage } from './FeedbackPage'
 import { BottomNav } from './BottomNav'
+import { Toast } from './Toast'
 import { SiteFooter } from './SiteFooter'
 import type { SitePageId } from '../lib/site'
 import {
@@ -30,6 +31,13 @@ import {
   type SmallerChoiceMinutes,
 } from '../lib/reentry'
 import type { ReentryFollowUp } from './TodayScreen'
+import { useUndoToast } from '../hooks/useUndoToast'
+import {
+  formatCompletedUndoMessage,
+  formatCountUndoMessage,
+  formatMetricUndoMessage,
+  formatSessionUndoMessage,
+} from '../lib/undoMessages'
 import { trackPageView } from '../lib/analytics'
 import {
   archiveActivity,
@@ -67,6 +75,7 @@ import {
   listMetricEntriesForDate,
   listMetricEntriesForMetric,
   upsertMetricEntry,
+  deleteMetricEntry,
   type MetricEntry,
 } from '../lib/metricEntries'
 import {
@@ -74,6 +83,7 @@ import {
   queuedSessionsAsLogEntries,
   writeSessionEntry,
 } from '../lib/sessions'
+import { removeQueuedSession } from '../lib/timerStorage'
 import { addDays, startOfWeekMonday, todayLocalDate } from '../lib/dates'
 import { buildTodayProgress, type ActivityTodayProgress } from '../lib/today'
 import {
@@ -151,6 +161,7 @@ export function AppShell() {
   )
 
   const today = todayLocalDate()
+  const undoToast = useUndoToast()
 
   const activeActivityIds = useMemo(
     () => activities.filter((a) => !a.archived).map((a) => a.id),
@@ -517,6 +528,45 @@ export function AppShell() {
     }
   }
 
+  function removeLogEntryLocally(entryId: string) {
+    setLogEntries((prev) => prev.filter((e) => e.id !== entryId))
+    setDetailLogEntries((prev) => prev.filter((e) => e.id !== entryId))
+    setInsightsEntries((prev) => prev.filter((e) => e.id !== entryId))
+    setPostponedEntries((prev) => prev.filter((e) => e.id !== entryId))
+  }
+
+  function removeMetricEntryLocally(entryId: string, metricId: string) {
+    setMetricEntriesToday((prev) => prev.filter((e) => e.id !== entryId))
+    setDetailMetricEntries((prev) => prev.filter((e) => e.id !== entryId))
+    setInsightsMetricEntries((prev) => prev.filter((e) => e.id !== entryId))
+    // Keep list keyed by metric_id in sync if another slice still holds it
+    void metricId
+  }
+
+  async function undoLogEntry(opts: {
+    entryId: string
+    queued?: boolean
+    activityId?: string
+  }) {
+    try {
+      if (opts.queued) {
+        // TODO(P1): offline undo for completions/metrics/skip — only sessions queue today.
+        removeQueuedSession(opts.entryId)
+        setQueueVersion((v) => v + 1)
+      } else {
+        await deleteLogEntry(opts.entryId)
+      }
+      removeLogEntryLocally(opts.entryId)
+      if (opts.activityId) {
+        setReentryFollowUp((prev) =>
+          prev?.excludeActivityId === opts.activityId ? null : prev,
+        )
+      }
+    } catch (err) {
+      setError(err instanceof Error ? err.message : 'Could not undo')
+    }
+  }
+
   async function handleCheckOff(row: ActivityTodayProgress) {
     if (!user) return
     setBusyId(row.activity.id)
@@ -528,6 +578,9 @@ export function AppShell() {
         date: today,
       })
       setLogEntries((prev) => [created, ...prev])
+      undoToast.show(formatCompletedUndoMessage(row.activity.name), () =>
+        undoLogEntry({ entryId: created.id, activityId: row.activity.id }),
+      )
     } catch (err) {
       setError(err instanceof Error ? err.message : 'Could not mark complete')
     } finally {
@@ -560,6 +613,7 @@ export function AppShell() {
           ),
         )
       }
+      undoToast.dismiss()
     } catch (err) {
       setError(err instanceof Error ? err.message : 'Could not undo')
     } finally {
@@ -578,6 +632,9 @@ export function AppShell() {
         date: today,
       })
       setLogEntries((prev) => [created, ...prev])
+      undoToast.show(formatCountUndoMessage(row.activity.name), () =>
+        undoLogEntry({ entryId: created.id, activityId: row.activity.id }),
+      )
     } catch (err) {
       setError(err instanceof Error ? err.message : 'Could not add +1')
     } finally {
@@ -587,6 +644,8 @@ export function AppShell() {
 
   async function handleLogMetric(metricId: string, value: number) {
     if (!user) return
+    const metric = metrics.find((m) => m.id === metricId)
+    const previous = metricEntriesToday.find((e) => e.metric_id === metricId) ?? null
     setBusyId(metricId)
     setError(null)
     try {
@@ -599,6 +658,38 @@ export function AppShell() {
       setMetricEntriesToday((prev) => {
         const without = prev.filter((e) => e.metric_id !== metricId)
         return [...without, entry]
+      })
+      const label = metric
+        ? formatMetricUndoMessage(metric.name, value, metric.unit)
+        : `Logged ${value}`
+      undoToast.show(label, async () => {
+        try {
+          if (previous) {
+            const restored = await upsertMetricEntry({
+              userId: user.id,
+              metricId,
+              date: today,
+              value: previous.value,
+            })
+            setMetricEntriesToday((prev) => {
+              const without = prev.filter((e) => e.metric_id !== metricId)
+              return [...without, restored]
+            })
+            setDetailMetricEntries((prev) => {
+              const without = prev.filter((e) => e.id !== entry.id)
+              return [...without, restored]
+            })
+            setInsightsMetricEntries((prev) => {
+              const without = prev.filter((e) => e.id !== entry.id)
+              return [...without, restored]
+            })
+          } else {
+            await deleteMetricEntry(entry.id)
+            removeMetricEntryLocally(entry.id, metricId)
+          }
+        } catch (err) {
+          setError(err instanceof Error ? err.message : 'Could not undo')
+        }
       })
     } catch (err) {
       setError(err instanceof Error ? err.message : 'Could not log number')
@@ -667,8 +758,17 @@ export function AppShell() {
         setOfflineNotice('Saved offline. Will sync when you reconnect.')
       }
 
+      const activity = activities.find((a) => a.id === stopped.activityId)
+      const name = activity?.name ?? 'activity'
+      undoToast.show(formatSessionUndoMessage(name, durationSeconds), () =>
+        undoLogEntry({
+          entryId: entry.id,
+          queued,
+          activityId: stopped.activityId,
+        }),
+      )
+
       if (stopped.fromReentry) {
-        const activity = activities.find((a) => a.id === stopped.activityId)
         const row = todayRows.find((r) => r.activity.id === stopped.activityId)
         const maxMinutes =
           (row && activityTargetMinutes(row)) ??
@@ -697,11 +797,12 @@ export function AppShell() {
     setBusyId(row.activity.id)
     setError(null)
     try {
+      const durationSeconds = Math.round(minutes * 60)
       const { entry, queued } = await writeSessionEntry({
         userId: user.id,
         activityId: row.activity.id,
         date: today,
-        durationSeconds: Math.round(minutes * 60),
+        durationSeconds,
         startedAt: null,
         source: 'manual',
       })
@@ -713,6 +814,15 @@ export function AppShell() {
       if (queued) {
         setOfflineNotice('Saved offline. Will sync when you reconnect.')
       }
+      undoToast.show(
+        formatSessionUndoMessage(row.activity.name, durationSeconds),
+        () =>
+          undoLogEntry({
+            entryId: entry.id,
+            queued,
+            activityId: row.activity.id,
+          }),
+      )
       return true
     } catch (err) {
       setError(err instanceof Error ? err.message : 'Could not log minutes')
@@ -1297,7 +1407,15 @@ export function AppShell() {
       </main>
 
       {!settingsOpen && !adminPage && !showOnboarding && !legalPage && (
-        <BottomNav tab={tab} onTabChange={switchTab} />
+        <>
+          {undoToast.toast && (
+            <Toast
+              message={undoToast.toast.message}
+              onUndo={() => void undoToast.undo()}
+            />
+          )}
+          <BottomNav tab={tab} onTabChange={switchTab} />
+        </>
       )}
     </div>
   )

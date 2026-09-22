@@ -1,0 +1,25 @@
+/** Calm undo-toast copy for Today write actions. */
+
+export function formatSessionUndoMessage(
+  activityName: string,
+  durationSeconds: number,
+): string {
+  const minutes = Math.max(1, Math.round(durationSeconds / 60))
+  return `Logged ${minutes} min of ${activityName}`
+}
+
+export function formatCompletedUndoMessage(activityName: string): string {
+  return `Logged ${activityName}`
+}
+
+export function formatCountUndoMessage(activityName: string): string {
+  return `Logged +1 of ${activityName}`
+}
+
+export function formatMetricUndoMessage(
+  metricName: string,
+  value: number,
+  unit: string,
+): string {
+  return `Logged ${value} ${unit} · ${metricName}`
+}
