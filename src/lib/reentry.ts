@@ -14,6 +14,11 @@ export const SMALLER_TODAY_MINUTES = 2
 export const SMALLER_ONE_MINUTE = 1
 /** Free-run ("Just get started") sessions shorter than this are discarded, not logged. */
 export const JUST_STARTED_MIN_SECONDS = 30
+
+/** True when a free-run stop should create a log_entries row. */
+export function shouldLogJustStartedSession(durationSeconds: number): boolean {
+  return durationSeconds >= JUST_STARTED_MIN_SECONDS
+}
 export const EASY_WIN_STORAGE_KEY = 'resuming-easy-wins'
 export const REENTRY_NOTIFICATION_ID = 7198
 export const REENTRY_NOTIFICATION_BODY =

@@ -28,7 +28,7 @@ import {
   activityTargetMinutes,
   isQuietReentry,
   buildQuietInsightLine,
-  JUST_STARTED_MIN_SECONDS,
+  shouldLogJustStartedSession,
   type SmallerChoiceMinutes,
 } from '../lib/reentry'
 import type { ReentryFollowUp, SkipReason } from './TodayScreen'
@@ -865,7 +865,7 @@ export function AppShell() {
     if (!stopped) return
 
     const isFreeRun = stopped.sessionTargetSeconds === null
-    if (isFreeRun && stopped.durationSeconds < JUST_STARTED_MIN_SECONDS) {
+    if (isFreeRun && !shouldLogJustStartedSession(stopped.durationSeconds)) {
       setSoftNotice('No worries. Try again anytime.')
       return
     }

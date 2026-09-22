@@ -370,7 +370,7 @@ export function InsightsScreen({
                   </span>
                   <span className="insights-rate">
                     {insights.peakSessionBucket
-                      ? insights.peakSessionBucket.label.slice(0, 3)
+                      ? insights.peakSessionBucket.label
                       : '—'}
                   </span>
                 </button>
@@ -388,7 +388,7 @@ export function InsightsScreen({
                                 }}
                               />
                             </div>
-                            <span className="bar-grid-label">{b.label.slice(0, 3)}</span>
+                            <span className="bar-grid-label">{b.label}</span>
                           </div>
                         ))}
                       </div>

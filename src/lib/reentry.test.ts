@@ -11,7 +11,9 @@ import {
   reentryPrimaryLabel,
   reentrySuggestLine,
   smallerChoiceCopy,
+  shouldLogJustStartedSession,
   trackingStartDate,
+  JUST_STARTED_MIN_SECONDS,
   QUIET_DAYS_THRESHOLD,
   REENTRY_NOTIFICATION_BODY,
   REENTRY_NOTIFICATION_ID,
@@ -486,5 +488,18 @@ describe('buildQuietInsightLine', () => {
         rows,
       }),
     ).toBe('Last 5 days were quiet. Meditation is an easy place to pick up.')
+  })
+})
+
+describe('shouldLogJustStartedSession', () => {
+  it('discards free-run stops under 30 seconds', () => {
+    expect(shouldLogJustStartedSession(0)).toBe(false)
+    expect(shouldLogJustStartedSession(29)).toBe(false)
+    expect(shouldLogJustStartedSession(JUST_STARTED_MIN_SECONDS - 1)).toBe(false)
+  })
+
+  it('logs free-run stops at or above 30 seconds', () => {
+    expect(shouldLogJustStartedSession(JUST_STARTED_MIN_SECONDS)).toBe(true)
+    expect(shouldLogJustStartedSession(120)).toBe(true)
   })
 })
