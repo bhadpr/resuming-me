@@ -1,28 +1,45 @@
-import { useCallback, useEffect, useMemo, useState } from 'react'
+import { lazy, Suspense, useCallback, useEffect, useMemo, useRef, useState } from 'react'
 import { Capacitor } from '@capacitor/core'
 import { useAuth, useProfileSync } from '../hooks/useAuth'
 import { useDailyDigest } from '../hooks/useDailyDigest'
 import { useTimer } from '../hooks/useTimer'
 import { ActivityList } from './ActivityList'
-import { ActivityForm } from './ActivityForm'
 import { ActivityDetail } from './ActivityDetail'
 import { MetricList } from './MetricList'
 import { MetricForm } from './MetricForm'
 import { MetricDetail } from './MetricDetail'
 import { TodayScreen } from './TodayScreen'
-import { InsightsScreen } from './InsightsScreen'
-import { SettingsScreen } from './SettingsScreen'
-import { AnalyticsScreen } from './AnalyticsScreen'
-import { AdminFeedbackScreen } from './AdminFeedbackScreen'
 import { OnboardingScreen } from './OnboardingScreen'
 import { InstallPrompt } from './InstallPrompt'
 import { BrandTitle } from './BrandTitle'
-import { LegalPage } from './LegalPage'
-import { FeedbackPage } from './FeedbackPage'
-import { DeleteAccountPage } from './DeleteAccountPage'
 import { BottomNav } from './BottomNav'
 import { Toast } from './Toast'
 import { SiteFooter } from './SiteFooter'
+
+const ActivityForm = lazy(() =>
+  import('./ActivityForm').then((m) => ({ default: m.ActivityForm })),
+)
+const InsightsScreen = lazy(() =>
+  import('./InsightsScreen').then((m) => ({ default: m.InsightsScreen })),
+)
+const SettingsScreen = lazy(() =>
+  import('./SettingsScreen').then((m) => ({ default: m.SettingsScreen })),
+)
+const AnalyticsScreen = lazy(() =>
+  import('./AnalyticsScreen').then((m) => ({ default: m.AnalyticsScreen })),
+)
+const AdminFeedbackScreen = lazy(() =>
+  import('./AdminFeedbackScreen').then((m) => ({ default: m.AdminFeedbackScreen })),
+)
+const LegalPage = lazy(() =>
+  import('./LegalPage').then((m) => ({ default: m.LegalPage })),
+)
+const FeedbackPage = lazy(() =>
+  import('./FeedbackPage').then((m) => ({ default: m.FeedbackPage })),
+)
+const DeleteAccountPage = lazy(() =>
+  import('./DeleteAccountPage').then((m) => ({ default: m.DeleteAccountPage })),
+)
 import type { SitePageId } from '../lib/site'
 import {
   activityTargetMinutes,
@@ -128,6 +145,11 @@ import {
   writeDismissedFlag,
   type OnboardingCompletePayload,
 } from '../lib/onboarding'
+import { readTodayCache, writeTodayCache } from '../lib/todayCache'
+
+function ScreenChunkFallback() {
+  return <p className="muted-center">Loading…</p>
+}
 
 type Tab = 'today' | 'activities' | 'metrics' | 'insights'
 
@@ -194,6 +216,15 @@ export function AppShell() {
   const native = Capacitor.isNativePlatform()
   useProfileSync(user)
 
+  const today = todayLocalDate()
+  const initialCache = useMemo(
+    () => (user ? readTodayCache(user.id, today) : null),
+    // Mount-only hydrate from last Today payload
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+    [],
+  )
+  const hadCache = initialCache != null
+
   const [tab, setTab] = useState<Tab>('today')
   const [settingsOpen, setSettingsOpen] = useState(false)
   const [adminPage, setAdminPage] = useState<AdminPage | null>(null)
@@ -201,19 +232,29 @@ export function AppShell() {
   const [activityScreen, setActivityScreen] = useState<ActivityScreen>({ name: 'list' })
   const [metricScreen, setMetricScreen] = useState<MetricScreen>({ name: 'list' })
 
-  const [activities, setActivities] = useState<Activity[]>([])
-  const [metrics, setMetrics] = useState<Metric[]>([])
-  const [logEntries, setLogEntries] = useState<LogEntry[]>([])
-  const [postponedEntries, setPostponedEntries] = useState<LogEntry[]>([])
-  const [metricEntriesToday, setMetricEntriesToday] = useState<MetricEntry[]>([])
+  const [activities, setActivities] = useState<Activity[]>(
+    () => initialCache?.activities ?? [],
+  )
+  const [metrics, setMetrics] = useState<Metric[]>(() => initialCache?.metrics ?? [])
+  const [logEntries, setLogEntries] = useState<LogEntry[]>(
+    () => initialCache?.logEntries ?? [],
+  )
+  const [postponedEntries, setPostponedEntries] = useState<LogEntry[]>(
+    () => initialCache?.postponedEntries ?? [],
+  )
+  const [metricEntriesToday, setMetricEntriesToday] = useState<MetricEntry[]>(
+    () => initialCache?.metricEntriesToday ?? [],
+  )
   const [activityPauses, setActivityPauses] = useState<ActivityPauseRow[]>([])
   const [restDays, setRestDays] = useState<RestDay[]>([])
+  const metricsRef = useRef(metrics)
+  metricsRef.current = metrics
 
   const [showArchivedActivities, setShowArchivedActivities] = useState(false)
   const [showArchivedMetrics, setShowArchivedMetrics] = useState(false)
-  const [loadingActivities, setLoadingActivities] = useState(true)
-  const [loadingMetrics, setLoadingMetrics] = useState(true)
-  const [loadingToday, setLoadingToday] = useState(true)
+  const [loadingActivities, setLoadingActivities] = useState(!hadCache)
+  const [loadingMetrics, setLoadingMetrics] = useState(!hadCache)
+  const [loadingToday, setLoadingToday] = useState(!hadCache)
   const [saving, setSaving] = useState(false)
   const [busyId, setBusyId] = useState<string | null>(null)
   const [error, setError] = useState<string | null>(null)
@@ -232,7 +273,6 @@ export function AppShell() {
     readDismissedFlag(ONBOARDING_DISMISS_KEY),
   )
 
-  const today = todayLocalDate()
   const undoToast = useUndoToast()
 
   const activeActivityIds = useMemo(
@@ -265,8 +305,12 @@ export function AppShell() {
   }, [])
 
   const refreshTodayData = useCallback(
-    async (activityList: Activity[]) => {
-      setLoadingToday(true)
+    async (
+      activityList: Activity[],
+      opts?: { background?: boolean; metricsList?: Metric[] },
+    ) => {
+      const background = opts?.background === true
+      if (!background) setLoadingToday(true)
       try {
         const activeIds = activityList.filter((a) => !a.archived).map((a) => a.id)
         const from = addDays(startOfWeekMonday(today), -90)
@@ -283,19 +327,33 @@ export function AppShell() {
         setActivityPauses(pauses)
         setRestDays(rests)
         setQueueVersion((v) => v + 1)
+        if (user) {
+          writeTodayCache({
+            userId: user.id,
+            date: today,
+            activities: activityList,
+            metrics: opts?.metricsList ?? metricsRef.current,
+            logEntries: logs,
+            postponedEntries: postponed,
+            metricEntriesToday: metricRows,
+          })
+        }
       } catch (err) {
         setError(err instanceof Error ? err.message : 'Failed to load Today')
       } finally {
         setLoadingToday(false)
       }
     },
-    [today],
+    [today, user],
   )
 
   useEffect(() => {
     void (async () => {
-      setLoadingActivities(true)
-      setLoadingMetrics(true)
+      const background = hadCache
+      if (!background) {
+        setLoadingActivities(true)
+        setLoadingMetrics(true)
+      }
       try {
         if (user) {
           await runClientRolloverCatchUp(user.id)
@@ -303,7 +361,7 @@ export function AppShell() {
         const [acts, mets] = await Promise.all([listActivities(true), listMetrics(true)])
         setActivities(acts)
         setMetrics(mets)
-        await refreshTodayData(acts)
+        await refreshTodayData(acts, { background, metricsList: mets })
       } catch (err) {
         setError(err instanceof Error ? err.message : 'Failed to load')
       } finally {
@@ -311,7 +369,7 @@ export function AppShell() {
         setLoadingMetrics(false)
       }
     })()
-  }, [refreshTodayData, user])
+  }, [refreshTodayData, user, hadCache])
 
   // Flush offline session queue when connectivity returns
   useEffect(() => {
@@ -1218,40 +1276,52 @@ export function AppShell() {
       <main className="app-main">
         {!showOnboarding && <InstallPrompt />}
         {legalPage === 'feedback' ? (
-          <FeedbackPage
-            onBack={() => setLegalPage(null)}
-            defaultName={user?.user_metadata?.full_name ?? user?.user_metadata?.name ?? ''}
-            defaultEmail={user?.email ?? ''}
-          />
+          <Suspense fallback={<ScreenChunkFallback />}>
+            <FeedbackPage
+              onBack={() => setLegalPage(null)}
+              defaultName={user?.user_metadata?.full_name ?? user?.user_metadata?.name ?? ''}
+              defaultEmail={user?.email ?? ''}
+            />
+          </Suspense>
         ) : legalPage === 'delete-account' ? (
-          <DeleteAccountPage onBack={() => setLegalPage(null)} />
+          <Suspense fallback={<ScreenChunkFallback />}>
+            <DeleteAccountPage onBack={() => setLegalPage(null)} />
+          </Suspense>
         ) : legalPage ? (
-          <LegalPage page={legalPage} onBack={() => setLegalPage(null)} />
+          <Suspense fallback={<ScreenChunkFallback />}>
+            <LegalPage page={legalPage} onBack={() => setLegalPage(null)} />
+          </Suspense>
         ) : adminPage === 'analytics' ? (
-          <AnalyticsScreen />
+          <Suspense fallback={<ScreenChunkFallback />}>
+            <AnalyticsScreen />
+          </Suspense>
         ) : adminPage === 'feedback' ? (
-          <AdminFeedbackScreen />
+          <Suspense fallback={<ScreenChunkFallback />}>
+            <AdminFeedbackScreen />
+          </Suspense>
         ) : (
           <>
             {settingsOpen ? (
-              <SettingsScreen
-                isAdmin={isAdmin}
-                todayItems={todayRows.map((row) => ({
-                  name: row.activity.name,
-                  done: row.done,
-                }))}
-                onBack={() => setSettingsOpen(false)}
-                onOpenAnalytics={() => {
-                  if (!isAdmin) return
-                  setAdminPage('analytics')
-                }}
-                onOpenFeedback={() => {
-                  if (!isAdmin) return
-                  setAdminPage('feedback')
-                }}
-                onOpenPrivacy={() => setLegalPage('privacy')}
-                onSignOut={() => void signOut()}
-              />
+              <Suspense fallback={<ScreenChunkFallback />}>
+                <SettingsScreen
+                  isAdmin={isAdmin}
+                  todayItems={todayRows.map((row) => ({
+                    name: row.activity.name,
+                    done: row.done,
+                  }))}
+                  onBack={() => setSettingsOpen(false)}
+                  onOpenAnalytics={() => {
+                    if (!isAdmin) return
+                    setAdminPage('analytics')
+                  }}
+                  onOpenFeedback={() => {
+                    if (!isAdmin) return
+                    setAdminPage('feedback')
+                  }}
+                  onOpenPrivacy={() => setLegalPage('privacy')}
+                  onSignOut={() => void signOut()}
+                />
+              </Suspense>
             ) : showOnboarding ? (
               <OnboardingScreen
                 saving={saving}
@@ -1341,19 +1411,21 @@ export function AppShell() {
                 <h2 className="form-title">
                   {activityScreen.activity ? 'Edit activity' : 'Add activity'}
                 </h2>
-                <ActivityForm
-                  initial={activityScreen.activity ?? null}
-                  saving={saving}
-                  error={error}
-                  onSubmit={handleActivitySave}
-                  onCancel={() =>
-                    setActivityScreen(
-                      activityScreen.activity
-                        ? { name: 'detail', activityId: activityScreen.activity.id }
-                        : { name: 'list' },
-                    )
-                  }
-                />
+                <Suspense fallback={<ScreenChunkFallback />}>
+                  <ActivityForm
+                    initial={activityScreen.activity ?? null}
+                    saving={saving}
+                    error={error}
+                    onSubmit={handleActivitySave}
+                    onCancel={() =>
+                      setActivityScreen(
+                        activityScreen.activity
+                          ? { name: 'detail', activityId: activityScreen.activity.id }
+                          : { name: 'list' },
+                      )
+                    }
+                  />
+                </Suspense>
               </>
             )}
 
@@ -1653,31 +1725,33 @@ export function AppShell() {
         )}
 
         {tab === 'insights' && (
-          <InsightsScreen
-            window={insightsWindow}
-            onWindowChange={setInsightsWindow}
-            insights={insights}
-            activities={activities}
-            entries={insightsEntries}
-            metrics={metrics}
-            metricEntries={insightsMetricEntries}
-            today={today}
-            dayStatusOpts={dayStatusOpts}
-            loading={loadingInsights}
-            error={error}
-            onAddActivity={() => {
-              setError(null)
-              setTab('activities')
-              setActivityScreen({ name: 'form' })
-            }}
-            onAddMetric={(input) => void handleQuickAddMetric(input)}
-            quietLine={buildQuietInsightLine({
-              activities,
-              entries: mergedLogEntries,
-              today,
-              rows: todayRows,
-            })}
-          />
+          <Suspense fallback={<ScreenChunkFallback />}>
+            <InsightsScreen
+              window={insightsWindow}
+              onWindowChange={setInsightsWindow}
+              insights={insights}
+              activities={activities}
+              entries={insightsEntries}
+              metrics={metrics}
+              metricEntries={insightsMetricEntries}
+              today={today}
+              dayStatusOpts={dayStatusOpts}
+              loading={loadingInsights}
+              error={error}
+              onAddActivity={() => {
+                setError(null)
+                setTab('activities')
+                setActivityScreen({ name: 'form' })
+              }}
+              onAddMetric={(input) => void handleQuickAddMetric(input)}
+              quietLine={buildQuietInsightLine({
+                activities,
+                entries: mergedLogEntries,
+                today,
+                rows: todayRows,
+              })}
+            />
+          </Suspense>
         )}
           </>
         )}
