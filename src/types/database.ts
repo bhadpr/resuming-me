@@ -199,6 +199,47 @@ export interface Database {
         }
         Relationships: []
       }
+      activity_pauses: {
+        Row: {
+          id: string
+          user_id: string
+          activity_id: string
+          paused_from: string
+          paused_until: string | null
+          created_at: string
+        }
+        Insert: {
+          id?: string
+          user_id: string
+          activity_id: string
+          paused_from: string
+          paused_until?: string | null
+          created_at?: string
+        }
+        Update: {
+          paused_from?: string
+          paused_until?: string | null
+        }
+        Relationships: []
+      }
+      rest_days: {
+        Row: {
+          id: string
+          user_id: string
+          date: string
+          created_at: string
+        }
+        Insert: {
+          id?: string
+          user_id: string
+          date: string
+          created_at?: string
+        }
+        Update: {
+          date?: string
+        }
+        Relationships: []
+      }
       feedback: {
         Row: {
           id: string

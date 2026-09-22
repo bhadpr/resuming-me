@@ -1,13 +1,12 @@
 import { createSupabaseClient } from './supabase'
-import { listActivities } from './activities'
-import { listLogEntriesForActivities, type LogEntry } from './logs'
-import { planRollover } from './rollover'
-import { addDays, todayLocalDate } from './dates'
+import type { LogEntry } from './logs'
 
 export async function insertPostponedEntry(params: {
   userId: string
   activityId: string
   date: string
+  /** Optional skip reason chip text. */
+  note?: string | null
 }): Promise<LogEntry | null> {
   const client = createSupabaseClient()
   const { data, error } = await client
@@ -17,10 +16,11 @@ export async function insertPostponedEntry(params: {
       activity_id: params.activityId,
       type: 'postponed',
       date: params.date,
+      // null source = explicit user Skip (distinct from historical source='auto')
       source: null,
       started_at: null,
       duration_seconds: null,
-      note: null,
+      note: params.note ?? null,
     })
     .select('*')
     .single()
@@ -34,8 +34,8 @@ export async function insertPostponedEntry(params: {
 }
 
 /**
- * Client-side catch-up: write postponed entries for closed periods in the
- * user's timezone. Safe to call on every app open (idempotent).
+ * Sync the user's timezone profile on app open.
+ * Does not write postponed / put-off rows (P1-04).
  */
 export async function runClientRolloverCatchUp(userId: string): Promise<{
   written: number
@@ -54,40 +54,13 @@ export async function runClientRolloverCatchUp(userId: string): Promise<{
     Intl.DateTimeFormat().resolvedOptions().timeZone ||
     'UTC'
 
-  // Persist timezone if missing/outdated
   if (!profile) {
     await client.from('profiles').insert({ id: userId, timezone })
   } else if (profile.timezone !== timezone) {
-    // Keep browser timezone fresh
     await client.from('profiles').update({ timezone }).eq('id', userId)
   }
 
-  const activities = await listActivities(false)
-  const activeIds = activities.map((a) => a.id)
-  const today = todayLocalDate()
-  const from = addDays(today, -21)
-  const entries = await listLogEntriesForActivities(activeIds, from, today)
-
-  const plans = planRollover({
-    userId,
-    timezone,
-    nowUtc: new Date(),
-    activities,
-    entries,
-    lookbackDays: 14,
-  })
-
-  let written = 0
-  for (const plan of plans) {
-    const row = await insertPostponedEntry({
-      userId: plan.userId,
-      activityId: plan.activityId,
-      date: plan.date,
-    })
-    if (row) written += 1
-  }
-
-  return { written, timezone }
+  return { written: 0, timezone }
 }
 
 export async function rescheduleDeadline(

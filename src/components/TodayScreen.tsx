@@ -25,6 +25,15 @@ export type ReentryFollowUp = {
   excludeActivityId: string
 }
 
+export const SKIP_REASONS = [
+  'Too tired',
+  'No time',
+  "Didn't feel like it",
+  'Other',
+] as const
+
+export type SkipReason = (typeof SKIP_REASONS)[number]
+
 interface TodayScreenProps {
   dateLabel: string
   rows: ActivityTodayProgress[]
@@ -37,6 +46,7 @@ interface TodayScreenProps {
   activeTimer: ActiveTimerState | null
   timerElapsedSeconds: number
   reentryFollowUp?: ReentryFollowUp | null
+  isRestDay?: boolean
   onCheckOff: (row: ActivityTodayProgress) => void
   onUncheck: (row: ActivityTodayProgress) => void
   onIncrement: (row: ActivityTodayProgress) => void
@@ -55,6 +65,8 @@ interface TodayScreenProps {
     minutes: SmallerChoiceMinutes,
   ) => void
   onShrinkRunningTimer: (minutes: SmallerChoiceMinutes) => void
+  onSkipToday?: (row: ActivityTodayProgress, reason: SkipReason) => void
+  onTakeRestDay?: () => void
   hasActivities?: boolean
   quietReentry?: boolean
   onEmptySetup?: () => void
@@ -72,6 +84,7 @@ export function TodayScreen({
   activeTimer,
   timerElapsedSeconds,
   reentryFollowUp = null,
+  isRestDay = false,
   onCheckOff,
   onUncheck,
   onIncrement,
@@ -84,6 +97,8 @@ export function TodayScreen({
   onRescheduleDeadline,
   onStartSmallerSession,
   onShrinkRunningTimer,
+  onSkipToday,
+  onTakeRestDay,
   hasActivities = false,
   quietReentry = false,
   onEmptySetup,
@@ -201,6 +216,11 @@ export function TodayScreen({
                       onManualMinutes={(minutes) => onManualMinutes(hero, minutes)}
                       onRescheduleDeadline={(date) => onRescheduleDeadline(hero, date)}
                       onShrinkRunningTimer={onShrinkRunningTimer}
+                      onSkipToday={
+                        onSkipToday
+                          ? (reason) => onSkipToday(hero, reason)
+                          : undefined
+                      }
                     />
                   </ul>
                 </section>
@@ -227,6 +247,11 @@ export function TodayScreen({
                         onManualMinutes={(minutes) => onManualMinutes(row, minutes)}
                         onRescheduleDeadline={(date) => onRescheduleDeadline(row, date)}
                         onShrinkRunningTimer={onShrinkRunningTimer}
+                        onSkipToday={
+                          onSkipToday
+                            ? (reason) => onSkipToday(row, reason)
+                            : undefined
+                        }
                       />
                     ))}
                   </ul>
@@ -256,6 +281,11 @@ export function TodayScreen({
                         onManualMinutes={(minutes) => onManualMinutes(row, minutes)}
                         onRescheduleDeadline={(date) => onRescheduleDeadline(row, date)}
                         onShrinkRunningTimer={onShrinkRunningTimer}
+                        onSkipToday={
+                          onSkipToday
+                            ? (reason) => onSkipToday(row, reason)
+                            : undefined
+                        }
                       />
                     ))}
                   </ul>
@@ -295,6 +325,23 @@ export function TodayScreen({
                 ))}
               </ul>
             </section>
+          )}
+
+          {hasActivities && onTakeRestDay && (
+            <div className="today-rest-day">
+              {isRestDay ? (
+                <p className="today-rest-day-note">Rest day · nothing due.</p>
+              ) : (
+                <button
+                  type="button"
+                  className="btn btn-ghost btn-sm today-rest-day-btn"
+                  onClick={onTakeRestDay}
+                  disabled={busyId === 'rest-day'}
+                >
+                  Take a rest day
+                </button>
+              )}
+            </div>
           )}
         </>
       )}
@@ -513,6 +560,7 @@ function TodayActivityRow({
   onManualMinutes,
   onRescheduleDeadline,
   onShrinkRunningTimer,
+  onSkipToday,
 }: {
   row: ActivityTodayProgress
   hero?: boolean
@@ -529,14 +577,16 @@ function TodayActivityRow({
   onManualMinutes: (minutes: number) => void
   onRescheduleDeadline: (newDeadline: string) => void
   onShrinkRunningTimer: (minutes: SmallerChoiceMinutes) => void
+  onSkipToday?: (reason: SkipReason) => void
 }) {
   const { activity, actionKind, done, progressLabel, current, target, status } = row
   const isThisTimer = activeTimer?.activityId === activity.id
   const timerLive = isThisTimer && activeTimer?.status === 'running'
   const timerPaused = isThisTimer && activeTimer?.status === 'paused'
-  const partial = !done && !isThisTimer && status === 'partial'
+  const skipped = status === 'skipped'
+  const partial = !done && !skipped && !isThisTimer && status === 'partial'
   const postponeNote =
-    !done && row.recentlyPostponed
+    !done && !skipped && row.recentlyPostponed
       ? row.activity.type === 'weekly_n'
         ? 'Put off last week'
         : row.activity.type === 'monthly'
@@ -554,6 +604,7 @@ function TodayActivityRow({
   const [shrinkOpen, setShrinkOpen] = useState(false)
   const [selectedMinutes, setSelectedMinutes] =
     useState<SmallerChoiceMinutes>(SMALLER_TODAY_MINUTES)
+  const [skipOpen, setSkipOpen] = useState(false)
 
   const sessionTarget =
     isThisTimer && activeTimer && 'sessionTargetSeconds' in activeTimer
@@ -572,6 +623,12 @@ function TodayActivityRow({
     (sessionTarget === undefined ||
       sessionTarget === null ||
       sessionTarget > SMALLER_ONE_MINUTE * 60)
+  const canSkip =
+    Boolean(onSkipToday) &&
+    !done &&
+    !skipped &&
+    !isThisTimer &&
+    activity.type !== 'deadline'
 
   if (row.activity.type === 'deadline' && row.overdue) {
     return (
@@ -586,7 +643,7 @@ function TodayActivityRow({
     )
   }
 
-  const rowStateClass = done
+  const rowStateClass = done || skipped
     ? 'today-row-done'
     : timerLive
       ? 'today-row-live'
@@ -609,8 +666,9 @@ function TodayActivityRow({
             {desc}
             {partial ? ' · partial' : ''}
             {done ? ' · done' : ''}
+            {skipped ? ' · skipped' : ''}
           </span>
-          {actionKind !== 'deadline' && !isThisTimer && (
+          {actionKind !== 'deadline' && !isThisTimer && !skipped && (
             <div className="progress-bar" aria-hidden>
               <div
                 className={`progress-bar-fill ${done ? 'progress-bar-fill-done' : ''}`}
@@ -622,7 +680,19 @@ function TodayActivityRow({
           )}
         </span>
         <span className="today-actions">
-          {actionKind === 'checkbox' && (
+          {canSkip && (
+            <button
+              type="button"
+              className="btn btn-ghost btn-today-more"
+              disabled={busy}
+              aria-expanded={skipOpen}
+              aria-label={`More options for ${activity.name}`}
+              onClick={() => setSkipOpen((v) => !v)}
+            >
+              ···
+            </button>
+          )}
+          {actionKind === 'checkbox' && !skipped && (
             <button
               type="button"
               className={`btn btn-today ${done ? 'btn-today-done' : 'btn-primary'}`}
@@ -632,7 +702,7 @@ function TodayActivityRow({
               {done ? 'Undo' : 'Done'}
             </button>
           )}
-          {actionKind === 'count' && (
+          {actionKind === 'count' && !skipped && (
             <button
               type="button"
               className={`btn btn-today ${done ? 'btn-today-done' : 'btn-primary'}`}
@@ -652,7 +722,7 @@ function TodayActivityRow({
               {done ? 'Done' : 'Complete'}
             </button>
           )}
-          {actionKind === 'timer' && !isThisTimer && (
+          {actionKind === 'timer' && !isThisTimer && !skipped && (
             <button
               type="button"
               className={`btn btn-today ${done ? 'btn-today-done' : 'btn-primary'}`}
@@ -711,6 +781,35 @@ function TodayActivityRow({
           )}
         </span>
       </div>
+
+      {skipOpen && canSkip && onSkipToday && (
+        <div className="today-skip-sheet">
+          <p className="today-skip-label">Skip today</p>
+          <div className="today-skip-chips" role="group" aria-label="Skip reason">
+            {SKIP_REASONS.map((reason) => (
+              <button
+                key={reason}
+                type="button"
+                className="today-skip-chip"
+                disabled={busy}
+                onClick={() => {
+                  onSkipToday(reason)
+                  setSkipOpen(false)
+                }}
+              >
+                {reason}
+              </button>
+            ))}
+          </div>
+          <button
+            type="button"
+            className="btn btn-ghost btn-sm"
+            onClick={() => setSkipOpen(false)}
+          >
+            Cancel
+          </button>
+        </div>
+      )}
 
       {isThisTimer && (
         <div
@@ -771,7 +870,7 @@ function TodayActivityRow({
         </div>
       )}
 
-      {actionKind === 'timer' && (
+      {actionKind === 'timer' && !skipped && (
         <div className="timer-manual">
           {!showManual ? (
             <button
