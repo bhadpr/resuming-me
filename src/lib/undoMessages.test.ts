@@ -3,7 +3,9 @@ import {
   formatCompletedUndoMessage,
   formatCountUndoMessage,
   formatMetricUndoMessage,
+  formatRestDayUndoMessage,
   formatSessionUndoMessage,
+  formatSkipUndoMessage,
 } from './undoMessages'
 
 describe('undoMessages', () => {
@@ -25,5 +27,10 @@ describe('undoMessages', () => {
     expect(formatMetricUndoMessage('Weight', 72.5, 'kg')).toBe(
       'Logged 72.5 kg · Weight',
     )
+  })
+
+  it('formats skip and rest day', () => {
+    expect(formatSkipUndoMessage('Meditate')).toBe('Skipped Meditate')
+    expect(formatRestDayUndoMessage()).toBe('Rest day marked')
   })
 })
