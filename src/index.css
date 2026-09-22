@@ -812,6 +812,11 @@ select.field-input {
   color: var(--color-primary);
   padding: 0;
   min-height: auto;
+  text-decoration: none;
+  background: none;
+  border: none;
+  cursor: pointer;
+  font-family: inherit;
 }
 
 .site-footer-link:hover {
@@ -1392,6 +1397,8 @@ select.field-input {
   align-items: center;
   justify-content: center;
   gap: 0.2rem;
+  text-decoration: none;
+  -webkit-tap-highlight-color: transparent;
   flex: 1;
   min-height: var(--tap-min);
   padding: 0.3rem 0.4rem;

@@ -1,10 +1,7 @@
 import { useEffect, useState } from 'react'
 import { Capacitor } from '@capacitor/core'
 import { BrandTitle } from './BrandTitle'
-import { FeedbackPage } from './FeedbackPage'
-import { LegalPage } from './LegalPage'
 import { SiteFooter } from './SiteFooter'
-import { sitePageFromPath, type SitePageId } from '../lib/site'
 import { trackPageView } from '../lib/analytics'
 
 interface LandingPageProps {
@@ -23,28 +20,10 @@ export function LandingPage({
   const native = Capacitor.isNativePlatform()
   const [error, setError] = useState<string | null>(null)
   const [signingIn, setSigningIn] = useState(false)
-  const [sitePage, setSitePage] = useState<SitePageId | null>(() =>
-    sitePageFromPath(window.location.pathname),
-  )
 
   useEffect(() => {
-    if (!sitePage) trackPageView('/', 'Landing')
-    else trackPageView(`/${sitePage}`, sitePage)
-  }, [sitePage])
-
-  useEffect(() => {
-    const onPopState = () => setSitePage(sitePageFromPath(window.location.pathname))
-    window.addEventListener('popstate', onPopState)
-    return () => window.removeEventListener('popstate', onPopState)
+    trackPageView('/', 'Landing')
   }, [])
-
-  function openSitePage(id: SitePageId | null) {
-    setSitePage(id)
-    const next = id ? `/${id}` : '/'
-    if (window.location.pathname !== next) {
-      window.history.pushState(null, '', next)
-    }
-  }
 
   async function handleSignIn() {
     setError(null)
@@ -59,26 +38,6 @@ export function LandingPage({
 
   const displayError = configError || authError || error
 
-  if (sitePage === 'feedback') {
-    return (
-      <div className="landing landing-legal">
-        <div className="landing-card landing-card-legal">
-          <FeedbackPage onBack={() => openSitePage(null)} />
-        </div>
-      </div>
-    )
-  }
-
-  if (sitePage) {
-    return (
-      <div className="landing landing-legal">
-        <div className="landing-card landing-card-legal">
-          <LegalPage page={sitePage} onBack={() => openSitePage(null)} />
-        </div>
-      </div>
-    )
-  }
-
   if (!configured) {
     return (
       <div className="landing">
@@ -88,7 +47,7 @@ export function LandingPage({
           <div className="notice notice-warning">
             <p>{configError ?? 'Supabase is not configured.'}</p>
           </div>
-          <SiteFooter onOpenPage={openSitePage} privacyOnly={native} />
+          <SiteFooter privacyOnly={native} />
         </div>
       </div>
     )
@@ -151,7 +110,7 @@ export function LandingPage({
           {signingIn ? 'Redirecting…' : 'Continue with Google'}
         </button>
 
-        <SiteFooter onOpenPage={openSitePage} privacyOnly={native} />
+        <SiteFooter privacyOnly={native} />
       </div>
     </div>
   )

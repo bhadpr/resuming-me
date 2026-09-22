@@ -1,5 +1,6 @@
 import { useCallback, useEffect, useMemo, useState } from 'react'
 import { Capacitor } from '@capacitor/core'
+import { Navigate, useLocation, useNavigate, useSearchParams } from 'react-router-dom'
 import { useAuth, useProfileSync } from '../hooks/useAuth'
 import { useDailyDigest } from '../hooks/useDailyDigest'
 import { useTimer } from '../hooks/useTimer'
@@ -17,12 +18,9 @@ import { AdminFeedbackScreen } from './AdminFeedbackScreen'
 import { OnboardingScreen } from './OnboardingScreen'
 import { InstallPrompt } from './InstallPrompt'
 import { BrandTitle } from './BrandTitle'
-import { LegalPage } from './LegalPage'
-import { FeedbackPage } from './FeedbackPage'
 import { BottomNav } from './BottomNav'
 import { Toast } from './Toast'
 import { SiteFooter } from './SiteFooter'
-import type { SitePageId } from '../lib/site'
 import {
   activityTargetMinutes,
   isQuietReentry,
@@ -94,6 +92,12 @@ import {
   computeInsights,
   type InsightsWindow,
 } from '../lib/insights'
+import {
+  navigateBack,
+  parseAppPath,
+  showAppChrome,
+  tabFromView,
+} from '../lib/navigation'
 import { requestMicroSteps } from '../lib/microSteps'
 import { enableDailyDigestFromOnboarding } from '../lib/localNotifications'
 import {
@@ -105,31 +109,36 @@ import {
   type OnboardingCompletePayload,
 } from '../lib/onboarding'
 
-type Tab = 'today' | 'activities' | 'metrics' | 'insights'
-
-type ActivityScreen =
-  | { name: 'list' }
-  | { name: 'form'; activity?: Activity }
-  | { name: 'detail'; activityId: string }
-
-type MetricScreen =
-  | { name: 'list' }
-  | { name: 'form'; metric?: Metric }
-  | { name: 'detail'; metricId: string }
-
-type AdminPage = 'analytics' | 'feedback'
-
 export function AppShell() {
   const { user, signOut, isAdmin } = useAuth()
   const native = Capacitor.isNativePlatform()
+  const navigate = useNavigate()
+  const location = useLocation()
+  const [searchParams, setSearchParams] = useSearchParams()
   useProfileSync(user)
 
-  const [tab, setTab] = useState<Tab>('today')
-  const [settingsOpen, setSettingsOpen] = useState(false)
-  const [adminPage, setAdminPage] = useState<AdminPage | null>(null)
-  const [legalPage, setLegalPage] = useState<SitePageId | null>(null)
-  const [activityScreen, setActivityScreen] = useState<ActivityScreen>({ name: 'list' })
-  const [metricScreen, setMetricScreen] = useState<MetricScreen>({ name: 'list' })
+  const view = parseAppPath(location.pathname)
+  const tab = tabFromView(view)
+  const settingsOpen = view?.name === 'settings'
+  const adminPage = view?.name === 'admin' ? view.page : null
+  const activityScreen =
+    view?.name === 'activities'
+      ? view.screen === 'list'
+        ? { name: 'list' as const }
+        : view.screen === 'form'
+          ? { name: 'form' as const, activityId: view.activityId }
+          : { name: 'detail' as const, activityId: view.activityId }
+      : { name: 'list' as const }
+  const metricScreen =
+    view?.name === 'numbers'
+      ? view.screen === 'list'
+        ? { name: 'list' as const }
+        : view.screen === 'form'
+          ? { name: 'form' as const, metricId: view.metricId }
+          : { name: 'detail' as const, metricId: view.metricId }
+      : { name: 'list' as const }
+  const insightsWindow: InsightsWindow =
+    searchParams.get('range') === 'month' ? 'month' : 'week'
 
   const [activities, setActivities] = useState<Activity[]>([])
   const [metrics, setMetrics] = useState<Metric[]>([])
@@ -152,7 +161,6 @@ export function AppShell() {
   const [detailLogEntries, setDetailLogEntries] = useState<LogEntry[]>([])
   const [detailMetricEntries, setDetailMetricEntries] = useState<MetricEntry[]>([])
   const [loadingDetailEntries, setLoadingDetailEntries] = useState(false)
-  const [insightsWindow, setInsightsWindow] = useState<InsightsWindow>('week')
   const [insightsEntries, setInsightsEntries] = useState<LogEntry[]>([])
   const [insightsMetricEntries, setInsightsMetricEntries] = useState<MetricEntry[]>([])
   const [loadingInsights, setLoadingInsights] = useState(false)
@@ -308,10 +316,7 @@ export function AppShell() {
     todayRows,
     !loadingActivities && !loadingToday,
     () => {
-      setSettingsOpen(false)
-      setAdminPage(null)
-      setLegalPage(null)
-      setTab('today')
+      navigate('/today')
     },
     quietSchedule,
   )
@@ -328,16 +333,9 @@ export function AppShell() {
     })
   }, [activeMetrics, metricEntriesToday])
 
-  function switchTab(next: Tab) {
-    setError(null)
-    setSettingsOpen(false)
-    setAdminPage(null)
-    setTab(next)
-  }
-
   useEffect(() => {
     if (adminPage === 'analytics') {
-      trackPageView('/analytics', 'Analytics')
+      trackPageView('/admin/analytics', 'Analytics')
       return
     }
     if (adminPage === 'feedback') {
@@ -348,37 +346,27 @@ export function AppShell() {
       trackPageView('/settings', 'Settings')
       return
     }
-    if (legalPage) {
-      trackPageView(`/${legalPage}`, legalPage)
-      return
-    }
-    if (tab === 'today') trackPageView('/app/today', 'Today')
-    else if (tab === 'activities') trackPageView('/app/activities', 'Activities')
-    else if (tab === 'metrics') trackPageView('/app/metrics', 'Numbers')
-    else if (tab === 'insights') trackPageView('/app/insights', 'Insights')
-  }, [tab, settingsOpen, adminPage, legalPage])
+    if (tab === 'today') trackPageView('/today', 'Today')
+    else if (tab === 'activities') trackPageView('/activities', 'Activities')
+    else if (tab === 'metrics') trackPageView('/numbers', 'Numbers')
+    else if (tab === 'insights') trackPageView('/insights', 'Insights')
+  }, [tab, settingsOpen, adminPage, location.pathname])
 
-  const selectedActivity =
+  const selectedActivityId =
     activityScreen.name === 'detail' || activityScreen.name === 'form'
-      ? activities.find(
-          (a) =>
-            a.id ===
-            (activityScreen.name === 'detail'
-              ? activityScreen.activityId
-              : activityScreen.activity?.id),
-        ) ?? (activityScreen.name === 'form' ? activityScreen.activity : undefined)
+      ? activityScreen.activityId
       : undefined
+  const selectedActivity = selectedActivityId
+    ? activities.find((a) => a.id === selectedActivityId)
+    : undefined
 
-  const selectedMetric =
+  const selectedMetricId =
     metricScreen.name === 'detail' || metricScreen.name === 'form'
-      ? metrics.find(
-          (m) =>
-            m.id ===
-            (metricScreen.name === 'detail'
-              ? metricScreen.metricId
-              : metricScreen.metric?.id),
-        ) ?? (metricScreen.name === 'form' ? metricScreen.metric : undefined)
+      ? metricScreen.metricId
       : undefined
+  const selectedMetric = selectedMetricId
+    ? metrics.find((m) => m.id === selectedMetricId)
+    : undefined
 
   useEffect(() => {
     if (tab !== 'activities' || activityScreen.name !== 'detail') {
@@ -472,17 +460,17 @@ export function AppShell() {
     setSaving(true)
     setError(null)
     try {
-      if (activityScreen.name === 'form' && activityScreen.activity) {
-        const updated = await updateActivity(activityScreen.activity, input)
+      if (activityScreen.name === 'form' && selectedActivity) {
+        const updated = await updateActivity(selectedActivity, input)
         setActivities((prev) => prev.map((a) => (a.id === updated.id ? updated : a)))
-        setActivityScreen({ name: 'detail', activityId: updated.id })
+        navigate(`/activities/${updated.id}`)
       } else {
         const created = await createActivity(user.id, input)
         setActivities((prev) => [created, ...prev])
-        setActivityScreen({ name: 'detail', activityId: created.id })
+        navigate(`/activities/${created.id}`)
       }
       await refreshTodayData(
-        activityScreen.name === 'form' && activityScreen.activity
+        activityScreen.name === 'form' && selectedActivity
           ? activities
           : await listActivities(true),
       )
@@ -498,14 +486,14 @@ export function AppShell() {
     setSaving(true)
     setError(null)
     try {
-      if (metricScreen.name === 'form' && metricScreen.metric) {
-        const updated = await updateMetric(metricScreen.metric, input)
+      if (metricScreen.name === 'form' && selectedMetric) {
+        const updated = await updateMetric(selectedMetric, input)
         setMetrics((prev) => prev.map((m) => (m.id === updated.id ? updated : m)))
-        setMetricScreen({ name: 'detail', metricId: updated.id })
+        navigate(`/numbers/${updated.id}`)
       } else {
         const created = await createMetric(user.id, input)
         setMetrics((prev) => [created, ...prev])
-        setMetricScreen({ name: 'detail', metricId: created.id })
+        navigate(`/numbers/${created.id}`)
       }
     } catch (err) {
       setError(err instanceof Error ? err.message : 'Save failed')
@@ -870,7 +858,7 @@ export function AppShell() {
       writeDismissedFlag(ONBOARDING_DISMISS_KEY, true)
       setOnboardingDismissed(true)
       await refreshTodayData(acts)
-      setTab('today')
+      navigate('/today')
     } catch (err) {
       setError(err instanceof Error ? err.message : 'Could not set up starters')
     } finally {
@@ -900,6 +888,10 @@ export function AppShell() {
     day: 'numeric',
   })
 
+  if (view?.name === 'admin' && !isAdmin) {
+    return <Navigate to="/settings" replace />
+  }
+
   return (
     <div className="app">
       <header className="app-header">
@@ -920,13 +912,11 @@ export function AppShell() {
             aria-pressed={Boolean(settingsOpen || adminPage)}
             onClick={() => {
               setError(null)
-              if (adminPage || legalPage) {
-                setAdminPage(null)
-                setLegalPage(null)
-                setSettingsOpen(false)
+              if (adminPage || settingsOpen) {
+                navigateBack(navigate, '/today')
                 return
               }
-              setSettingsOpen((v) => !v)
+              navigate('/settings')
             }}
           >
             <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8" aria-hidden>
@@ -947,15 +937,7 @@ export function AppShell() {
 
       <main className="app-main">
         {!showOnboarding && <InstallPrompt />}
-        {legalPage === 'feedback' ? (
-          <FeedbackPage
-            onBack={() => setLegalPage(null)}
-            defaultName={user?.user_metadata?.full_name ?? user?.user_metadata?.name ?? ''}
-            defaultEmail={user?.email ?? ''}
-          />
-        ) : legalPage ? (
-          <LegalPage page={legalPage} onBack={() => setLegalPage(null)} />
-        ) : adminPage === 'analytics' ? (
+        {adminPage === 'analytics' ? (
           <AnalyticsScreen />
         ) : adminPage === 'feedback' ? (
           <AdminFeedbackScreen />
@@ -968,16 +950,16 @@ export function AppShell() {
                   name: row.activity.name,
                   done: row.done,
                 }))}
-                onBack={() => setSettingsOpen(false)}
+                onBack={() => navigateBack(navigate, '/today')}
                 onOpenAnalytics={() => {
                   if (!isAdmin) return
-                  setAdminPage('analytics')
+                  navigate('/admin/analytics')
                 }}
                 onOpenFeedback={() => {
                   if (!isAdmin) return
-                  setAdminPage('feedback')
+                  navigate('/admin/feedback')
                 }}
-                onOpenPrivacy={() => setLegalPage('privacy')}
+                onOpenPrivacy={() => navigate('/privacy')}
                 onSignOut={() => void signOut()}
               />
             ) : showOnboarding ? (
@@ -1037,12 +1019,10 @@ export function AppShell() {
                   loading={loadingActivities}
                   showArchived={showArchivedActivities}
                   onToggleArchived={() => setShowArchivedActivities((v) => !v)}
-                  onSelect={(activity) =>
-                    setActivityScreen({ name: 'detail', activityId: activity.id })
-                  }
+                  onSelect={(activity) => navigate(`/activities/${activity.id}`)}
                   onAdd={() => {
                     setError(null)
-                    setActivityScreen({ name: 'form' })
+                    navigate('/activities/new')
                   }}
                 />
               </>
@@ -1054,28 +1034,29 @@ export function AppShell() {
                   type="button"
                   className="btn btn-ghost btn-sm back-btn"
                   onClick={() =>
-                    setActivityScreen(
-                      activityScreen.activity
-                        ? { name: 'detail', activityId: activityScreen.activity.id }
-                        : { name: 'list' },
+                    navigateBack(
+                      navigate,
+                      activityScreen.activityId
+                        ? `/activities/${activityScreen.activityId}`
+                        : '/activities',
                     )
                   }
                 >
                   ← Back
                 </button>
                 <h2 className="form-title">
-                  {activityScreen.activity ? 'Edit activity' : 'Add activity'}
+                  {selectedActivity ? 'Edit activity' : 'Add activity'}
                 </h2>
                 <ActivityForm
-                  initial={activityScreen.activity ?? null}
+                  initial={selectedActivity ?? null}
                   saving={saving}
                   error={error}
                   onSubmit={handleActivitySave}
                   onCancel={() =>
-                    setActivityScreen(
-                      activityScreen.activity
-                        ? { name: 'detail', activityId: activityScreen.activity.id }
-                        : { name: 'list' },
+                    navigate(
+                      selectedActivity
+                        ? `/activities/${selectedActivity.id}`
+                        : '/activities',
                     )
                   }
                 />
@@ -1089,10 +1070,10 @@ export function AppShell() {
                 loadingEntries={loadingDetailEntries}
                 busy={saving}
                 error={error}
-                onBack={() => setActivityScreen({ name: 'list' })}
+                onBack={() => navigate('/activities')}
                 onEdit={() => {
                   setError(null)
-                  setActivityScreen({ name: 'form', activity: selectedActivity })
+                  navigate(`/activities/${selectedActivity.id}/edit`)
                 }}
                 onUpdateEntry={async (entryId, updates) => {
                   setSaving(true)
@@ -1196,7 +1177,7 @@ export function AppShell() {
                     await archiveActivity(selectedActivity.id)
                     await refreshActivities()
                     await refreshTodayData(await listActivities(true))
-                    setActivityScreen({ name: 'list' })
+                    navigate('/activities')
                   } catch (err) {
                     setError(err instanceof Error ? err.message : 'Archive failed')
                   } finally {
@@ -1224,7 +1205,7 @@ export function AppShell() {
                     const next = activities.filter((a) => a.id !== selectedActivity.id)
                     setActivities(next)
                     await refreshTodayData(next)
-                    setActivityScreen({ name: 'list' })
+                    navigate('/activities')
                   } catch (err) {
                     setError(err instanceof Error ? err.message : 'Delete failed')
                   } finally {
@@ -1240,7 +1221,7 @@ export function AppShell() {
                 <button
                   type="button"
                   className="btn btn-primary"
-                  onClick={() => setActivityScreen({ name: 'list' })}
+                  onClick={() => navigate('/activities')}
                 >
                   Back to list
                 </button>
@@ -1259,12 +1240,10 @@ export function AppShell() {
                   loading={loadingMetrics}
                   showArchived={showArchivedMetrics}
                   onToggleArchived={() => setShowArchivedMetrics((v) => !v)}
-                  onSelect={(metric) =>
-                    setMetricScreen({ name: 'detail', metricId: metric.id })
-                  }
+                  onSelect={(metric) => navigate(`/numbers/${metric.id}`)}
                   onAdd={() => {
                     setError(null)
-                    setMetricScreen({ name: 'form' })
+                    navigate('/numbers/new')
                   }}
                   onQuickAdd={(input) => void handleQuickAddMetric(input)}
                 />
@@ -1277,28 +1256,27 @@ export function AppShell() {
                   type="button"
                   className="btn btn-ghost btn-sm back-btn"
                   onClick={() =>
-                    setMetricScreen(
-                      metricScreen.metric
-                        ? { name: 'detail', metricId: metricScreen.metric.id }
-                        : { name: 'list' },
+                    navigateBack(
+                      navigate,
+                      metricScreen.metricId
+                        ? `/numbers/${metricScreen.metricId}`
+                        : '/numbers',
                     )
                   }
                 >
                   ← Back
                 </button>
                 <h2 className="form-title">
-                  {metricScreen.metric ? 'Edit number' : 'Add number'}
+                  {selectedMetric ? 'Edit number' : 'Add number'}
                 </h2>
                 <MetricForm
-                  initial={metricScreen.metric ?? null}
+                  initial={selectedMetric ?? null}
                   saving={saving}
                   error={error}
                   onSubmit={handleMetricSave}
                   onCancel={() =>
-                    setMetricScreen(
-                      metricScreen.metric
-                        ? { name: 'detail', metricId: metricScreen.metric.id }
-                        : { name: 'list' },
+                    navigate(
+                      selectedMetric ? `/numbers/${selectedMetric.id}` : '/numbers',
                     )
                   }
                 />
@@ -1312,10 +1290,10 @@ export function AppShell() {
                 loadingEntries={loadingDetailEntries}
                 busy={saving}
                 error={error}
-                onBack={() => setMetricScreen({ name: 'list' })}
+                onBack={() => navigate('/numbers')}
                 onEdit={() => {
                   setError(null)
-                  setMetricScreen({ name: 'form', metric: selectedMetric })
+                  navigate(`/numbers/${selectedMetric.id}/edit`)
                 }}
                 onArchive={async () => {
                   setSaving(true)
@@ -1323,7 +1301,7 @@ export function AppShell() {
                   try {
                     await archiveMetric(selectedMetric.id)
                     await refreshMetrics()
-                    setMetricScreen({ name: 'list' })
+                    navigate('/numbers')
                   } catch (err) {
                     setError(err instanceof Error ? err.message : 'Archive failed')
                   } finally {
@@ -1348,7 +1326,7 @@ export function AppShell() {
                   try {
                     await deleteMetric(selectedMetric.id)
                     setMetrics((prev) => prev.filter((m) => m.id !== selectedMetric.id))
-                    setMetricScreen({ name: 'list' })
+                    navigate('/numbers')
                   } catch (err) {
                     setError(err instanceof Error ? err.message : 'Delete failed')
                   } finally {
@@ -1364,7 +1342,7 @@ export function AppShell() {
                 <button
                   type="button"
                   className="btn btn-primary"
-                  onClick={() => setMetricScreen({ name: 'list' })}
+                  onClick={() => navigate('/numbers')}
                 >
                   Back to list
                 </button>
@@ -1376,7 +1354,9 @@ export function AppShell() {
         {tab === 'insights' && (
           <InsightsScreen
             window={insightsWindow}
-            onWindowChange={setInsightsWindow}
+            onWindowChange={(next) => {
+              setSearchParams(next === 'week' ? {} : { range: next }, { replace: true })
+            }}
             insights={insights}
             activities={activities}
             entries={insightsEntries}
@@ -1387,8 +1367,7 @@ export function AppShell() {
             error={error}
             onAddActivity={() => {
               setError(null)
-              setTab('activities')
-              setActivityScreen({ name: 'form' })
+              navigate('/activities/new')
             }}
             onAddMetric={(input) => void handleQuickAddMetric(input)}
             quietLine={buildQuietInsightLine({
@@ -1401,12 +1380,12 @@ export function AppShell() {
         )}
           </>
         )}
-        {!native && !showOnboarding && <SiteFooter onOpenPage={setLegalPage} compact />}
+        {!native && !showOnboarding && <SiteFooter compact />}
           </>
         )}
       </main>
 
-      {!settingsOpen && !adminPage && !showOnboarding && !legalPage && (
+      {showAppChrome(view) && !showOnboarding && (
         <>
           {undoToast.toast && (
             <Toast
@@ -1414,7 +1393,7 @@ export function AppShell() {
               onUndo={() => void undoToast.undo()}
             />
           )}
-          <BottomNav tab={tab} onTabChange={switchTab} />
+          <BottomNav tab={tab} />
         </>
       )}
     </div>

@@ -6,6 +6,10 @@ export const NATIVE_AUTH_REDIRECT = 'com.cheerfulgames.resuming://auth/callback'
 
 export function getAuthRedirectTo(): string {
   if (Capacitor.isNativePlatform()) return NATIVE_AUTH_REDIRECT
+  const next = new URLSearchParams(window.location.search).get('next')
+  if (next && next.startsWith('/') && !next.startsWith('//') && !next.includes('://')) {
+    return `${window.location.origin}/?next=${encodeURIComponent(next)}`
+  }
   return `${window.location.origin}/`
 }
 

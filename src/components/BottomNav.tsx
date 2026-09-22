@@ -1,37 +1,39 @@
-type Tab = 'today' | 'activities' | 'metrics' | 'insights'
+import { NavLink } from 'react-router-dom'
+import { tabPath, type AppTab } from '../lib/navigation'
 
 interface BottomNavProps {
-  tab: Tab
-  onTabChange: (tab: Tab) => void
+  tab: AppTab
 }
 
-const TABS: Array<{ id: Tab; label: string }> = [
+const TABS: Array<{ id: AppTab; label: string }> = [
   { id: 'today', label: 'Today' },
   { id: 'activities', label: 'Activities' },
   { id: 'metrics', label: 'Numbers' },
   { id: 'insights', label: 'Insights' },
 ]
 
-export function BottomNav({ tab, onTabChange }: BottomNavProps) {
+export function BottomNav({ tab }: BottomNavProps) {
   return (
     <nav className="app-nav" aria-label="Main">
       {TABS.map(({ id, label }) => (
-        <button
+        <NavLink
           key={id}
-          type="button"
-          className={`nav-item ${tab === id ? 'nav-item-active' : ''}`}
+          to={tabPath(id)}
+          className={({ isActive }) =>
+            `nav-item ${isActive || tab === id ? 'nav-item-active' : ''}`
+          }
           aria-current={tab === id ? 'page' : undefined}
-          onClick={() => onTabChange(id)}
+          end={id === 'today' || id === 'insights'}
         >
           <NavIcon tab={id} />
           <span className="nav-item-label">{label}</span>
-        </button>
+        </NavLink>
       ))}
     </nav>
   )
 }
 
-function NavIcon({ tab }: { tab: Tab }) {
+function NavIcon({ tab }: { tab: AppTab }) {
   return (
     <svg
       className="nav-item-icon"
