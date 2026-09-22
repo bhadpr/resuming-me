@@ -1,11 +1,16 @@
-import { useEffect, useState } from 'react'
+import { lazy, Suspense, useEffect, useState } from 'react'
 import { Capacitor } from '@capacitor/core'
 import { BrandTitle } from './BrandTitle'
-import { FeedbackPage } from './FeedbackPage'
-import { LegalPage } from './LegalPage'
 import { SiteFooter } from './SiteFooter'
 import { sitePageFromPath, type SitePageId } from '../lib/site'
 import { trackPageView } from '../lib/analytics'
+
+const FeedbackPage = lazy(() =>
+  import('./FeedbackPage').then((m) => ({ default: m.FeedbackPage })),
+)
+const LegalPage = lazy(() =>
+  import('./LegalPage').then((m) => ({ default: m.LegalPage })),
+)
 
 interface LandingPageProps {
   configured: boolean
@@ -63,7 +68,9 @@ export function LandingPage({
     return (
       <div className="landing landing-legal">
         <div className="landing-card landing-card-legal">
-          <FeedbackPage onBack={() => openSitePage(null)} />
+          <Suspense fallback={<p className="muted-center">Loading…</p>}>
+            <FeedbackPage onBack={() => openSitePage(null)} />
+          </Suspense>
         </div>
       </div>
     )
@@ -73,7 +80,9 @@ export function LandingPage({
     return (
       <div className="landing landing-legal">
         <div className="landing-card landing-card-legal">
-          <LegalPage page={sitePage} onBack={() => openSitePage(null)} />
+          <Suspense fallback={<p className="muted-center">Loading…</p>}>
+            <LegalPage page={sitePage} onBack={() => openSitePage(null)} />
+          </Suspense>
         </div>
       </div>
     )
@@ -106,14 +115,17 @@ export function LandingPage({
         </p>
 
         <figure className="landing-figure">
-          <img
-            className="landing-image"
-            src="/landing-resume.jpg"
-            alt="A calm desk scene: pausing, then picking work back up."
-            width={960}
-            height={640}
-            decoding="async"
-          />
+          <picture>
+            <source type="image/webp" srcSet="/landing-resume.webp" />
+            <img
+              className="landing-image"
+              src="/landing-resume.jpg"
+              alt="A calm desk scene: pausing, then picking work back up."
+              width={960}
+              height={640}
+              decoding="async"
+            />
+          </picture>
         </figure>
 
         <div className="landing-diagram" aria-hidden>

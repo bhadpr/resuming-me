@@ -136,7 +136,7 @@ export function TodayScreen({
       {error && <p className="error">{error}</p>}
 
       {loading ? (
-        <p className="muted-center">Loading…</p>
+        <TodaySkeleton />
       ) : (
         <>
           {emptyKind === 'setup' && (
@@ -894,5 +894,27 @@ function MetricValueForm({
         {submitLabel}
       </button>
     </form>
+  )
+}
+
+function TodaySkeleton() {
+  return (
+    <div className="today-skeleton" aria-busy="true" aria-label="Loading today">
+      <div className="today-section">
+        <div className="today-skeleton-label" />
+        <ul className="today-list">
+          {[0, 1, 2].map((i) => (
+            <li key={i} className="today-row today-skeleton-row">
+              <div className="today-skeleton-emoji" />
+              <div className="today-row-stack">
+                <div className="today-skeleton-line today-skeleton-line-title" />
+                <div className="today-skeleton-line today-skeleton-line-sub" />
+              </div>
+              <div className="today-skeleton-action" />
+            </li>
+          ))}
+        </ul>
+      </div>
+    </div>
   )
 }

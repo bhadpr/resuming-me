@@ -1571,6 +1571,68 @@ select.field-input {
   border-color: color-mix(in srgb, var(--color-danger) 45%, transparent);
 }
 
+.today-skeleton-label {
+  width: 4.5rem;
+  height: 0.75rem;
+  border-radius: 4px;
+  margin-bottom: 0.75rem;
+  background: color-mix(in srgb, var(--color-border) 70%, var(--color-surface));
+  animation: today-skeleton-pulse 1.2s ease-in-out infinite;
+}
+
+.today-skeleton-row {
+  pointer-events: none;
+  min-height: 3.4rem;
+}
+
+.today-skeleton-emoji {
+  width: 2rem;
+  height: 2rem;
+  border-radius: 8px;
+  flex-shrink: 0;
+  background: color-mix(in srgb, var(--color-border) 70%, var(--color-surface));
+  animation: today-skeleton-pulse 1.2s ease-in-out infinite;
+}
+
+.today-skeleton-line {
+  height: 0.7rem;
+  border-radius: 4px;
+  background: color-mix(in srgb, var(--color-border) 70%, var(--color-surface));
+  animation: today-skeleton-pulse 1.2s ease-in-out infinite;
+}
+
+.today-skeleton-line-title {
+  width: 55%;
+  margin-bottom: 0.45rem;
+}
+
+.today-skeleton-line-sub {
+  width: 35%;
+  opacity: 0.85;
+  animation-delay: 0.15s;
+}
+
+.today-skeleton-action {
+  width: 4.25rem;
+  height: 2rem;
+  border-radius: var(--radius-sm, 8px);
+  margin-left: auto;
+  flex-shrink: 0;
+  background: color-mix(in srgb, var(--color-border) 70%, var(--color-surface));
+  animation: today-skeleton-pulse 1.2s ease-in-out infinite;
+  animation-delay: 0.08s;
+}
+
+@keyframes today-skeleton-pulse {
+  0%,
+  100% {
+    opacity: 0.55;
+  }
+  50% {
+    opacity: 1;
+  }
+}
+
 .today-row-hero {
   border-color: color-mix(in srgb, var(--color-primary) 45%, var(--color-border));
   background: color-mix(in srgb, var(--color-primary) 7%, var(--color-surface));

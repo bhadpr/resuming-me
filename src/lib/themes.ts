@@ -1,4 +1,5 @@
 import { syncNativeChrome } from './nativeChrome'
+import { loadThemeFonts } from './themeFonts'
 
 export type ThemeId =
   | 'resuming'
@@ -17,7 +18,7 @@ export interface ThemeOption {
   colorScheme: 'dark' | 'light'
 }
 
-export const DEFAULT_THEME: ThemeId = 'dawn'
+export const DEFAULT_THEME = 'dawn' as const satisfies ThemeId
 
 export const THEME_STORAGE_KEY = 'resuming-theme'
 
@@ -101,6 +102,8 @@ export function applyTheme(id: ThemeId): void {
 
   const meta = document.querySelector('meta[name="theme-color"]')
   if (meta) meta.setAttribute('content', theme.themeColor)
+
+  loadThemeFonts(theme.id)
 
   try {
     localStorage.setItem(THEME_STORAGE_KEY, theme.id)

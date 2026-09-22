@@ -4,6 +4,7 @@ import { AuthProvider } from './hooks/useAuth'
 import { ThemeProvider } from './hooks/useTheme'
 import { setupServiceWorker } from './lib/pwa'
 import App from './App'
+import './fonts-dawn.css'
 import './themes.css'
 import './index.css'
 
