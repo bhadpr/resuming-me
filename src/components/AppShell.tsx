@@ -39,6 +39,7 @@ import {
   formatSessionUndoMessage,
 } from '../lib/undoMessages'
 import { trackPageView } from '../lib/analytics'
+import { useDocumentMeta } from '../hooks/useDocumentMeta'
 import {
   archiveActivity,
   createActivity,
@@ -357,6 +358,33 @@ export function AppShell() {
     else if (tab === 'metrics') trackPageView('/app/metrics', 'Numbers')
     else if (tab === 'insights') trackPageView('/app/insights', 'Insights')
   }, [tab, settingsOpen, adminPage, legalPage])
+
+  const appTitle = adminPage
+    ? adminPage === 'analytics'
+      ? 'Analytics · Resuming'
+      : 'Feedback · Resuming'
+    : settingsOpen
+      ? 'Settings · Resuming'
+      : legalPage
+        ? legalPage === 'about'
+          ? 'About · Resuming'
+          : legalPage === 'privacy'
+            ? 'Privacy · Resuming'
+            : legalPage === 'terms'
+              ? 'Terms · Resuming'
+              : 'Feedback · Resuming'
+        : tab === 'today'
+          ? 'Today · Resuming'
+          : tab === 'activities'
+            ? 'Activities · Resuming'
+            : tab === 'metrics'
+              ? 'Numbers · Resuming'
+              : 'Insights · Resuming'
+
+  useDocumentMeta({
+    title: appTitle,
+    noindex: true,
+  })
 
   const selectedActivity =
     activityScreen.name === 'detail' || activityScreen.name === 'form'

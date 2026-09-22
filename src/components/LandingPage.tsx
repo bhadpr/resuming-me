@@ -4,8 +4,19 @@ import { BrandTitle } from './BrandTitle'
 import { FeedbackPage } from './FeedbackPage'
 import { LegalPage } from './LegalPage'
 import { SiteFooter } from './SiteFooter'
-import { sitePageFromPath, type SitePageId } from '../lib/site'
+import {
+  COMPANY_NAME,
+  PRODUCT_NAME,
+  SITE_PAGE_TITLES,
+  sitePageFromPath,
+  type SitePageId,
+} from '../lib/site'
 import { trackPageView } from '../lib/analytics'
+import {
+  DEFAULT_DESCRIPTION,
+  DEFAULT_TITLE,
+  useDocumentMeta,
+} from '../hooks/useDocumentMeta'
 
 interface LandingPageProps {
   configured: boolean
@@ -27,9 +38,52 @@ export function LandingPage({
     sitePageFromPath(window.location.pathname),
   )
 
+  useDocumentMeta(
+    sitePage
+      ? {
+          title: SITE_PAGE_TITLES[sitePage],
+          path: `/${sitePage}`,
+        }
+      : {
+          title: DEFAULT_TITLE,
+          description: DEFAULT_DESCRIPTION,
+          path: '/',
+        },
+  )
+
   useEffect(() => {
     if (!sitePage) trackPageView('/', 'Landing')
     else trackPageView(`/${sitePage}`, sitePage)
+  }, [sitePage])
+
+  useEffect(() => {
+    if (sitePage) return
+    const existing = document.getElementById('resuming-jsonld')
+    if (existing) return
+    const script = document.createElement('script')
+    script.id = 'resuming-jsonld'
+    script.type = 'application/ld+json'
+    script.text = JSON.stringify({
+      '@context': 'https://schema.org',
+      '@type': 'SoftwareApplication',
+      name: PRODUCT_NAME,
+      description: DEFAULT_DESCRIPTION,
+      applicationCategory: 'LifestyleApplication',
+      operatingSystem: 'Web, Android',
+      offers: {
+        '@type': 'Offer',
+        price: '0',
+        priceCurrency: 'USD',
+      },
+      publisher: {
+        '@type': 'Organization',
+        name: COMPANY_NAME,
+      },
+    })
+    document.head.appendChild(script)
+    return () => {
+      script.remove()
+    }
   }, [sitePage])
 
   useEffect(() => {

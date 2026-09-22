@@ -1,0 +1,10 @@
+User-agent: *
+Allow: /
+Disallow: /today
+Disallow: /activities
+Disallow: /numbers
+Disallow: /insights
+Disallow: /settings
+Disallow: /admin
+
+Sitemap: https://resuming.me/sitemap.xml

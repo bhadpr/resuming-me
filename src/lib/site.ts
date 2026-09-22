@@ -15,6 +15,35 @@ export function sitePageFromPath(pathname: string): SitePageId | null {
   return (SITE_PAGE_IDS as readonly string[]).includes(id) ? (id as SitePageId) : null
 }
 
+/** Paths that belong to the signed-in app (or will after P1-05). */
+const APP_PATH_PREFIXES = [
+  '/today',
+  '/activities',
+  '/numbers',
+  '/insights',
+  '/settings',
+  '/admin',
+] as const
+
+/**
+ * True for `/` and known public/app paths. Unknown paths should show Not Found.
+ */
+export function isKnownPath(pathname: string): boolean {
+  const path = pathname.replace(/\/+$/, '') || '/'
+  if (path === '/') return true
+  if (sitePageFromPath(path)) return true
+  return APP_PATH_PREFIXES.some(
+    (prefix) => path === prefix || path.startsWith(`${prefix}/`),
+  )
+}
+
+export const SITE_PAGE_TITLES: Record<SitePageId, string> = {
+  about: 'About · Resuming',
+  privacy: 'Privacy · Resuming',
+  terms: 'Terms · Resuming',
+  feedback: 'Feedback · Resuming',
+}
+
 export type SocialLinkId =
   | 'facebook'
   | 'instagram'
