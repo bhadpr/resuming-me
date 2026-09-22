@@ -19,6 +19,7 @@ import { InstallPrompt } from './InstallPrompt'
 import { BrandTitle } from './BrandTitle'
 import { LegalPage } from './LegalPage'
 import { FeedbackPage } from './FeedbackPage'
+import { DeleteAccountPage } from './DeleteAccountPage'
 import { BottomNav } from './BottomNav'
 import { Toast } from './Toast'
 import { SiteFooter } from './SiteFooter'
@@ -962,6 +963,8 @@ export function AppShell() {
             defaultName={user?.user_metadata?.full_name ?? user?.user_metadata?.name ?? ''}
             defaultEmail={user?.email ?? ''}
           />
+        ) : legalPage === 'delete-account' ? (
+          <DeleteAccountPage onBack={() => setLegalPage(null)} />
         ) : legalPage ? (
           <LegalPage page={legalPage} onBack={() => setLegalPage(null)} />
         ) : adminPage === 'analytics' ? (

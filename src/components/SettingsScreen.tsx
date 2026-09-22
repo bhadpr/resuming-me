@@ -1,6 +1,7 @@
 import { useEffect, useRef, useState } from 'react'
 import { Capacitor } from '@capacitor/core'
 import { useTheme } from '../hooks/useTheme'
+import { useAuth } from '../hooks/useAuth'
 import { DEFAULT_THEME, type ThemeId } from '../lib/themes'
 import {
   digestScheduleHint,
@@ -17,6 +18,8 @@ import {
   requestExactAlarms,
   scheduleTestDigest,
 } from '../lib/localNotifications'
+import { downloadUserDataExport } from '../lib/exportData'
+import { deleteCurrentAccount } from '../lib/deleteAccount'
 
 interface SettingsScreenProps {
   onBack: () => void
@@ -37,6 +40,7 @@ export function SettingsScreen({
   onSignOut,
   onOpenPrivacy,
 }: SettingsScreenProps) {
+  const { user } = useAuth()
   const { themeId, themes, setThemeId } = useTheme()
   const native = Capacitor.isNativePlatform()
   const [digest, setDigest] = useState<DailyDigestPrefs>(loadDailyDigestPrefs)
@@ -45,6 +49,13 @@ export function SettingsScreen({
   const [permissionError, setPermissionError] = useState<string | null>(null)
   const [testNotice, setTestNotice] = useState<string | null>(null)
   const [exactDenied, setExactDenied] = useState(false)
+  const [exportBusy, setExportBusy] = useState(false)
+  const [exportNotice, setExportNotice] = useState<string | null>(null)
+  const [exportError, setExportError] = useState<string | null>(null)
+  const [deleteOpen, setDeleteOpen] = useState(false)
+  const [deleteConfirmText, setDeleteConfirmText] = useState('')
+  const [deleteBusy, setDeleteBusy] = useState(false)
+  const [deleteError, setDeleteError] = useState<string | null>(null)
   const scheduleHint = digestScheduleHint(todayItems, digest)
 
   useEffect(() => {
@@ -101,6 +112,33 @@ export function SettingsScreen({
       setPermissionError(
         err instanceof Error ? err.message : 'Could not send a test reminder.',
       )
+    }
+  }
+
+  async function handleExport() {
+    if (!user?.id) return
+    setExportBusy(true)
+    setExportError(null)
+    setExportNotice(null)
+    try {
+      const filename = await downloadUserDataExport(user.id)
+      setExportNotice(`Downloaded ${filename}`)
+    } catch (err) {
+      setExportError(err instanceof Error ? err.message : 'Export failed.')
+    } finally {
+      setExportBusy(false)
+    }
+  }
+
+  async function handleDeleteAccount() {
+    if (deleteConfirmText !== 'DELETE') return
+    setDeleteBusy(true)
+    setDeleteError(null)
+    try {
+      await deleteCurrentAccount()
+    } catch (err) {
+      setDeleteError(err instanceof Error ? err.message : 'Could not delete account.')
+      setDeleteBusy(false)
     }
   }
 
@@ -277,6 +315,103 @@ export function SettingsScreen({
             ›
           </span>
         </button>
+
+        <button
+          type="button"
+          className="theme-option settings-nav-link"
+          onClick={() => void handleExport()}
+          disabled={exportBusy || !user}
+        >
+          <span className="activity-meta">
+            <span className="activity-name">
+              {exportBusy ? 'Exporting…' : 'Export my data'}
+            </span>
+            <span className="activity-desc">
+              Download a ZIP with your activities, logs, and metrics
+            </span>
+          </span>
+          <span className="activity-chevron" aria-hidden>
+            ›
+          </span>
+        </button>
+        {exportNotice && <p className="digest-hint settings-account-hint">{exportNotice}</p>}
+        {exportError && <p className="error">{exportError}</p>}
+
+        {!deleteOpen ? (
+          <button
+            type="button"
+            className="theme-option settings-nav-link settings-delete-link"
+            onClick={() => {
+              setDeleteOpen(true)
+              setDeleteConfirmText('')
+              setDeleteError(null)
+            }}
+          >
+            <span className="activity-meta">
+              <span className="activity-name">Delete my account</span>
+              <span className="activity-desc">Permanently erase your Resuming data</span>
+            </span>
+            <span className="activity-chevron" aria-hidden>
+              ›
+            </span>
+          </button>
+        ) : (
+          <div className="confirm-delete settings-delete-confirm">
+            <p>
+              This permanently deletes your account, activities, metrics, log history, and
+              feedback tied to this Google sign-in. It cannot be undone.
+            </p>
+            <p>
+              Want a copy first?{' '}
+              <button
+                type="button"
+                className="btn btn-ghost btn-sm"
+                onClick={() => void handleExport()}
+                disabled={exportBusy || deleteBusy || !user}
+              >
+                {exportBusy ? 'Exporting…' : 'Export my data'}
+              </button>
+            </p>
+            <div className="field">
+              <label className="field-label" htmlFor="delete-confirm-input">
+                Type DELETE to confirm
+              </label>
+              <input
+                id="delete-confirm-input"
+                className="field-input"
+                value={deleteConfirmText}
+                onChange={(e) => setDeleteConfirmText(e.target.value)}
+                autoComplete="off"
+                disabled={deleteBusy}
+                placeholder="DELETE"
+              />
+            </div>
+            {deleteError && <p className="error">{deleteError}</p>}
+            <div className="form-actions">
+              <button
+                type="button"
+                className="btn btn-ghost"
+                onClick={() => {
+                  setDeleteOpen(false)
+                  setDeleteConfirmText('')
+                  setDeleteError(null)
+                }}
+                disabled={deleteBusy}
+              >
+                Cancel
+              </button>
+              <button
+                type="button"
+                className="btn btn-danger"
+                onClick={() => void handleDeleteAccount()}
+                disabled={deleteBusy || deleteConfirmText !== 'DELETE'}
+              >
+                {deleteBusy ? 'Deleting…' : 'Delete forever'}
+              </button>
+            </div>
+          </div>
+        )}
+
         <button type="button" className="btn btn-primary btn-lg settings-sign-out" onClick={() => void onSignOut()}>
           Sign out
         </button>

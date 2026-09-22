@@ -26,6 +26,7 @@ export type AppAnalyticsPath =
   | '/privacy'
   | '/terms'
   | '/feedback'
+  | '/delete-account'
 
 const PATH_LABELS: Record<string, string> = {
   '/': 'Landing',
@@ -40,6 +41,7 @@ const PATH_LABELS: Record<string, string> = {
   '/privacy': 'Privacy',
   '/terms': 'Terms',
   '/feedback': 'Feedback',
+  '/delete-account': 'Delete account',
 }
 
 export function pathLabel(path: string): string {
