@@ -1,6 +1,6 @@
 import { describe, expect, it } from 'vitest'
 import { createZip, crc32 } from './zip'
-import { exportFilename, logEntriesToCsv } from './exportData'
+import { EXPORT_TABLES, exportFilename, logEntriesToCsv } from './exportData'
 
 describe('crc32 / zip', () => {
   it('matches known CRC32 for empty and hello', () => {
@@ -23,6 +23,18 @@ describe('crc32 / zip', () => {
 describe('export helpers', () => {
   it('names the zip with the local date', () => {
     expect(exportFilename('2026-09-22')).toBe('resuming-export-2026-09-22.zip')
+  })
+
+  it('includes every user-owned table from the Phase 1 export list', () => {
+    expect([...EXPORT_TABLES]).toEqual([
+      'profiles',
+      'activities',
+      'activity_target_history',
+      'log_entries',
+      'metrics',
+      'metric_entries',
+      'feedback',
+    ])
   })
 
   it('csv-escapes notes with commas and quotes', () => {

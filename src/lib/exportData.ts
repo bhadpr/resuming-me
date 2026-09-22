@@ -13,6 +13,18 @@ export interface UserDataExport {
   feedback: unknown[]
 }
 
+/** Tables included in an export (and scoped to the signed-in user). */
+export const EXPORT_TABLES = [
+  'profiles',
+  'activities',
+  'activity_target_history',
+  'log_entries',
+  'metrics',
+  'metric_entries',
+  'feedback',
+] as const satisfies ReadonlyArray<keyof Omit<UserDataExport, 'exported_at'>>
+
+
 function csvEscape(value: unknown): string {
   if (value === null || value === undefined) return ''
   const s = String(value)
