@@ -50,8 +50,9 @@ export function ActivityInsightChart({
 
   const polyline = plotted.map((p) => `${p.x},${p.y}`).join(' ')
   const avgY = padT + innerH - ((avg - lo) / span) * innerH
-  const met = points.filter((p) => p.status === 'met').length
-  const postponed = points.filter((p) => p.status === 'postponed').length
+  const met = points.filter((p) => p.status === 'done').length
+  const partial = points.filter((p) => p.status === 'partial').length
+  const postponed = points.filter((p) => p.status === 'skipped').length
   const labelEvery = points.length <= 7 ? 1 : points.length <= 14 ? 2 : 5
   const yTicks = [hi, hi / 2, 0].map((v) => Math.round(v * 10) / 10)
   const showAverage = unit === 'min' || unit === '×'
@@ -144,8 +145,11 @@ export function ActivityInsightChart({
       </svg>
       <div className="activity-insight-chart-caption">
         <span>
-          {met} done · {postponed} skipped · {points.length}{' '}
-          {unit === '×' ? 'weeks' : 'days'}
+          {met} done
+          {partial > 0 ? ` · ${partial} partial` : ''}
+          {postponed > 0 ? ` · ${postponed} skipped` : ''}
+          {' · '}
+          {points.length} {unit === '×' ? 'weeks' : 'days'}
           {showAverage ? ` · avg ${formatAvg(avg, unit)}${unit === '×' ? '/wk' : '/day'}` : ''}
           {showAverage && avgLogged != null && unit === 'min'
             ? ` · ${formatAvg(avgLogged, unit)} when logged`
@@ -153,6 +157,7 @@ export function ActivityInsightChart({
         </span>
         <span className="activity-insight-legend">
           <span className="legend-swatch legend-met" /> Done
+          <span className="legend-swatch legend-partial" /> Partial
           <span className="legend-swatch legend-postponed" /> Skipped
           <span className="legend-swatch legend-open" /> Open
         </span>
@@ -175,8 +180,7 @@ function formatAvg(value: number, unit: string): string {
 }
 
 function tooltip(p: ActivitySeriesPoint): string {
-  const status =
-    p.status === 'met' ? 'done' : p.status === 'postponed' ? 'skipped' : 'open'
+  const status = p.status
   if (p.unit === 'min') return `${p.date}: ${p.value} min (${status})`
   if (p.unit === '×') return `${p.date}: ${p.value}× (${status})`
   return `${p.date}: ${status}`

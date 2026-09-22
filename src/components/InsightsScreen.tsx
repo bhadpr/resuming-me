@@ -192,7 +192,9 @@ export function InsightsScreen({
                           <span className="activity-desc">
                             {a.scheduled === 0
                               ? 'Nothing scheduled yet'
-                              : `Skipped ${a.postponed} of ${a.scheduled} this ${window}`}
+                              : a.postponed > 0
+                                ? `Skipped ${a.postponed} · showed up ${a.showedUp} of ${a.scheduled}`
+                                : `${a.met} done · ${a.showedUp} showed up of ${a.scheduled}`}
                           </span>
                           <div className="progress-bar" aria-hidden>
                             <div

@@ -15,6 +15,7 @@ import {
   sumSessionSeconds,
   targetToSeconds,
 } from './timer'
+import { getDayStatus, type DayStatus } from './dayStatus'
 
 export type TodayActionKind = 'checkbox' | 'count' | 'timer' | 'deadline'
 
@@ -30,6 +31,8 @@ export interface ActivityTodayProgress {
   current: number
   target: number
   done: boolean
+  /** From getDayStatus — soft progress without meeting target. */
+  status: DayStatus
   /** For deadline activities. */
   daysRemaining: number | null
   overdue: boolean
@@ -224,7 +227,6 @@ export function buildTodayProgress(
     const target = periodTarget(activity)
     let daysRemaining: number | null = null
     let overdue = false
-    let done = current >= target
     let progressLabel = `${current}/${target}`
 
     if (actionKind === 'timer') {
@@ -237,21 +239,19 @@ export function buildTodayProgress(
           to,
           Math.max(1, minSeconds),
         )
-        done = current >= target
         progressLabel = `${current}/${target} sessions this week`
       } else {
         current = sumSessionSeconds(entries, activity.id, from, to)
-        done = target > 0 && current >= target
         progressLabel = `${formatSecondsAsTargetUnit(current, activity.target_unit)} / ${activity.target_value ?? 0} ${activity.target_unit ?? 'minutes'}`
       }
     } else if (activity.type === 'deadline') {
       daysRemaining = activity.deadline
         ? daysBetween(today, activity.deadline)
         : null
-      done = hasActivityCompletion(entries, activity.id)
-      current = done ? 1 : 0
-      overdue = daysRemaining != null && daysRemaining < 0 && !done
-      if (done) {
+      const completed = hasActivityCompletion(entries, activity.id)
+      current = completed ? 1 : 0
+      overdue = daysRemaining != null && daysRemaining < 0 && !completed
+      if (completed) {
         if (daysRemaining != null && daysRemaining > 0) {
           progressLabel = `Completed · ${daysRemaining}d until due`
         } else if (daysRemaining === 0) {
@@ -265,9 +265,22 @@ export function buildTodayProgress(
     } else if (activity.type === 'weekly_n') {
       progressLabel = `${current}/${target} this week`
     } else if (activity.type === 'monthly') {
-      progressLabel = done ? 'Done this month' : 'Not yet this month'
+      progressLabel = current >= target ? 'Done this month' : 'Not yet this month'
     } else if (actionKind === 'checkbox') {
-      progressLabel = done ? 'Done today' : 'Not yet'
+      progressLabel = current >= 1 ? 'Done today' : 'Not yet'
+    }
+
+    // TODO(P1-03): timezone from profile — todayLocalDate is browser-local today.
+    const dayStatus = getDayStatus({
+      activity,
+      entriesForDay: entries,
+      date: activity.type === 'weekly_n' || activity.type === 'monthly' ? from : today,
+      today,
+      timezone: Intl.DateTimeFormat().resolvedOptions().timeZone,
+    })
+    const done = dayStatus.status === 'done'
+    if (dayStatus.status === 'partial' && actionKind === 'timer' && activity.type === 'daily') {
+      progressLabel = `${formatSecondsAsTargetUnit(current, activity.target_unit)} / ${activity.target_value ?? 0} ${activity.target_unit ?? 'minutes'}`
     }
 
     const postponementStreak = computePostponementStreak(
@@ -287,6 +300,7 @@ export function buildTodayProgress(
       current,
       target,
       done,
+      status: dayStatus.status,
       daysRemaining,
       overdue,
       recentlyPostponed: postponementStreak > 0,

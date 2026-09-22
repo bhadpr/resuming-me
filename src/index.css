@@ -2375,15 +2375,24 @@ select.field-input {
   font-size: 8px;
 }
 
-.trend-dot-met {
+.trend-dot-met,
+.trend-dot-done {
   fill: var(--color-success);
 }
 
-.trend-dot-postponed {
+.trend-dot-partial {
+  fill: color-mix(in srgb, var(--color-success) 55%, var(--color-border));
+}
+
+.trend-dot-postponed,
+.trend-dot-skipped {
   fill: var(--color-warning-text);
 }
 
-.trend-dot-open {
+.trend-dot-open,
+.trend-dot-missed,
+.trend-dot-rest,
+.trend-dot-paused {
   fill: var(--color-border);
   stroke: var(--color-text-muted);
   stroke-width: 1;

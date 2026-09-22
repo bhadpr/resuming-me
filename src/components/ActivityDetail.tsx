@@ -133,6 +133,10 @@ export function ActivityDetail({
                   <dd>{seriesStats.done}</dd>
                 </div>
                 <div>
+                  <dt>Partial</dt>
+                  <dd>{seriesStats.partial}</dd>
+                </div>
+                <div>
                   <dt>Skipped</dt>
                   <dd>{seriesStats.skipped}</dd>
                 </div>

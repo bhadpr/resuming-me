@@ -1,7 +1,7 @@
 export type ActivityType = 'daily' | 'weekly_n' | 'deadline' | 'monthly'
 export type TrackingMode = 'timer' | 'count' | 'checkbox'
 export type LogEntryType = 'session' | 'postponed' | 'completed'
-export type SessionSource = 'timer' | 'manual'
+export type SessionSource = 'timer' | 'manual' | 'auto'
 
 export interface Database {
   public: {

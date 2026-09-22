@@ -3,7 +3,6 @@ import type { ActivityTodayProgress } from '../lib/today'
 import { partitionTodayRows, todayEmptyKind } from '../lib/today'
 import {
   canShrinkToday,
-  isPartialToday,
   pickEasiestReentryRow,
   pickFollowUpReentryRow,
   reentryPrimaryLabel,
@@ -531,16 +530,11 @@ function TodayActivityRow({
   onRescheduleDeadline: (newDeadline: string) => void
   onShrinkRunningTimer: (minutes: SmallerChoiceMinutes) => void
 }) {
-  const { activity, actionKind, done, progressLabel, current, target } = row
+  const { activity, actionKind, done, progressLabel, current, target, status } = row
   const isThisTimer = activeTimer?.activityId === activity.id
   const timerLive = isThisTimer && activeTimer?.status === 'running'
   const timerPaused = isThisTimer && activeTimer?.status === 'paused'
-  // TODO(P1-03): replace with getDayStatus
-  const partial =
-    !done &&
-    !isThisTimer &&
-    actionKind === 'timer' &&
-    isPartialToday(activity, current)
+  const partial = !done && !isThisTimer && status === 'partial'
   const postponeNote =
     !done && row.recentlyPostponed
       ? row.activity.type === 'weekly_n'

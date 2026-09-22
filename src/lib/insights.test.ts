@@ -63,8 +63,8 @@ describe('computeInsights', () => {
     // Week ending 2026-08-11 (Tue): dates Aug 5–11
     const entries: LogEntry[] = [
       entry({ id: '1', date: '2026-08-10', type: 'completed' }),
-      entry({ id: '2', date: '2026-08-09', type: 'postponed' }),
-      entry({ id: '3', date: '2026-08-08', type: 'postponed' }),
+      entry({ id: '2', date: '2026-08-09', type: 'postponed', source: 'manual' }),
+      entry({ id: '3', date: '2026-08-08', type: 'postponed', source: 'manual' }),
       entry({
         id: '4',
         activity_id: 'gym',
@@ -92,9 +92,9 @@ describe('computeInsights', () => {
     const result = computeInsights(
       [activity()],
       [
-        entry({ id: '1', date: '2026-08-10', type: 'postponed' }),
-        entry({ id: '2', date: '2026-08-03', type: 'postponed' }),
-        entry({ id: '3', date: '2026-08-11', type: 'postponed' }),
+        entry({ id: '1', date: '2026-08-10', type: 'postponed', source: 'manual' }),
+        entry({ id: '2', date: '2026-08-03', type: 'postponed', source: 'manual' }),
+        entry({ id: '3', date: '2026-08-11', type: 'postponed', source: 'manual' }),
       ],
       'month',
       '2026-08-11',
@@ -158,15 +158,16 @@ describe('computeInsights', () => {
         id: '2',
         activity_id: 'reading',
         type: 'postponed',
+        source: 'manual',
         date: '2026-08-10',
       }),
     ]
 
     const week = buildActivityInsightSeries(reading, entries, 'week', '2026-08-11')
     expect(week).toHaveLength(7)
-    expect(week.find((p) => p.date === '2026-08-11')?.status).toBe('met')
+    expect(week.find((p) => p.date === '2026-08-11')?.status).toBe('done')
     expect(week.find((p) => p.date === '2026-08-11')?.value).toBe(10)
-    expect(week.find((p) => p.date === '2026-08-10')?.status).toBe('postponed')
+    expect(week.find((p) => p.date === '2026-08-10')?.status).toBe('skipped')
 
     const month = buildActivityInsightSeries(reading, entries, 'month', '2026-08-11')
     expect(month).toHaveLength(11) // created Aug 1 → Aug 11
@@ -210,7 +211,7 @@ describe('computeInsights', () => {
         key: 'a',
         label: 'Mon',
         date: '2026-08-09',
-        status: 'met' as const,
+        status: 'done' as const,
         value: 10,
         unit: 'min',
       },
@@ -218,7 +219,7 @@ describe('computeInsights', () => {
         key: 'b',
         label: 'Tue',
         date: '2026-08-10',
-        status: 'postponed' as const,
+        status: 'skipped' as const,
         value: 0,
         unit: 'min',
       },
@@ -238,5 +239,32 @@ describe('computeInsights', () => {
     expect(stats.min).toBe(10)
     expect(stats.max).toBe(20)
     expect(stats.avg).toBe(15)
+  })
+
+  it('counts a 2-min session on a 5-min target as showed up, not done', () => {
+    const meditate = activity({
+      id: 'med',
+      name: 'Meditate',
+      tracking_mode: 'timer',
+      target_value: 5,
+      target_unit: 'min',
+      created_at: '2026-08-01T00:00:00Z',
+    })
+    const entries = [
+      entry({
+        activity_id: 'med',
+        type: 'session',
+        date: '2026-08-11',
+        duration_seconds: 120,
+        source: 'timer',
+      }),
+    ]
+    const insights = computeInsights([meditate], entries, 'week', '2026-08-11')
+    expect(insights.completedScheduled).toBe(0)
+    expect(insights.showedUpScheduled).toBe(1)
+    const series = buildActivityInsightSeriesForDays(meditate, entries, 7, '2026-08-11')
+    const day = series.find((p) => p.date === '2026-08-11')
+    expect(day?.status).toBe('partial')
+    expect(day?.value).toBe(2)
   })
 })

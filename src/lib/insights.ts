@@ -1,9 +1,13 @@
 import type { Activity } from './activities'
 import type { LogEntry } from './logs'
 import { addDays, endOfMonth, parseLocalDate, startOfMonth, todayLocalDate } from './dates'
-import { dailyTargetMet, monthlyTargetMet, weeklyTargetMet } from './rollover'
 import { endOfWeekSunday, startOfWeekMonday } from './dates'
-import { sumSessionSeconds } from './timer'
+import {
+  getDayStatus,
+  isUserSkipped,
+  showedUp,
+  type DayStatus,
+} from './dayStatus'
 
 export type InsightsWindow = 'week' | 'month'
 
@@ -22,6 +26,8 @@ export interface ActivityInsight {
   scheduled: number
   postponed: number
   met: number
+  /** done + partial */
+  showedUp: number
   /** postponed / scheduled, 0 if nothing scheduled */
   postponementRate: number
 }
@@ -38,6 +44,7 @@ export interface InsightsResult {
   to: string
   activities: ActivityInsight[]
   completedScheduled: number
+  showedUpScheduled: number
   totalScheduled: number
   mostPostponed: ActivityInsight[]
   dayOfWeekSkips: DayCount[]
@@ -47,14 +54,15 @@ export interface InsightsResult {
   summary: string
 }
 
-export type ActivityDayStatus = 'met' | 'postponed' | 'open'
+/** Chart status — includes partial/missed from getDayStatus. */
+export type ActivityDayStatus = DayStatus | 'met' | 'postponed'
 
 export interface ActivitySeriesPoint {
   key: string
   /** Short axis label */
   label: string
   date: string
-  status: ActivityDayStatus
+  status: DayStatus
   /** Chart height basis: minutes for timer, completions for count/checkbox */
   value: number
   unit: string
@@ -93,6 +101,7 @@ function dayLabel(date: string, window: InsightsWindow): string {
 export interface ActivitySeriesStats {
   windowDays: ActivityChartWindowDays
   done: number
+  partial: number
   skipped: number
   open: number
   min: number | null
@@ -105,21 +114,38 @@ export function computeActivitySeriesStats(
   points: ActivitySeriesPoint[],
   windowDays: ActivityChartWindowDays,
 ): ActivitySeriesStats {
-  const done = points.filter((p) => p.status === 'met').length
-  const skipped = points.filter((p) => p.status === 'postponed').length
-  const open = points.filter((p) => p.status === 'open').length
+  const done = points.filter((p) => p.status === 'done').length
+  const partial = points.filter((p) => p.status === 'partial').length
+  const skipped = points.filter((p) => p.status === 'skipped').length
+  const open = points.filter(
+    (p) =>
+      p.status === 'open' ||
+      p.status === 'missed' ||
+      p.status === 'rest' ||
+      p.status === 'paused',
+  ).length
   const unit = points[0]?.unit ?? ''
   const logged = points.filter((p) => p.value > 0).map((p) => p.value)
 
   if (logged.length === 0) {
-    return { windowDays, done, skipped, open, min: null, max: null, avg: null, unit }
+    return {
+      windowDays,
+      done,
+      partial,
+      skipped,
+      open,
+      min: null,
+      max: null,
+      avg: null,
+      unit,
+    }
   }
 
   const min = Math.min(...logged)
   const max = Math.max(...logged)
   const avg = logged.reduce((a, b) => a + b, 0) / logged.length
 
-  return { windowDays, done, skipped, open, min, max, avg, unit }
+  return { windowDays, done, partial, skipped, open, min, max, avg, unit }
 }
 
 /**
@@ -132,7 +158,7 @@ export function buildActivityInsightSeries(
   today = todayLocalDate(),
 ): ActivitySeriesPoint[] {
   const { from, to } = windowRange(window, today)
-  return buildActivityInsightSeriesInRange(activity, entries, from, to, window)
+  return buildActivityInsightSeriesInRange(activity, entries, from, to, window, today)
 }
 
 /** Activity detail chart — supports 7 / 30 / 90 day windows. */
@@ -146,7 +172,29 @@ export function buildActivityInsightSeriesForDays(
   const from = addDays(today, -(windowDays - 1))
   const to = today
   const labelWindow: InsightsWindow = windowDays === 7 ? 'week' : 'month'
-  return buildActivityInsightSeriesInRange(activity, entries, from, to, labelWindow)
+  return buildActivityInsightSeriesInRange(
+    activity,
+    entries,
+    from,
+    to,
+    labelWindow,
+    today,
+  )
+}
+
+function statusForPeriod(
+  activity: Activity,
+  entries: LogEntry[],
+  date: string,
+  today: string,
+): { status: DayStatus; value: number; target: number } {
+  return getDayStatus({
+    activity,
+    entriesForDay: entries,
+    date,
+    today,
+    timezone: 'UTC',
+  })
 }
 
 function buildActivityInsightSeriesInRange(
@@ -155,6 +203,7 @@ function buildActivityInsightSeriesInRange(
   from: string,
   to: string,
   labelWindow: InsightsWindow,
+  today = to,
 ): ActivitySeriesPoint[] {
   const created = activity.created_at.slice(0, 10)
 
@@ -164,25 +213,31 @@ function buildActivityInsightSeriesInRange(
     while (weekStart <= to) {
       const weekEnd = endOfWeekSunday(weekStart)
       if (weekEnd >= created) {
-        const postponed = hasPostponedOn(entries, activity.id, weekEnd)
-        const met = !postponed && weeklyTargetMet(activity, entries, weekStart)
-        const completions = entries.filter(
-          (e) =>
-            e.activity_id === activity.id &&
-            e.type === 'completed' &&
-            e.date >= weekStart &&
-            e.date <= weekEnd,
-        ).length
-        const sessionMinutes = Math.round(
-          sumSessionSeconds(entries, activity.id, weekStart, weekEnd) / 60,
+        const { status, value } = statusForPeriod(
+          activity,
+          entries,
+          weekStart,
+          today,
         )
         const isTimer = activity.tracking_mode === 'timer'
         points.push({
           key: weekStart,
           label: shortDateLabel(weekStart),
           date: weekStart,
-          status: postponed ? 'postponed' : met ? 'met' : 'open',
-          value: isTimer ? sessionMinutes : completions,
+          status,
+          value: isTimer
+            ? Math.round(
+                entries
+                  .filter(
+                    (e) =>
+                      e.activity_id === activity.id &&
+                      e.type === 'session' &&
+                      e.date >= weekStart &&
+                      e.date <= weekEnd,
+                  )
+                  .reduce((s, e) => s + (e.duration_seconds ?? 0), 0) / 60,
+              )
+            : value,
           unit: isTimer ? 'min' : '×',
         })
       }
@@ -197,21 +252,18 @@ function buildActivityInsightSeriesInRange(
     while (monthStart <= to) {
       const monthEnd = endOfMonth(monthStart)
       if (monthEnd >= created) {
-        const postponed = hasPostponedOn(entries, activity.id, monthEnd)
-        const met = !postponed && monthlyTargetMet(activity, entries, monthStart)
-        const completions = entries.filter(
-          (e) =>
-            e.activity_id === activity.id &&
-            e.type === 'completed' &&
-            e.date >= monthStart &&
-            e.date <= monthEnd,
-        ).length
+        const { status, value } = statusForPeriod(
+          activity,
+          entries,
+          monthStart,
+          today,
+        )
         points.push({
           key: monthStart,
           label: shortDateLabel(monthStart),
           date: monthStart,
-          status: postponed ? 'postponed' : met ? 'met' : 'open',
-          value: completions,
+          status,
+          value,
           unit: '×',
         })
       }
@@ -224,35 +276,38 @@ function buildActivityInsightSeriesInRange(
   const start = created > from ? created : from
   const isTimer = activity.tracking_mode === 'timer'
   return eachDateInclusive(start, to).map((date) => {
-    const postponed = hasPostponedOn(entries, activity.id, date)
-    const met = !postponed && dailyTargetMet(activity, entries, date)
-    const minutes = Math.round(sumSessionSeconds(entries, activity.id, date, date) / 60)
-    const completions = entries.filter(
-      (e) =>
-        e.activity_id === activity.id &&
-        e.type === 'completed' &&
-        e.date === date,
-    ).length
+    const { status, value } = statusForPeriod(activity, entries, date, today)
     return {
       key: date,
       label: dayLabel(date, labelWindow),
       date,
-      status: postponed ? 'postponed' : met ? 'met' : 'open',
-      value: isTimer ? minutes : completions,
+      status,
+      value,
       unit: isTimer ? 'min' : 'done',
     }
   })
 }
 
-function hasPostponedOn(
+function analyzePeriod(
+  activity: Activity,
   entries: LogEntry[],
-  activityId: string,
-  date: string,
-): boolean {
-  return entries.some(
-    (e) =>
-      e.activity_id === activityId && e.type === 'postponed' && e.date === date,
-  )
+  dates: string[],
+  today: string,
+): Pick<ActivityInsight, 'scheduled' | 'postponed' | 'met' | 'showedUp'> {
+  let scheduled = 0
+  let postponed = 0
+  let met = 0
+  let showed = 0
+
+  for (const date of dates) {
+    scheduled += 1
+    const { status } = statusForPeriod(activity, entries, date, today)
+    if (status === 'skipped') postponed += 1
+    if (status === 'done') met += 1
+    if (showedUp(status)) showed += 1
+  }
+
+  return { scheduled, postponed, met, showedUp: showed }
 }
 
 function analyzeDaily(
@@ -260,23 +315,11 @@ function analyzeDaily(
   entries: LogEntry[],
   from: string,
   to: string,
-): Pick<ActivityInsight, 'scheduled' | 'postponed' | 'met'> {
+  today: string,
+): Pick<ActivityInsight, 'scheduled' | 'postponed' | 'met' | 'showedUp'> {
   const created = activity.created_at.slice(0, 10)
   const start = created > from ? created : from
-  let scheduled = 0
-  let postponed = 0
-  let met = 0
-
-  for (const date of eachDateInclusive(start, to)) {
-    scheduled += 1
-    if (hasPostponedOn(entries, activity.id, date)) {
-      postponed += 1
-    } else if (dailyTargetMet(activity, entries, date)) {
-      met += 1
-    }
-  }
-
-  return { scheduled, postponed, met }
+  return analyzePeriod(activity, entries, eachDateInclusive(start, to), today)
 }
 
 function analyzeWeekly(
@@ -284,31 +327,17 @@ function analyzeWeekly(
   entries: LogEntry[],
   from: string,
   to: string,
-): Pick<ActivityInsight, 'scheduled' | 'postponed' | 'met'> {
+  today: string,
+): Pick<ActivityInsight, 'scheduled' | 'postponed' | 'met' | 'showedUp'> {
   const created = activity.created_at.slice(0, 10)
-  let scheduled = 0
-  let postponed = 0
-  let met = 0
-
-  // Walk week starts that overlap [from, to]
+  const dates: string[] = []
   let weekStart = startOfWeekMonday(from)
   while (weekStart <= to) {
     const weekEnd = endOfWeekSunday(weekStart)
-    if (weekEnd >= created && weekStart <= to) {
-      // Count week if it has started relative to activity creation
-      if (weekEnd >= created) {
-        scheduled += 1
-        if (hasPostponedOn(entries, activity.id, weekEnd)) {
-          postponed += 1
-        } else if (weeklyTargetMet(activity, entries, weekStart)) {
-          met += 1
-        }
-      }
-    }
+    if (weekEnd >= created) dates.push(weekStart)
     weekStart = addDays(weekStart, 7)
   }
-
-  return { scheduled, postponed, met }
+  return analyzePeriod(activity, entries, dates, today)
 }
 
 function analyzeMonthly(
@@ -316,33 +345,23 @@ function analyzeMonthly(
   entries: LogEntry[],
   from: string,
   to: string,
-): Pick<ActivityInsight, 'scheduled' | 'postponed' | 'met'> {
+  today: string,
+): Pick<ActivityInsight, 'scheduled' | 'postponed' | 'met' | 'showedUp'> {
   const created = activity.created_at.slice(0, 10)
-  let scheduled = 0
-  let postponed = 0
-  let met = 0
-
+  const dates: string[] = []
   let monthStart = startOfMonth(from)
   while (monthStart <= to) {
     const monthEnd = endOfMonth(monthStart)
-    if (monthEnd >= created) {
-      scheduled += 1
-      if (hasPostponedOn(entries, activity.id, monthEnd)) {
-        postponed += 1
-      } else if (monthlyTargetMet(activity, entries, monthStart)) {
-        met += 1
-      }
-    }
+    if (monthEnd >= created) dates.push(monthStart)
     monthStart = startOfMonth(addDays(monthEnd, 1))
   }
-
-  return { scheduled, postponed, met }
+  return analyzePeriod(activity, entries, dates, today)
 }
 
 function buildDayOfWeekSkips(entries: LogEntry[], from: string, to: string): DayCount[] {
   const counts = [0, 0, 0, 0, 0, 0, 0]
   for (const e of entries) {
-    if (e.type !== 'postponed') continue
+    if (!isUserSkipped(e)) continue
     if (e.date < from || e.date > to) continue
     const dow = parseLocalDate(e.date).getDay()
     counts[dow] += 1
@@ -400,6 +419,7 @@ function peak(counts: DayCount[]): DayCount | null {
 function buildSummary(
   window: InsightsWindow,
   completed: number,
+  showed: number,
   total: number,
   mostPostponed: ActivityInsight[],
 ): string {
@@ -413,13 +433,15 @@ function buildSummary(
     .slice(0, 2)
     .map((a) => a.name)
 
-  let text = `${completed} of ${total} done ${period}.`
+  let text = `${completed} of ${total} done ${period}`
+  if (showed > completed) {
+    text += ` · ${showed} showed up`
+  }
+  text += '.'
   if (top.length === 1) {
     text += ` ${top[0]} is the one you keep putting off.`
   } else if (top.length >= 2) {
     text += ` ${top[0]} and ${top[1]} are the ones you keep putting off.`
-  } else {
-    text += ` Nothing put off in this window.`
   }
   return text
 }
@@ -440,10 +462,10 @@ export function computeInsights(
   const activityInsights: ActivityInsight[] = trackable.map((activity) => {
     const stats =
       activity.type === 'weekly_n'
-        ? analyzeWeekly(activity, entries, from, to)
+        ? analyzeWeekly(activity, entries, from, to, today)
         : activity.type === 'monthly'
-          ? analyzeMonthly(activity, entries, from, to)
-          : analyzeDaily(activity, entries, from, to)
+          ? analyzeMonthly(activity, entries, from, to, today)
+          : analyzeDaily(activity, entries, from, to, today)
     const postponementRate =
       stats.scheduled === 0 ? 0 : stats.postponed / stats.scheduled
     return {
@@ -465,6 +487,7 @@ export function computeInsights(
 
   const totalScheduled = activityInsights.reduce((s, a) => s + a.scheduled, 0)
   const completedScheduled = activityInsights.reduce((s, a) => s + a.met, 0)
+  const showedUpScheduled = activityInsights.reduce((s, a) => s + a.showedUp, 0)
   const mostPostponed = [...activityInsights].sort(
     (a, b) => b.postponed - a.postponed || b.postponementRate - a.postponementRate,
   )
@@ -478,6 +501,7 @@ export function computeInsights(
     to,
     activities: activityInsights,
     completedScheduled,
+    showedUpScheduled,
     totalScheduled,
     mostPostponed,
     dayOfWeekSkips,
@@ -487,6 +511,7 @@ export function computeInsights(
     summary: buildSummary(
       window,
       completedScheduled,
+      showedUpScheduled,
       totalScheduled,
       mostPostponed,
     ),
