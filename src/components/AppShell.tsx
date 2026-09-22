@@ -28,6 +28,7 @@ import {
   isQuietReentry,
   buildQuietInsightLine,
   JUST_STARTED_MIN_SECONDS,
+  lastActivityWinDate,
   type SmallerChoiceMinutes,
 } from '../lib/reentry'
 import type { ReentryFollowUp } from './TodayScreen'
@@ -39,6 +40,8 @@ import {
   formatSessionUndoMessage,
 } from '../lib/undoMessages'
 import { trackPageView } from '../lib/analytics'
+import { comebackGapDays, track } from '../lib/track'
+import { targetToSeconds } from '../lib/timer'
 import {
   archiveActivity,
   createActivity,
@@ -118,6 +121,52 @@ type MetricScreen =
   | { name: 'detail'; metricId: string }
 
 type AdminPage = 'analytics' | 'feedback'
+
+function trackActivityCreated(activity: Activity): void {
+  track('activity_created', {
+    type: activity.type,
+    tracking: activity.tracking_mode,
+    target: activity.target_value ?? activity.weekly_target ?? null,
+  })
+}
+
+function trackLogAndComeback(opts: {
+  activity: Activity | undefined
+  kind: 'session' | 'completed' | 'count'
+  minutes: number | null
+  wasPartial: boolean
+  entries: LogEntry[]
+  activities: Activity[]
+  today: string
+}): void {
+  const activityType = opts.activity?.type ?? 'unknown'
+  track('log_created', {
+    activity_type: activityType,
+    kind: opts.kind,
+    minutes: opts.minutes,
+    was_partial: opts.wasPartial,
+  })
+
+  const activeIds = new Set(
+    opts.activities.filter((a) => !a.archived).map((a) => a.id),
+  )
+  const lastWin = lastActivityWinDate(opts.entries, activeIds)
+  const gap = comebackGapDays(lastWin, opts.today, 3)
+  if (gap != null) {
+    track('comeback', { gap_days: gap })
+  }
+}
+
+function sessionWasPartial(
+  activity: Activity | undefined,
+  durationSeconds: number,
+): boolean {
+  if (!activity || activity.tracking_mode !== 'timer') return false
+  if (activity.type === 'weekly_n' || activity.type === 'deadline') return false
+  const target = targetToSeconds(activity)
+  if (target <= 0) return false
+  return durationSeconds > 0 && durationSeconds < target
+}
 
 export function AppShell() {
   const { user, signOut, isAdmin } = useAuth()
@@ -355,8 +404,11 @@ export function AppShell() {
     if (tab === 'today') trackPageView('/app/today', 'Today')
     else if (tab === 'activities') trackPageView('/app/activities', 'Activities')
     else if (tab === 'metrics') trackPageView('/app/metrics', 'Numbers')
-    else if (tab === 'insights') trackPageView('/app/insights', 'Insights')
-  }, [tab, settingsOpen, adminPage, legalPage])
+    else if (tab === 'insights') {
+      trackPageView('/app/insights', 'Insights')
+      track('insights_viewed', { range: insightsWindow })
+    }
+  }, [tab, settingsOpen, adminPage, legalPage, insightsWindow])
 
   const selectedActivity =
     activityScreen.name === 'detail' || activityScreen.name === 'form'
@@ -478,6 +530,7 @@ export function AppShell() {
         setActivityScreen({ name: 'detail', activityId: updated.id })
       } else {
         const created = await createActivity(user.id, input)
+        trackActivityCreated(created)
         setActivities((prev) => [created, ...prev])
         setActivityScreen({ name: 'detail', activityId: created.id })
       }
@@ -547,6 +600,7 @@ export function AppShell() {
     entryId: string
     queued?: boolean
     activityId?: string
+    kind?: 'session' | 'completed' | 'count'
   }) {
     try {
       if (opts.queued) {
@@ -557,6 +611,7 @@ export function AppShell() {
         await deleteLogEntry(opts.entryId)
       }
       removeLogEntryLocally(opts.entryId)
+      track('log_undone', { kind: opts.kind ?? 'session' })
       if (opts.activityId) {
         setReentryFollowUp((prev) =>
           prev?.excludeActivityId === opts.activityId ? null : prev,
@@ -577,9 +632,22 @@ export function AppShell() {
         activityId: row.activity.id,
         date: today,
       })
+      trackLogAndComeback({
+        activity: row.activity,
+        kind: 'completed',
+        minutes: null,
+        wasPartial: false,
+        entries: logEntries,
+        activities,
+        today,
+      })
       setLogEntries((prev) => [created, ...prev])
       undoToast.show(formatCompletedUndoMessage(row.activity.name), () =>
-        undoLogEntry({ entryId: created.id, activityId: row.activity.id }),
+        undoLogEntry({
+          entryId: created.id,
+          activityId: row.activity.id,
+          kind: 'completed',
+        }),
       )
     } catch (err) {
       setError(err instanceof Error ? err.message : 'Could not mark complete')
@@ -631,9 +699,23 @@ export function AppShell() {
         activityId: row.activity.id,
         date: today,
       })
+      const nextValue = row.current + 1
+      trackLogAndComeback({
+        activity: row.activity,
+        kind: 'count',
+        minutes: null,
+        wasPartial: nextValue < row.target,
+        entries: logEntries,
+        activities,
+        today,
+      })
       setLogEntries((prev) => [created, ...prev])
       undoToast.show(formatCountUndoMessage(row.activity.name), () =>
-        undoLogEntry({ entryId: created.id, activityId: row.activity.id }),
+        undoLogEntry({
+          entryId: created.id,
+          activityId: row.activity.id,
+          kind: 'count',
+        }),
       )
     } catch (err) {
       setError(err instanceof Error ? err.message : 'Could not add +1')
@@ -725,6 +807,10 @@ export function AppShell() {
     timer.setSessionTarget(minutes == null ? null : minutes * 60)
   }
 
+  // TODO(P1-04): track('skip_today', { reason }) when skip UI lands
+  // TODO(P1-04): track('activity_paused', { duration }) when pause UI lands
+  // TODO(P1-04): track('rest_day', { duration }) when rest-day UI lands
+
   async function handleTimerStop() {
     if (!user) return
     const stopped = timer.stop()
@@ -760,11 +846,21 @@ export function AppShell() {
 
       const activity = activities.find((a) => a.id === stopped.activityId)
       const name = activity?.name ?? 'activity'
+      trackLogAndComeback({
+        activity,
+        kind: 'session',
+        minutes: Math.round((durationSeconds / 60) * 10) / 10,
+        wasPartial: sessionWasPartial(activity, durationSeconds),
+        entries: logEntries,
+        activities,
+        today,
+      })
       undoToast.show(formatSessionUndoMessage(name, durationSeconds), () =>
         undoLogEntry({
           entryId: entry.id,
           queued,
           activityId: stopped.activityId,
+          kind: 'session',
         }),
       )
 
@@ -814,6 +910,15 @@ export function AppShell() {
       if (queued) {
         setOfflineNotice('Saved offline. Will sync when you reconnect.')
       }
+      trackLogAndComeback({
+        activity: row.activity,
+        kind: 'session',
+        minutes: Math.round((durationSeconds / 60) * 10) / 10,
+        wasPartial: sessionWasPartial(row.activity, durationSeconds),
+        entries: logEntries,
+        activities,
+        today,
+      })
       undoToast.show(
         formatSessionUndoMessage(row.activity.name, durationSeconds),
         () =>
@@ -821,6 +926,7 @@ export function AppShell() {
             entryId: entry.id,
             queued,
             activityId: row.activity.id,
+            kind: 'session',
           }),
       )
       return true
@@ -856,6 +962,7 @@ export function AppShell() {
     try {
       for (const item of payload.activities) {
         const created = await createActivity(user.id, item.input)
+        trackActivityCreated(created)
         if (item.deadlineCadence) {
           saveDeadlineReminder(created.id, item.deadlineCadence)
         }

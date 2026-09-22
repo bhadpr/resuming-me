@@ -109,7 +109,12 @@ function PrivacyContent() {
           processed by our infrastructure providers). We do not run advertising or
           third-party marketing analytics. We collect first-party page-view events
           (page path, approximate referrer, browser/device class, and an anonymous
-          visitor id) so site operators can understand usage of the Service.
+          visitor id) and first-party product events (for example, sign-in, activity
+          created, log created/undone, insights viewed, and app opened — with
+          non-identifying props such as activity type or duration, never activity
+          names, notes, or other personal text) so site operators can understand
+          usage of the Service. These events stay on our first-party infrastructure;
+          we do not send them to third-party analytics vendors.
         </li>
         <li>
           <strong>Local device storage.</strong> On your device we may store session
@@ -128,7 +133,7 @@ function PrivacyContent() {
         <li>Authenticate you and keep you signed in</li>
         <li>Sync your activities and logs and compute Insights from your own data</li>
         <li>Respond to feedback and support requests</li>
-        <li>Understand aggregate website usage through first-party page analytics</li>
+        <li>Understand aggregate website and product usage through first-party analytics</li>
         <li>Detect, prevent, and address abuse, security, or technical issues</li>
         <li>Comply with legal obligations</li>
       </ul>

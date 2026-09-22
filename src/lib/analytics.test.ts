@@ -1,4 +1,4 @@
-import { formatSignInTime, summarizePageViews } from './analytics'
+import { formatRetentionRate, formatSignInTime, summarizePageViews } from './analytics'
 import { describe, expect, it } from 'vitest'
 
 describe('summarizePageViews', () => {
@@ -51,5 +51,13 @@ describe('formatSignInTime', () => {
 
   it('formats a real timestamp', () => {
     expect(formatSignInTime('2026-08-18T17:00:00.000Z')).toMatch(/Aug/)
+  })
+})
+
+describe('formatRetentionRate', () => {
+  it('formats rates and missing values', () => {
+    expect(formatRetentionRate(null)).toBe('—')
+    expect(formatRetentionRate(0.25)).toBe('25%')
+    expect(formatRetentionRate(0)).toBe('0%')
   })
 })
