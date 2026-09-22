@@ -1,14 +1,15 @@
-export type SitePageId = 'about' | 'privacy' | 'terms' | 'feedback'
+export type SitePageId = 'about' | 'privacy' | 'terms' | 'feedback' | 'delete-account'
 
 export const SITE_PAGE_IDS: readonly SitePageId[] = [
   'about',
   'privacy',
   'terms',
   'feedback',
+  'delete-account',
 ]
 
 /** @deprecated Prefer SitePageId — kept for existing legal-only imports. */
-export type LegalPageId = Exclude<SitePageId, 'feedback'>
+export type LegalPageId = Exclude<SitePageId, 'feedback' | 'delete-account'>
 
 export function sitePageFromPath(pathname: string): SitePageId | null {
   const id = pathname.replace(/^\/+|\/+$/g, '')

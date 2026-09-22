@@ -215,8 +215,11 @@ function PrivacyContent() {
       </ul>
       <p>
         You can edit or delete many records directly in the app, and you can sign out at
-        any time. For a full account deletion, data export, or other privacy request,
-        email{' '}
+        any time. In Settings → Account you can <strong>Export my data</strong> (download a
+        copy of your activities, logs, and metrics) or <strong>Delete my account</strong>{' '}
+        (permanent removal after typing DELETE). See also{' '}
+        <a href="/delete-account">how to delete your account</a>. For help when you cannot
+        use the app, or for other privacy requests, email{' '}
         <a href={`mailto:${SUPPORT_EMAIL}`}>{SUPPORT_EMAIL}</a>. We may need to verify
         your identity before fulfilling a request. You may also have the right to lodge a
         complaint with a data protection authority in your region.

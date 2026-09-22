@@ -2671,6 +2671,18 @@ select.field-input {
   margin-top: 1rem;
 }
 
+.settings-account-hint {
+  margin: 0.35rem 0 0.5rem;
+}
+
+.settings-delete-link .activity-name {
+  color: var(--color-danger);
+}
+
+.settings-delete-confirm {
+  margin-top: 0.5rem;
+}
+
 .site-footer-privacy {
   margin-top: 0.5rem;
   padding-top: 0.75rem;

@@ -8,6 +8,7 @@ describe('sitePageFromPath', () => {
     expect(sitePageFromPath('/terms/')).toBe('terms')
     expect(sitePageFromPath('about')).toBe('about')
     expect(sitePageFromPath('/feedback')).toBe('feedback')
+    expect(sitePageFromPath('/delete-account')).toBe('delete-account')
   })
 
   it('ignores the home path and unknown routes', () => {
@@ -22,5 +23,14 @@ describe('sitePageFromPath', () => {
     expect(html).toContain(COMPANY_NAME)
     expect(html).toContain(SUPPORT_EMAIL)
     expect(html).toContain('We do not sell your personal information')
+    expect(html).toContain('Export my data')
+    expect(html).toContain('Delete my account')
+  })
+
+  it('ships a static delete-account page for store listings', () => {
+    const html = readFileSync('public/delete-account.html', 'utf8')
+    expect(html).toContain('Delete your account')
+    expect(html).toContain(SUPPORT_EMAIL)
+    expect(html).toContain('DELETE')
   })
 })

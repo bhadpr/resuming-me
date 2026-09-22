@@ -1,11 +1,13 @@
 import { useEffect, useState } from 'react'
 import { Capacitor } from '@capacitor/core'
 import { BrandTitle } from './BrandTitle'
+import { DeleteAccountPage } from './DeleteAccountPage'
 import { FeedbackPage } from './FeedbackPage'
 import { LegalPage } from './LegalPage'
 import { SiteFooter } from './SiteFooter'
 import { sitePageFromPath, type SitePageId } from '../lib/site'
 import { trackPageView } from '../lib/analytics'
+import { consumeAccountDeletedFlag } from '../lib/clearLocalData'
 
 interface LandingPageProps {
   configured: boolean
@@ -23,6 +25,7 @@ export function LandingPage({
   const native = Capacitor.isNativePlatform()
   const [error, setError] = useState<string | null>(null)
   const [signingIn, setSigningIn] = useState(false)
+  const [accountDeleted, setAccountDeleted] = useState(() => consumeAccountDeletedFlag())
   const [sitePage, setSitePage] = useState<SitePageId | null>(() =>
     sitePageFromPath(window.location.pathname),
   )
@@ -69,6 +72,16 @@ export function LandingPage({
     )
   }
 
+  if (sitePage === 'delete-account') {
+    return (
+      <div className="landing landing-legal">
+        <div className="landing-card landing-card-legal">
+          <DeleteAccountPage onBack={() => openSitePage(null)} />
+        </div>
+      </div>
+    )
+  }
+
   if (sitePage) {
     return (
       <div className="landing landing-legal">
@@ -99,6 +112,19 @@ export function LandingPage({
       <div className="landing-card">
         <BrandTitle size="lg" className="landing-brand" />
         <p className="tagline">Track what you postpone. Resume what matters.</p>
+
+        {accountDeleted && (
+          <div className="notice" role="status">
+            <p>Your account has been deleted.</p>
+            <button
+              type="button"
+              className="btn btn-ghost btn-sm"
+              onClick={() => setAccountDeleted(false)}
+            >
+              Dismiss
+            </button>
+          </div>
+        )}
         <p className="explainer">
           Not a to-do list to empty. These are things that keep coming back.
           Skip them, see the pattern, and pick one small thing up when a few
