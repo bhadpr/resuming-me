@@ -44,15 +44,31 @@ Rules: guest first (local until step 8); one question per screen; back arrow; Sk
 
 ## P2-02 — Screens 1–4
 
-Chips (up to 3): Reading, Walk, Exercise, Meditate, Pranayam, Writing, Guitar, Stretching, Water, Sleep earlier, Journaling, Taxes, Call family, Study, Tidy up, Side project, plus "Something else…" (40 chars). Gap chips with reassurance lines. Tiny target stepper. Slip multi-select max 2. Events: `onboarding_started`, `onboarding_step_completed`.
+**Screen 1.** "What have you been meaning to get back to?" Sub: "Pick up to three. You can change these later." Chips: Reading, Walk, Exercise, Meditate, Pranayam, Writing, Guitar, Stretching, Water, Sleep earlier, Journaling, Taxes, Call family, Study, Tidy up, Side project, plus "Something else…" (40 chars). Continue disabled until one chip; label "Continue with 2".
+
+**Screen 2.** "When did you last do this?" Options: "A few days", "A couple of weeks", "A month or more", "Honestly, ages", "Never started". Reassurance, then auto-advance after 1.2s: few days → "Easy to pick back up."; couple of weeks → "That's a normal gap. Restarting is the skill."; month or more → "Long gaps are normal. We'll start small."; ages / never → "Then today is day one. Two minutes is enough."
+
+**Screen 3.** "Let's make it small enough to actually do." Stepper 1, 2, 5, 10, 15, 20, 30 min (counts 1×–5×) and "That's still too big?". Sub: "Small is the point. You can raise it any time."
+
+**Screen 4.** "When does it usually slip?" Multi-select max 2: Mornings, Afternoons, Evenings, Weekends, Busy workdays, Not sure. Sub: "This helps Insights spot your pattern sooner."
+
+Events: `onboarding_started`, `onboarding_step_completed {step, choices}`. Nothing written to Supabase. No overflow at 320px.
 
 ## P2-03 — Screens 5–6
 
-Start 2 minutes full-screen timer, wake lock, Pause/Done. Under 30s logs nothing. Otherwise guest session log with real `started_at`. Celebration or "Ready when you are." Insights preview card. Events: `onboarding_timer_started`, `onboarding_timer_completed`, `onboarding_timer_skipped`.
+**Screen 5.** "Want to start right now?" Body: "Two minutes of <activity>. That's all this takes." Primary "Start 2 minutes". Secondary "Pick a different one" and "I'll start later". Full-screen timer, wake lock, Pause and Done. Under 30s logs nothing. Otherwise a guest session with real `started_at`. "I'll start later" → screen 6 copy "No rush. It'll be waiting on Today."
+
+**Screen 6.** "You resumed Reading." plus "That's the hard part. The rest is just repeating it." Insights preview: "In a week, this shows where your skips pile up — and what's easiest to pick back up." If skipped: "Ready when you are." No fake data.
+
+Events: `onboarding_timer_started`, `onboarding_timer_completed {seconds}`, `onboarding_timer_skipped`.
 
 ## P2-04 — Screens 7–8
 
-Nudge time from slipAnswer. No OS permission during onboarding. Google + email buttons (Apple deferred). "Not now" stays guest on `/today` with "Save your progress" (expires 7 days, warn at day 5).
+**Screen 7.** "One quiet nudge a day?" Body: "We'll only ping if something's still open. Nothing if you're done." Default time: mornings 08:00, evenings 19:00, weekends 10:00, else 19:00. "Yes, remind me" / "No thanks". No OS permission during onboarding.
+
+**Screen 8.** "Save what you just set up." Summary like "3 activities · 1 resumed today · nudge at 19:00". Google and email (Apple deferred, keep a provider list). Footer: "Free. No ads. Your data stays yours." "Not now" stays guest on `/today` with "Save your progress" (expires 7 days, warn at day 5).
+
+Events: `onboarding_reminder_set {time|none}`, `signin_shown`, `signin_method_clicked {method}`, `signup_completed {activities, resumed_in_onboarding}`.
 
 ## P2-05 — Email magic link
 
