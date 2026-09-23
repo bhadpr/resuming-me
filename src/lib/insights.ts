@@ -1,7 +1,7 @@
 import type { Activity } from './activities'
 import type { LogEntry } from './logs'
-import { addDays, endOfMonth, parseLocalDate, startOfMonth, todayLocalDate } from './dates'
-import { endOfWeekSunday, startOfWeekMonday } from './dates'
+import { coveragePhrase, freshStartCovering, type FreshStartRange } from './comeback'
+import { addDays, endOfMonth, endOfWeekSunday, parseLocalDate, startOfMonth, startOfWeekMonday, todayLocalDate } from './dates'
 import {
   getDayStatus,
   isUserSkipped,
@@ -15,6 +15,8 @@ export type DayStatusOpts = {
   pauses?: readonly ActivityPause[]
   /** From onboarding, used until there are 5 logged days. */
   slipAnswer?: readonly string[]
+  freshStarts?: readonly FreshStartRange[]
+  showEverything?: boolean
 }
 
 export type InsightsWindow = 'week' | 'month'
@@ -332,6 +334,7 @@ function analyzePeriod(
   let showed = 0
 
   for (const date of dates) {
+    if (!opts?.showEverything && freshStartCovering(date, opts?.freshStarts ?? [])) continue
     const { status } = statusForPeriod(activity, entries, date, today, opts)
     if (status === 'rest' || status === 'paused') continue
     scheduled += 1
@@ -607,13 +610,18 @@ export function computeInsights(
     peakSkipDay: peak(dayOfWeekSkips),
     sessionTimeBuckets,
     peakSessionBucket: peak(sessionTimeBuckets),
-    summary: buildSummary(
-      window,
-      totalScheduled,
-      activityInsights,
-      entries,
-      opts?.slipAnswer,
-    ),
+    summary: [
+      buildSummary(
+        window,
+        totalScheduled,
+        activityInsights,
+        entries,
+        opts?.slipAnswer,
+      ),
+      coveragePhrase(opts?.freshStarts ?? [], from, to, opts?.showEverything),
+    ]
+      .filter(Boolean)
+      .join(' '),
   }
 }
 

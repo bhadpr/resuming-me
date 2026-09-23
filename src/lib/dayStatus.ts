@@ -5,12 +5,12 @@ import {
   endOfWeekSunday,
   startOfMonth,
   startOfWeekMonday,
-} from './dates'
+} from './dates.ts'
 import {
   countQualifyingSessions,
   sumSessionSeconds,
   targetToSeconds,
-} from './timer'
+} from './timer.ts'
 
 export type DayStatus =
   | 'done'
@@ -31,7 +31,10 @@ export type DayStatusActivity = Pick<
   | 'weekly_target'
   | 'deadline'
   | 'archived'
->
+> & {
+  /** 0 = Sunday … 6 = Saturday. These days are not scheduled. */
+  off_weekdays?: number[] | null
+}
 
 export type DayStatusEntry = Pick<
   LogEntry,
@@ -180,6 +183,20 @@ function progressAndTarget(
   return { value, target, met: value >= target }
 }
 
+export function weekdayIndex(date: string): number {
+  return new Date(`${date}T12:00:00Z`).getUTCDay()
+}
+
+/** A habit can name days it is not scheduled. Those days are not misses. */
+export function isOffWeekday(
+  activity: { off_weekdays?: number[] | null },
+  date: string,
+): boolean {
+  const days = activity.off_weekdays ?? []
+  if (days.length === 0) return false
+  return days.includes(weekdayIndex(date))
+}
+
 export function isPausedOnDate(
   activityId: string,
   date: string,
@@ -270,6 +287,10 @@ export function getDayStatus(input: GetDayStatusInput): DayStatusResult {
 
   if (hasProgress) {
     return { status: 'partial', value, target }
+  }
+
+  if (isOffWeekday(activity, date)) {
+    return { status: 'rest', value, target }
   }
 
   // Auto put-offs read as missed (neutral), not skipped.

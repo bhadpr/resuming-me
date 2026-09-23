@@ -1,4 +1,4 @@
-import { useEffect, useMemo, useState } from 'react'
+import { useEffect, useMemo, useRef, useState } from 'react'
 import type { Activity } from '../lib/activities'
 import type { LogEntry } from '../lib/logs'
 import { STARTER_METRICS, type Metric, type MetricInput } from '../lib/metrics'
@@ -11,8 +11,22 @@ import {
   type InsightsWindow,
 } from '../lib/insights'
 import { computeMetricTrendStats } from '../lib/stats'
+import { listAccountComebacks } from '../lib/comeback'
+import { daysBetween } from '../lib/dates'
+import { findPatterns, patternTextIsCausal } from '../lib/patterns'
+import { track } from '../lib/track'
 import { ActivityInsightChart } from './ActivityInsightChart'
 import { MetricTrendChart } from './MetricTrendChart'
+
+function chartTarget(activity: Activity | undefined): number | null {
+  if (!activity || activity.type === 'deadline') return null
+  if (activity.tracking_mode === 'checkbox') return 1
+  if (activity.target_value == null) return null
+  if (activity.tracking_mode === 'timer' && activity.target_unit === 'seconds') {
+    return activity.target_value / 60
+  }
+  return activity.target_value
+}
 
 function activityKey(id: string) {
   return `activity:${id}`
@@ -37,6 +51,8 @@ interface InsightsScreenProps {
   onAddActivity: () => void
   onAddMetric: (input: MetricInput) => void
   quietLine?: string | null
+  slipAnswer?: string | null
+  onOpenActivity?: (activityId: string) => void
 }
 
 export function InsightsScreen({
@@ -54,6 +70,8 @@ export function InsightsScreen({
   onAddActivity,
   onAddMetric,
   quietLine = null,
+  slipAnswer = null,
+  onOpenActivity,
 }: InsightsScreenProps) {
   const [openKeys, setOpenKeys] = useState<Set<string>>(() => new Set())
   const [didInitOpen, setDidInitOpen] = useState(false)
@@ -65,6 +83,36 @@ export function InsightsScreen({
   const activeActivities = useMemo(
     () => activities.filter((a) => !a.archived),
     [activities],
+  )
+  const comebacks = useMemo(
+    () => listAccountComebacks(activities, entries, today, 30, dayStatusOpts),
+    [activities, entries, today, dayStatusOpts],
+  )
+  const patterns = useMemo(
+    () =>
+      findPatterns({
+        activities,
+        entries,
+        metrics,
+        metricEntries,
+        today,
+        slipAnswer,
+        restDates: dayStatusOpts?.restDates,
+        pauses: dayStatusOpts?.pauses,
+        freshStarts: dayStatusOpts?.freshStarts,
+        showEverything: dayStatusOpts?.showEverything,
+      }).filter((pattern) => !patternTextIsCausal(pattern.text)),
+    [activities, entries, metrics, metricEntries, today, slipAnswer, dayStatusOpts],
+  )
+  const earlyAccount = useMemo(() => {
+    const started = activeActivities
+      .map((activity) => activity.created_at.slice(0, 10))
+      .sort()[0]
+    if (!started) return false
+    return daysBetween(started, today) < 14
+  }, [activeActivities, today])
+  const [showComebackHelp] = useState(
+    () => typeof localStorage === 'undefined' || localStorage.getItem('resuming-comeback-explained') !== '1',
   )
   const empty =
     !loading && activeActivities.length === 0 && activeMetrics.length === 0
@@ -80,6 +128,28 @@ export function InsightsScreen({
     setOpenKeys(new Set([first]))
     setDidInitOpen(true)
   }, [didInitOpen, loading, insights, activeMetrics])
+
+  const shownPatternKinds = useRef(new Set<string>())
+
+  useEffect(() => {
+    if (!showComebackHelp || loading || empty) return
+    const timerId = globalThis.setTimeout(() => {
+      localStorage.setItem('resuming-comeback-explained', '1')
+    }, 1500)
+    return () => globalThis.clearTimeout(timerId)
+  }, [showComebackHelp, loading, empty])
+
+  useEffect(() => {
+    if (loading || empty || earlyAccount) return
+    for (const pattern of patterns) {
+      if (shownPatternKinds.current.has(pattern.kind)) continue
+      shownPatternKinds.current.add(pattern.kind)
+      track('pattern_shown', {
+        kind: pattern.kind,
+        confidence: Number(pattern.confidence.toFixed(2)),
+      })
+    }
+  }, [loading, empty, earlyAccount, patterns])
 
   function isOpen(key: string) {
     return openKeys.has(key)
@@ -134,6 +204,50 @@ export function InsightsScreen({
         <>
           {quietLine && (
             <p className="insights-quiet">{quietLine}</p>
+          )}
+          <section className="insights-summary comeback-hero">
+            <p>
+              {comebacks.length} comeback{comebacks.length === 1 ? '' : 's'} in the last 30 days
+            </p>
+            {showComebackHelp && (
+              <p className="screen-sub">
+                A comeback is picking something up again after a couple of quiet days. That's the skill.
+              </p>
+            )}
+          </section>
+          {earlyAccount ? (
+            <section className="today-section">
+              <h3 className="section-label">Patterns</h3>
+              <p>
+                Too early for a pattern.
+                {comebacks.length === 0
+                  ? ' A comeback is picking something up after a couple of quiet days.'
+                  : ` You've had ${comebacks.length} comeback${comebacks.length === 1 ? '' : 's'}.`}
+              </p>
+            </section>
+          ) : patterns.length > 0 && (
+            <section className="today-section">
+              <h3 className="section-label">Patterns</h3>
+              <ul className="insights-list">
+                {patterns.map((pattern) => (
+                  <li key={pattern.kind}>
+                    <button
+                      type="button"
+                      className="insights-row"
+                      onClick={() => {
+                        track('pattern_tapped', { kind: pattern.kind })
+                        if (pattern.activityId) onOpenActivity?.(pattern.activityId)
+                      }}
+                    >
+                      <span className="activity-meta">
+                        <span className="activity-name">{pattern.earlyGuess ? 'Early guess' : 'Pattern'}</span>
+                        <span className="activity-desc">{pattern.text}</span>
+                      </span>
+                    </button>
+                  </li>
+                ))}
+              </ul>
+            </section>
           )}
           <div className="segmented window-toggle">
             <button
@@ -216,6 +330,7 @@ export function InsightsScreen({
                           <ActivityInsightChart
                             points={series}
                             windowLabel={window === 'week' ? '7-day' : '30-day'}
+                            target={chartTarget(activity)}
                           />
                         </div>
                       )}

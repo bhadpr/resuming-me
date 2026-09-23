@@ -46,6 +46,7 @@ describe('isKnownPath', () => {
     expect(isKnownPath('/')).toBe(true)
     expect(isKnownPath('/about')).toBe(true)
     expect(isKnownPath('/today')).toBe(true)
+    expect(isKnownPath('/review/2026-09-14')).toBe(true)
     expect(isKnownPath('/start')).toBe(true)
     expect(isKnownPath('/activities/abc')).toBe(true)
   })

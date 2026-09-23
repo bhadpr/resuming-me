@@ -19,6 +19,8 @@ import type { ActiveTimerState } from '../lib/timerStorage'
 import { formatDuration } from '../lib/timer'
 import { smallerChoiceProp, track } from '../lib/track'
 import { DeadlineOverduePrompt } from './DeadlineOverduePrompt'
+import { WelcomeBackCard, type WelcomeBackModel } from './WelcomeBackCard'
+import type { Moment } from '../lib/moments'
 
 export type ReentryFollowUp = {
   activityName: string
@@ -70,7 +72,17 @@ interface TodayScreenProps {
   onTakeRestDay?: () => void
   hasActivities?: boolean
   quietReentry?: boolean
+  welcomeBack?: WelcomeBackModel | null
+  onWelcomeStart?: (row: ActivityTodayProgress, minutes: number | null) => void
+  onWelcomeDismiss?: () => void
+  onFreshStart?: () => void
   onEmptySetup?: () => void
+  moment?: Moment | null
+  onMomentStart?: (activityId: string, minutes: number | null) => void
+  onMomentDismiss?: (id: string) => void
+  reviewCard?: { weekStart: string; headline: string } | null
+  onOpenReview?: (weekStart: string) => void
+  focusActivityId?: string | null
 }
 
 export function TodayScreen({
@@ -102,7 +114,17 @@ export function TodayScreen({
   onTakeRestDay,
   hasActivities = false,
   quietReentry = false,
+  welcomeBack = null,
+  onWelcomeStart,
+  onWelcomeDismiss,
+  onFreshStart,
   onEmptySetup,
+  moment = null,
+  onMomentStart,
+  onMomentDismiss,
+  reviewCard = null,
+  onOpenReview,
+  focusActivityId = null,
 }: TodayScreenProps) {
   const quietSuggested = quietReentry ? pickEasiestReentryRow(rows) : null
   const followUpSuggested = reentryFollowUp
@@ -118,9 +140,9 @@ export function TodayScreen({
       partitionTodayRows(
         rows,
         activeTimer?.activityId ?? null,
-        suggested?.activity.id ?? null,
+        suggested?.activity.id ?? focusActivityId,
       ),
-    [rows, activeTimer?.activityId, suggested?.activity.id],
+    [rows, activeTimer?.activityId, suggested?.activity.id, focusActivityId],
   )
   const pendingMetrics = metrics.filter(({ entry }) => !entry)
   const loggedMetrics = metrics.filter(({ entry }) => entry)
@@ -169,7 +191,48 @@ export function TodayScreen({
             </div>
           )}
 
-          {showWelcome && (
+          {welcomeBack && onWelcomeStart && onWelcomeDismiss && onFreshStart && (
+            <WelcomeBackCard
+              model={welcomeBack}
+              busyId={busyId}
+              rows={rows}
+              onStart={onWelcomeStart}
+              onDismiss={onWelcomeDismiss}
+              onFreshStart={onFreshStart}
+            />
+          )}
+
+          {moment && onMomentStart && onMomentDismiss && (
+            <section className="notice moment-banner">
+              <p>{moment.line}</p>
+              <div className="detail-actions">
+                <button
+                  type="button"
+                  className="btn btn-primary"
+                  disabled={busyId != null}
+                  onClick={() => onMomentStart(moment.activityId, moment.minutes)}
+                >
+                  Start {moment.activityName}
+                </button>
+                <button type="button" className="btn btn-ghost" onClick={() => onMomentDismiss(moment.id)}>
+                  Not now
+                </button>
+              </div>
+            </section>
+          )}
+
+          {reviewCard && onOpenReview && (
+            <button
+              type="button"
+              className="insights-summary review-card"
+              onClick={() => onOpenReview(reviewCard.weekStart)}
+            >
+              <p>{reviewCard.headline}</p>
+              <p className="screen-sub">Open this week’s review</p>
+            </button>
+          )}
+
+          {showWelcome && !welcomeBack && (
             <ReentryWelcomeCard
               followUp={reentryFollowUp}
               suggested={suggested}
@@ -198,7 +261,9 @@ export function TodayScreen({
                   <h3 className="section-label">
                     {suggested?.activity.id === hero.activity.id
                       ? 'Start here'
-                      : heroKicker(hero, activeTimer)}
+                      : focusActivityId === hero.activity.id
+                        ? "This week's focus"
+                        : heroKicker(hero, activeTimer)}
                   </h3>
                   <ul className="today-list">
                     <TodayActivityRow

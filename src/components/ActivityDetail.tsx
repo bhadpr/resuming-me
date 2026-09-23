@@ -17,8 +17,11 @@ import {
   formatHistoryDay,
   formatQuietRange,
 } from '../lib/activityHistory'
+import { formatMonthDay, freshStartCovering, listActivityComebacks, longestReturnedGap, showedUpDayCount } from '../lib/comeback'
+import { addDays, todayLocalDate } from '../lib/dates'
+import { getDayStatus } from '../lib/dayStatus'
 import { isDeadlineOverdue } from '../lib/rollover'
-import { todayLocalDate } from '../lib/dates'
+import { shrinkOffer } from '../lib/weeklyReview'
 import {
   findActivePause,
   type ActivityPauseRow,
@@ -34,6 +37,15 @@ const PAUSE_OPTIONS: { duration: PauseDuration; label: string }[] = [
   { duration: '2_weeks', label: '2 weeks' },
   { duration: 'until_resume', label: 'Until I resume' },
 ]
+
+function heatClass(status: string): string {
+  if (status === 'done' || status === 'partial') return 'showed'
+  if (status === 'skipped' || status === 'rest') return 'outline'
+  if (status === 'paused') return 'paused'
+  if (status === 'missed') return 'missed'
+  if (status === 'fresh') return 'outline'
+  return 'open'
+}
 
 interface ActivityDetailProps {
   activity: Activity
@@ -58,6 +70,7 @@ interface ActivityDetailProps {
   onBreakDown?: () => Promise<{ steps?: MicroStep[]; error?: string }>
   onPause?: (duration: PauseDuration) => Promise<void>
   onResume?: () => Promise<void>
+  onShrink?: (value: number) => void
 }
 
 export function ActivityDetail({
@@ -80,11 +93,14 @@ export function ActivityDetail({
   onBreakDown,
   onPause,
   onResume,
+  onShrink,
 }: ActivityDetailProps) {
   const [confirmDelete, setConfirmDelete] = useState(false)
   const [editingId, setEditingId] = useState<string | null>(null)
   const [windowDays, setWindowDays] = useState<ActivityChartWindowDays>(30)
   const [pauseOpen, setPauseOpen] = useState(false)
+  const [expandedFresh, setExpandedFresh] = useState<string | null>(null)
+  const [heatDate, setHeatDate] = useState<string | null>(null)
 
   const today = todayLocalDate()
   const activePause = findActivePause(pauses, activity.id, today)
@@ -115,6 +131,44 @@ export function ActivityDetail({
     () => buildActivityHistory(activity, entries, today, dayStatusOpts),
     [activity, entries, today, dayStatusOpts],
   )
+  const comebackHits = useMemo(
+    () => listActivityComebacks(activity, entries, today, 30, dayStatusOpts),
+    [activity, entries, today, dayStatusOpts],
+  )
+  const longestGap = longestReturnedGap(comebackHits)
+  const showedUp30 = useMemo(
+    () => showedUpDayCount(activity, entries, today, 30, dayStatusOpts),
+    [activity, entries, today, dayStatusOpts],
+  )
+  const heatDays = useMemo(() => {
+    if (activity.type === 'deadline') return []
+    const created = activity.created_at.slice(0, 10)
+    const mine = entries.filter((entry) => entry.activity_id === activity.id)
+    const days: { date: string; status: string }[] = []
+    for (let offset = 89; offset >= 0; offset -= 1) {
+      const date = addDays(today, -offset)
+      if (date < created) continue
+      if (
+        !dayStatusOpts?.showEverything &&
+        freshStartCovering(date, dayStatusOpts?.freshStarts ?? [])
+      ) {
+        days.push({ date, status: 'fresh' })
+        continue
+      }
+      const status = getDayStatus({
+        activity,
+        entriesForDay: mine,
+        date,
+        today,
+        timezone: 'UTC',
+        restDates: dayStatusOpts?.restDates,
+        pauses: dayStatusOpts?.pauses,
+      }).status
+      days.push({ date, status })
+    }
+    return days
+  }, [activity, entries, today, dayStatusOpts])
+  const shrink = shrinkOffer(activity)
 
   const overdue = isDeadlineOverdue(activity, entries, today)
   const showChart = activity.type !== 'deadline'
@@ -136,6 +190,37 @@ export function ActivityDetail({
         {activity.archived && <span className="badge">Archived</span>}
         {activePause && <span className="badge">Paused</span>}
       </div>
+
+      {heatDays.length > 0 && (
+        <section className="heat-section">
+          <h3 className="section-label">Last 90 days</h3>
+          <div className="heat-scroll">
+            <div className="heat-row" role="list">
+              {heatDays.map((day) => (
+                <button
+                  key={day.date}
+                  type="button"
+                  role="listitem"
+                  className={`heat-cell heat-${heatClass(day.status)} ${heatDate === day.date ? 'heat-selected' : ''}`}
+                  aria-label={`${day.date} ${day.status}`}
+                  onClick={() => setHeatDate((current) => (current === day.date ? null : day.date))}
+                />
+              ))}
+            </div>
+          </div>
+          {heatDate && (
+            <p className="screen-sub">
+              {heatDate}
+              {entries.some((entry) => entry.activity_id === activity.id && entry.date === heatDate)
+                ? ` · ${entries
+                    .filter((entry) => entry.activity_id === activity.id && entry.date === heatDate)
+                    .map((entry) => describeLogEntry(entry))
+                    .join(', ')}`
+                : ' · nothing logged'}
+            </p>
+          )}
+        </section>
+      )}
 
       {(canPause || canResume) && (
         <div className="detail-pause">
@@ -229,7 +314,17 @@ export function ActivityDetail({
             <p className="muted-center">Loading trend…</p>
           ) : (
             <>
-              <ActivityInsightChart points={series} windowLabel={`${windowDays}-day`} />
+              <ActivityInsightChart
+                points={series}
+                windowLabel={`${windowDays}-day`}
+                target={
+                  activity.tracking_mode === 'checkbox'
+                    ? 1
+                    : activity.target_unit === 'seconds'
+                      ? (activity.target_value ?? 0) / 60
+                      : activity.target_value
+                }
+              />
 
               <dl className="detail-facts">
                 <div>
@@ -271,19 +366,21 @@ export function ActivityDetail({
       )}
 
       <dl className="detail-facts">
-        <div>
-          <dt>Put off (30d)</dt>
-          <dd>{stats.postponementsLast30}</dd>
-        </div>
-        <div>
-          <dt>Put off (all)</dt>
-          <dd>{stats.postponementsAllTime}</dd>
-        </div>
         {activity.type !== 'deadline' && (
-          <div>
-            <dt>Comebacks (30d)</dt>
-            <dd>{stats.comebacksLast30}</dd>
-          </div>
+          <>
+            <div>
+              <dt>Comebacks (30d)</dt>
+              <dd>{comebackHits.length}</dd>
+            </div>
+            <div>
+              <dt>Longest gap returned from</dt>
+              <dd>{longestGap == null ? '—' : `${longestGap} days`}</dd>
+            </div>
+            <div>
+              <dt>Times shown up (30d)</dt>
+              <dd>{showedUp30}</dd>
+            </div>
+          </>
         )}
         {activity.tracking_mode === 'timer' && (
           <div>
@@ -343,6 +440,35 @@ export function ActivityDetail({
                           </span>
                         </span>
                       </li>
+                    ) : row.kind === 'fresh' ? (
+                      <li key={row.id} className="history-item history-item-quiet">
+                        <button
+                          type="button"
+                          className="btn btn-ghost"
+                          onClick={() =>
+                            setExpandedFresh((current) => (current === row.id ? null : row.id))
+                          }
+                        >
+                          Fresh start · {formatMonthDay(row.startedOn)} · Before your fresh start · {row.days} days · tap to {expandedFresh === row.id ? 'hide' : 'show'}
+                        </button>
+                        {expandedFresh === row.id && (
+                          <ul className="history-list">
+                            {entries
+                              .filter(
+                                (entry) =>
+                                  entry.activity_id === activity.id &&
+                                  entry.date >= row.coversFrom &&
+                                  entry.date <= row.coversTo,
+                              )
+                              .map((entry) => (
+                                <li key={entry.id} className="history-item">
+                                  <span className="history-date">{formatHistoryDay(entry.date)}</span>
+                                  <span>{describeLogEntry(entry)}</span>
+                                </li>
+                              ))}
+                          </ul>
+                        )}
+                      </li>
                     ) : editingId === row.entry.id ? (
                       <li key={row.entry.id} className="history-item">
                         <LogEntryEditor
@@ -395,6 +521,16 @@ export function ActivityDetail({
         <button type="button" className="btn btn-primary" onClick={onEdit} disabled={busy}>
           Edit activity
         </button>
+        {shrink && onShrink && (
+          <button
+            type="button"
+            className="btn btn-secondary"
+            disabled={busy}
+            onClick={() => onShrink(shrink.value)}
+          >
+            Shrink to {shrink.value} {shrink.unit}
+          </button>
+        )}
 
         {activity.archived ? (
           <div className="detail-archive">

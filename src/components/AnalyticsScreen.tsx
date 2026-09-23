@@ -14,6 +14,7 @@ import {
   type SignedInAccount,
 } from '../lib/analytics'
 import { summarizeOnboardingFunnel } from '../lib/onboardingFunnel'
+import { cohortRetention, fetchLoopEvents, summarizeComebackLoop } from '../lib/loopAnalytics'
 
 export function AnalyticsScreen() {
   const [window, setWindow] = useState<AnalyticsWindow>('7d')
@@ -27,6 +28,9 @@ export function AnalyticsScreen() {
   const [productError, setProductError] = useState<string | null>(null)
   const [funnel, setFunnel] = useState<ReturnType<typeof summarizeOnboardingFunnel> | null>(null)
   const [funnelError, setFunnelError] = useState<string | null>(null)
+  const [loop, setLoop] = useState<ReturnType<typeof summarizeComebackLoop> | null>(null)
+  const [cohorts, setCohorts] = useState<ReturnType<typeof cohortRetention>>([])
+  const [loopError, setLoopError] = useState<string | null>(null)
 
   useEffect(() => {
     let mounted = true
@@ -91,6 +95,37 @@ export function AnalyticsScreen() {
       mounted = false
     }
   }, [window])
+
+  useEffect(() => {
+    let mounted = true
+    setLoopError(null)
+    fetchLoopEvents(90)
+      .then((rows) => {
+        if (!mounted) return
+        const active = new Set(rows.map((row) => row.userId).filter((id): id is string => Boolean(id))).size
+        setLoop(summarizeComebackLoop(rows, active))
+        setCohorts(
+          cohortRetention({
+            signups: rows
+              .filter((row) => row.name === 'signup_completed' && row.userId)
+              .map((row) => ({ userId: row.userId as string, at: row.createdAt })),
+            showedUp: rows
+              .filter((row) => (row.name === 'log_created' || row.name === 'app_opened') && row.userId)
+              .map((row) => ({ userId: row.userId as string, at: row.createdAt })),
+            asOf: new Date().toISOString().slice(0, 10),
+          }),
+        )
+      })
+      .catch((err) => {
+        if (!mounted) return
+        setLoop(null)
+        setCohorts([])
+        setLoopError(err instanceof Error ? err.message : 'Could not load the comeback loop')
+      })
+    return () => {
+      mounted = false
+    }
+  }, [])
 
   useEffect(() => {
     let mounted = true
@@ -175,6 +210,43 @@ export function AnalyticsScreen() {
               hint="After 3+ day gap"
             />
           </section>
+        )}
+      </section>
+
+      <section className="today-section">
+        <h3 className="section-label">Comeback loop</h3>
+        <p className="screen-sub insights-hint">Last 90 days. Not a controlled test.</p>
+        {loopError && <p className="error">{loopError}</p>}
+        {loop && (
+          <ul className="analytics-rank-list">
+            <li className="analytics-rank-row">
+              Comebacks per active user ·{' '}
+              {loop.comebacksPerActiveUser == null ? '—' : loop.comebacksPerActiveUser.toFixed(1)}
+            </li>
+            <li className="analytics-rank-row">
+              Returned after a gap, card shown · {loop.returnedWithCard}
+            </li>
+            <li className="analytics-rank-row">
+              Returned after a gap, card not shown · {loop.returnedWithoutCard}
+            </li>
+            <li className="analytics-rank-row">
+              Review open rate · {loop.reviewOpenRate == null ? '—' : `${Math.round(loop.reviewOpenRate * 100)}%`}
+            </li>
+            <li className="analytics-rank-row">
+              Review to action · {loop.reviewActionRate == null ? '—' : `${Math.round(loop.reviewActionRate * 100)}%`}
+            </li>
+            <li className="analytics-rank-row">{loop.caveat}</li>
+          </ul>
+        )}
+        {cohorts.length > 0 && (
+          <ul className="analytics-rank-list">
+            {cohorts.slice(0, 6).map((row) => (
+              <li key={row.weekStart} className="analytics-rank-row">
+                Joined {row.weekStart} · {row.size} · week 2 {formatRetentionRate(row.week2)} · week 4{' '}
+                {formatRetentionRate(row.week4)} · week 8 {formatRetentionRate(row.week8)}
+              </li>
+            ))}
+          </ul>
         )}
       </section>
 

@@ -27,6 +27,16 @@ export type TrackedEventName =
   | 'comeback'
   | 'insights_viewed'
   | 'app_opened'
+  | 'welcome_back_shown'
+  | 'welcome_back_started'
+  | 'welcome_back_dismissed'
+  | 'fresh_start_used'
+  | 'review_generated'
+  | 'review_opened'
+  | 'review_focus_set'
+  | 'review_shrink_used'
+  | 'pattern_shown'
+  | 'pattern_tapped'
 
 type EventInsert = Database['public']['Tables']['events']['Insert']
 

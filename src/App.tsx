@@ -230,6 +230,7 @@ export const appRouteObjects = [
               { path: '/numbers/:id', element: <RouteSlot /> },
               { path: '/numbers/:id/edit', element: <RouteSlot /> },
               { path: '/insights', element: <RouteSlot /> },
+              { path: '/review/:weekStart', element: <RouteSlot /> },
               { path: '/settings', element: <RouteSlot /> },
               { path: '/admin/analytics', element: <RouteSlot /> },
               { path: '/admin/feedback', element: <RouteSlot /> },

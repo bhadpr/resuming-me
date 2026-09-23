@@ -49,14 +49,12 @@ function AboutContent() {
   return (
     <>
       <p>
-        <strong>{PRODUCT_NAME}</strong> is a personal multi-activity tracker from{' '}
-        {COMPANY_NAME}. It helps you notice what you keep postponing — across habits,
-        deadlines, and daily numbers — so avoidance stops being invisible.
+        Start again, two minutes counts.
       </p>
       <p>
-        Unlike streak-first habit apps, Resuming focuses on the pattern: what you skip,
-        when you skip it, and how those skips cluster. Timers, checkboxes, and simple
-        number logs are the plumbing; Insights is the point.
+        Miss a few days and Resuming meets you there, with one small way back.
+        Rest, a skip, and a pause are not failures. Insights keeps the record of
+        what you pick back up.
       </p>
       <p>
         Built for a single person who wants a calm, no-shame tool — not gamification,

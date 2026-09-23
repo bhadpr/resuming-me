@@ -25,6 +25,16 @@ export interface Database {
           merged_guest_id: string | null
           checkins_opt_out: boolean
           checkin_token: string
+          last_welcome_back_shown_at: string | null
+          last_gap_started_at: string | null
+          welcome_back_dismissed_until: string | null
+          birthday: string | null
+          focus_activity_id: string | null
+          focus_week_start: string | null
+          review_weekday: number
+          review_hour: number
+          review_minute: number
+          reviews_opt_out: boolean
           created_at: string
           updated_at: string
         }
@@ -38,6 +48,16 @@ export interface Database {
           merged_guest_id?: string | null
           checkins_opt_out?: boolean
           checkin_token?: string
+          last_welcome_back_shown_at?: string | null
+          last_gap_started_at?: string | null
+          welcome_back_dismissed_until?: string | null
+          birthday?: string | null
+          focus_activity_id?: string | null
+          focus_week_start?: string | null
+          review_weekday?: number
+          review_hour?: number
+          review_minute?: number
+          reviews_opt_out?: boolean
           created_at?: string
           updated_at?: string
         }
@@ -49,6 +69,16 @@ export interface Database {
           onboarding_completed_at?: string | null
           merged_guest_id?: string | null
           checkins_opt_out?: boolean
+          last_welcome_back_shown_at?: string | null
+          last_gap_started_at?: string | null
+          welcome_back_dismissed_until?: string | null
+          birthday?: string | null
+          focus_activity_id?: string | null
+          focus_week_start?: string | null
+          review_weekday?: number
+          review_hour?: number
+          review_minute?: number
+          reviews_opt_out?: boolean
           updated_at?: string
         }
         Relationships: []
@@ -68,6 +98,7 @@ export interface Database {
           deadline: string | null
           why_matters: string | null
           usually_when: string | null
+          off_weekdays?: number[]
           micro_steps: unknown[]
           archived: boolean
           created_at: string
@@ -87,6 +118,7 @@ export interface Database {
           deadline?: string | null
           why_matters?: string | null
           usually_when?: string | null
+          off_weekdays?: number[]
           micro_steps?: unknown[]
           archived?: boolean
           created_at?: string
@@ -104,6 +136,7 @@ export interface Database {
           deadline?: string | null
           why_matters?: string | null
           usually_when?: string | null
+          off_weekdays?: number[]
           micro_steps?: unknown[]
           archived?: boolean
           updated_at?: string
@@ -268,6 +301,53 @@ export interface Database {
         }
         Update: {
           date?: string
+        }
+        Relationships: []
+      }
+      fresh_starts: {
+        Row: {
+          id: string
+          user_id: string
+          started_on: string
+          covers_from: string
+          covers_to: string
+          created_at: string
+        }
+        Insert: {
+          id?: string
+          user_id: string
+          started_on: string
+          covers_from: string
+          covers_to: string
+          created_at?: string
+        }
+        Update: {
+          started_on?: string
+          covers_from?: string
+          covers_to?: string
+        }
+        Relationships: []
+      }
+      weekly_reviews: {
+        Row: {
+          id: string
+          user_id: string
+          week_start: string
+          payload: Json
+          emailed_at: string | null
+          created_at: string
+        }
+        Insert: {
+          id?: string
+          user_id: string
+          week_start: string
+          payload: Json
+          emailed_at?: string | null
+          created_at?: string
+        }
+        Update: {
+          payload?: Json
+          emailed_at?: string | null
         }
         Relationships: []
       }

@@ -3,11 +3,14 @@ import type { ActivitySeriesPoint } from '../lib/insights'
 interface ActivityInsightChartProps {
   points: ActivitySeriesPoint[]
   windowLabel: string
+  /** Axis max is max(target, best day) × 1.2, with a target line when set. */
+  target?: number | null
 }
 
 export function ActivityInsightChart({
   points,
   windowLabel,
+  target = null,
 }: ActivityInsightChartProps) {
   if (points.length === 0) {
     return (
@@ -28,7 +31,8 @@ export function ActivityInsightChart({
 
   const values = points.map((p) => p.value)
   const lo = 0
-  const hi = Math.max(...values, 1)
+  const best = Math.max(...values, 0)
+  const hi = Math.max(target ?? 0, best, 1) * 1.2
   const span = hi - lo || 1
   const unit = points[0]?.unit ?? ''
   const avg =
@@ -89,6 +93,17 @@ export function ActivityInsightChart({
           y2={padT + innerH}
           className="trend-axis"
         />
+        {target != null && target > 0 && target <= hi && (
+          <g>
+            <line
+              x1={padL}
+              y1={padT + innerH - ((target - lo) / span) * innerH}
+              x2={padL + innerW}
+              y2={padT + innerH - ((target - lo) / span) * innerH}
+              className="trend-target-line"
+            />
+          </g>
+        )}
         <polyline points={polyline} className="trend-line" fill="none" />
         {plotted.map((p) => (
           <circle

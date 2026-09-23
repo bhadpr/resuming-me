@@ -25,6 +25,7 @@ function fromActivity(activity: Activity): ActivityInput {
     deadline: activity.deadline,
     whyMatters: activity.why_matters,
     usuallyWhen: activity.usually_when,
+    offWeekdays: activity.off_weekdays ?? [],
   }
 }
 
@@ -39,6 +40,7 @@ const emptyInput: ActivityInput = {
   deadline: null,
   whyMatters: null,
   usuallyWhen: null,
+  offWeekdays: [],
 }
 
 export function ActivityForm({
@@ -297,6 +299,31 @@ export function ActivityForm({
           placeholder="Optional"
         />
       </label>
+
+      <fieldset className="field">
+        <legend className="field-label">Days off</legend>
+        <p className="screen-sub">These days are not misses.</p>
+        <div className="onboarding-chips">
+          {['Sun', 'Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat'].map((label, index) => {
+            const selected = (input.offWeekdays ?? []).includes(index)
+            return (
+              <button
+                key={label}
+                type="button"
+                className={`onboarding-chip ${selected ? 'onboarding-chip-selected' : ''}`}
+                aria-pressed={selected}
+                onClick={() => {
+                  const current = input.offWeekdays ?? []
+                  const next = selected ? current.filter((day) => day !== index) : [...current, index]
+                  update('offWeekdays', next)
+                }}
+              >
+                {label}
+              </button>
+            )
+          })}
+        </div>
+      </fieldset>
 
       {initial && (
         <p className="form-hint">

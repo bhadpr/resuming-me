@@ -38,6 +38,7 @@ describe('parseAppPath', () => {
       metricId: 'm1',
     })
     expect(parseAppPath('/insights')).toEqual({ name: 'insights' })
+    expect(parseAppPath('/review/2026-09-14')).toEqual({ name: 'review', weekStart: '2026-09-14' })
     expect(parseAppPath('/settings')).toEqual({ name: 'settings' })
     expect(parseAppPath('/admin/analytics')).toEqual({ name: 'admin', page: 'analytics' })
   })

@@ -451,4 +451,16 @@ describe('getDayStatus — rest / paused', () => {
       }).status,
     ).toBe('open')
   })
+
+  it('treats an off weekday as not scheduled', () => {
+    expect(
+      getDayStatus({
+        activity: activity({ off_weekdays: [2] }),
+        entriesForDay: [],
+        date: '2026-09-22',
+        today: '2026-09-23',
+        timezone: tz,
+      }).status,
+    ).toBe('rest')
+  })
 })

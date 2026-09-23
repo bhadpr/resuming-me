@@ -18,7 +18,6 @@ import {
 import {
   INSIGHTS_PREVIEW,
   ONBOARDING_TIMER_SECONDS,
-  SLIP_OPTIONS,
   activitySizeControl,
   gapNote,
   glassesInGap,
@@ -31,7 +30,6 @@ import {
   gapReassurance,
   onboardingSummary,
   smallestStep,
-  toggleSlip,
 } from '../../lib/onboardingFlow'
 import { track } from '../../lib/track'
 
@@ -84,6 +82,7 @@ export function StartFlow({
   const [paused, setPaused] = useState(false)
   const [elapsed, setElapsed] = useState(0)
   const [googleBusy, setGoogleBusy] = useState(false)
+  const [nudgeTime, setNudgeTime] = useState(draft.reminderTime ?? '19:00')
   const startedAt = useRef<string | null>(null)
   const tickAt = useRef<number | null>(null)
   const finished = useRef(false)
@@ -210,8 +209,17 @@ export function StartFlow({
     setCustomOpen(false)
   }
 
+  function hasSizeStep(base: GuestDraft): boolean {
+    return base.activities.some((item) => activitySizeControl(item))
+  }
+
   function stepAfterGap(base: GuestDraft): number {
-    return base.activities.some((item) => activitySizeControl(item)) ? 3 : 4
+    return hasSizeStep(base) ? 3 : 5
+  }
+
+  function stepAfterPick(base: GuestDraft): number {
+    if (base.activities.some(isWaterHabit)) return 2
+    return stepAfterGap(base)
   }
 
   function pickGap(id: string) {
@@ -236,8 +244,11 @@ export function StartFlow({
     gapTimer.current = window.setTimeout(() => {
       gapTimer.current = null
       setReassurance(null)
-      if (gapIndex + 1 < next.activities.length) setGapIndex((index) => index + 1)
-      else finishStep(2, choiceCode(Object.values(next.gapAnswer)), setGuestStep(next, stepAfterGap(next)))
+      if (gapIndex + 1 < next.activities.length) {
+        const nextWater = next.activities.findIndex((item, index) => index > gapIndex && isWaterHabit(item))
+        if (nextWater >= 0) setGapIndex(nextWater)
+        else finishStep(2, choiceCode(Object.values(next.gapAnswer)), setGuestStep(next, stepAfterGap(next)))
+      } else finishStep(2, choiceCode(Object.values(next.gapAnswer)), setGuestStep(next, stepAfterGap(next)))
     }, 1200)
   }
 
@@ -277,6 +288,27 @@ export function StartFlow({
     setTiming(false)
     finishStep(5, whole >= 30 ? 'done' : 'short', setGuestStep(next, 6))
   }
+
+  useEffect(() => {
+    if (draft.step !== 2) return
+    const waterAt = draft.activities.findIndex(isWaterHabit)
+    if (waterAt < 0) return
+    if (!isWaterHabit(draft.activities[gapIndex] ?? { templateId: null })) setGapIndex(waterAt)
+  }, [draft.step, draft.activities, gapIndex])
+
+  useEffect(() => {
+    if (draft.step !== 2 || draft.activities.some(isWaterHabit)) return
+    persist(setGuestStep(draft, stepAfterGap(draft)))
+    // Skip the removed "when did you last" question. Water still uses this step for glasses.
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [draft.step, draft.activities])
+
+  useEffect(() => {
+    if (draft.step !== 4 && draft.slipAnswer.length === 0) return
+    persist(setGuestStep({ ...draft, slipAnswer: [] }, draft.step === 4 ? 5 : draft.step))
+    // Move anyone already on the removed slip screen, and drop a saved answer.
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [draft.step, draft.slipAnswer.length])
 
   useEffect(() => {
     if (timing && elapsed >= ONBOARDING_TIMER_SECONDS) completeTimer(elapsed)
@@ -331,9 +363,11 @@ export function StartFlow({
           type="button"
           className="btn btn-ghost start-back"
           onClick={() => {
-            const previous = draft.step - 1
-            if (previous === 3 && !draft.activities.some((item) => activitySizeControl(item))) go(2)
-            else go(previous)
+            let previous = draft.step - 1
+            if (previous === 4) previous = 3
+            if (previous === 3 && !hasSizeStep(draft)) previous = 2
+            if (previous === 2 && !draft.activities.some(isWaterHabit)) previous = 1
+            go(previous)
           }}
         >
           Back
@@ -397,7 +431,7 @@ export function StartFlow({
               finishStep(
                 1,
                 choiceCode(draft.activities.map((item) => item.templateId ?? 'custom')),
-                setGuestStep(draft, 2),
+                setGuestStep(draft, stepAfterPick(draft)),
               )
             }
           >
@@ -406,7 +440,7 @@ export function StartFlow({
         </>
       )}
 
-      {draft.step === 2 && gapActivity && (
+      {draft.step === 2 && gapActivity && isWaterHabit(gapActivity) && (
         <>
           <h1 className="screen-heading">{gapHeading(gapActivity)}</h1>
           <p className="screen-sub">
@@ -491,43 +525,9 @@ export function StartFlow({
           <button
             type="button"
             className="btn btn-primary"
-            onClick={() => finishStep(3, 'sized', setGuestStep(draft, 4))}
+            onClick={() => finishStep(3, 'sized', setGuestStep(draft, 5))}
           >
             Continue
-          </button>
-        </>
-      )}
-
-      {draft.step === 4 && (
-        <>
-          <h1 className="screen-heading">When does it usually slip?</h1>
-          <p className="screen-sub">This helps Insights spot your pattern sooner.</p>
-          <div className="onboarding-chips">
-            {SLIP_OPTIONS.map((chip) => {
-              const selected = draft.slipAnswer.includes(chip)
-              const full = draft.slipAnswer.length >= 2 && !selected
-              return (
-                <button
-                  key={chip}
-                  type="button"
-                  className={`onboarding-chip ${selected ? 'onboarding-chip-selected' : ''}`}
-                  disabled={full}
-                  onClick={() => persist(saveGuestDraft({ ...draft, slipAnswer: toggleSlip(draft.slipAnswer, chip) }))}
-                >
-                  {chip}
-                </button>
-              )
-            })}
-          </div>
-          <button
-            type="button"
-            className="btn btn-primary"
-            onClick={() => finishStep(4, choiceCode(draft.slipAnswer), setGuestStep(draft, 5))}
-          >
-            Continue
-          </button>
-          <button type="button" className="btn btn-ghost" onClick={() => finishStep(4, 'skip', setGuestStep(draft, 5))}>
-            Skip
           </button>
         </>
       )}
@@ -567,19 +567,28 @@ export function StartFlow({
 
       {draft.step === 7 && (
         <>
-          <h1 className="screen-heading">One quiet nudge a day?</h1>
-          <p className="screen-sub">We'll only ping if something's still open. Nothing if you're done.</p>
+          <h1 className="screen-heading">When tomorrow?</h1>
+          <p className="screen-sub">We'll nudge you then if it's still open. Nothing if you're done.</p>
+          <label className="field">
+            <span className="field-label">Time</span>
+            <input
+              className="field-input"
+              type="time"
+              value={nudgeTime}
+              onChange={(event) => setNudgeTime(event.target.value || '19:00')}
+            />
+          </label>
           <p className="onboarding-hint">Suggested time {defaultReminderTime(draft.slipAnswer)}</p>
           <button
             type="button"
             className="btn btn-primary"
             onClick={() => {
-              const time = defaultReminderTime(draft.slipAnswer)
+              const time = nudgeTime || '19:00'
               track('onboarding_reminder_set', { time })
               finishStep(7, time, setGuestStep(saveGuestDraft({ ...draft, reminderTime: time, reminderDeclined: false }), 8))
             }}
           >
-            Yes, remind me
+            Remind me then
           </button>
           <button
             type="button"
@@ -594,9 +603,6 @@ export function StartFlow({
             }}
           >
             No thanks
-          </button>
-          <button type="button" className="btn btn-ghost" onClick={() => finishStep(7, 'skip', setGuestStep(draft, 8))}>
-            Skip
           </button>
         </>
       )}

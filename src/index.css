@@ -3499,6 +3499,76 @@ select.field-input {
   gap: 0.5rem;
 }
 
+.trend-target-line {
+  stroke: var(--color-accent);
+  stroke-dasharray: 4 3;
+  stroke-width: 1;
+}
+
+.heat-section {
+  margin: 0.5rem 0 1rem;
+}
+
+.heat-scroll {
+  overflow-x: auto;
+  padding-bottom: 0.25rem;
+}
+
+.heat-row {
+  display: flex;
+  gap: 3px;
+  width: max-content;
+  min-height: 12px;
+}
+
+.heat-cell {
+  width: 12px;
+  height: 12px;
+  min-width: 12px;
+  padding: 0;
+  border: 0;
+  border-radius: 2px;
+  background: transparent;
+}
+
+.heat-showed {
+  background: var(--color-accent);
+}
+
+.heat-missed {
+  background: color-mix(in srgb, var(--color-text) 14%, transparent);
+}
+
+.heat-outline {
+  background: transparent;
+  box-shadow: inset 0 0 0 1px color-mix(in srgb, var(--color-text) 35%, transparent);
+}
+
+.heat-paused {
+  background: color-mix(in srgb, var(--color-text) 28%, transparent);
+}
+
+.heat-open {
+  background: transparent;
+  box-shadow: inset 0 0 0 1px color-mix(in srgb, var(--color-text) 16%, transparent);
+}
+
+.heat-selected {
+  outline: 2px solid var(--color-text);
+  outline-offset: 1px;
+}
+
+.moment-banner,
+.review-card {
+  width: 100%;
+  text-align: left;
+  margin-bottom: 0.75rem;
+}
+
+.review-card {
+  border: 0;
+  cursor: pointer;
+}
 .start-card,
 .start-flow {
   display: flex;

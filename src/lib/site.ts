@@ -22,6 +22,7 @@ const APP_PATH_PREFIXES = [
   '/activities',
   '/numbers',
   '/insights',
+  '/review',
   '/settings',
   '/admin',
 ] as const

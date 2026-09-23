@@ -3,6 +3,42 @@ import { Capacitor } from '@capacitor/core'
 import { Navigate, useLocation, useNavigate, useSearchParams } from 'react-router-dom'
 import { useAuth, useProfileSync } from '../hooks/useAuth'
 import { createSupabaseClient } from '../lib/supabase'
+import {
+  accountGap,
+  freshStartBlock,
+  freshStartCovers,
+  listAccountComebacks,
+  rankResumable,
+  readSeenMilestones,
+  shouldShowWelcomeBack,
+  takeComebackMilestone,
+  writeSeenMilestones,
+  type FreshStartRange,
+  type WelcomeBackState,
+} from '../lib/comeback'
+import { pickMoment } from '../lib/moments'
+import {
+  loadBirthday,
+  loadReviewSchedule,
+  loadReviewsOff,
+  loadSeenMoments,
+  saveBirthday,
+  saveReviewSchedule,
+  saveReviewsOff,
+  saveSeenMoments,
+} from '../lib/reviewPrefs'
+import { activeReviewWindow, buildWeeklyReview, focusApplies, nextFocusWeekStart } from '../lib/weeklyReview'
+import { upsertWeeklyReview } from '../lib/weeklyReviews'
+import { WeeklyReviewScreen } from './WeeklyReviewScreen'
+import {
+  deleteFreshStart,
+  insertFreshStart,
+  listFreshStarts,
+  loadShowEverything,
+  loadWelcomeBackState,
+  saveShowEverything,
+  saveWelcomeBackState,
+} from '../lib/freshStarts'
 import { useDailyDigest } from '../hooks/useDailyDigest'
 import { useTimer } from '../hooks/useTimer'
 import { ActivityList } from './ActivityList'
@@ -270,6 +306,18 @@ export function AppShell() {
   const [loadingDetailEntries, setLoadingDetailEntries] = useState(false)
   const [insightsEntries, setInsightsEntries] = useState<LogEntry[]>([])
   const [slipAnswer, setSlipAnswer] = useState<string[]>([])
+  const [welcomeState, setWelcomeState] = useState<WelcomeBackState>(loadWelcomeBackState)
+  const [visibleGapStart, setVisibleGapStart] = useState<string | null>(null)
+  const [freshStarts, setFreshStarts] = useState<FreshStartRange[]>([])
+  const [showEverything, setShowEverything] = useState(loadShowEverything)
+  const [reviewSchedule, setReviewSchedule] = useState(loadReviewSchedule)
+  const [reviewsOff, setReviewsOff] = useState(loadReviewsOff)
+  const [birthday, setBirthday] = useState<string | null>(loadBirthday)
+  const [seenMoments, setSeenMoments] = useState<string[]>(loadSeenMoments)
+  const [focusActivityId, setFocusActivityId] = useState<string | null>(null)
+  const [focusWeekStart, setFocusWeekStart] = useState<string | null>(null)
+  const [milestone, setMilestone] = useState<string | null>(null)
+  const [shrinkSnapshot, setShrinkSnapshot] = useState<Activity | null>(null)
   const [insightsMetricEntries, setInsightsMetricEntries] = useState<MetricEntry[]>([])
   const [loadingInsights, setLoadingInsights] = useState(false)
   const [onboardingDismissed, setOnboardingDismissed] = useState(() =>
@@ -427,8 +475,252 @@ export function AppShell() {
     return {
       restDates: restDayDates(restDays),
       pauses: activityPauses.map(pauseRowToPause),
+      freshStarts,
+      showEverything,
     }
-  }, [restDays, activityPauses])
+  }, [restDays, activityPauses, freshStarts, showEverything])
+
+  useEffect(() => {
+    if (!user) {
+      setFreshStarts([])
+      return
+    }
+    let cancelled = false
+    void listFreshStarts(user.id)
+      .then((rows) => {
+        if (!cancelled) setFreshStarts(rows)
+      })
+      .catch(() => {
+        /* Table may not be migrated yet. The card still works from local state. */
+      })
+    return () => {
+      cancelled = true
+    }
+  }, [user])
+
+  useEffect(() => {
+    if (!user) {
+      setFocusActivityId(null)
+      setFocusWeekStart(null)
+      return
+    }
+    let cancelled = false
+    void createSupabaseClient()
+      .from('profiles')
+      .select('focus_activity_id, focus_week_start')
+      .eq('id', user.id)
+      .maybeSingle()
+      .then(({ data }) => {
+        if (cancelled || !data) return
+        setFocusActivityId(data.focus_activity_id)
+        setFocusWeekStart(data.focus_week_start)
+      })
+    return () => {
+      cancelled = true
+    }
+  }, [user])
+
+  const welcomeBack = useMemo(() => {
+    const gap = accountGap({
+      activities,
+      entries: mergedLogEntries,
+      today,
+      restDates: dayStatusOpts.restDates,
+      pauses: dayStatusOpts.pauses,
+    })
+    const showedToday = mergedLogEntries.some(
+      (entry) =>
+        entry.date === today &&
+        (entry.type === 'completed' || (entry.type === 'session' && (entry.duration_seconds ?? 0) > 0)),
+    )
+    if (showedToday) return null
+    if (
+      !shouldShowWelcomeBack({
+        gapDays: gap.gapDays,
+        gapStart: gap.gapStart,
+        state: welcomeState,
+        visibleGapStart,
+      })
+    ) {
+      return null
+    }
+    const ranked = rankResumable(activities, mergedLogEntries, today, {
+      restDates: dayStatusOpts.restDates,
+      pauses: dayStatusOpts.pauses,
+      preferredTimes: slipAnswer,
+    })
+    const suggestion = ranked[0]
+    if (!suggestion || !gap.gapStart) return null
+    return {
+      gapDays: gap.gapDays,
+      gapStart: gap.gapStart,
+      suggestion,
+      alternatives: ranked.slice(1, 4),
+      why: suggestion.why_matters,
+      freshStart: freshStartBlock(freshStarts, today),
+    }
+  }, [
+    activities,
+    mergedLogEntries,
+    today,
+    dayStatusOpts,
+    welcomeState,
+    visibleGapStart,
+    slipAnswer,
+    freshStarts,
+  ])
+
+  const timeZone = Intl.DateTimeFormat().resolvedOptions().timeZone || 'UTC'
+  const reviewWindow = useMemo(
+    () =>
+      activeReviewWindow({
+        now: new Date(),
+        timeZone,
+        schedule: reviewSchedule,
+        reviewsOff,
+      }),
+    [timeZone, reviewSchedule, reviewsOff],
+  )
+  const reviewWeekStart = view?.name === 'review' ? view.weekStart : null
+  const weeklyReview = useMemo(() => {
+    if (!reviewWindow && !reviewWeekStart) return null
+    const weekStart = reviewWeekStart ?? reviewWindow?.weekStart
+    if (!weekStart || !/^\d{4}-\d{2}-\d{2}$/.test(weekStart)) return null
+    return buildWeeklyReview({
+      activities,
+      entries: mergedLogEntries,
+      metrics,
+      metricEntries: insightsMetricEntries,
+      today,
+      weekStart,
+      restDates: dayStatusOpts.restDates,
+      pauses: dayStatusOpts.pauses,
+      freshStarts: dayStatusOpts.freshStarts,
+      showEverything: dayStatusOpts.showEverything,
+      slipAnswer: slipAnswer[0] ?? null,
+    })
+  }, [
+    reviewWindow,
+    reviewWeekStart,
+    activities,
+    mergedLogEntries,
+    metrics,
+    insightsMetricEntries,
+    today,
+    dayStatusOpts,
+    slipAnswer,
+  ])
+  const moment = useMemo(
+    () =>
+      pickMoment({
+        today,
+        birthday,
+        seen: seenMoments,
+        activities,
+        entries: mergedLogEntries,
+        pauses: dayStatusOpts.pauses,
+        restDates: dayStatusOpts.restDates,
+        freshStarts: dayStatusOpts.freshStarts,
+        showEverything: dayStatusOpts.showEverything,
+        welcomeBackVisible: welcomeBack != null,
+      }),
+    [today, birthday, seenMoments, activities, mergedLogEntries, dayStatusOpts, welcomeBack],
+  )
+
+  useEffect(() => {
+    if (loadingActivities) return
+    const total = listAccountComebacks(activities, mergedLogEntries, today, 3650, dayStatusOpts).length
+    const taken = takeComebackMilestone(total, readSeenMilestones())
+    writeSeenMilestones(taken.seen)
+    if (taken.message) setMilestone(taken.message)
+  }, [loadingActivities, activities, mergedLogEntries, today, dayStatusOpts])
+
+  useEffect(() => {
+    if (!milestone) return
+    const timerId = window.setTimeout(() => setMilestone(null), 6000)
+    return () => window.clearTimeout(timerId)
+  }, [milestone])
+
+  useEffect(() => {
+    if (!user || !reviewWindow || !weeklyReview || reviewsOff) return
+    if (weeklyReview.weekStart !== reviewWindow.weekStart) return
+    const key = `resuming-review-generated:${weeklyReview.weekStart}`
+    if (localStorage.getItem(key) !== '1') {
+      localStorage.setItem(key, '1')
+      track('review_generated', { week_start: weeklyReview.weekStart })
+    }
+    void upsertWeeklyReview(user.id, weeklyReview).catch(() => {
+      /* Migration may not be applied yet. The card still renders. */
+    })
+  }, [user, reviewWindow, weeklyReview, reviewsOff])
+
+  const reviewSource = searchParams.get('source') === 'email' ? 'email' : 'app'
+  useEffect(() => {
+    if (!reviewWeekStart) return
+    track('review_opened', { source: reviewSource })
+  }, [reviewWeekStart, reviewSource])
+
+  useEffect(() => {
+    if (!welcomeBack) return
+    if (visibleGapStart === welcomeBack.gapStart) return
+    setVisibleGapStart(welcomeBack.gapStart)
+    const next = { ...welcomeState, lastGapStartedAt: welcomeBack.gapStart }
+    saveWelcomeBackState(next)
+    setWelcomeState(next)
+    track('welcome_back_shown', { gap_days: welcomeBack.gapDays })
+    if (user) {
+      void createSupabaseClient()
+        .from('profiles')
+        .update({
+          last_gap_started_at: welcomeBack.gapStart,
+          last_welcome_back_shown_at: new Date().toISOString(),
+        })
+        .eq('id', user.id)
+    }
+  }, [welcomeBack, visibleGapStart, welcomeState, user])
+
+  function hideWelcomeBack() {
+    if (!welcomeBack) return
+    const next = { ...welcomeState, lastGapStartedAt: welcomeBack.gapStart }
+    saveWelcomeBackState(next)
+    setWelcomeState(next)
+    setVisibleGapStart(null)
+  }
+
+  function dismissWelcomeBack() {
+    if (!welcomeBack) return
+    const until = new Date(Date.now() + 24 * 60 * 60 * 1000).toISOString()
+    const next = { lastGapStartedAt: welcomeBack.gapStart, dismissedUntil: until }
+    saveWelcomeBackState(next)
+    setWelcomeState(next)
+    setVisibleGapStart(null)
+    if (user) {
+      void createSupabaseClient()
+        .from('profiles')
+        .update({ welcome_back_dismissed_until: until, last_gap_started_at: welcomeBack.gapStart })
+        .eq('id', user.id)
+    }
+  }
+
+  function handleWelcomeStart(row: ActivityTodayProgress, minutes: number | null) {
+    if (minutes === 1 || minutes === 2) handleStartSmallerSession(row, minutes)
+    else if (minutes != null) {
+      handleTimerStart(row, { sessionTargetSeconds: minutes * 60, fromReentry: true })
+    } else if (row.actionKind === 'timer') handleTimerStart(row, { fromReentry: true })
+    else if (row.actionKind === 'count') void handleIncrement(row)
+    else void handleCheckOff(row)
+    hideWelcomeBack()
+  }
+
+  async function handleFreshStart() {
+    if (!welcomeBack || !user) return
+    const block = freshStartBlock(freshStarts, today)
+    if (!block.allowed) return
+    const covers = freshStartCovers(welcomeBack.gapStart, today)
+    const row = await insertFreshStart(user.id, covers)
+    setFreshStarts((current) => [row, ...current])
+    dismissWelcomeBack()
+  }
 
   const todayRows = useMemo(() => {
     return buildTodayProgress(
@@ -439,6 +731,117 @@ export function AppShell() {
       dayStatusOpts,
     )
   }, [activities, mergedLogEntries, postponedEntries, today, dayStatusOpts])
+
+  function toActivityInput(activity: Activity, targetValue: number | null = activity.target_value): ActivityInput {
+    return {
+      name: activity.name,
+      emoji: activity.emoji,
+      type: activity.type,
+      trackingMode: activity.tracking_mode,
+      targetValue,
+      targetUnit: activity.target_unit,
+      weeklyTarget: activity.weekly_target,
+      deadline: activity.deadline,
+      whyMatters: activity.why_matters,
+      usuallyWhen: activity.usually_when,
+    }
+  }
+
+  async function applyShrink(activityId: string, minutes: number) {
+    const activity = activities.find((item) => item.id === activityId)
+    if (!activity) return
+    const nextValue = activity.target_unit === 'seconds' ? minutes * 60 : minutes
+    setShrinkSnapshot(activity)
+    try {
+      const updated = await updateActivity(activity, toActivityInput(activity, nextValue))
+      setActivities((current) => current.map((item) => (item.id === updated.id ? updated : item)))
+      track('review_shrink_used', { activity_type: activity.type })
+    } catch (err) {
+      setShrinkSnapshot(null)
+      setError(err instanceof Error ? err.message : 'Could not shrink the target')
+    }
+  }
+
+  async function undoShrink() {
+    if (!shrinkSnapshot) return
+    const current = activities.find((item) => item.id === shrinkSnapshot.id) ?? shrinkSnapshot
+    try {
+      const updated = await updateActivity(current, toActivityInput(shrinkSnapshot))
+      setActivities((rows) => rows.map((item) => (item.id === updated.id ? updated : item)))
+      setShrinkSnapshot(null)
+    } catch (err) {
+      setError(err instanceof Error ? err.message : 'Could not undo the shrink')
+    }
+  }
+
+  function dismissMoment(id: string) {
+    setSeenMoments((current) => {
+      const next = current.includes(id) ? current : [...current, id]
+      saveSeenMoments(next)
+      return next
+    })
+  }
+
+  function handleMomentStart(activityId: string, minutes: number | null) {
+    const row = todayRows.find((item) => item.activity.id === activityId)
+    if (moment) dismissMoment(moment.id)
+    if (!row) return
+    if (minutes === 1 || minutes === 2) handleStartSmallerSession(row, minutes)
+    else if (minutes != null) handleTimerStart(row, { sessionTargetSeconds: minutes * 60, fromReentry: true })
+    else if (row.actionKind === 'timer') handleTimerStart(row, { fromReentry: true })
+    else if (row.actionKind === 'count') void handleIncrement(row)
+    else void handleCheckOff(row)
+  }
+
+  function changeBirthday(value: string | null) {
+    setBirthday(value)
+    saveBirthday(value)
+    if (!user) return
+    void createSupabaseClient().from('profiles').update({ birthday: value }).eq('id', user.id)
+  }
+
+  function changeReviewsOff(off: boolean) {
+    setReviewsOff(off)
+    saveReviewsOff(off)
+    if (!user) return
+    void createSupabaseClient().from('profiles').update({ reviews_opt_out: off }).eq('id', user.id)
+  }
+
+  function changeReviewSchedule(weekday: number, time: string) {
+    const [hourText, minuteText] = time.split(':')
+    const next = {
+      weekday,
+      hour: Number(hourText) || 0,
+      minute: Number(minuteText) || 0,
+    }
+    setReviewSchedule(next)
+    saveReviewSchedule(next)
+    if (!user) return
+    void createSupabaseClient()
+      .from('profiles')
+      .update({
+        review_weekday: next.weekday,
+        review_hour: next.hour,
+        review_minute: next.minute,
+      })
+      .eq('id', user.id)
+  }
+
+  async function setWeekFocus(activityId: string) {
+    const week = weeklyReview ? nextFocusWeekStart(weeklyReview.weekStart) : null
+    setFocusActivityId(activityId)
+    setFocusWeekStart(week)
+    const activity = activities.find((item) => item.id === activityId)
+    track('review_focus_set', { activity_type: activity?.type ?? 'daily' })
+    if (!user || !week) return
+    await createSupabaseClient()
+      .from('profiles')
+      .update({
+        focus_activity_id: activityId,
+        focus_week_start: week,
+      })
+      .eq('id', user.id)
+  }
 
   const quietSchedule = useMemo(
     () => ({
@@ -483,6 +886,10 @@ export function AppShell() {
       trackPageView('/settings', 'Settings')
       return
     }
+    if (reviewWeekStart) {
+      trackPageView(`/review/${reviewWeekStart}`, 'Weekly review')
+      return
+    }
     if (tab === 'today') trackPageView('/today', 'Today')
     else if (tab === 'activities') trackPageView('/activities', 'Activities')
     else if (tab === 'metrics') trackPageView('/numbers', 'Numbers')
@@ -490,7 +897,7 @@ export function AppShell() {
       trackPageView('/insights', 'Insights')
       track('insights_viewed', { range: insightsWindow })
     }
-  }, [tab, settingsOpen, adminPage, location.pathname, insightsWindow])
+  }, [tab, settingsOpen, adminPage, location.pathname, insightsWindow, reviewWeekStart])
 
   useEffect(() => {
     if (!isAdmin && adminPage) navigate('/today', { replace: true })
@@ -500,6 +907,8 @@ export function AppShell() {
     ? adminPage === 'analytics'
       ? 'Analytics · Resuming'
       : 'Feedback · Resuming'
+    : reviewWeekStart
+      ? 'This week · Resuming'
     : settingsOpen
       ? 'Settings · Resuming'
       : tab === 'today'
@@ -1287,6 +1696,25 @@ export function AppShell() {
                   }}
                   onOpenPrivacy={() => navigate('/privacy')}
                   onSignOut={() => void signOut()}
+                  showEverything={showEverything}
+                  onShowEverything={(on) => {
+                    saveShowEverything(on)
+                    setShowEverything(on)
+                  }}
+                  canUndoFreshStart={freshStarts.length > 0}
+                  onUndoFreshStart={() => {
+                    const latest = freshStarts[0]
+                    if (!latest) return
+                    setFreshStarts((current) => current.filter((row) => row.id !== latest.id))
+                    if (user) void deleteFreshStart(latest.id).catch(() => setFreshStarts(freshStarts))
+                  }}
+                  birthday={birthday}
+                  onBirthday={changeBirthday}
+                  reviewWeekday={reviewSchedule.weekday}
+                  reviewTime={`${String(reviewSchedule.hour).padStart(2, '0')}:${String(reviewSchedule.minute).padStart(2, '0')}`}
+                  onReviewSchedule={changeReviewSchedule}
+                  reviewsOff={reviewsOff}
+                  onReviewsOff={changeReviewsOff}
                 />
               </Suspense>
             ) : showOnboarding ? (
@@ -1296,6 +1724,32 @@ export function AppShell() {
                 onComplete={handleOnboardingComplete}
                 onSkip={handleOnboardingSkip}
               />
+            ) : reviewWeekStart ? (
+              weeklyReview ? (
+              <WeeklyReviewScreen
+                review={weeklyReview}
+                activities={activities}
+                focusActivityId={focusActivityId}
+                busy={saving}
+                canUndoShrink={shrinkSnapshot != null}
+                onBack={() => navigate('/today')}
+                onShrink={(activityId, value) => void applyShrink(activityId, value)}
+                onUndoShrink={() => void undoShrink()}
+                onFocus={(activityId) => void setWeekFocus(activityId)}
+                onInsights={() => navigate('/insights')}
+                onTurnOff={() => {
+                  changeReviewsOff(true)
+                  navigate('/today')
+                }}
+              />
+              ) : (
+                <section className="empty-state">
+                  <p>That review link doesn’t look right.</p>
+                  <button type="button" className="btn btn-primary" onClick={() => navigate('/today')}>
+                    Back to Today
+                  </button>
+                </section>
+              )
             ) : (
               <>
                 {tab === 'today' && (
@@ -1332,10 +1786,24 @@ export function AppShell() {
                       entries: mergedLogEntries,
                       today,
                     })}
+                    welcomeBack={welcomeBack}
+                    onWelcomeStart={handleWelcomeStart}
+                    onWelcomeDismiss={dismissWelcomeBack}
+                    onFreshStart={() => void handleFreshStart()}
                     onEmptySetup={() => {
                       writeDismissedFlag(ONBOARDING_DISMISS_KEY, false)
                       setOnboardingDismissed(false)
                     }}
+                    moment={moment}
+                    onMomentStart={handleMomentStart}
+                    onMomentDismiss={dismissMoment}
+                    reviewCard={
+                      reviewWindow && weeklyReview && weeklyReview.weekStart === reviewWindow.weekStart
+                        ? { weekStart: weeklyReview.weekStart, headline: weeklyReview.headline }
+                        : null
+                    }
+                    onOpenReview={(weekStart) => navigate(`/review/${weekStart}?source=app`)}
+                    focusActivityId={focusApplies(focusWeekStart, today) ? focusActivityId : null}
                   />
                 )}
 
@@ -1411,6 +1879,7 @@ export function AppShell() {
                 }}
                 onPause={handlePauseActivity}
                 onResume={handleResumeActivity}
+                onShrink={(value) => void applyShrink(selectedActivity.id, value)}
                 onUpdateEntry={async (entryId, updates) => {
                   setSaving(true)
                   setError(null)
@@ -1714,6 +2183,8 @@ export function AppShell() {
                 today,
                 rows: todayRows,
               })}
+              slipAnswer={slipAnswer[0] ?? null}
+              onOpenActivity={(activityId) => navigate(`/activities/${activityId}`)}
             />
           </Suspense>
         )}
@@ -1732,6 +2203,7 @@ export function AppShell() {
               onUndo={() => void undoToast.undo()}
             />
           )}
+          {milestone && !undoToast.toast && <Toast message={milestone} />}
           <BottomNav tab={tab} />
         </>
       )}

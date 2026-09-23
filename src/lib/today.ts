@@ -15,7 +15,7 @@ import {
   sumSessionSeconds,
   targetToSeconds,
 } from './timer'
-import { getDayStatus, isPausedOnDate, type ActivityPause, type DayStatus } from './dayStatus'
+import { getDayStatus, isOffWeekday, isPausedOnDate, type ActivityPause, type DayStatus } from './dayStatus'
 
 export type TodayActionKind = 'checkbox' | 'count' | 'timer' | 'deadline'
 
@@ -46,8 +46,9 @@ export interface ActivityTodayProgress {
   periodCompletedEntries: LogEntry[]
 }
 
-function isDueOnToday(activity: Activity): boolean {
+function isDueOnToday(activity: Activity, today: string): boolean {
   if (activity.archived) return false
+  if (isOffWeekday(activity, today)) return false
   if (activity.type === 'daily') return true
   if (activity.type === 'weekly_n') return true
   if (activity.type === 'monthly') return true
@@ -217,7 +218,7 @@ export function buildTodayProgress(
   const restDates = opts?.restDates
   const pauses = opts?.pauses
   const active = activities.filter((a) => {
-    if (!isDueOnToday(a)) return false
+    if (!isDueOnToday(a, today)) return false
     if (pauses && isPausedOnDate(a.id, today, pauses)) return false
     return true
   })

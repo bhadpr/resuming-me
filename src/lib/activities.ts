@@ -15,7 +15,9 @@ export interface ActivityInput {
   weeklyTarget: number | null
   deadline: string | null
   whyMatters?: string | null
-  usuallyWhen?: string | null
+    usuallyWhen?: string | null
+  /** 0 = Sunday … 6 = Saturday. Empty means every scheduled day. */
+  offWeekdays?: number[]
 }
 
 export function validateActivityInput(input: ActivityInput): string | null {
@@ -84,6 +86,7 @@ function toInsertRow(userId: string, input: ActivityInput, effectiveFrom: string
     deadline: input.type === 'deadline' ? input.deadline : null,
     why_matters: input.whyMatters?.trim() || null,
     usually_when: input.usuallyWhen?.trim() || null,
+    off_weekdays: input.offWeekdays ?? [],
     archived: false,
   }
 }
@@ -178,6 +181,7 @@ export async function updateActivity(
     deadline: input.type === 'deadline' ? input.deadline : null,
     why_matters: input.whyMatters?.trim() || null,
     usually_when: input.usuallyWhen?.trim() || null,
+    off_weekdays: input.offWeekdays ?? [],
   }
 
   if (targetChanged) {

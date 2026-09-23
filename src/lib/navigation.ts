@@ -19,6 +19,7 @@ export type AppView =
   | { name: 'numbers'; screen: 'form'; metricId?: string }
   | { name: 'numbers'; screen: 'detail'; metricId: string }
   | { name: 'insights' }
+  | { name: 'review'; weekStart: string }
   | { name: 'settings' }
   | { name: 'admin'; page: 'analytics' | 'feedback' }
 
@@ -45,6 +46,7 @@ const APP_ROUTES: Array<{ pattern: string; parse: (params: Record<string, string
   },
   { pattern: '/numbers', parse: () => ({ name: 'numbers', screen: 'list' }) },
   { pattern: '/insights', parse: () => ({ name: 'insights' }) },
+  { pattern: '/review/:weekStart', parse: (p) => ({ name: 'review', weekStart: p.weekStart! }) },
   { pattern: '/settings', parse: () => ({ name: 'settings' }) },
   { pattern: '/admin/analytics', parse: () => ({ name: 'admin', page: 'analytics' }) },
   { pattern: '/admin/feedback', parse: () => ({ name: 'admin', page: 'feedback' }) },
@@ -77,7 +79,8 @@ export function showAppChrome(view: AppView | null): boolean {
     view.name === 'today' ||
     view.name === 'activities' ||
     view.name === 'numbers' ||
-    view.name === 'insights'
+    view.name === 'insights' ||
+    view.name === 'review'
   )
 }
 

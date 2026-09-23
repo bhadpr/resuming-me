@@ -21,6 +21,7 @@ import {
 import { downloadUserDataExport } from '../lib/exportData'
 import { loadCheckinOptOut, saveCheckinOptOut } from '../lib/checkinPrefs'
 import { deleteCurrentAccount } from '../lib/deleteAccount'
+import { REVIEW_WEEKDAYS } from '../lib/weeklyReview'
 
 interface SettingsScreenProps {
   onBack: () => void
@@ -30,6 +31,17 @@ interface SettingsScreenProps {
   todayItems?: DigestItem[]
   onSignOut: () => void
   onOpenPrivacy: () => void
+  showEverything?: boolean
+  onShowEverything?: (on: boolean) => void
+  canUndoFreshStart?: boolean
+  onUndoFreshStart?: () => void
+  birthday?: string | null
+  onBirthday?: (value: string | null) => void
+  reviewWeekday?: number
+  reviewTime?: string
+  onReviewSchedule?: (weekday: number, time: string) => void
+  reviewsOff?: boolean
+  onReviewsOff?: (off: boolean) => void
 }
 
 export function SettingsScreen({
@@ -40,6 +52,17 @@ export function SettingsScreen({
   todayItems = [],
   onSignOut,
   onOpenPrivacy,
+  showEverything = false,
+  onShowEverything,
+  canUndoFreshStart = false,
+  onUndoFreshStart,
+  birthday = null,
+  onBirthday,
+  reviewWeekday = 0,
+  reviewTime = '18:00',
+  onReviewSchedule,
+  reviewsOff = false,
+  onReviewsOff,
 }: SettingsScreenProps) {
   const { user } = useAuth()
   const { themeId, themes, setThemeId } = useTheme()
@@ -267,6 +290,85 @@ export function SettingsScreen({
       </section>
 
       <section className="today-section">
+        <h3 className="section-label">Weekly review</h3>
+        <div className="digest-card">
+          <div className="digest-toggle">
+            <span className="activity-meta">
+              <span className="activity-name">Weekly review</span>
+              <span className="activity-desc">A short look at the week. Off hides the card and the email.</span>
+            </span>
+            <button
+              type="button"
+              className={`digest-switch ${reviewsOff ? '' : 'digest-switch-on'}`}
+              role="switch"
+              aria-checked={!reviewsOff}
+              aria-label="Weekly review"
+              onClick={() => onReviewsOff?.(!reviewsOff)}
+            >
+              <span className="digest-switch-knob" aria-hidden />
+            </button>
+          </div>
+        </div>
+        <label className="field">
+          <span className="field-label">Review day</span>
+          <select
+            className="field-input"
+            value={reviewWeekday}
+            onChange={(event) => onReviewSchedule?.(Number(event.target.value), reviewTime)}
+          >
+            {REVIEW_WEEKDAYS.map((name, index) => (
+              <option key={name} value={index}>
+                {name}
+              </option>
+            ))}
+          </select>
+        </label>
+        <label className="field">
+          <span className="field-label">Review time</span>
+          <input
+            className="field-input"
+            type="time"
+            value={reviewTime}
+            onChange={(event) => onReviewSchedule?.(reviewWeekday, event.target.value || '18:00')}
+          />
+        </label>
+        <label className="field">
+          <span className="field-label">Birthday, optional</span>
+          <input
+            className="field-input"
+            type="date"
+            value={birthday ?? ''}
+            onChange={(event) => onBirthday?.(event.target.value || null)}
+          />
+        </label>
+        {birthday && (
+          <button type="button" className="btn btn-ghost" onClick={() => onBirthday?.(null)}>
+            Clear birthday
+          </button>
+        )}
+      </section>
+
+      <section className="today-section">
+        <h3 className="section-label">History</h3>
+        <div className="settings-row">
+          <div>
+            <span className="activity-name">Show everything</span>
+            <p className="screen-sub">Reveal days hidden by a fresh start.</p>
+          </div>
+          <button
+            type="button"
+            className={`btn ${showEverything ? 'btn-primary' : 'btn-secondary'}`}
+            onClick={() => onShowEverything?.(!showEverything)}
+          >
+            {showEverything ? 'On' : 'Off'}
+          </button>
+        </div>
+        {canUndoFreshStart && (
+          <button type="button" className="btn btn-ghost" onClick={onUndoFreshStart}>
+            Undo fresh start
+          </button>
+        )}
+
         <h3 className="section-label">Theme</h3>
         <ul className="theme-list">
           {themes.map((theme) => {

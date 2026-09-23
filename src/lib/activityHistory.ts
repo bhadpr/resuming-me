@@ -1,10 +1,19 @@
 import type { Activity } from './activities'
 import type { LogEntry } from './logs'
-import { addDays, parseLocalDate, todayLocalDate } from './dates'
+import { addDays, daysBetween, parseLocalDate, todayLocalDate } from './dates'
 import { getDayStatus, isAutoPostponed, type ActivityPause } from './dayStatus'
+import { freshStartCovering, type FreshStartRange } from './comeback'
 
 export type ActivityHistoryRow =
   | { kind: 'quiet'; id: string; from: string; to: string }
+  | {
+      kind: 'fresh'
+      id: string
+      startedOn: string
+      coversFrom: string
+      coversTo: string
+      days: number
+    }
   | { kind: 'entry'; entry: LogEntry }
 
 export type ActivityHistoryGroup = {
@@ -16,6 +25,8 @@ export type ActivityHistoryGroup = {
 export type ActivityHistoryOpts = {
   restDates?: ReadonlySet<string>
   pauses?: readonly ActivityPause[]
+  freshStarts?: readonly FreshStartRange[]
+  showEverything?: boolean
 }
 
 const MONTH_SHORT = [
@@ -115,6 +126,8 @@ export function buildActivityHistory(
   const flat: Array<{ sortDate: string; row: ActivityHistoryRow }> = []
   let missedTo: string | null = null
   let missedFrom: string | null = null
+  const emittedFresh = new Set<string>()
+  const hideFresh = !opts?.showEverything
 
   const flushMissed = () => {
     if (missedFrom && missedTo) {
@@ -133,6 +146,26 @@ export function buildActivityHistory(
   }
 
   for (let date = today; date >= start; date = addDays(date, -1)) {
+    const cover = hideFresh ? freshStartCovering(date, opts?.freshStarts ?? []) : null
+    if (cover) {
+      flushMissed()
+      if (!emittedFresh.has(cover.id)) {
+        emittedFresh.add(cover.id)
+        flat.push({
+          sortDate: cover.coversTo,
+          row: {
+            kind: 'fresh',
+            id: `fresh-${cover.id}`,
+            startedOn: cover.startedOn,
+            coversFrom: cover.coversFrom,
+            coversTo: cover.coversTo,
+            days: daysBetween(cover.coversFrom, cover.coversTo) + 1,
+          },
+        })
+      }
+      continue
+    }
+
     const { status } = getDayStatus({
       activity,
       entriesForDay: mine,
