@@ -1,5 +1,7 @@
 import { useState, type FormEvent } from 'react'
 import { EmojiPicker } from './EmojiPicker'
+import { ACTIVITY_TEMPLATES, activityInputFromTemplate, tinyHint } from '../data/activityTemplates'
+import { addDays, todayLocalDate } from '../lib/dates'
 import type { Activity, ActivityInput } from '../lib/activities'
 import type { ActivityType, TrackingMode } from '../types/database'
 
@@ -21,6 +23,8 @@ function fromActivity(activity: Activity): ActivityInput {
     targetUnit: activity.target_unit,
     weeklyTarget: activity.weekly_target,
     deadline: activity.deadline,
+    whyMatters: activity.why_matters,
+    usuallyWhen: activity.usually_when,
   }
 }
 
@@ -33,6 +37,8 @@ const emptyInput: ActivityInput = {
   targetUnit: 'minutes',
   weeklyTarget: null,
   deadline: null,
+  whyMatters: null,
+  usuallyWhen: null,
 }
 
 export function ActivityForm({
@@ -107,6 +113,36 @@ export function ActivityForm({
 
   return (
     <form className="activity-form" onSubmit={handleSubmit}>
+      {!initial && (
+        <div className="field">
+          <span className="field-label">Start from a template</span>
+          <div className="onboarding-chips">
+            {ACTIVITY_TEMPLATES.map((template) => (
+              <button
+                key={template.id}
+                type="button"
+                className="onboarding-chip"
+                onClick={() => {
+                  const next = activityInputFromTemplate(template, 'tiny')
+                  if (next.type === 'deadline') next.deadline = addDays(todayLocalDate(), 14)
+                  setInput(next)
+                }}
+              >
+                {template.emoji} {template.label}
+              </button>
+            ))}
+          </div>
+          <p className="screen-sub">
+            {(() => {
+              const matched = ACTIVITY_TEMPLATES.find(
+                (template) => activityInputFromTemplate(template).name === input.name,
+              )
+              return matched ? tinyHint(matched) : 'Pick a template to start small, or type your own.'
+            })()}
+          </p>
+        </div>
+      )}
+
       <label className="field">
         <span className="field-label">Name</span>
         <input
@@ -175,7 +211,11 @@ export function ActivityForm({
         <div className="field-row">
           <label className="field field-grow">
             <span className="field-label">
-              {input.trackingMode === 'timer' ? 'Minutes' : 'Count target'}
+              {input.targetUnit === 'glasses'
+                ? 'Glasses a day'
+                : input.trackingMode === 'timer'
+                  ? 'Minutes'
+                  : 'Count target'}
             </span>
             <input
               className="field-input"
@@ -235,6 +275,28 @@ export function ActivityForm({
           />
         </label>
       )}
+
+      <label className="field">
+        <span className="field-label">Why this matters</span>
+        <input
+          className="field-input"
+          maxLength={80}
+          value={input.whyMatters ?? ''}
+          onChange={(e) => update('whyMatters', e.target.value || null)}
+          placeholder="Optional"
+        />
+      </label>
+
+      <label className="field">
+        <span className="field-label">Usually when?</span>
+        <input
+          className="field-input"
+          maxLength={40}
+          value={input.usuallyWhen ?? ''}
+          onChange={(e) => update('usuallyWhen', e.target.value || null)}
+          placeholder="Optional"
+        />
+      </label>
 
       {initial && (
         <p className="form-hint">

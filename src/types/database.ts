@@ -19,6 +19,12 @@ export interface Database {
           id: string
           timezone: string
           is_admin: boolean
+          reminder_time: string | null
+          slip_answer: Json | null
+          onboarding_completed_at: string | null
+          merged_guest_id: string | null
+          checkins_opt_out: boolean
+          checkin_token: string
           created_at: string
           updated_at: string
         }
@@ -26,12 +32,23 @@ export interface Database {
           id: string
           timezone?: string
           is_admin?: boolean
+          reminder_time?: string | null
+          slip_answer?: Json | null
+          onboarding_completed_at?: string | null
+          merged_guest_id?: string | null
+          checkins_opt_out?: boolean
+          checkin_token?: string
           created_at?: string
           updated_at?: string
         }
         Update: {
           timezone?: string
           is_admin?: boolean
+          reminder_time?: string | null
+          slip_answer?: Json | null
+          onboarding_completed_at?: string | null
+          merged_guest_id?: string | null
+          checkins_opt_out?: boolean
           updated_at?: string
         }
         Relationships: []
@@ -49,6 +66,8 @@ export interface Database {
           target_effective_from: string
           weekly_target: number | null
           deadline: string | null
+          why_matters: string | null
+          usually_when: string | null
           micro_steps: unknown[]
           archived: boolean
           created_at: string
@@ -66,6 +85,8 @@ export interface Database {
           target_effective_from?: string
           weekly_target?: number | null
           deadline?: string | null
+          why_matters?: string | null
+          usually_when?: string | null
           micro_steps?: unknown[]
           archived?: boolean
           created_at?: string
@@ -81,6 +102,8 @@ export interface Database {
           target_effective_from?: string
           weekly_target?: number | null
           deadline?: string | null
+          why_matters?: string | null
+          usually_when?: string | null
           micro_steps?: unknown[]
           archived?: boolean
           updated_at?: string
@@ -362,6 +385,28 @@ export interface Database {
           activity_count: number
           metric_count: number
         }[]
+      }
+      merge_guest_draft: {
+        Args: { payload: Json }
+        Returns: Json
+      }
+      due_checkins: {
+        Args: { p_now?: string }
+        Returns: {
+          user_id: string
+          email: string
+          day_n: number
+          timezone: string
+          checkin_token: string
+        }[]
+      }
+      opt_out_checkins: {
+        Args: { p_token: string }
+        Returns: boolean
+      }
+      mark_checkin_opened: {
+        Args: Record<string, never>
+        Returns: number
       }
       product_analytics_summary: {
         Args: { p_days: number }

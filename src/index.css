@@ -3499,3 +3499,86 @@ select.field-input {
   gap: 0.5rem;
 }
 
+.start-card,
+.start-flow {
+  display: flex;
+  flex-direction: column;
+  gap: 0.85rem;
+  width: 100%;
+  max-width: 28rem;
+  box-sizing: border-box;
+}
+
+.start-flow .btn,
+.email-sign-in .btn,
+.guest-save-banner .btn {
+  align-self: flex-start;
+}
+
+.onboarding-dots {
+  display: flex;
+  gap: 0.35rem;
+}
+
+.onboarding-dot {
+  width: 0.45rem;
+  height: 0.45rem;
+  border-radius: 999px;
+  background: var(--color-border, rgba(0, 0, 0, 0.2));
+}
+
+.onboarding-dot-active {
+  background: var(--color-text, currentColor);
+}
+
+.start-back {
+  align-self: flex-start;
+  padding-left: 0;
+}
+
+.start-timer {
+  position: fixed;
+  inset: 0;
+  z-index: 30;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: 1.25rem;
+  padding: 1.5rem;
+  background: var(--color-bg, #fff);
+}
+
+.start-timer-clock {
+  font-size: 3.5rem;
+  font-variant-numeric: tabular-nums;
+  margin: 0;
+}
+
+.email-sign-in,
+.guest-save-banner,
+.guest-merge-banner {
+  display: flex;
+  flex-direction: column;
+  gap: 0.6rem;
+}
+
+.guest-merge-banner {
+  position: sticky;
+  top: 0;
+  z-index: 20;
+  padding: 0.75rem 1rem;
+  background: var(--color-surface, #fff);
+}
+
+@media (max-width: 320px) {
+  .start-flow,
+  .start-card {
+    padding-inline: 0;
+  }
+
+  .onboarding-chip {
+    max-width: 100%;
+  }
+}
+

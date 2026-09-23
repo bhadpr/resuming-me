@@ -148,9 +148,11 @@ function PrivacyContent() {
       </p>
       <ul>
         <li>
-          <strong>Service providers.</strong> Google (sign-in), Supabase (authentication,
-          database, and related backend services), and hosting/CDN providers that process
-          data on our behalf to run the Service.
+          <strong>Service providers.</strong> Google and email magic links (sign-in; the
+          same email can belong to one account when it is already linked), Supabase
+          (authentication, database, and related backend services), Resend (optional day
+          2, 3, and 7 check-in emails, only if you ask for a reminder), and hosting/CDN
+          providers that process data on our behalf to run the Service.
         </li>
         <li>
           <strong>Legal & safety.</strong> If we reasonably believe disclosure is
@@ -177,8 +179,9 @@ function PrivacyContent() {
       <ul>
         <li>Authentication / session storage so you stay signed in</li>
         <li>
-          Local preferences such as theme, onboarding completion, daily reminder time,
-          and in-progress timer state
+          Local preferences such as theme, a guest onboarding draft (kept on this device
+          for up to 7 days, until you save an account), daily reminder time, and
+          in-progress timer state
         </li>
         <li>
           A service worker / progressive web app cache that stores app assets for faster
@@ -292,8 +295,10 @@ function TermsContent() {
 
       <h3>Accounts</h3>
       <p>
-        You sign in using Google authentication. You are responsible for activity under
-        your account and for keeping access to your Google account secure. Notify us
+        You sign in with Google or an email magic link. If that email is already linked
+        to Google, it is the same account. You are responsible for activity under your
+        account and for keeping access to that email secure. Optional day 2, 3, and 7
+        check-in emails can be turned off in the message or in Settings. Notify us
         promptly if you believe your {PRODUCT_NAME} account has been compromised. We may
         suspend or terminate access if we reasonably believe these Terms have been
         violated or if needed to protect the Service or other users.

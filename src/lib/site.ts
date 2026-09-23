@@ -32,6 +32,7 @@ const APP_PATH_PREFIXES = [
 export function isKnownPath(pathname: string): boolean {
   const path = pathname.replace(/\/+$/, '') || '/'
   if (path === '/') return true
+  if (path === '/start') return true
   if (sitePageFromPath(path)) return true
   return APP_PATH_PREFIXES.some(
     (prefix) => path === prefix || path.startsWith(`${prefix}/`),
@@ -66,7 +67,7 @@ export const PRODUCT_NAME = 'Resuming'
 export const GOVERNING_LAW = 'the State of Washington, United States'
 
 /** Shown on Privacy / Terms / About as the policy effective date. */
-export const LEGAL_LAST_UPDATED = `August 13, ${COPYRIGHT_YEAR}`
+export const LEGAL_LAST_UPDATED = `September 23, ${COPYRIGHT_YEAR}`
 
 export interface SocialLink {
   id: SocialLinkId

@@ -16,6 +16,8 @@ function activity(overrides: Partial<Activity> = {}): Activity {
     target_effective_from: '2026-08-01',
     weekly_target: null,
     deadline: null,
+    why_matters: null,
+    usually_when: null,
     micro_steps: [],
     archived: false,
     created_at: '2026-08-01T00:00:00Z',

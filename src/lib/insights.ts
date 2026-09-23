@@ -13,6 +13,8 @@ import {
 export type DayStatusOpts = {
   restDates?: ReadonlySet<string>
   pauses?: readonly ActivityPause[]
+  /** From onboarding, used until there are 5 logged days. */
+  slipAnswer?: readonly string[]
 }
 
 export type InsightsWindow = 'week' | 'month'
@@ -470,34 +472,76 @@ function peak(counts: DayCount[]): DayCount | null {
   return sorted[0]
 }
 
+function loggedDayCount(entries: LogEntry[]): number {
+  const days = new Set<string>()
+  for (const entry of entries) {
+    if (entry.type === 'session' || entry.type === 'completed') days.add(entry.date)
+  }
+  return days.size
+}
+
+/** Highest show-up rate, then fewer skips. */
+export function mostResumableActivity(
+  activities: readonly ActivityInsight[],
+): ActivityInsight | null {
+  const ranked = activities.filter((activity) => activity.scheduled > 0)
+  if (ranked.length === 0) return null
+  ranked.sort((a, b) => {
+    const rateA = a.showedUp / a.scheduled
+    const rateB = b.showedUp / b.scheduled
+    if (rateB !== rateA) return rateB - rateA
+    if (a.postponed !== b.postponed) return a.postponed - b.postponed
+    return a.name.localeCompare(b.name)
+  })
+  return ranked[0] ?? null
+}
+
+function formatSlip(slip: readonly string[]): string {
+  if (slip.length === 1) return slip[0] ?? ''
+  return `${slip[0]} and ${slip[1]}`
+}
+
+/**
+ * Lead with what is easiest to resume.
+ * Do not open with "0 of …" or a failure percentage.
+ * Slip answers stand in until five distinct logged days.
+ */
 function buildSummary(
   window: InsightsWindow,
-  completed: number,
-  showed: number,
   total: number,
-  mostPostponed: ActivityInsight[],
+  activities: ActivityInsight[],
+  entries: LogEntry[],
+  slipAnswer?: readonly string[],
 ): string {
   const period = window === 'week' ? 'this week' : 'this month'
   if (total === 0) {
     return `No repeating activities ${period} yet. Log a few days and Insights will fill in.`
   }
 
-  const top = mostPostponed
-    .filter((a) => a.postponed > 0)
-    .slice(0, 2)
-    .map((a) => a.name)
+  const loggedDays = loggedDayCount(entries)
+  const slip = (slipAnswer ?? []).filter(Boolean).slice(0, 2)
+  const useSlip = loggedDays < 5 && slip.length > 0
+  const easiest = mostResumableActivity(activities)
+  const slipsMost = [...activities]
+    .filter((activity) => activity.postponed > 0)
+    .sort((a, b) => b.postponed - a.postponed)[0]
 
-  let text = `${completed} of ${total} done ${period}`
-  if (showed > completed) {
-    text += ` · ${showed} showed up`
+  const parts: string[] = []
+  if (useSlip) {
+    parts.push(`You said it usually slips ${formatSlip(slip)}.`)
   }
-  text += '.'
-  if (top.length === 1) {
-    text += ` ${top[0]} is the one you keep putting off.`
-  } else if (top.length >= 2) {
-    text += ` ${top[0]} and ${top[1]} are the ones you keep putting off.`
+  if (easiest && easiest.showedUp > 0) {
+    parts.push(`${easiest.name} looks easiest to pick back up.`)
+  } else if (easiest) {
+    parts.push(`${easiest.name} is a small enough place to start.`)
   }
-  return text
+  if (!useSlip && slipsMost && slipsMost.name !== easiest?.name) {
+    parts.push(`${slipsMost.name} is the one that slips most.`)
+  }
+  if (parts.length === 0) {
+    return `Log a few days ${period} and Insights will fill in.`
+  }
+  return parts.join(' ')
 }
 
 export function computeInsights(
@@ -565,10 +609,10 @@ export function computeInsights(
     peakSessionBucket: peak(sessionTimeBuckets),
     summary: buildSummary(
       window,
-      completedScheduled,
-      showedUpScheduled,
       totalScheduled,
-      mostPostponed,
+      activityInsights,
+      entries,
+      opts?.slipAnswer,
     ),
   }
 }

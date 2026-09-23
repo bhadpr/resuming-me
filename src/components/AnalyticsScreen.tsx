@@ -1,5 +1,6 @@
 import { useEffect, useState } from 'react'
 import {
+  fetchOnboardingEvents,
   fetchPageViewsForAnalytics,
   fetchProductAnalytics,
   fetchSignedInEmails,
@@ -12,6 +13,7 @@ import {
   type ProductAnalyticsSummary,
   type SignedInAccount,
 } from '../lib/analytics'
+import { summarizeOnboardingFunnel } from '../lib/onboardingFunnel'
 
 export function AnalyticsScreen() {
   const [window, setWindow] = useState<AnalyticsWindow>('7d')
@@ -23,6 +25,8 @@ export function AnalyticsScreen() {
   const [accountsError, setAccountsError] = useState<string | null>(null)
   const [error, setError] = useState<string | null>(null)
   const [productError, setProductError] = useState<string | null>(null)
+  const [funnel, setFunnel] = useState<ReturnType<typeof summarizeOnboardingFunnel> | null>(null)
+  const [funnelError, setFunnelError] = useState<string | null>(null)
 
   useEffect(() => {
     let mounted = true
@@ -64,6 +68,24 @@ export function AnalyticsScreen() {
       })
       .finally(() => {
         if (mounted) setProductLoading(false)
+      })
+    return () => {
+      mounted = false
+    }
+  }, [window])
+
+  useEffect(() => {
+    let mounted = true
+    setFunnelError(null)
+    fetchOnboardingEvents(window)
+      .then((rows) => {
+        if (!mounted) return
+        setFunnel(summarizeOnboardingFunnel(rows))
+      })
+      .catch((err) => {
+        if (!mounted) return
+        setFunnel(null)
+        setFunnelError(err instanceof Error ? err.message : 'Could not load the funnel')
       })
     return () => {
       mounted = false
@@ -210,6 +232,38 @@ export function AnalyticsScreen() {
           </section>
         </>
       )}
+
+      <section className="today-section">
+        <h3 className="section-label">Onboarding</h3>
+        <p className="screen-sub insights-hint">
+          Funnel, first-week logs, and median time to the first resume.
+        </p>
+        {funnelError && <p className="error">{funnelError}</p>}
+        {funnel && (
+          <ul className="analytics-rank-list">
+            <li className="analytics-rank-row">Started · {funnel.started}</li>
+            {funnel.steps.map((step) => (
+              <li key={step.step} className="analytics-rank-row">
+                Step {step.step} · {step.people}
+              </li>
+            ))}
+            <li className="analytics-rank-row">Timer started · {funnel.timerStarted}</li>
+            <li className="analytics-rank-row">Timer finished · {funnel.timerCompleted}</li>
+            <li className="analytics-rank-row">Timer skipped · {funnel.timerSkipped}</li>
+            <li className="analytics-rank-row">
+              Reminder yes / no · {funnel.reminderSet} / {funnel.reminderNone}
+            </li>
+            <li className="analytics-rank-row">Sign-in shown · {funnel.signinShown}</li>
+            <li className="analytics-rank-row">Sign-ups · {funnel.signups}</li>
+            <li className="analytics-rank-row">
+              Median seconds to first resume · {funnel.medianSecondsToFirstResume ?? '—'}
+            </li>
+            <li className="analytics-rank-row">
+              Logged on day 2 / 3 / 7 · {funnel.loggedDay2} / {funnel.loggedDay3} / {funnel.loggedDay7}
+            </li>
+          </ul>
+        )}
+      </section>
 
       <section className="today-section">
         <h3 className="section-label">Signed-in Google accounts</h3>

@@ -1,4 +1,4 @@
-import { useEffect } from 'react'
+import { useEffect, useRef } from 'react'
 import {
   Navigate,
   Outlet,
@@ -16,7 +16,12 @@ import { LegalPage } from './components/LegalPage'
 import { FeedbackPage } from './components/FeedbackPage'
 import { NotFoundPage } from './components/NotFoundPage'
 import { DeleteAccountPage } from './components/DeleteAccountPage'
+import { StartPage } from './components/StartPage'
+import { GuestMergeBanner } from './components/GuestMergeBanner'
+import { GuestTodayPage } from './components/GuestTodayPage'
 import { hideNativeSplash } from './lib/nativeChrome'
+import { loadGuestDraft } from './lib/guestDraft'
+import { markCheckinOpened } from './lib/checkinPrefs'
 import { navigateBack, safeNextPath, stashAuthNext, takeAuthNext } from './lib/navigation'
 import type { SitePageId } from './lib/site'
 import { trackPageView } from './lib/analytics'
@@ -29,11 +34,37 @@ function LoadingScreen() {
   )
 }
 
+function CheckinOpenedPing() {
+  const { user } = useAuth()
+  const [params, setParams] = useSearchParams()
+  const token = params.get('checkin')
+  const sent = useRef(false)
+
+  useEffect(() => {
+    if (!user || token !== '1' || sent.current) return
+    sent.current = true
+    void markCheckinOpened().finally(() => {
+      setParams(
+        (current) => {
+          const next = new URLSearchParams(current)
+          next.delete('checkin')
+          return next
+        },
+        { replace: true },
+      )
+    })
+  }, [user, token, setParams])
+
+  return null
+}
+
 function RootLayout() {
   useAndroidBackButton()
   return (
     <>
       <ScrollRestoration />
+      <GuestMergeBanner />
+      <CheckinOpenedPing />
       <Outlet />
     </>
   )
@@ -82,6 +113,7 @@ function RequireAuth() {
   if (loading) return <LoadingScreen />
 
   if (!user) {
+    if (location.pathname === '/today' && loadGuestDraft()) return <GuestTodayPage />
     const next = safeNextPath(`${location.pathname}${location.search}`) ?? '/today'
     return <Navigate to={`/?next=${encodeURIComponent(next)}`} replace />
   }
@@ -93,7 +125,7 @@ function publicBack(navigate: ReturnType<typeof useNavigate>) {
   navigateBack(navigate, '/')
 }
 
-function PublicLegalRoute({ page }: { page: Exclude<SitePageId, 'feedback'> }) {
+function PublicLegalRoute({ page }: { page: Exclude<SitePageId, 'feedback' | 'delete-account'> }) {
   const navigate = useNavigate()
   const native = Capacitor.isNativePlatform()
 
@@ -176,6 +208,7 @@ export const appRouteObjects = [
     element: <RootLayout />,
     children: [
       { path: '/', element: <IndexRoute /> },
+      { path: '/start', element: <StartPage /> },
       { path: '/about', element: <PublicLegalRoute page="about" /> },
       { path: '/privacy', element: <PublicLegalRoute page="privacy" /> },
       { path: '/terms', element: <PublicLegalRoute page="terms" /> },

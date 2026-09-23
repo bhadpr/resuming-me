@@ -112,8 +112,8 @@ export function ActivityDetail({
   )
 
   const historyGroups = useMemo(
-    () => buildActivityHistory(entries, today),
-    [entries, today],
+    () => buildActivityHistory(activity, entries, today, dayStatusOpts),
+    [activity, entries, today, dayStatusOpts],
   )
 
   const overdue = isDeadlineOverdue(activity, entries, today)

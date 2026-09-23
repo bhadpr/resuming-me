@@ -19,6 +19,7 @@ import {
   scheduleTestDigest,
 } from '../lib/localNotifications'
 import { downloadUserDataExport } from '../lib/exportData'
+import { loadCheckinOptOut, saveCheckinOptOut } from '../lib/checkinPrefs'
 import { deleteCurrentAccount } from '../lib/deleteAccount'
 
 interface SettingsScreenProps {
@@ -57,6 +58,20 @@ export function SettingsScreen({
   const [deleteBusy, setDeleteBusy] = useState(false)
   const [deleteError, setDeleteError] = useState<string | null>(null)
   const scheduleHint = digestScheduleHint(todayItems, digest)
+  const [checkinsOff, setCheckinsOff] = useState(false)
+
+  useEffect(() => {
+    if (!user) return
+    let mounted = true
+    void loadCheckinOptOut(user.id)
+      .then((off) => {
+        if (mounted) setCheckinsOff(off)
+      })
+      .catch(() => {})
+    return () => {
+      mounted = false
+    }
+  }, [user])
 
   useEffect(() => {
     if (!native || !digest.enabled) {
@@ -223,6 +238,31 @@ export function SettingsScreen({
           )}
 
           {permissionError && <p className="error">{permissionError}</p>}
+        </div>
+        <div className="digest-card">
+          <div className="digest-toggle">
+            <span className="activity-meta">
+              <span className="activity-name">Day 2, 3, and 7 emails</span>
+              <span className="activity-desc">
+                A short note if you opted in. Off stops them, including from the email link.
+              </span>
+            </span>
+            <button
+              type="button"
+              className={`digest-switch ${checkinsOff ? '' : 'digest-switch-on'}`}
+              role="switch"
+              aria-checked={!checkinsOff}
+              aria-label="Day 2, 3, and 7 emails"
+              onClick={() => {
+                if (!user) return
+                const next = !checkinsOff
+                setCheckinsOff(next)
+                void saveCheckinOptOut(user.id, next).catch(() => setCheckinsOff(!next))
+              }}
+            >
+              <span className="digest-switch-knob" aria-hidden />
+            </button>
+          </div>
         </div>
       </section>
 

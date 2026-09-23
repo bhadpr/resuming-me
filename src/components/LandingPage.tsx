@@ -1,5 +1,7 @@
 import { useEffect, useState } from 'react'
+import { Link } from 'react-router-dom'
 import { Capacitor } from '@capacitor/core'
+import { EmailSignInForm } from './EmailSignInForm'
 import { BrandTitle } from './BrandTitle'
 import { SiteFooter } from './SiteFooter'
 import { trackPageView } from '../lib/analytics'
@@ -127,14 +129,22 @@ export function LandingPage({
             <p>{displayError}</p>
           </div>
         )}
+        <Link className="btn btn-primary btn-lg" to="/start">
+          Get started
+        </Link>
+        <EmailSignInForm />
         <button
           type="button"
-          className="btn btn-primary btn-lg"
+          className="btn btn-secondary"
           onClick={handleSignIn}
           disabled={signingIn}
         >
           {signingIn ? 'Redirecting…' : 'Continue with Google'}
         </button>
+        <button type="button" className="btn btn-ghost" disabled>
+          Continue with Apple
+        </button>
+        <p className="screen-sub">Apple is coming later.</p>
 
         <SiteFooter privacyOnly={native} />
       </div>

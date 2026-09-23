@@ -384,6 +384,38 @@ export async function fetchProductAnalytics(
   }
 }
 
+const ONBOARDING_EVENT_NAMES = [
+  'onboarding_started',
+  'onboarding_step_completed',
+  'onboarding_timer_started',
+  'onboarding_timer_completed',
+  'onboarding_timer_skipped',
+  'onboarding_reminder_set',
+  'signin_shown',
+  'signin_method_clicked',
+  'signup_completed',
+  'log_created',
+] as const
+
+export async function fetchOnboardingEvents(window: AnalyticsWindow) {
+  const client = createSupabaseClient()
+  const days = ANALYTICS_WINDOW_DAYS[window]
+  const since = new Date()
+  since.setUTCDate(since.getUTCDate() - (days - 1))
+  since.setUTCHours(0, 0, 0, 0)
+
+  const { data, error } = await client
+    .from('events')
+    .select('name, props, created_at, anon_id, user_id')
+    .gte('created_at', since.toISOString())
+    .in('name', [...ONBOARDING_EVENT_NAMES])
+    .order('created_at', { ascending: true })
+    .limit(5000)
+
+  if (error) throw error
+  return data ?? []
+}
+
 export function formatRetentionRate(rate: number | null): string {
   if (rate == null || !Number.isFinite(rate)) return '—'
   return `${Math.round(rate * 100)}%`

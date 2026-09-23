@@ -31,6 +31,7 @@ interface AuthContextValue {
   authError: string | null
   isAdmin: boolean
   signInWithGoogle: () => Promise<void>
+  signInWithEmail: (email: string) => Promise<void>
   signOut: () => Promise<void>
 }
 
@@ -171,6 +172,18 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     }
   }, [])
 
+  const signInWithEmail = useCallback(async (email: string) => {
+    const client = createSupabaseClient()
+    const { error } = await client.auth.signInWithOtp({
+      email: email.trim(),
+      options: {
+        emailRedirectTo: getAuthRedirectTo(),
+        shouldCreateUser: true,
+      },
+    })
+    if (error) throw error
+  }, [])
+
   const signOut = useCallback(async () => {
     const client = createSupabaseClient()
     const { error } = await client.auth.signOut()
@@ -187,9 +200,20 @@ export function AuthProvider({ children }: { children: ReactNode }) {
       authError,
       isAdmin,
       signInWithGoogle,
+      signInWithEmail,
       signOut,
     }),
-    [session, loading, configured, configError, authError, isAdmin, signInWithGoogle, signOut],
+    [
+      session,
+      loading,
+      configured,
+      configError,
+      authError,
+      isAdmin,
+      signInWithGoogle,
+      signInWithEmail,
+      signOut,
+    ],
   )
 
   return <AuthContext.Provider value={value}>{children}</AuthContext.Provider>

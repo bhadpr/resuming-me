@@ -22,6 +22,8 @@ function activity(overrides: Partial<Activity> = {}): Activity {
     target_effective_from: '2026-08-01',
     weekly_target: null,
     deadline: null,
+    why_matters: null,
+    usually_when: null,
     micro_steps: [],
     archived: false,
     created_at: '2026-08-01T00:00:00Z',
@@ -83,8 +85,8 @@ describe('computeInsights', () => {
     expect(walkInsight.met).toBe(1)
     expect(walkInsight.postponementRate).toBeCloseTo(2 / 7)
 
-    expect(result.summary).toContain('done this week')
-    expect(result.summary).toContain('Walk is the one you keep putting off')
+    expect(result.summary).toContain('Gym looks easiest to pick back up')
+    expect(result.summary.startsWith('0 of')).toBe(false)
   })
 
   it('builds day-of-week skip correlation', () => {

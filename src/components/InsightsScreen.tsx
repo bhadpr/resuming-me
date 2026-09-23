@@ -5,7 +5,6 @@ import { STARTER_METRICS, type Metric, type MetricInput } from '../lib/metrics'
 import type { MetricEntry } from '../lib/metricEntries'
 import {
   buildActivityInsightSeries,
-  formatPercent,
   INSIGHTS_WINDOW_DAYS,
   type DayStatusOpts,
   type InsightsResult,
@@ -160,7 +159,7 @@ export function InsightsScreen({
           </section>
 
           <section className="today-section">
-            <h3 className="section-label">Skipped</h3>
+            <h3 className="section-label">Easiest to pick up</h3>
             <p className="screen-sub insights-hint">
               Tap an activity for its {window} chart.
             </p>
@@ -195,9 +194,9 @@ export function InsightsScreen({
                           <span className="activity-desc">
                             {a.scheduled === 0
                               ? 'Nothing scheduled yet'
-                              : a.postponed > 0
-                                ? `Skipped ${a.postponed} · showed up ${a.showedUp} of ${a.scheduled}`
-                                : `${a.met} done · ${a.showedUp} showed up of ${a.scheduled}`}
+                              : `Showed up ${a.showedUp} of ${a.scheduled}${
+                                  a.postponed > 0 ? ` · skipped ${a.postponed}` : ''
+                                }`}
                           </span>
                           <div className="progress-bar" aria-hidden>
                             <div
@@ -209,7 +208,7 @@ export function InsightsScreen({
                           </div>
                         </span>
                         <span className="insights-rate">
-                          {formatPercent(a.postponementRate)}
+                          {a.scheduled === 0 ? '—' : `${a.showedUp}/${a.scheduled}`}
                         </span>
                       </button>
                       {open && activity && (

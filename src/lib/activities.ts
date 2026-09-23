@@ -14,6 +14,8 @@ export interface ActivityInput {
   targetUnit: string | null
   weeklyTarget: number | null
   deadline: string | null
+  whyMatters?: string | null
+  usuallyWhen?: string | null
 }
 
 export function validateActivityInput(input: ActivityInput): string | null {
@@ -28,6 +30,13 @@ export function validateActivityInput(input: ActivityInput): string | null {
 
   if (input.type === 'deadline') {
     if (!input.deadline) return 'Deadline date is required'
+  }
+
+  if (input.whyMatters && input.whyMatters.trim().length > 80) {
+    return 'Why this matters must be 80 characters or fewer'
+  }
+  if (input.usuallyWhen && input.usuallyWhen.trim().length > 40) {
+    return 'Usually when must be 40 characters or fewer'
   }
 
   if (input.trackingMode === 'timer' || input.trackingMode === 'count') {
@@ -73,6 +82,8 @@ function toInsertRow(userId: string, input: ActivityInput, effectiveFrom: string
     target_effective_from: effectiveFrom,
     weekly_target: input.type === 'weekly_n' ? input.weeklyTarget : null,
     deadline: input.type === 'deadline' ? input.deadline : null,
+    why_matters: input.whyMatters?.trim() || null,
+    usually_when: input.usuallyWhen?.trim() || null,
     archived: false,
   }
 }
@@ -165,6 +176,8 @@ export async function updateActivity(
         : input.targetUnit,
     weekly_target: input.type === 'weekly_n' ? input.weeklyTarget : null,
     deadline: input.type === 'deadline' ? input.deadline : null,
+    why_matters: input.whyMatters?.trim() || null,
+    usually_when: input.usuallyWhen?.trim() || null,
   }
 
   if (targetChanged) {

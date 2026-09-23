@@ -2,6 +2,7 @@ import { lazy, Suspense, useCallback, useEffect, useMemo, useRef, useState } fro
 import { Capacitor } from '@capacitor/core'
 import { Navigate, useLocation, useNavigate, useSearchParams } from 'react-router-dom'
 import { useAuth, useProfileSync } from '../hooks/useAuth'
+import { createSupabaseClient } from '../lib/supabase'
 import { useDailyDigest } from '../hooks/useDailyDigest'
 import { useTimer } from '../hooks/useTimer'
 import { ActivityList } from './ActivityList'
@@ -268,6 +269,7 @@ export function AppShell() {
   const [detailMetricEntries, setDetailMetricEntries] = useState<MetricEntry[]>([])
   const [loadingDetailEntries, setLoadingDetailEntries] = useState(false)
   const [insightsEntries, setInsightsEntries] = useState<LogEntry[]>([])
+  const [slipAnswer, setSlipAnswer] = useState<string[]>([])
   const [insightsMetricEntries, setInsightsMetricEntries] = useState<MetricEntry[]>([])
   const [loadingInsights, setLoadingInsights] = useState(false)
   const [onboardingDismissed, setOnboardingDismissed] = useState(() =>
@@ -529,15 +531,17 @@ export function AppShell() {
     ? metrics.find((m) => m.id === selectedMetricId)
     : undefined
 
+  const activityDetailId =
+    tab === 'activities' && activityScreen.name === 'detail' ? activityScreen.activityId : null
+
   useEffect(() => {
-    if (tab !== 'activities' || activityScreen.name !== 'detail') {
-      setDetailLogEntries([])
+    if (!activityDetailId) {
+      setDetailLogEntries((prev) => (prev.length === 0 ? prev : []))
       return
     }
-    const id = activityScreen.activityId
     let cancelled = false
     setLoadingDetailEntries(true)
-    void listLogEntriesForActivity(id)
+    void listLogEntriesForActivity(activityDetailId)
       .then((rows) => {
         if (!cancelled) setDetailLogEntries(rows)
       })
@@ -552,19 +556,21 @@ export function AppShell() {
     return () => {
       cancelled = true
     }
-  }, [tab, activityScreen])
+  }, [activityDetailId])
+
+  const metricDetailId =
+    tab === 'metrics' && metricScreen.name === 'detail' ? metricScreen.metricId : null
 
   useEffect(() => {
-    if (tab !== 'metrics' || metricScreen.name !== 'detail') {
-      setDetailMetricEntries([])
+    if (!metricDetailId) {
+      setDetailMetricEntries((prev) => (prev.length === 0 ? prev : []))
       return
     }
-    const id = metricScreen.metricId
     let cancelled = false
     setLoadingDetailEntries(true)
     // Load enough history for 90-day window
     const from = addDays(todayLocalDate(), -89)
-    void listMetricEntriesForMetric(id, from)
+    void listMetricEntriesForMetric(metricDetailId, from)
       .then((rows) => {
         if (!cancelled) setDetailMetricEntries(rows)
       })
@@ -579,7 +585,7 @@ export function AppShell() {
     return () => {
       cancelled = true
     }
-  }, [tab, metricScreen])
+  }, [metricDetailId])
 
   useEffect(() => {
     if (tab !== 'insights') return
@@ -598,6 +604,18 @@ export function AppShell() {
           setInsightsEntries(logs)
           setInsightsMetricEntries(metricRows.flat())
         }
+        if (user) {
+          const { data } = await createSupabaseClient()
+            .from('profiles')
+            .select('slip_answer')
+            .eq('id', user.id)
+            .maybeSingle()
+          const raw = data?.slip_answer
+          const slip = Array.isArray(raw)
+            ? raw.filter((item): item is string => typeof item === 'string')
+            : []
+          if (!cancelled) setSlipAnswer(slip)
+        }
       } catch (err) {
         if (!cancelled) {
           setError(err instanceof Error ? err.message : 'Failed to load insights')
@@ -609,18 +627,15 @@ export function AppShell() {
     return () => {
       cancelled = true
     }
-  }, [tab, activities, metrics, today])
+  }, [tab, activities, metrics, today, user])
 
   const insights = useMemo(
     () =>
-      computeInsights(
-        activities,
-        insightsEntries,
-        insightsWindow,
-        today,
-        dayStatusOpts,
-      ),
-    [activities, insightsEntries, insightsWindow, today, dayStatusOpts],
+        computeInsights(activities, insightsEntries, insightsWindow, today, {
+          ...dayStatusOpts,
+          slipAnswer,
+        }),
+    [activities, insightsEntries, insightsWindow, today, dayStatusOpts, slipAnswer],
   )
 
   async function handleActivitySave(input: ActivityInput) {
