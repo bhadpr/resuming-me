@@ -23,7 +23,16 @@ describe('validateMetricInput', () => {
 
 describe('STARTER_METRICS', () => {
   it('offers Weight and Sleep', () => {
-    expect(STARTER_METRICS.map((m) => m.name)).toEqual(['Weight', 'Sleep'])
+    expect(STARTER_METRICS.map((m) => m.name)).toEqual([
+      'Weight',
+      'Daily Steps',
+      'Blood Pressure',
+      'Heart Rate',
+      'Water',
+      'Sleep',
+      'Protein',
+      'Fasting',
+    ])
     for (const metric of STARTER_METRICS) {
       expect(validateMetricInput(metric)).toBeNull()
     }

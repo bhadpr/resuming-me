@@ -63,6 +63,32 @@ describe('getDayStatus — daily timer', () => {
     expect(showedUp(result.status)).toBe(true)
   })
 
+  it('adds one-minute walks, and five of them meet a 5 minute goal', () => {
+    const walking = activity({ name: 'Walking', target_value: 5 })
+    const partial = getDayStatus({
+      activity: walking,
+      entriesForDay: [
+        entry({ id: '1', duration_seconds: 60 }),
+        entry({ id: '2', duration_seconds: 60 }),
+      ],
+      date: today,
+      today,
+      timezone: tz,
+    })
+    expect(partial).toMatchObject({ status: 'partial', value: 2, target: 5 })
+
+    const done = getDayStatus({
+      activity: walking,
+      entriesForDay: [1, 2, 3, 4, 5].map((id) =>
+        entry({ id: String(id), duration_seconds: 60 }),
+      ),
+      date: today,
+      today,
+      timezone: tz,
+    })
+    expect(done).toMatchObject({ status: 'done', value: 5, target: 5 })
+  })
+
   it('done when target met', () => {
     expect(
       getDayStatus({
@@ -193,6 +219,67 @@ describe('getDayStatus — daily checkbox / count', () => {
         timezone: tz,
       }),
     ).toMatchObject({ status: 'partial', value: 1, target: 3 })
+  })
+
+  it('counts a protein log as 5 g and can pass the goal', () => {
+    const protein = activity({
+      tracking_mode: 'count',
+      target_value: 50,
+      target_unit: 'g',
+    })
+    expect(
+      getDayStatus({
+        activity: protein,
+        entriesForDay: [entry({ id: '1', type: 'completed', source: null, duration_seconds: null })],
+        date: today,
+        today,
+        timezone: tz,
+      }),
+    ).toMatchObject({ status: 'partial', value: 5, target: 50 })
+    const twenty = activity({
+      tracking_mode: 'count',
+      target_value: 20,
+      target_unit: 'g',
+    })
+    expect(
+      getDayStatus({
+        activity: twenty,
+        entriesForDay: [1, 2, 3, 4, 5].map((id) =>
+          entry({ id: String(id), type: 'completed', source: null, duration_seconds: null }),
+        ),
+        date: today,
+        today,
+        timezone: tz,
+      }),
+    ).toMatchObject({ status: 'done', value: 25, target: 20 })
+  })
+
+  it('counts a fasting log as 4 hours toward the goal', () => {
+    const fasting = activity({
+      tracking_mode: 'count',
+      target_value: 16,
+      target_unit: 'hours',
+    })
+    expect(
+      getDayStatus({
+        activity: fasting,
+        entriesForDay: [entry({ id: '1', type: 'completed', source: null, duration_seconds: null })],
+        date: today,
+        today,
+        timezone: tz,
+      }),
+    ).toMatchObject({ status: 'partial', value: 4, target: 16 })
+    expect(
+      getDayStatus({
+        activity: fasting,
+        entriesForDay: [1, 2, 3, 4].map((id) =>
+          entry({ id: String(id), type: 'completed', source: null, duration_seconds: null }),
+        ),
+        date: today,
+        today,
+        timezone: tz,
+      }),
+    ).toMatchObject({ status: 'done', value: 16, target: 16 })
   })
 
   it('count done / open / missed', () => {

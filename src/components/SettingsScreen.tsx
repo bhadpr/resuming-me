@@ -9,6 +9,7 @@ import {
   loadDailyDigestPrefs,
   parseTimeInput,
   saveDailyDigestPrefs,
+  withDigestTimes,
   type DailyDigestPrefs,
   type DigestItem,
 } from '../lib/dailyDigest'
@@ -19,7 +20,7 @@ import {
   scheduleTestDigest,
 } from '../lib/localNotifications'
 import { downloadUserDataExport } from '../lib/exportData'
-import { loadCheckinOptOut, saveCheckinOptOut } from '../lib/checkinPrefs'
+import { loadCheckinOptOut, loadReminderTime, saveCheckinOptOut, saveReminderTime, emailReminderLine } from '../lib/checkinPrefs'
 import { deleteCurrentAccount } from '../lib/deleteAccount'
 import { REVIEW_WEEKDAYS } from '../lib/weeklyReview'
 
@@ -82,13 +83,16 @@ export function SettingsScreen({
   const [deleteError, setDeleteError] = useState<string | null>(null)
   const scheduleHint = digestScheduleHint(todayItems, digest)
   const [checkinsOff, setCheckinsOff] = useState(false)
+  const [reminderTime, setReminderTime] = useState<string | null>(null)
 
   useEffect(() => {
     if (!user) return
     let mounted = true
-    void loadCheckinOptOut(user.id)
-      .then((off) => {
-        if (mounted) setCheckinsOff(off)
+    void Promise.all([loadCheckinOptOut(user.id), loadReminderTime(user.id)])
+      .then(([off, time]) => {
+        if (!mounted) return
+        setCheckinsOff(off)
+        setReminderTime(time)
       })
       .catch(() => {})
     return () => {
@@ -106,7 +110,20 @@ export function SettingsScreen({
 
   async function updateDigest(patch: Partial<DailyDigestPrefs>) {
     const previous = digestRef.current
-    const next = { ...previous, ...patch }
+    let next: DailyDigestPrefs = { ...previous, ...patch }
+    if (patch.times) {
+      next = withDigestTimes(next, patch.times)
+    } else if (patch.hour != null || patch.minute != null) {
+      const currentTimes = previous.times?.length
+        ? previous.times
+        : [{ hour: previous.hour, minute: previous.minute }]
+      const times = currentTimes.map((item, index) =>
+        index === 0 ? { hour: next.hour, minute: next.minute } : item,
+      )
+      next = withDigestTimes(next, times)
+    } else {
+      next = withDigestTimes(next, next.times?.length ? next.times : [{ hour: next.hour, minute: next.minute }])
+    }
     digestRef.current = next
     setDigest(next)
     setPermissionError(null)
@@ -191,9 +208,10 @@ export function SettingsScreen({
         <div className="digest-card">
           <div className="digest-toggle">
             <span className="activity-meta">
-              <span className="activity-name">Daily reminder</span>
+              <span className="activity-name">Daily reminders</span>
               <span className="activity-desc">
-                One ping a day if something is still open. Silent if you&apos;re done.
+                A few nudges early on help you come back. Later you can keep one —
+                or none. Silent once you&apos;re done.
               </span>
             </span>
             <button
@@ -210,27 +228,85 @@ export function SettingsScreen({
           </div>
 
           {!native && (
-            <p className="digest-hint">Available in the Android app. Per-activity alerts can wait.</p>
+            <p className="digest-hint">
+              {reminderTime && !checkinsOff
+                ? emailReminderLine(reminderTime)
+                : 'Set a time on the day 2, 3, and 7 emails. Nothing is sent if you are done.'}
+            </p>
           )}
 
           {native && (
             <div className="field">
-              <span className="field-label" id="digest-time-label">
-                Time
-              </span>
-              <input
-                className="field-input time-input"
-                type="time"
-                value={formatTimeInput(digest.hour, digest.minute)}
-                aria-labelledby="digest-time-label"
-                onChange={(event) => {
-                  const parsed = parseTimeInput(event.target.value)
-                  if (!parsed) return
-                  void updateDigest(parsed)
-                }}
-              />
+              <span className="field-label">Reminders</span>
+              <div className="reminder-times">
+                {(digest.times ?? [{ hour: digest.hour, minute: digest.minute }]).map(
+                  (time, index) => (
+                    <div key={`digest-time-${index}`} className="reminder-time-row">
+                      <input
+                        className="field-input time-input"
+                        type="time"
+                        value={formatTimeInput(time.hour, time.minute)}
+                        aria-label={index === 0 ? 'Reminder time' : `Reminder ${index + 1}`}
+                        onChange={(event) => {
+                          const parsed = parseTimeInput(event.target.value)
+                          if (!parsed) return
+                          const current = digest.times ?? [
+                            { hour: digest.hour, minute: digest.minute },
+                          ]
+                          const times = current.map((item, i) => (i === index ? parsed : item))
+                          void updateDigest({
+                            hour: times[0].hour,
+                            minute: times[0].minute,
+                            times,
+                          })
+                        }}
+                      />
+                      {(digest.times?.length ?? 1) > 1 && (
+                        <button
+                          type="button"
+                          className="btn btn-ghost btn-sm"
+                          aria-label={`Remove reminder ${index + 1}`}
+                          onClick={() => {
+                            const current = digest.times ?? [
+                              { hour: digest.hour, minute: digest.minute },
+                            ]
+                            const times = current.filter((_, i) => i !== index)
+                            void updateDigest({
+                              hour: times[0].hour,
+                              minute: times[0].minute,
+                              times,
+                            })
+                          }}
+                        >
+                          Remove
+                        </button>
+                      )}
+                    </div>
+                  ),
+                )}
+              </div>
+              {(digest.times?.length ?? 1) < 5 && (
+                <button
+                  type="button"
+                  className="btn btn-secondary btn-sm"
+                  onClick={() => {
+                    const current = digest.times ?? [
+                      { hour: digest.hour, minute: digest.minute },
+                    ]
+                    const times = [...current, { hour: 12, minute: 0 }]
+                    void updateDigest({
+                      hour: times[0].hour,
+                      minute: times[0].minute,
+                      times,
+                    })
+                  }}
+                >
+                  Add more reminder
+                </button>
+              )}
               <p className="digest-hint">
-                If everything due today is done before this time, you&apos;ll get nothing.
+                Early on, extra nudges help. Once the habit sticks, keep fewer. We only
+                ping if something is still open.
               </p>
               {scheduleHint && <p className="digest-hint digest-schedule">{scheduleHint}</p>}
               {exactDenied && (
@@ -267,7 +343,9 @@ export function SettingsScreen({
             <span className="activity-meta">
               <span className="activity-name">Day 2, 3, and 7 emails</span>
               <span className="activity-desc">
-                A short note if you opted in. Off stops them, including from the email link.
+                {reminderTime && !checkinsOff
+                  ? emailReminderLine(reminderTime)
+                  : 'A short note on day 2, 3, and 7. Nothing if you are done.'}
               </span>
             </span>
             <button
@@ -286,6 +364,24 @@ export function SettingsScreen({
               <span className="digest-switch-knob" aria-hidden />
             </button>
           </div>
+          {!checkinsOff && (
+            <label className="field">
+              <span className="field-label">Email time</span>
+              <input
+                className="field-input"
+                type="time"
+                value={reminderTime ?? ''}
+                onChange={(event) => {
+                  const next = event.target.value
+                  if (!next) return
+                  const previous = reminderTime
+                  setReminderTime(next)
+                  if (!user) return
+                  void saveReminderTime(user.id, next).catch(() => setReminderTime(previous))
+                }}
+              />
+            </label>
+          )}
         </div>
       </section>
 
@@ -340,6 +436,7 @@ export function SettingsScreen({
             value={birthday ?? ''}
             onChange={(event) => onBirthday?.(event.target.value || null)}
           />
+          <p className="digest-hint">Optional. We'll say happy birthday on Today.</p>
         </label>
         {birthday && (
           <button type="button" className="btn btn-ghost" onClick={() => onBirthday?.(null)}>

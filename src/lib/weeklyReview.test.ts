@@ -1,7 +1,7 @@
 import { describe, expect, it } from 'vitest'
 import type { Activity } from './activities'
 import type { LogEntry } from './logs'
-import { activeReviewWindow, buildWeeklyReview, DEFAULT_REVIEW_SCHEDULE, focusApplies, nextFocusWeekStart } from './weeklyReview'
+import { activeReviewWindow, buildWeeklyReview, DEFAULT_REVIEW_SCHEDULE, focusApplies, formatReviewRange, nextFocusWeekStart } from './weeklyReview'
 
 function activity(overrides: Partial<Activity> = {}): Activity {
   return {
@@ -87,6 +87,7 @@ describe('weekly review', () => {
       weekStart: '2026-09-14',
     })
     expect(empty.headline).toBe('Quiet week. It happens.')
+    expect(empty.comebackLine).toBe('Quiet week. You can still start.')
 
     const fresh = buildWeeklyReview({
       activities: [activity({ created_at: '2026-09-18T00:00:00Z' })],
@@ -114,5 +115,10 @@ describe('weekly review', () => {
     expect(nextFocusWeekStart('2026-09-14')).toBe('2026-09-21')
     expect(focusApplies('2026-09-21', '2026-09-23')).toBe(true)
     expect(focusApplies('2026-09-14', '2026-09-23')).toBe(false)
+  })
+
+  it('writes the review range as a short date', () => {
+    expect(formatReviewRange('2026-09-14', '2026-09-20')).toBe('Sep 14–20')
+    expect(formatReviewRange('2026-09-28', '2026-10-04')).toBe('Sep 28–Oct 4')
   })
 })

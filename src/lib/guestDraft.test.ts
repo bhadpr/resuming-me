@@ -2,7 +2,11 @@ import { afterEach, describe, expect, it, vi } from 'vitest'
 import {
   GUEST_DRAFT_KEY,
   GUEST_DRAFT_TTL_MS,
+  appendGuestCount,
   appendGuestLog,
+  guestCountProgress,
+  guestSessionSeconds,
+  guestTimerProgress,
   guestDraftToPayload,
   clampStep,
   clearGuestDraft,
@@ -94,7 +98,7 @@ describe('guest draft storage', () => {
     expect(loadGuestDraft()?.step).toBe(4)
   })
 
-  it('caps activities at 3 and keeps answers across reload', () => {
+  it('keeps many habits up to the guest cap and keeps answers across reload', () => {
     memoryStorage()
     let draft = ensureGuestDraft('UTC')
     draft = upsertGuestActivity(draft, activity('a', 'Reading'))
@@ -108,19 +112,107 @@ describe('guest draft storage', () => {
     })
 
     const loaded = loadGuestDraft()
-    expect(loaded?.activities.map((a) => a.name)).toEqual(['Reading', 'Walk', 'Meditate'])
+    expect(loaded?.activities.map((a) => a.name)).toEqual([
+      'Reading',
+      'Walk',
+      'Meditate',
+      'Guitar',
+    ])
     expect(loaded?.gapAnswer).toEqual({ a: 'a few days' })
     expect(loaded?.slipAnswer).toEqual(['Evenings', 'Weekends'])
   })
 
-  it('does not store a session under 30 seconds', () => {
+  it('stores a protein tap without a timer session', () => {
+    memoryStorage()
+    let draft = ensureGuestDraft('UTC')
+    draft = upsertGuestActivity(draft, {
+      ...activity('p', 'Protein'),
+      trackingMode: 'count',
+      targetValue: 20,
+      targetUnit: 'g',
+      templateId: 'protein',
+    })
+    draft = appendGuestCount(draft, 'p', '2026-09-23')
+    const loaded = loadGuestDraft()
+    expect(loaded?.logs).toHaveLength(1)
+    expect(loaded?.logs[0]?.kind).toBe('count')
+    expect(guestCountProgress(
+      { targetValue: 20, targetUnit: 'g' },
+      1,
+    )).toMatchObject({ value: 5, done: false, label: '5 g / 20 g' })
+    let next = loaded!
+    for (let tap = 0; tap < 4; tap += 1) next = appendGuestCount(next, 'p', '2026-09-23')
+    expect(loadGuestDraft()?.logs).toHaveLength(5)
+    expect(guestCountProgress({ targetValue: 20, targetUnit: 'g' }, 5)).toMatchObject({
+      value: 25,
+      done: true,
+      label: '25 g / 20 g',
+    })
+    draft = upsertGuestActivity(loadGuestDraft()!, {
+      ...activity('f', 'Fasting'),
+      trackingMode: 'count',
+      targetValue: 4,
+      targetUnit: 'hours',
+      templateId: 'fasting',
+    })
+    draft = appendGuestCount(draft, 'f', '2026-09-23')
+    draft = appendGuestCount(draft, 'f', '2026-09-23')
+    expect(loadGuestDraft()?.logs.filter((log) => log.localActivityId === 'f')).toHaveLength(2)
+    expect(guestCountProgress({ targetValue: 4, targetUnit: 'hours' }, 2)).toMatchObject({
+      value: 8,
+      done: true,
+      label: '8 hours / 4 hours',
+    })
+  })
+
+  it('keeps timer sessions of at least one second and adds later bouts the same day', () => {
+    memoryStorage()
+    let draft = ensureGuestDraft('UTC')
+    draft = upsertGuestActivity(draft, {
+      ...activity('b', 'Bhastrika'),
+      targetValue: 3,
+      targetUnit: 'minutes',
+      templateId: 'bhastrika',
+    })
+    draft = appendGuestLog(draft, {
+      localActivityId: 'b',
+      startedAt: '2026-09-22T18:00:00.000Z',
+      durationSeconds: 12,
+      date: '2026-09-22',
+    })
+    expect(loadGuestDraft()?.logs).toHaveLength(1)
+    expect(guestSessionSeconds(draft, 'b', '2026-09-22')).toBe(12)
+
+    draft = appendGuestLog(draft, {
+      localActivityId: 'b',
+      startedAt: '2026-09-22T18:05:00.000Z',
+      durationSeconds: 120,
+      date: '2026-09-22',
+    })
+    expect(guestSessionSeconds(draft, 'b', '2026-09-22')).toBe(132)
+    expect(guestTimerProgress({ targetValue: 3, targetUnit: 'minutes' }, 132)).toMatchObject({
+      done: false,
+      label: '2.2 min / 3 min',
+    })
+
+    draft = appendGuestLog(draft, {
+      localActivityId: 'b',
+      startedAt: '2026-09-22T18:10:00.000Z',
+      durationSeconds: 60,
+      date: '2026-09-22',
+    })
+    expect(guestSessionSeconds(draft, 'b', '2026-09-22')).toBe(192)
+    expect(guestTimerProgress({ targetValue: 3, targetUnit: 'minutes' }, 192).done).toBe(true)
+  })
+
+  it('does not store a zero-second session', () => {
     memoryStorage()
     let draft = ensureGuestDraft('UTC')
     draft = upsertGuestActivity(draft, activity('a'))
     draft = appendGuestLog(draft, {
       localActivityId: 'a',
       startedAt: '2026-09-22T18:00:00.000Z',
-      durationSeconds: 12,
+      durationSeconds: 0,
       date: '2026-09-22',
     })
     expect(loadGuestDraft()?.logs).toEqual([])
@@ -133,6 +225,78 @@ describe('guest draft storage', () => {
     })
     expect(loadGuestDraft()?.logs).toHaveLength(1)
     expect(loadGuestDraft()?.logs[0]?.startedAt).toBe('2026-09-22T18:00:00.000Z')
+  })
+
+  it('keeps a one-minute walk and adds later walks the same day', () => {
+    memoryStorage()
+    let draft = ensureGuestDraft('UTC')
+    draft = upsertGuestActivity(draft, {
+      ...activity('w', 'Walking'),
+      targetValue: 5,
+      targetUnit: 'minutes',
+      templateId: 'walk',
+    })
+    draft = appendGuestLog(draft, {
+      localActivityId: 'w',
+      startedAt: '2026-09-23T10:00:00.000Z',
+      durationSeconds: 60,
+      date: '2026-09-23',
+    })
+    expect(guestSessionSeconds(draft, 'w', '2026-09-23')).toBe(60)
+    expect(guestTimerProgress({ targetValue: 5, targetUnit: 'minutes' }, 60)).toMatchObject({
+      done: false,
+      label: '1.0 min / 5 min',
+    })
+    for (let bout = 0; bout < 4; bout += 1) {
+      draft = appendGuestLog(draft, {
+        localActivityId: 'w',
+        startedAt: `2026-09-23T11:0${bout}:00.000Z`,
+        durationSeconds: 60,
+        date: '2026-09-23',
+      })
+    }
+    expect(loadGuestDraft()?.logs).toHaveLength(5)
+    expect(guestSessionSeconds(draft, 'w', '2026-09-23')).toBe(300)
+    expect(guestTimerProgress({ targetValue: 5, targetUnit: 'minutes' }, 300).done).toBe(true)
+    draft = appendGuestLog(draft, {
+      localActivityId: 'w',
+      startedAt: '2026-09-23T12:00:00.000Z',
+      durationSeconds: 60,
+      date: '2026-09-23',
+    })
+    expect(guestSessionSeconds(draft, 'w', '2026-09-23')).toBe(360)
+  })
+
+  it('tracks each timer habit on its own, including a second one', () => {
+    memoryStorage()
+    let draft = ensureGuestDraft('UTC')
+    draft = upsertGuestActivity(draft, {
+      ...activity('b', 'Bhastrika'),
+      targetValue: 3,
+      targetUnit: 'minutes',
+      templateId: 'bhastrika',
+    })
+    draft = upsertGuestActivity(draft, {
+      ...activity('p', 'Piano'),
+      targetValue: 2,
+      targetUnit: 'minutes',
+      templateId: null,
+    })
+    expect(guestTimerProgress({ targetValue: 3, targetUnit: 'minutes' }, 0)).toMatchObject({
+      done: false,
+      targetSeconds: 180,
+      label: '0.0 min / 3 min',
+    })
+    draft = appendGuestLog(draft, {
+      localActivityId: 'b',
+      startedAt: '2026-09-23T10:00:00.000Z',
+      durationSeconds: 180,
+      date: '2026-09-23',
+    })
+    expect(guestSessionSeconds(draft, 'b', '2026-09-23')).toBe(180)
+    expect(guestSessionSeconds(draft, 'p', '2026-09-23')).toBe(0)
+    expect(guestTimerProgress({ targetValue: 3, targetUnit: 'minutes' }, 180).done).toBe(true)
+    expect(guestTimerProgress({ targetValue: 2, targetUnit: 'minutes' }, 0).done).toBe(false)
   })
 
   it('drops a stale draft on load', () => {

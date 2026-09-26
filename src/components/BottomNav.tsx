@@ -7,8 +7,8 @@ interface BottomNavProps {
 
 const TABS: Array<{ id: AppTab; label: string }> = [
   { id: 'today', label: 'Today' },
-  { id: 'activities', label: 'Activities' },
-  { id: 'metrics', label: 'Numbers' },
+  { id: 'activities', label: 'Abhyas' },
+  { id: 'metrics', label: 'Vitals' },
   { id: 'insights', label: 'Insights' },
 ]
 

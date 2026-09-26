@@ -20,11 +20,10 @@ export function DeadlineOverduePrompt({
   return (
     <div className="deadline-prompt">
       <p className="deadline-prompt-title">
-        {activity.emoji} {activity.name} is overdue
+        {activity.emoji} {activity.name} is past the date
       </p>
       <p className="deadline-prompt-body">
-        Still open{activity.deadline ? ` — due ${activity.deadline}` : ''}. Mark it
-        done, or pick a new date.
+        Still open. Mark it done, or pick a new date.
       </p>
 
       {!showReschedule ? (

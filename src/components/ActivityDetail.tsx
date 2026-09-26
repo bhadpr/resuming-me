@@ -1,5 +1,6 @@
 import { useEffect, useMemo, useState } from 'react'
 import { describeActivity, type Activity } from '../lib/activities'
+import { HabitMark } from './HabitMark'
 import type { LogEntry } from '../lib/logs'
 import {
   computeActivityStats,
@@ -45,6 +46,13 @@ function heatClass(status: string): string {
   if (status === 'missed') return 'missed'
   if (status === 'fresh') return 'outline'
   return 'open'
+}
+
+function heatWords(status: string): string {
+  if (status === 'done' || status === 'partial') return 'showed up'
+  if (status === 'missed') return 'quiet'
+  if (status === 'paused') return 'paused'
+  return 'not scheduled'
 }
 
 interface ActivityDetailProps {
@@ -182,9 +190,7 @@ export function ActivityDetail({
       </button>
 
       <div className="detail-hero">
-        <span className="detail-emoji" aria-hidden>
-          {activity.emoji}
-        </span>
+        <HabitMark name={activity.name} />
         <h2>{activity.name}</h2>
         <p className="screen-sub">{describeActivity(activity)}</p>
         {activity.archived && <span className="badge">Archived</span>}
@@ -202,7 +208,7 @@ export function ActivityDetail({
                   type="button"
                   role="listitem"
                   className={`heat-cell heat-${heatClass(day.status)} ${heatDate === day.date ? 'heat-selected' : ''}`}
-                  aria-label={`${day.date} ${day.status}`}
+                  aria-label={`${day.date}, ${heatWords(day.status)}`}
                   onClick={() => setHeatDate((current) => (current === day.date ? null : day.date))}
                 />
               ))}
@@ -219,6 +225,20 @@ export function ActivityDetail({
                 : ' · nothing logged'}
             </p>
           )}
+          <div className="heat-legend">
+            <span className="heat-legend-item">
+              <span className="heat-cell heat-showed" aria-hidden />
+              Showed up
+            </span>
+            <span className="heat-legend-item">
+              <span className="heat-cell heat-missed" aria-hidden />
+              Quiet
+            </span>
+            <span className="heat-legend-item">
+              <span className="heat-cell heat-outline" aria-hidden />
+              Not scheduled
+            </span>
+          </div>
         </section>
       )}
 
@@ -231,7 +251,7 @@ export function ActivityDetail({
               disabled={busy}
               onClick={() => void onResume?.()}
             >
-              Resume activity
+              Resume habit
             </button>
           ) : pauseOpen ? (
             <div className="detail-pause-sheet">
@@ -270,14 +290,9 @@ export function ActivityDetail({
               Pause
             </button>
           )}
-          {activePause && (
-            <p className="activity-desc">
-              Hidden from Today
-              {activePause.paused_until
-                ? ` until ${activePause.paused_until}`
-                : ' until you resume'}
-              .
-            </p>
+          <p className="activity-desc">Pause. This habit stays hidden until you come back.</p>
+          {activePause?.paused_until && (
+            <p className="activity-desc">Until {activePause.paused_until}.</p>
           )}
         </div>
       )}
@@ -519,7 +534,7 @@ export function ActivityDetail({
 
       <div className="detail-actions">
         <button type="button" className="btn btn-primary" onClick={onEdit} disabled={busy}>
-          Edit activity
+          Edit habit
         </button>
         {shrink && onShrink && (
           <button

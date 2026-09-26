@@ -15,7 +15,15 @@ import {
   sumSessionSeconds,
   targetToSeconds,
 } from './timer'
-import { getDayStatus, isOffWeekday, isPausedOnDate, type ActivityPause, type DayStatus } from './dayStatus'
+import {
+  countPortion,
+  getDayStatus,
+  isOffWeekday,
+  isPausedOnDate,
+  stacksSessionMinutes,
+  type ActivityPause,
+  type DayStatus,
+} from './dayStatus'
 
 export type TodayActionKind = 'checkbox' | 'count' | 'timer' | 'deadline'
 
@@ -234,13 +242,29 @@ export function buildTodayProgress(
           )
         : completedCountInWindow(entries, activity.id, from, to)
 
-    let current = periodCompletedEntries.length
-    const target = periodTarget(activity)
+    const portion = actionKind === 'count' ? countPortion(activity.target_unit) : 1
+    let current = periodCompletedEntries.length * portion
+    let target = periodTarget(activity)
     let daysRemaining: number | null = null
     let overdue = false
-    let progressLabel = `${current}/${target}`
+    let progressLabel =
+      activity.target_unit === 'g'
+        ? `${current} g / ${target} g`
+        : activity.target_unit === 'hours' || activity.target_unit === 'hr'
+          ? `${current} hours / ${target} hours`
+          : `${current}/${target}`
 
-    if (actionKind === 'timer') {
+    if (actionKind === 'timer' && stacksSessionMinutes(activity)) {
+      const fromDay = activity.type === 'weekly_n' ? startOfWeekMonday(today) : today
+      const toDay = activity.type === 'weekly_n' ? endOfWeekSunday(today) : today
+      current = sumSessionSeconds(entries, activity.id, fromDay, toDay)
+      const repeats = activity.type === 'weekly_n' ? Math.max(1, activity.weekly_target ?? 1) : 1
+      target = targetToSeconds(activity) * repeats
+      const shown =
+        activity.target_unit === 'seconds' ? target : Math.round((target / 60) * 10) / 10
+      const unit = activity.target_unit === 'seconds' ? 'sec' : 'min'
+      progressLabel = `${formatSecondsAsTargetUnit(current, activity.target_unit)} / ${shown} ${unit}`
+    } else if (actionKind === 'timer') {
       if (activity.type === 'weekly_n') {
         const minSeconds = targetToSeconds(activity)
         current = countQualifyingSessions(
@@ -264,14 +288,14 @@ export function buildTodayProgress(
       overdue = daysRemaining != null && daysRemaining < 0 && !completed
       if (completed) {
         if (daysRemaining != null && daysRemaining > 0) {
-          progressLabel = `Completed · ${daysRemaining}d until due`
-        } else if (daysRemaining === 0) {
-          progressLabel = 'Completed · due today'
+          progressLabel = `Completed · ${daysRemaining} ${daysRemaining === 1 ? 'day' : 'days'} left`
         } else {
           progressLabel = 'Completed'
         }
-      } else if (overdue) progressLabel = `Overdue by ${Math.abs(daysRemaining ?? 0)}d`
-      else if (daysRemaining === 0) progressLabel = 'Due today'
+      } else if (overdue) {
+        const late = Math.abs(daysRemaining ?? 0)
+        progressLabel = late > 0 ? `Past the date by ${late} ${late === 1 ? 'day' : 'days'}` : 'Past the date'
+      } else if (daysRemaining === 0) progressLabel = 'Open today'
       else progressLabel = `${daysRemaining}d left`
     } else if (activity.type === 'weekly_n') {
       progressLabel = `${current}/${target} this week`
@@ -376,24 +400,22 @@ export function todayEmptyKind(opts: {
 
 export function partitionTodayRows(
   rows: ActivityTodayProgress[],
-  timerActivityId: string | null,
+  _timerActivityId: string | null,
   preferredHeroId?: string | null,
 ): {
   hero: ActivityTodayProgress | null
   alsoDue: ActivityTodayProgress[]
   done: ActivityTodayProgress[]
 } {
+  // A running timer stays in its row. Starting must not promote it to the top.
   let hero: ActivityTodayProgress | null = null
-  if (timerActivityId) {
-    hero = rows.find((row) => row.activity.id === timerActivityId) ?? null
-  }
-  if (!hero && preferredHeroId) {
+  if (preferredHeroId) {
     const preferred = rows.find(
       (row) => row.activity.id === preferredHeroId && !isSettledToday(row),
     )
     if (preferred) hero = preferred
   }
-  if (!hero) hero = pickHeroRow(rows, timerActivityId)
+  if (!hero) hero = pickHeroRow(rows, null)
   const done = rows.filter(
     (row) => isSettledToday(row) && row.activity.id !== hero?.activity.id,
   )

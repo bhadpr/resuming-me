@@ -12,6 +12,45 @@ import {
   targetToSeconds,
 } from './timer.ts'
 
+/** One protein tap adds 5 g. The day can go past the goal. */
+export const PROTEIN_GRAMS_PER_PORTION = 5
+/** One fasting tap adds 4 hours. */
+export const FASTING_HOURS_PER_TAP = 4
+
+export function countPortion(unit: string | null | undefined): number {
+  if (unit === 'g') return PROTEIN_GRAMS_PER_PORTION
+  if (unit === 'hours') return FASTING_HOURS_PER_TAP
+  return 1
+}
+
+/** Protein and fasting can keep logging after the goal is met. */
+export function canLogPastGoal(unit: string | null | undefined): boolean {
+  return unit === 'g' || unit === 'hours' || unit === 'hr'
+}
+
+const STACKED_MINUTE_TEMPLATES = new Set(['walk', 'running', 'exercise', 'stretching'])
+const STACKED_MINUTE_NAMES = new Set([
+  'walking',
+  'running',
+  'exercise',
+  'strength',
+  'stretching',
+  'exercises',
+])
+
+/**
+ * Walking, Strength, and Exercises add every bout.
+ * One minute five times is five minutes, even when each bout is shorter than the goal.
+ */
+export function stacksSessionMinutes(activity: {
+  templateId?: string | null
+  name?: string | null
+}): boolean {
+  if (activity.templateId && STACKED_MINUTE_TEMPLATES.has(activity.templateId)) return true
+  const name = activity.name?.trim().toLowerCase()
+  return name != null && STACKED_MINUTE_NAMES.has(name)
+}
+
 export type DayStatus =
   | 'done'
   | 'partial'
@@ -34,6 +73,8 @@ export type DayStatusActivity = Pick<
 > & {
   /** 0 = Sunday … 6 = Saturday. These days are not scheduled. */
   off_weekdays?: number[] | null
+  /** Used to add short Walking, Strength, and Exercises bouts. */
+  name?: string | null
 }
 
 export type DayStatusEntry = Pick<
@@ -95,7 +136,29 @@ function progressAndTarget(
   activity: DayStatusActivity,
   entries: DayStatusEntry[],
   date: string,
+  today: string,
 ): { value: number; target: number; met: boolean } {
+  if (activity.tracking_mode === 'timer' && stacksSessionMinutes(activity)) {
+    const from = activity.type === 'weekly_n' ? startOfWeekMonday(today) : today
+    const to = activity.type === 'weekly_n' ? endOfWeekSunday(today) : today
+    const seconds = sumSessionSeconds(entries as LogEntry[], activity.id, from, to)
+    const repeats = activity.type === 'weekly_n' ? Math.max(1, activity.weekly_target ?? 1) : 1
+    const targetSeconds = targetToSeconds(activity as Activity) * repeats
+    const value =
+      activity.target_unit === 'seconds'
+        ? seconds
+        : Math.round((seconds / 60) * 10) / 10
+    const targetDisplay =
+      activity.target_unit === 'seconds'
+        ? targetSeconds
+        : Math.round((targetSeconds / 60) * 10) / 10
+    return {
+      value,
+      target: targetDisplay,
+      met: targetSeconds > 0 && seconds >= targetSeconds,
+    }
+  }
+
   if (activity.type === 'deadline') {
     const done = entries.some(
       (e) => e.activity_id === activity.id && e.type === 'completed',
@@ -172,15 +235,21 @@ function progressAndTarget(
     return { value: value > 0 ? 1 : 0, target: 1, met: value >= 1 }
   }
 
-  // count
-  const target = activity.target_value ?? 1
-  const value = entries.filter(
+  // count. Each protein log is 5 g, and extra logs past the goal still count.
+  const completions = entries.filter(
     (e) =>
       e.activity_id === activity.id &&
       e.type === 'completed' &&
       e.date === date,
   ).length
-  return { value, target, met: value >= target }
+  if (activity.target_unit === 'g' || activity.target_unit === 'hours' || activity.target_unit === 'hr') {
+    const portion = countPortion(activity.target_unit)
+    const value = completions * portion
+    const target = activity.target_value ?? portion
+    return { value, target, met: value >= target }
+  }
+  const target = activity.target_value ?? 1
+  return { value: completions, target, met: completions >= target }
 }
 
 export function weekdayIndex(date: string): number {
@@ -240,12 +309,12 @@ export function getDayStatus(input: GetDayStatusInput): DayStatusResult {
   )
 
   if (input.restDates?.has(date)) {
-    const { value, target } = progressAndTarget(activity, progressEntries, date)
+    const { value, target } = progressAndTarget(activity, progressEntries, date, today)
     return { status: 'rest', value, target }
   }
 
   if (isPausedOnDate(activity.id, date, input.pauses)) {
-    const { value, target } = progressAndTarget(activity, progressEntries, date)
+    const { value, target } = progressAndTarget(activity, progressEntries, date, today)
     return { status: 'paused', value, target }
   }
 
@@ -255,7 +324,7 @@ export function getDayStatus(input: GetDayStatusInput): DayStatusResult {
     postponed.length > 0 && postponed.every(isAutoPostponed) && !userSkip
 
   if (userSkip) {
-    const { value, target } = progressAndTarget(activity, progressEntries, date)
+    const { value, target } = progressAndTarget(activity, progressEntries, date, today)
     return { status: 'skipped', value, target }
   }
 
@@ -263,6 +332,7 @@ export function getDayStatus(input: GetDayStatusInput): DayStatusResult {
     activity,
     progressEntries,
     date,
+    today,
   )
 
   if (met) {

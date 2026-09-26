@@ -212,7 +212,7 @@ describe('buildTodayProgress', () => {
     expect(rows).toHaveLength(1)
     expect(rows[0].done).toBe(true)
     expect(rows[0].actionKind).toBe('checkbox')
-    expect(rows[0].progressLabel).toBe('Completed · 9d until due')
+    expect(rows[0].progressLabel).toBe('Completed · 9 days left')
   })
 
   it('hides completed deadlines after due date passes', () => {
@@ -312,6 +312,21 @@ describe('partitionTodayRows', () => {
     expect(parts.hero?.activity.id).toBe('read')
     expect(parts.done.map((r) => r.activity.id)).toEqual(['walk'])
     expect(parts.alsoDue).toEqual([])
+  })
+
+  it('keeps a running timer in its list place', () => {
+    const walk = activity({ id: 'walk', name: 'Walk' })
+    const read = activity({
+      id: 'read',
+      name: 'Reading',
+      tracking_mode: 'timer',
+      target_value: 10,
+      target_unit: 'min',
+    })
+    const rows = buildTodayProgress([walk, read], [], [], '2026-08-11')
+    const parts = partitionTodayRows(rows, 'read')
+    expect(parts.hero?.activity.id).toBe('walk')
+    expect(parts.alsoDue.map((row) => row.activity.id)).toEqual(['read'])
   })
 
   it('can prefer a suggested hero during re-entry', () => {

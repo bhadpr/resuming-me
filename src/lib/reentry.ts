@@ -231,12 +231,20 @@ export function reentrySuggestLine(row: ActivityTodayProgress): string {
     const value = row.activity.target_value ?? 0
     return `Try ${name} · ${value} ${unit}`
   }
+  if (row.actionKind === 'count' && row.activity.target_unit === 'glasses') return `Try ${name} · 1 glass`
+  if (row.actionKind === 'count' && row.activity.target_unit === 'g') return `Try ${name} · +5 g`
+  if (row.actionKind === 'count' && row.activity.target_unit === 'hours') return `Try ${name} · +4 hours`
+  if (row.actionKind === 'count' && row.activity.target_unit === 'hr') return `Try ${name} · +1 hour`
   if (row.actionKind === 'count') return `Try ${name} · +1`
   return `Try ${name}`
 }
 
 export function reentryPrimaryLabel(row: ActivityTodayProgress): string {
   if (row.actionKind === 'checkbox') return 'Done'
+  if (row.actionKind === 'count' && row.activity.target_unit === 'glasses') return '1 glass'
+  if (row.actionKind === 'count' && row.activity.target_unit === 'g') return '+5 g'
+  if (row.actionKind === 'count' && row.activity.target_unit === 'hours') return '+4 hours'
+  if (row.actionKind === 'count' && row.activity.target_unit === 'hr') return '+1 hour'
   if (row.actionKind === 'count') return '+1'
   if (row.actionKind === 'deadline') return 'Complete'
   return 'Start'

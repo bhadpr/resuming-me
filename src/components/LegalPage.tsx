@@ -49,12 +49,11 @@ function AboutContent() {
   return (
     <>
       <p>
-        Start again, two minutes counts.
+        Resuming is for one small habit. Do two minutes. If a few days pass, start again. That still counts.
       </p>
       <p>
-        Miss a few days and Resuming meets you there, with one small way back.
-        Rest, a skip, and a pause are not failures. Insights keeps the record of
-        what you pick back up.
+        A rest, a skip, and a pause are not failures. Insights keeps a record of
+        the days you pick it back up.
       </p>
       <p>
         Built for a single person who wants a calm, no-shame tool — not gamification,

@@ -38,6 +38,9 @@ export function WelcomeBackCard({
     onStart(row, tinyTimerMinutes(activity))
   }
 
+  const startMinutes = tinyTimerMinutes(model.suggestion) ?? 2
+  const startLabel = `Start ${startMinutes} ${startMinutes === 1 ? 'minute' : 'minutes'}`
+
   return (
     <div className="today-welcome">
       <p className="today-empty-title">{welcomeBackLine(model.gapDays)}</p>
@@ -65,7 +68,7 @@ export function WelcomeBackCard({
             disabled={busyId === model.suggestion.id || !rowFor(model.suggestion)}
             onClick={() => start(model.suggestion)}
           >
-            Start
+            {startLabel}
           </button>
           {model.alternatives.length > 0 && (
             <button type="button" className="btn btn-secondary" onClick={() => setPickerOpen(true)}>
@@ -86,6 +89,7 @@ export function WelcomeBackCard({
       )}
       {model.gapDays >= 7 && (
         <div className="today-welcome-actions">
+          <p className="onboarding-hint">Fresh start. Quiet days before today stay covered.</p>
           <button
             type="button"
             className="btn btn-ghost"

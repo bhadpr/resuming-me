@@ -7,6 +7,12 @@ export type EventProps = Record<string, string | number | boolean | null>
 export type TrackedEventName =
   | 'landing_viewed'
   | 'signin_clicked'
+  | 'get_started_clicked'
+  | 'signin_reveal_clicked'
+  | 'intent_journey_started'
+  | 'intent_step_answered'
+  | 'intent_journey_completed'
+  | 'intent_journey_skipped'
   | 'signup_completed'
   | 'signin_method_clicked'
   | 'signin_shown'

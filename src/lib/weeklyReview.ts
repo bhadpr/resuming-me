@@ -62,6 +62,18 @@ export function focusApplies(focusWeekStart: string | null, today: string): bool
   return mondayOnOrBefore(today) === focusWeekStart
 }
 
+export function formatReviewRange(weekStart: string, weekEnd: string): string {
+  const months = ['Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun', 'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec']
+  const start = new Date(`${weekStart}T12:00:00Z`)
+  const end = new Date(`${weekEnd}T12:00:00Z`)
+  const startLabel = `${months[start.getUTCMonth()]} ${start.getUTCDate()}`
+  const endLabel = `${months[end.getUTCMonth()]} ${end.getUTCDate()}`
+  if (start.getUTCMonth() === end.getUTCMonth() && start.getUTCFullYear() === end.getUTCFullYear()) {
+    return `${startLabel}–${end.getUTCDate()}`
+  }
+  return `${startLabel}–${endLabel}`
+}
+
 export function mondayOnOrBefore(date: string): string {
   const day = new Date(`${date}T12:00:00Z`).getUTCDay()
   const delta = day === 0 ? 6 : day - 1
@@ -126,6 +138,7 @@ export function shrinkOffer(
     return null
   }
   if (activity.tracking_mode === 'count') {
+    if (activity.target_unit === 'g' || activity.target_unit === 'hours' || activity.target_unit === 'hr') return null
     const current = activity.target_value ?? 0
     if (current > 2) return { value: 2, unit: activity.target_unit ?? '' }
   }
@@ -188,7 +201,7 @@ export function buildWeeklyReview(opts: {
   )
   const comebackLine =
     comebacks.length === 0
-      ? 'No comebacks this week.'
+      ? 'Quiet week. You can still start.'
       : `${comebacks.length} comeback${comebacks.length === 1 ? '' : 's'} — ${comebacks
           .map((hit) => `${hit.name} after ${hit.gapDays} quiet days`)
           .join(', ')}.`

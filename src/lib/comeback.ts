@@ -2,6 +2,8 @@ import type { Activity } from './activities'
 import type { LogEntry } from './logs'
 import { addDays, daysBetween } from './dates.ts'
 import {
+  FASTING_HOURS_PER_TAP,
+  PROTEIN_GRAMS_PER_PORTION,
   getDayStatus,
   showedUp,
   type ActivityPause,
@@ -66,6 +68,15 @@ export function tinyStartLine(
     const tiny = Math.min(count, 2)
     if (activity.target_unit === 'glasses') {
       return `Start with ${tiny} ${tiny === 1 ? 'glass' : 'glasses'} of ${activity.name}.`
+    }
+    if (activity.target_unit === 'g') {
+      return `Start with ${PROTEIN_GRAMS_PER_PORTION} g of ${activity.name}.`
+    }
+    if (activity.target_unit === 'hours') {
+      return `Start with ${FASTING_HOURS_PER_TAP} hours of ${activity.name}.`
+    }
+    if (activity.target_unit === 'hr') {
+      return `Start with 1 hour of ${activity.name}.`
     }
     return `Start with ${tiny} of ${activity.name}.`
   }
@@ -185,6 +196,12 @@ function targetSize(activity: Activity): number {
   if (activity.tracking_mode === 'timer') {
     if (activity.target_unit === 'seconds') return Math.max(1, (activity.target_value ?? 60) / 60)
     return Math.max(1, activity.target_value ?? 1)
+  }
+  if (activity.target_unit === 'g') {
+    return Math.max(1, Math.round((activity.target_value ?? PROTEIN_GRAMS_PER_PORTION) / PROTEIN_GRAMS_PER_PORTION))
+  }
+  if (activity.target_unit === 'hours') {
+    return Math.max(1, Math.round((activity.target_value ?? FASTING_HOURS_PER_TAP) / FASTING_HOURS_PER_TAP))
   }
   return Math.max(1, activity.target_value ?? 1)
 }

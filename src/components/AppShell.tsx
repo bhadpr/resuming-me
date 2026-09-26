@@ -16,6 +16,7 @@ import {
   type FreshStartRange,
   type WelcomeBackState,
 } from '../lib/comeback'
+import { canLogPastGoal, countPortion } from '../lib/dayStatus'
 import { pickMoment } from '../lib/moments'
 import {
   loadBirthday,
@@ -295,6 +296,8 @@ export function AppShell() {
   const [loadingMetrics, setLoadingMetrics] = useState(!hadCache)
   const [loadingToday, setLoadingToday] = useState(!hadCache)
   const [saving, setSaving] = useState(false)
+  const [habitFormPhase, setHabitFormPhase] = useState<'pick' | 'details'>('pick')
+  const [vitalFormPhase, setVitalFormPhase] = useState<'pick' | 'details'>('pick')
   const [busyId, setBusyId] = useState<string | null>(null)
   const [error, setError] = useState<string | null>(null)
   const [offlineNotice, setOfflineNotice] = useState<string | null>(null)
@@ -891,8 +894,8 @@ export function AppShell() {
       return
     }
     if (tab === 'today') trackPageView('/today', 'Today')
-    else if (tab === 'activities') trackPageView('/activities', 'Activities')
-    else if (tab === 'metrics') trackPageView('/numbers', 'Numbers')
+    else if (tab === 'activities') trackPageView('/activities', 'Abhyas')
+    else if (tab === 'metrics') trackPageView('/numbers', 'Vitals')
     else if (tab === 'insights') {
       trackPageView('/insights', 'Insights')
       track('insights_viewed', { range: insightsWindow })
@@ -914,9 +917,9 @@ export function AppShell() {
       : tab === 'today'
         ? 'Today · Resuming'
         : tab === 'activities'
-          ? 'Activities · Resuming'
+          ? 'Abhyas · Resuming'
           : tab === 'metrics'
-            ? 'Numbers · Resuming'
+            ? 'Vitals · Resuming'
             : 'Insights · Resuming'
 
   useDocumentMeta({
@@ -1218,7 +1221,7 @@ export function AppShell() {
   }
 
   async function handleIncrement(row: ActivityTodayProgress) {
-    if (!user || row.done) return
+    if (!user || (row.done && !canLogPastGoal(row.activity.target_unit))) return
     setBusyId(row.activity.id)
     setError(null)
     try {
@@ -1227,7 +1230,7 @@ export function AppShell() {
         activityId: row.activity.id,
         date: today,
       })
-      const nextValue = row.current + 1
+      const nextValue = row.current + countPortion(row.activity.target_unit)
       trackLogAndComeback({
         activity: row.activity,
         kind: 'count',
@@ -1300,15 +1303,15 @@ export function AppShell() {
     }
   }
 
-  async function handlePauseActivity(duration: PauseDuration) {
-    if (!user || activityScreen.name !== 'detail') return
-    const activityId = activityScreen.activityId
+  async function handlePauseActivity(duration: PauseDuration, activityId?: string) {
+    const id = activityId ?? (activityScreen.name === 'detail' ? activityScreen.activityId : null)
+    if (!user || !id) return
     setSaving(true)
     setError(null)
     try {
       const created = await createActivityPause({
         userId: user.id,
-        activityId,
+        activityId: id,
         duration,
       })
       setActivityPauses((prev) => [created, ...prev])
@@ -1339,7 +1342,7 @@ export function AppShell() {
     }
   }
 
-  async function handleLogMetric(metricId: string, value: number) {
+  async function handleLogMetric(metricId: string, value: number, secondaryValue?: number | null) {
     if (!user) return
     const metric = metrics.find((m) => m.id === metricId)
     const previous = metricEntriesToday.find((e) => e.metric_id === metricId) ?? null
@@ -1351,13 +1354,14 @@ export function AppShell() {
         metricId,
         date: today,
         value,
+        secondaryValue,
       })
       setMetricEntriesToday((prev) => {
         const without = prev.filter((e) => e.metric_id !== metricId)
         return [...without, entry]
       })
       const label = metric
-        ? formatMetricUndoMessage(metric.name, value, metric.unit)
+        ? formatMetricUndoMessage(metric.name, value, metric.unit, secondaryValue)
         : `Logged ${value}`
       undoToast.show(label, async () => {
         try {
@@ -1367,6 +1371,7 @@ export function AppShell() {
               metricId,
               date: today,
               value: previous.value,
+              secondaryValue: previous.secondary_value,
             })
             setMetricEntriesToday((prev) => {
               const without = prev.filter((e) => e.metric_id !== metricId)
@@ -1579,7 +1584,11 @@ export function AppShell() {
         }
       }
       if (payload.digest.enabled) {
-        await enableDailyDigestFromOnboarding(payload.digest.hour, payload.digest.minute)
+        const times =
+          'times' in payload.digest && Array.isArray(payload.digest.times) && payload.digest.times.length > 0
+            ? payload.digest.times
+            : [{ hour: payload.digest.hour, minute: payload.digest.minute }]
+        await enableDailyDigestFromOnboarding(times)
       }
       const acts = await listActivities(true)
       const mets = await listMetrics(true)
@@ -1730,6 +1739,7 @@ export function AppShell() {
                 review={weeklyReview}
                 activities={activities}
                 focusActivityId={focusActivityId}
+                reviewWeekday={reviewSchedule.weekday}
                 busy={saving}
                 canUndoShrink={shrinkSnapshot != null}
                 onBack={() => navigate('/today')}
@@ -1778,6 +1788,7 @@ export function AppShell() {
                     onShrinkRunningTimer={handleShrinkRunningTimer}
                     onRescheduleDeadline={handleRescheduleDeadline}
                     onSkipToday={handleSkipToday}
+                    onPauseHabit={(row, duration) => void handlePauseActivity(duration, row.activity.id)}
                     onTakeRestDay={() => void handleTakeRestDay()}
                     isRestDay={dayStatusOpts.restDates.has(today)}
                     hasActivities={activeActivityCount > 0}
@@ -1793,6 +1804,10 @@ export function AppShell() {
                     onEmptySetup={() => {
                       writeDismissedFlag(ONBOARDING_DISMISS_KEY, false)
                       setOnboardingDismissed(false)
+                    }}
+                    onAddActivity={() => {
+                      setError(null)
+                      navigate('/activities/new')
                     }}
                     moment={moment}
                     onMomentStart={handleMomentStart}
@@ -1843,13 +1858,21 @@ export function AppShell() {
                   ← Back
                 </button>
                 <h2 className="form-title">
-                  {selectedActivity ? 'Edit activity' : 'Add activity'}
+                  {selectedActivity
+                    ? 'Edit habit'
+                    : habitFormPhase === 'details'
+                      ? 'Create habit'
+                      : 'Add habit'}
                 </h2>
                 <Suspense fallback={<ScreenChunkFallback />}>
                   <ActivityForm
                     initial={selectedActivity ?? null}
+                    existingNames={activities
+                      .filter((item) => !item.archived && item.id !== selectedActivity?.id)
+                      .map((item) => item.name)}
                     saving={saving}
                     error={error}
+                    onPhaseChange={setHabitFormPhase}
                     onSubmit={handleActivitySave}
                     onCancel={() =>
                       navigate(
@@ -2022,7 +2045,7 @@ export function AppShell() {
 
             {activityScreen.name === 'detail' && !selectedActivity && !loadingActivities && (
               <section className="empty-state">
-                <p>Activity not found.</p>
+                <p>Habit not found.</p>
                 <button
                   type="button"
                   className="btn btn-primary"
@@ -2050,7 +2073,6 @@ export function AppShell() {
                     setError(null)
                     navigate('/numbers/new')
                   }}
-                  onQuickAdd={(input) => void handleQuickAddMetric(input)}
                 />
               </>
             )}
@@ -2072,12 +2094,20 @@ export function AppShell() {
                   ← Back
                 </button>
                 <h2 className="form-title">
-                  {selectedMetric ? 'Edit number' : 'Add number'}
+                  {selectedMetric
+                    ? 'Edit vital'
+                    : vitalFormPhase === 'details'
+                      ? 'Create vital'
+                      : 'Add vital'}
                 </h2>
                 <MetricForm
                   initial={selectedMetric ?? null}
+                  existingNames={metrics
+                    .filter((item) => !item.archived && item.id !== selectedMetric?.id)
+                    .map((item) => item.name)}
                   saving={saving}
                   error={error}
+                  onPhaseChange={setVitalFormPhase}
                   onSubmit={handleMetricSave}
                   onCancel={() =>
                     navigate(
@@ -2143,7 +2173,7 @@ export function AppShell() {
 
             {metricScreen.name === 'detail' && !selectedMetric && !loadingMetrics && (
               <section className="empty-state">
-                <p>Number not found.</p>
+                <p>Vital not found.</p>
                 <button
                   type="button"
                   className="btn btn-primary"

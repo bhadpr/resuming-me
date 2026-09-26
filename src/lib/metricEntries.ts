@@ -40,6 +40,7 @@ export async function upsertMetricEntry(params: {
   metricId: string
   date: string
   value: number
+  secondaryValue?: number | null
 }): Promise<MetricEntry> {
   const client = createSupabaseClient()
 
@@ -53,7 +54,10 @@ export async function upsertMetricEntry(params: {
   if (existing) {
     const { data, error } = await client
       .from('metric_entries')
-      .update({ value: params.value })
+      .update({
+        value: params.value,
+        secondary_value: params.secondaryValue ?? null,
+      })
       .eq('id', existing.id)
       .select('*')
       .single()
@@ -68,6 +72,7 @@ export async function upsertMetricEntry(params: {
       metric_id: params.metricId,
       date: params.date,
       value: params.value,
+      secondary_value: params.secondaryValue ?? null,
     })
     .select('*')
     .single()

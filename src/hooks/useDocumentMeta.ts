@@ -1,8 +1,8 @@
 import { useEffect } from 'react'
 
-const DEFAULT_TITLE = 'Resuming — Get back to your habits without the guilt'
+const DEFAULT_TITLE = 'Resuming — Get back to what you put off'
 const DEFAULT_DESCRIPTION =
-  'Track what you postpone. Resume what matters. A calm, no-shame activity tracker.'
+  'For the habits you keep postponing. Start again when you drift — without the guilt.'
 
 function upsertMeta(attr: 'name' | 'property', key: string, content: string) {
   let el = document.head.querySelector(`meta[${attr}="${key}"]`)

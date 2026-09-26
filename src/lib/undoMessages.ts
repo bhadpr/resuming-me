@@ -20,8 +20,10 @@ export function formatMetricUndoMessage(
   metricName: string,
   value: number,
   unit: string,
+  secondary?: number | null,
 ): string {
-  return `Logged ${value} ${unit} · ${metricName}`
+  const shown = secondary == null ? String(value) : `${value}/${secondary}`
+  return `Logged ${shown} ${unit} · ${metricName}`
 }
 
 export function formatSkipUndoMessage(activityName: string): string {

@@ -5,6 +5,7 @@ import {
   computeMetricTrendStats,
   type MetricWindowDays,
 } from '../lib/stats'
+import { HabitMark } from './HabitMark'
 import { MetricTrendChart } from './MetricTrendChart'
 
 interface MetricDetailProps {
@@ -47,9 +48,7 @@ export function MetricDetail({
       </button>
 
       <div className="detail-hero">
-        <span className="detail-emoji" aria-hidden>
-          {metric.emoji}
-        </span>
+        <HabitMark name={metric.name} />
         <h2>{metric.name}</h2>
         <p className="screen-sub">{describeMetric(metric)}</p>
         {metric.archived && <span className="badge">Archived</span>}
@@ -123,9 +122,9 @@ export function MetricDetail({
               onClick={() => onUnarchive()}
               disabled={busy}
             >
-              Show on Numbers again
+              Show on Vitals again
             </button>
-            <p className="activity-desc">Hidden from Numbers. Logged values stay.</p>
+            <p className="activity-desc">Hidden from Vitals. Logged values stay.</p>
           </div>
         ) : (
           <div className="detail-archive">
@@ -135,7 +134,7 @@ export function MetricDetail({
               onClick={() => onArchive()}
               disabled={busy}
             >
-              Hide from Numbers
+              Hide from Vitals
             </button>
             <p className="activity-desc">
               Hide from the list. Logged values stay. Delete is what removes them.

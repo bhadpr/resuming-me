@@ -16,6 +16,7 @@ import { daysBetween } from '../lib/dates'
 import { findPatterns, patternTextIsCausal } from '../lib/patterns'
 import { track } from '../lib/track'
 import { ActivityInsightChart } from './ActivityInsightChart'
+import { HabitMark } from './HabitMark'
 import { MetricTrendChart } from './MetricTrendChart'
 
 function chartTarget(activity: Activity | undefined): number | null {
@@ -169,7 +170,7 @@ export function InsightsScreen({
       <div className="screen-heading">
         <div>
           <h2>Insights</h2>
-          <p className="screen-sub">Where skips pile up.</p>
+          <p className="screen-sub">What you pick back up.</p>
         </div>
       </div>
 
@@ -181,7 +182,7 @@ export function InsightsScreen({
         <section className="empty-state">
           <p className="empty-state-emoji">📊</p>
           <h2>Insights need a few days</h2>
-          <p>Add something you’ve been putting off, or log Weight or Sleep.</p>
+          <p>Add one small habit. Two minutes counts.</p>
           <div className="onboarding-chips">
             {STARTER_METRICS.map((metric) => (
               <button
@@ -190,12 +191,12 @@ export function InsightsScreen({
                 className="onboarding-chip"
                 onClick={() => onAddMetric(metric)}
               >
-                {metric.emoji} {metric.name}
+                {metric.name}
               </button>
             ))}
           </div>
           <button type="button" className="btn btn-primary" onClick={onAddActivity}>
-            Add something to resume
+            Add a habit
           </button>
         </section>
       ) : !insights ? (
@@ -255,14 +256,14 @@ export function InsightsScreen({
               className={`segmented-btn ${window === 'week' ? 'segmented-btn-active' : ''}`}
               onClick={() => onWindowChange('week')}
             >
-              Week
+              7 days
             </button>
             <button
               type="button"
               className={`segmented-btn ${window === 'month' ? 'segmented-btn-active' : ''}`}
               onClick={() => onWindowChange('month')}
             >
-              Month
+              30 days
             </button>
           </div>
           <section className="insights-summary">
@@ -275,10 +276,10 @@ export function InsightsScreen({
           <section className="today-section">
             <h3 className="section-label">Easiest to pick up</h3>
             <p className="screen-sub insights-hint">
-              Tap an activity for its {window} chart.
+              Tap a habit for its {window} chart.
             </p>
             {insights.activities.length === 0 ? (
-              <p className="muted-center">No repeating activities on Insights yet.</p>
+              <p className="muted-center">No habits here yet.</p>
             ) : (
               <ul className="insights-list">
                 {insights.activities.map((a) => {
@@ -300,9 +301,7 @@ export function InsightsScreen({
                         onClick={() => toggle(key)}
                         aria-expanded={open}
                       >
-                        <span className="activity-emoji" aria-hidden>
-                          {a.emoji}
-                        </span>
+                        <HabitMark name={a.name} emoji={a.emoji} />
                         <span className="activity-meta">
                           <span className="activity-name">{a.name}</span>
                           <span className="activity-desc">
@@ -342,7 +341,7 @@ export function InsightsScreen({
           </section>
 
           <section className="today-section">
-            <h3 className="section-label">Numbers</h3>
+            <h3 className="section-label">Vitals</h3>
             <p className="screen-sub insights-hint">
               Tap a number for its {window} trend.
             </p>
@@ -375,9 +374,7 @@ export function InsightsScreen({
                         onClick={() => toggle(key)}
                         aria-expanded={open}
                       >
-                        <span className="activity-emoji" aria-hidden>
-                          {m.emoji}
-                        </span>
+                        <HabitMark name={m.name} emoji={m.emoji} />
                         <span className="activity-meta">
                           <span className="activity-name">{m.name}</span>
                           <span className="activity-desc">
@@ -399,6 +396,8 @@ export function InsightsScreen({
                             unit={m.unit}
                             min={trend.min}
                             max={trend.max}
+                            windowDays={windowDays}
+                            today={today}
                           />
                         </div>
                       )}

@@ -58,7 +58,12 @@ export function StartPage() {
   return (
     <div className="landing">
       <div className="landing-card start-card">
-        <StartFlow draft={draft} onDraft={update} onGoogle={signInWithGoogle} />
+        <StartFlow
+          draft={draft}
+          onDraft={update}
+          onGoogle={signInWithGoogle}
+          adding={params.get('add') === '1'}
+        />
       </div>
     </div>
   )

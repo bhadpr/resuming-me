@@ -20,6 +20,73 @@ export function ActivityInsightChart({
     )
   }
 
+  const useBars = points.length <= 7
+  const values = points.map((p) => p.value)
+  const best = Math.max(...values, 0)
+  const hi = Math.max(target ?? 0, best, 1) * 1.2
+  const unit = points[0]?.unit ?? ''
+  const avg = values.reduce((sum, v) => sum + v, 0) / Math.max(values.length, 1)
+  const logged = points.filter((p) => p.value > 0)
+  const avgLogged =
+    logged.length === 0
+      ? null
+      : logged.reduce((sum, p) => sum + p.value, 0) / logged.length
+  const met = points.filter((p) => p.status === 'done').length
+  const partial = points.filter((p) => p.status === 'partial').length
+  const postponed = points.filter((p) => p.status === 'skipped').length
+  const showAverage = unit === 'min' || unit === '×'
+
+  const caption = (
+    <div className="activity-insight-chart-caption">
+      <span>
+        {met} done
+        {partial > 0 ? ` · ${partial} partial` : ''}
+        {postponed > 0 ? ` · ${postponed} skipped` : ''}
+        {' · '}
+        {points.length} {unit === '×' ? 'weeks' : 'days'}
+        {showAverage ? ` · avg ${formatAvg(avg, unit)}${unit === '×' ? '/wk' : '/day'}` : ''}
+        {showAverage && avgLogged != null && unit === 'min'
+          ? ` · ${formatAvg(avgLogged, unit)} when logged`
+          : ''}
+      </span>
+      <span className="activity-insight-legend">
+        <span className="legend-swatch legend-met" /> Done
+        <span className="legend-swatch legend-partial" /> Partial
+        <span className="legend-swatch legend-postponed" /> Skipped
+        <span className="legend-swatch legend-open" /> Open
+      </span>
+    </div>
+  )
+
+  if (useBars) {
+    return (
+      <div className="activity-insight-chart">
+        <div
+          className="bar-grid insight-bar-grid"
+          role="img"
+          aria-label={`${windowLabel} habit chart`}
+        >
+          {points.map((p) => {
+            const heightPct = Math.max(2, Math.round((p.value / hi) * 100))
+            const empty = p.value <= 0
+            return (
+              <div key={p.key} className="bar-grid-item" title={tooltip(p)}>
+                <div className="bar-grid-track">
+                  <div
+                    className={`bar-grid-fill bar-fill-${p.status}${empty ? ' bar-grid-fill-empty' : ''}`}
+                    style={{ height: empty ? '3px' : `${heightPct}%` }}
+                  />
+                </div>
+                <span className="bar-grid-label">{p.label}</span>
+              </div>
+            )
+          })}
+        </div>
+        {caption}
+      </div>
+    )
+  }
+
   const width = 320
   const height = 150
   const padL = 28
@@ -28,20 +95,11 @@ export function ActivityInsightChart({
   const padB = 28
   const innerW = width - padL - padR
   const innerH = height - padT - padB
-
-  const values = points.map((p) => p.value)
   const lo = 0
-  const best = Math.max(...values, 0)
-  const hi = Math.max(target ?? 0, best, 1) * 1.2
   const span = hi - lo || 1
-  const unit = points[0]?.unit ?? ''
-  const avg =
-    values.reduce((sum, v) => sum + v, 0) / Math.max(values.length, 1)
-  const logged = points.filter((p) => p.value > 0)
-  const avgLogged =
-    logged.length === 0
-      ? null
-      : logged.reduce((sum, p) => sum + p.value, 0) / logged.length
+  const labelEvery = points.length <= 14 ? 2 : 5
+  const yTicks = [hi, hi / 2, 0].map((v) => Math.round(v * 10) / 10)
+  const avgY = padT + innerH - ((avg - lo) / span) * innerH
 
   const plotted = points.map((p, i) => {
     const x =
@@ -51,15 +109,7 @@ export function ActivityInsightChart({
     const y = padT + innerH - ((p.value - lo) / span) * innerH
     return { x, y, ...p }
   })
-
   const polyline = plotted.map((p) => `${p.x},${p.y}`).join(' ')
-  const avgY = padT + innerH - ((avg - lo) / span) * innerH
-  const met = points.filter((p) => p.status === 'done').length
-  const partial = points.filter((p) => p.status === 'partial').length
-  const postponed = points.filter((p) => p.status === 'skipped').length
-  const labelEvery = points.length <= 7 ? 1 : points.length <= 14 ? 2 : 5
-  const yTicks = [hi, hi / 2, 0].map((v) => Math.round(v * 10) / 10)
-  const showAverage = unit === 'min' || unit === '×'
 
   return (
     <div className="activity-insight-chart">
@@ -67,7 +117,7 @@ export function ActivityInsightChart({
         viewBox={`0 0 ${width} ${height}`}
         className="activity-insight-svg"
         role="img"
-        aria-label={`${windowLabel} activity chart`}
+        aria-label={`${windowLabel} habit chart`}
       >
         {yTicks.map((tick) => {
           const y = padT + innerH - ((tick - lo) / span) * innerH
@@ -94,15 +144,13 @@ export function ActivityInsightChart({
           className="trend-axis"
         />
         {target != null && target > 0 && target <= hi && (
-          <g>
-            <line
-              x1={padL}
-              y1={padT + innerH - ((target - lo) / span) * innerH}
-              x2={padL + innerW}
-              y2={padT + innerH - ((target - lo) / span) * innerH}
-              className="trend-target-line"
-            />
-          </g>
+          <line
+            x1={padL}
+            y1={padT + innerH - ((target - lo) / span) * innerH}
+            x2={padL + innerW}
+            y2={padT + innerH - ((target - lo) / span) * innerH}
+            className="trend-target-line"
+          />
         )}
         <polyline points={polyline} className="trend-line" fill="none" />
         {plotted.map((p) => (
@@ -158,25 +206,7 @@ export function ActivityInsightChart({
           ) : null,
         )}
       </svg>
-      <div className="activity-insight-chart-caption">
-        <span>
-          {met} done
-          {partial > 0 ? ` · ${partial} partial` : ''}
-          {postponed > 0 ? ` · ${postponed} skipped` : ''}
-          {' · '}
-          {points.length} {unit === '×' ? 'weeks' : 'days'}
-          {showAverage ? ` · avg ${formatAvg(avg, unit)}${unit === '×' ? '/wk' : '/day'}` : ''}
-          {showAverage && avgLogged != null && unit === 'min'
-            ? ` · ${formatAvg(avgLogged, unit)} when logged`
-            : ''}
-        </span>
-        <span className="activity-insight-legend">
-          <span className="legend-swatch legend-met" /> Done
-          <span className="legend-swatch legend-partial" /> Partial
-          <span className="legend-swatch legend-postponed" /> Skipped
-          <span className="legend-swatch legend-open" /> Open
-        </span>
-      </div>
+      {caption}
     </div>
   )
 }

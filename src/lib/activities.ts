@@ -283,6 +283,8 @@ export function describeActivity(activity: Activity): string {
   // daily
   if (activity.tracking_mode === 'checkbox') return 'Daily'
   if (activity.tracking_mode === 'count') {
+    if (activity.target_unit === 'g') return `${activity.target_value ?? 50} g / day`
+    if (activity.target_unit === 'hours' || activity.target_unit === 'hr') return `${activity.target_value ?? 16} hours / day`
     return `${activity.target_value ?? 1} / day`
   }
   return `${activity.target_value ?? 0} ${activity.target_unit ?? 'min'} / day`

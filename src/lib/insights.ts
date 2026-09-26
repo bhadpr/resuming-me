@@ -518,7 +518,7 @@ function buildSummary(
 ): string {
   const period = window === 'week' ? 'this week' : 'this month'
   if (total === 0) {
-    return `No repeating activities ${period} yet. Log a few days and Insights will fill in.`
+    return `No habits ${period} yet. Log a few days and Insights will fill in.`
   }
 
   const loggedDays = loggedDayCount(entries)

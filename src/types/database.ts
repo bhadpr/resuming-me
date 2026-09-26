@@ -208,6 +208,7 @@ export interface Database {
           user_id: string
           date: string
           value: number
+          secondary_value: number | null
           created_at: string
           updated_at: string
         }
@@ -217,11 +218,13 @@ export interface Database {
           user_id: string
           date: string
           value: number
+          secondary_value?: number | null
           created_at?: string
           updated_at?: string
         }
         Update: {
           value?: number
+          secondary_value?: number | null
           updated_at?: string
         }
         Relationships: []

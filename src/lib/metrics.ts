@@ -10,8 +10,14 @@ export interface MetricInput {
 }
 
 export const STARTER_METRICS: MetricInput[] = [
-  { name: 'Weight', emoji: '⚖️', unit: 'lbs' },
-  { name: 'Sleep', emoji: '💤', unit: 'hrs' },
+  { name: 'Weight', emoji: '⚖️', unit: 'kg' },
+  { name: 'Daily Steps', emoji: '👣', unit: 'steps' },
+  { name: 'Blood Pressure', emoji: '❤️', unit: 'mmHg' },
+  { name: 'Heart Rate', emoji: '💓', unit: 'bpm' },
+  { name: 'Water', emoji: '💧', unit: 'glasses' },
+  { name: 'Sleep', emoji: '😴', unit: 'hours' },
+  { name: 'Protein', emoji: '🍽️', unit: 'g' },
+  { name: 'Fasting', emoji: '🌙', unit: 'hours' },
 ]
 
 export function validateMetricInput(input: MetricInput): string | null {
@@ -102,6 +108,20 @@ export async function deleteMetric(id: string): Promise<void> {
   if (error) throw error
 }
 
+export function isBloodPressure(metric: { name: string }): boolean {
+  return metric.name.trim().toLowerCase() === 'blood pressure'
+}
+
+export function formatMetricReading(
+  value: number,
+  unit: string,
+  secondary?: number | null,
+): string {
+  if (secondary != null) return `${value}/${secondary} ${unit}`
+  return `${value} ${unit}`
+}
+
 export function describeMetric(metric: Metric): string {
+  if (isBloodPressure(metric)) return 'Upper and lower, in mmHg'
   return `Logged in ${metric.unit}`
 }

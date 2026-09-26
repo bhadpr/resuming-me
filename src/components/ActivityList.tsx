@@ -1,5 +1,6 @@
 import { describeActivity, type Activity } from '../lib/activities'
 import { ArchivedFilter } from './ArchivedFilter'
+import { HabitMark } from './HabitMark'
 
 interface ActivityListProps {
   activities: Activity[]
@@ -27,7 +28,7 @@ export function ActivityList({
     <div className="activity-list-screen">
       <div className="screen-heading">
         <div>
-          <h2>Activities</h2>
+          <h2>Abhyas</h2>
           <p className="screen-sub">What you want to pick back up.</p>
         </div>
         <button type="button" className="btn btn-primary btn-compact" onClick={onAdd}>
@@ -50,7 +51,7 @@ export function ActivityList({
           <h2>Nothing here yet</h2>
           <p>Not chores to clear. A walk, a weekly practice, or a due date you keep moving.</p>
           <button type="button" className="btn btn-primary" onClick={onAdd}>
-            Add activity
+            Add habit
           </button>
         </section>
       ) : (
@@ -62,9 +63,7 @@ export function ActivityList({
                 className={`activity-row ${activity.archived ? 'activity-row-archived' : ''}`}
                 onClick={() => onSelect(activity)}
               >
-                <span className="activity-emoji" aria-hidden>
-                  {activity.emoji}
-                </span>
+                <HabitMark name={activity.name} />
                 <span className="activity-meta">
                   <span className="activity-name">
                     {activity.name}

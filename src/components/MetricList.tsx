@@ -1,5 +1,6 @@
-import { describeMetric, STARTER_METRICS, type Metric, type MetricInput } from '../lib/metrics'
+import { describeMetric, type Metric } from '../lib/metrics'
 import { ArchivedFilter } from './ArchivedFilter'
+import { HabitMark } from './HabitMark'
 
 interface MetricListProps {
   metrics: Metric[]
@@ -8,7 +9,6 @@ interface MetricListProps {
   onToggleArchived: () => void
   onSelect: (metric: Metric) => void
   onAdd: () => void
-  onQuickAdd: (input: MetricInput) => void
 }
 
 export function MetricList({
@@ -18,21 +18,16 @@ export function MetricList({
   onToggleArchived,
   onSelect,
   onAdd,
-  onQuickAdd,
 }: MetricListProps) {
   const visible = showArchived ? metrics : metrics.filter((m) => !m.archived)
   const archivedCount = metrics.filter((m) => m.archived).length
-  const existingNames = new Set(visible.map((m) => m.name.toLowerCase()))
-  const starters = STARTER_METRICS.filter(
-    (metric) => !existingNames.has(metric.name.toLowerCase()),
-  )
 
   return (
     <div className="activity-list-screen">
       <div className="screen-heading">
         <div>
-          <h2>Numbers</h2>
-          <p className="screen-sub">Daily numbers, once a day. Weight and Sleep, or your own.</p>
+          <h2>Vitals</h2>
+          <p className="screen-sub">Numbers you check in on.</p>
         </div>
         <button type="button" className="btn btn-primary btn-compact" onClick={onAdd}>
           Add
@@ -43,7 +38,7 @@ export function MetricList({
         showArchived={showArchived}
         archivedCount={archivedCount}
         onToggle={onToggleArchived}
-        showLabel="Show hidden from Numbers"
+        showLabel="Show hidden from Vitals"
       />
 
       {loading ? (
@@ -51,22 +46,10 @@ export function MetricList({
       ) : visible.length === 0 ? (
         <section className="empty-state">
           <p className="empty-state-emoji">⚖️</p>
-          <h2>A number a day</h2>
-          <p>No target. Start with Weight or Sleep, or add your own.</p>
-          <div className="onboarding-chips">
-            {starters.map((metric) => (
-              <button
-                key={metric.name}
-                type="button"
-                className="onboarding-chip"
-                onClick={() => onQuickAdd(metric)}
-              >
-                {metric.emoji} {metric.name}
-              </button>
-            ))}
-          </div>
-          <button type="button" className="btn btn-ghost" onClick={onAdd}>
-            Something else
+          <h2>Nothing here yet</h2>
+          <p>Weight, steps, blood pressure, or another number you want to keep.</p>
+          <button type="button" className="btn btn-primary" onClick={onAdd}>
+            Add vital
           </button>
         </section>
       ) : (
@@ -78,9 +61,7 @@ export function MetricList({
                 className={`activity-row ${metric.archived ? 'activity-row-archived' : ''}`}
                 onClick={() => onSelect(metric)}
               >
-                <span className="activity-emoji" aria-hidden>
-                  {metric.emoji}
-                </span>
+                <HabitMark name={metric.name} />
                 <span className="activity-meta">
                   <span className="activity-name">
                     {metric.name}

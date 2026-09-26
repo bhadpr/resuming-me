@@ -48,7 +48,12 @@ export interface OnboardingCompletePayload {
     input: ActivityInput
     deadlineCadence: DeadlineCadence | null
   }>
-  digest: { enabled: boolean; hour: number; minute: number }
+  digest: {
+    enabled: boolean
+    hour: number
+    minute: number
+    times?: Array<{ hour: number; minute: number }>
+  }
 }
 
 export const STARTER_CHIPS: StarterChip[] = [

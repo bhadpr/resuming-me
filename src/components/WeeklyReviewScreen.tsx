@@ -1,10 +1,11 @@
 import type { Activity } from '../lib/activities'
-import { shrinkOffer, type WeeklyReview } from '../lib/weeklyReview'
+import { formatReviewRange, shrinkOffer, REVIEW_WEEKDAYS, type WeeklyReview } from '../lib/weeklyReview'
 
 interface WeeklyReviewScreenProps {
   review: WeeklyReview
   activities: Activity[]
   focusActivityId: string | null
+  reviewWeekday?: number
   busy?: boolean
   canUndoShrink?: boolean
   onBack: () => void
@@ -19,6 +20,7 @@ export function WeeklyReviewScreen({
   review,
   activities,
   focusActivityId,
+  reviewWeekday = 0,
   busy = false,
   canUndoShrink = false,
   onBack,
@@ -36,9 +38,7 @@ export function WeeklyReviewScreen({
       <div className="screen-heading">
         <div>
           <h2>This week</h2>
-          <p className="screen-sub">
-            {review.weekStart} → {review.weekEnd}
-          </p>
+          <p className="screen-sub">{formatReviewRange(review.weekStart, review.weekEnd)}</p>
         </div>
       </div>
 
@@ -51,7 +51,7 @@ export function WeeklyReviewScreen({
 
       {review.slipped.length > 0 && (
         <section className="today-section">
-          <h3 className="section-label">What slipped</h3>
+          <h3 className="section-label">Quiet lately</h3>
           <ul className="insights-list">
             {review.slipped.map((row) => {
               const activity = activities.find((item) => item.id === row.activityId)
@@ -60,7 +60,6 @@ export function WeeklyReviewScreen({
                 <li key={row.activityId} className="insights-row-wrap">
                   <p className="activity-desc">
                     {row.name} has been quiet for {row.quietDays} days.
-                    {offer ? ` Want to shrink it to ${offer.value} ${offer.unit}?` : ''}
                   </p>
                   {offer && (
                     <button
@@ -69,7 +68,8 @@ export function WeeklyReviewScreen({
                       disabled={busy}
                       onClick={() => onShrink(row.activityId, offer.value)}
                     >
-                      Shrink target
+                      Make it {offer.value}
+                      {offer.unit ? ` ${offer.unit}` : ''}
                     </button>
                   )}
                 </li>
@@ -78,7 +78,7 @@ export function WeeklyReviewScreen({
           </ul>
           {canUndoShrink && (
             <button type="button" className="btn btn-ghost" onClick={onUndoShrink}>
-              Undo shrink
+              Undo
             </button>
           )}
         </section>
@@ -94,7 +94,7 @@ export function WeeklyReviewScreen({
       <section className="today-section">
         <h3 className="section-label">One small thing for next week?</h3>
         {review.focus.length === 0 ? (
-          <p className="screen-sub">Add something small and it can be next week’s focus.</p>
+          <p className="screen-sub">Add a small habit and it can be next week’s focus.</p>
         ) : (
           <div className="onboarding-chips">
             {review.focus.map((choice) => (
@@ -116,7 +116,7 @@ export function WeeklyReviewScreen({
           Full insights
         </button>
         <button type="button" className="btn btn-ghost" onClick={onTurnOff}>
-          Turn these off
+          Stop the {REVIEW_WEEKDAYS[reviewWeekday] ?? 'Sunday'} email
         </button>
       </div>
     </div>

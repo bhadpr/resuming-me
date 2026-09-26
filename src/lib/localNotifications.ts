@@ -5,8 +5,10 @@ import {
   digestNotificationIds,
   loadDailyDigestPrefs,
   saveDailyDigestPrefs,
+  withDigestTimes,
   type DigestItem,
   type DigestNotification,
+  type DigestTime,
 } from './dailyDigest'
 import { REENTRY_NOTIFICATION_ID, buildReentryNotification } from './reentry'
 import type { Activity } from './activities'
@@ -21,17 +23,21 @@ function nativePluginAvailable(): boolean {
   )
 }
 
-/** Turn the daily reminder on from Get started. No-ops permission on web. */
+/** Turn daily reminders on from Get started. No-ops permission on web. */
 export async function enableDailyDigestFromOnboarding(
-  hour: number,
-  minute: number,
+  times: DigestTime[] | number,
+  minute?: number,
 ): Promise<void> {
-  saveDailyDigestPrefs({ enabled: true, hour, minute })
+  const slots: DigestTime[] = Array.isArray(times)
+    ? times
+    : [{ hour: times, minute: minute ?? 0 }]
+  const prefs = withDigestTimes({ enabled: true }, slots)
+  saveDailyDigestPrefs(prefs)
   if (!nativePluginAvailable()) return
 
   const granted = await requestDailyDigestPermission()
   if (!granted) {
-    saveDailyDigestPrefs({ enabled: false, hour, minute })
+    saveDailyDigestPrefs({ ...prefs, enabled: false })
     throw new Error(
       'Notifications are off for Resuming. You can turn them on in system settings.',
     )
@@ -79,7 +85,7 @@ async function ensureDigestChannel(): Promise<void> {
     await LocalNotifications.createChannel({
       id: CHANNEL_ID,
       name: 'Daily reminder',
-      description: 'Once a day if something is still open. Silent if you are done.',
+      description: 'A few nudges a day if something is still open. Silent when you are done.',
       importance: 3,
       vibration: false,
       lights: false,

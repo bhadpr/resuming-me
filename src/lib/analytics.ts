@@ -31,8 +31,8 @@ export type AppAnalyticsPath =
 const PATH_LABELS: Record<string, string> = {
   '/': 'Landing',
   '/app/today': 'Today',
-  '/app/activities': 'Activities',
-  '/app/metrics': 'Numbers',
+  '/app/activities': 'Abhyas',
+  '/app/metrics': 'Vitals',
   '/app/insights': 'Insights',
   '/settings': 'Settings',
   '/analytics': 'Analytics',

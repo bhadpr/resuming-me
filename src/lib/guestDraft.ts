@@ -1,8 +1,12 @@
 import { templateById } from '../data/activityTemplates'
+import { canLogPastGoal, countPortion } from './dayStatus'
+import { endOfWeekSunday, startOfWeekMonday } from './dates'
+import { formatSecondsAsTargetUnit } from './timer'
 import type { ActivityType, TrackingMode } from '../types/database'
 
 export const GUEST_DRAFT_KEY = 'resuming-guest-draft'
-export const GUEST_MAX_ACTIVITIES = 3
+/** How many habits a guest draft can hold. The first screen still starts with three. */
+export const GUEST_MAX_ACTIVITIES = 20
 export const GUEST_NAME_MAX = 40
 export const GUEST_WHY_MAX = 80
 export const GUEST_WHEN_MAX = 40
@@ -10,6 +14,7 @@ export const GUEST_DRAFT_TTL_MS = 7 * 24 * 60 * 60 * 1000
 export const GUEST_STEP_MIN = 1
 export const GUEST_STEP_MAX = 8
 export const GUEST_SAVE_WARN_DAY = 5
+export const GUEST_MAX_REMINDERS = 5
 
 export type GuestActivity = {
   localId: string
@@ -31,6 +36,15 @@ export type GuestLog = {
   startedAt: string
   durationSeconds: number
   date: string
+  /** Count taps, such as protein portions. Sessions omit this. */
+  kind?: 'session' | 'count'
+}
+
+export type GuestReading = {
+  localActivityId: string
+  date: string
+  value: number
+  secondaryValue: number | null
 }
 
 export type GuestDraft = {
@@ -44,11 +58,15 @@ export type GuestDraft = {
   gapAnswer: Record<string, string>
   /** When it usually slips (max 2 chips). */
   slipAnswer: string[]
-  /** HH:MM, or null when unset or declined. */
+  /** HH:MM times for local nudges (1–5). reminderTime mirrors the first. */
+  reminderTimes: string[]
+  /** HH:MM, or null when unset or declined. Kept for merge/email. */
   reminderTime: string | null
   reminderDeclined: boolean
   timerSkipped: boolean
   logs: GuestLog[]
+  /** Typed vitals, such as blood pressure and heart rate. */
+  readings: GuestReading[]
 }
 
 function storage(): Storage | null {
@@ -85,10 +103,12 @@ export function createGuestDraft(now = new Date(), timezone = 'UTC'): GuestDraft
     activities: [],
     gapAnswer: {},
     slipAnswer: [],
+    reminderTimes: [],
     reminderTime: null,
     reminderDeclined: false,
     timerSkipped: false,
     logs: [],
+    readings: [],
   }
 }
 
@@ -154,17 +174,27 @@ function clip(value: string | null | undefined, max: number): string | null {
   return next || null
 }
 
-const TEMPLATE_ALIASES: Record<string, string> = { guitar: 'music' }
+const TEMPLATE_ALIASES: Record<string, string> = {
+  guitar: 'music',
+  cleaning: 'rejuvenation',
+  box_breathing: 'rejuvenation',
+  diary: 'relaxation',
+}
 
 function normalizeActivity(activity: GuestActivity): GuestActivity {
   const rawId = activity.templateId ?? null
   const templateId = rawId ? (TEMPLATE_ALIASES[rawId] ?? rawId) : null
   const template = templateId ? templateById(templateId) : undefined
   const renamed = rawId != null && rawId !== templateId && template
+  const labelRefresh =
+    !renamed &&
+    template != null &&
+    templateId === 'stretching' &&
+    activity.name.trim().toLowerCase() === 'stretching'
   return {
     ...activity,
-    name: renamed ? template.label : sanitizeActivityName(activity.name),
-    emoji: renamed ? template.emoji : activity.emoji,
+    name: renamed || labelRefresh ? template!.label : sanitizeActivityName(activity.name),
+    emoji: renamed ? template!.emoji : activity.emoji,
     deadline: activity.deadline ?? null,
     templateId,
     why: clip(activity.why, GUEST_WHY_MAX),
@@ -175,6 +205,26 @@ function normalizeActivity(activity: GuestActivity): GuestActivity {
 /** Drop habits that left the catalog, such as an old Sleep selection. Custom names stay. */
 function keepCurrentHabits(activities: GuestActivity[]): GuestActivity[] {
   return activities.filter((activity) => activity.templateId == null || templateById(activity.templateId))
+}
+
+function normalizeReminderTimes(times: unknown, fallback: string | null): string[] {
+  const fromList = Array.isArray(times)
+    ? times.filter((item): item is string => typeof item === 'string' && /^\d{1,2}:\d{2}$/.test(item))
+    : []
+  const seed = fromList.length > 0 ? fromList : fallback ? [fallback] : []
+  const unique: string[] = []
+  for (const raw of seed) {
+    const match = /^(\d{1,2}):(\d{2})$/.exec(raw.trim())
+    if (!match) continue
+    const hour = Number(match[1])
+    const minute = Number(match[2])
+    if (hour < 0 || hour > 23 || minute < 0 || minute > 59) continue
+    const next = `${String(hour).padStart(2, '0')}:${String(minute).padStart(2, '0')}`
+    if (unique.includes(next)) continue
+    unique.push(next)
+    if (unique.length >= GUEST_MAX_REMINDERS) break
+  }
+  return unique.sort()
 }
 
 function normalizeDraft(draft: GuestDraft): GuestDraft {
@@ -190,10 +240,34 @@ function normalizeDraft(draft: GuestDraft): GuestDraft {
       Object.entries(draft.gapAnswer ?? {}).filter(([id]) => ids.has(id)),
     ),
     slipAnswer: (draft.slipAnswer ?? []).slice(0, 2),
-    reminderTime: draft.reminderTime ?? null,
+    reminderTimes: (() => {
+      const times = normalizeReminderTimes(
+        (draft as GuestDraft).reminderTimes,
+        draft.reminderTime ?? null,
+      )
+      return draft.reminderDeclined ? [] : times
+    })(),
+    reminderTime: (() => {
+      if (draft.reminderDeclined) return null
+      const times = normalizeReminderTimes(
+        (draft as GuestDraft).reminderTimes,
+        draft.reminderTime ?? null,
+      )
+      return times[0] ?? null
+    })(),
     reminderDeclined: draft.reminderDeclined ?? false,
     timerSkipped: draft.timerSkipped ?? false,
-    logs: (draft.logs ?? []).filter((log) => log.durationSeconds >= 30 && ids.has(log.localActivityId)),
+    readings: (draft.readings ?? []).filter(
+      (reading) =>
+        ids.has(reading.localActivityId) &&
+        typeof reading.date === 'string' &&
+        Number.isFinite(reading.value),
+    ),
+    logs: (draft.logs ?? []).filter((log) => {
+      if (!ids.has(log.localActivityId)) return false
+      if (log.kind === 'count') return Boolean(log.date)
+      return log.durationSeconds >= 1
+    }),
     timezone: draft.timezone || 'UTC',
   }
 }
@@ -246,9 +320,112 @@ export function removeGuestActivity(draft: GuestDraft, localId: string): GuestDr
 }
 
 export function appendGuestLog(draft: GuestDraft, log: GuestLog): GuestDraft {
-  if (log.durationSeconds < 30) return draft
-  if (!draft.activities.some((a) => a.localId === log.localActivityId)) return draft
+  const activity = draft.activities.find((item) => item.localId === log.localActivityId)
+  if (!activity) return draft
+  // Match signed-in timer stops: keep any bout of at least one second.
+  const minimum = log.kind === 'count' ? 0 : 1
+  if (log.kind !== 'count' && log.durationSeconds < minimum) return draft
   return saveGuestDraft({ ...draft, logs: [...draft.logs, log] })
+}
+
+export function guestCountsOnDate(draft: GuestDraft, localId: string, date: string): number {
+  return draft.logs.filter(
+    (log) => log.kind === 'count' && log.localActivityId === localId && log.date === date,
+  ).length
+}
+
+/** Seconds logged for a guest timer habit. Walking bouts in one week add together. */
+export function guestSessionSeconds(
+  draft: GuestDraft,
+  localId: string,
+  date: string,
+  activity?: Pick<GuestActivity, 'type'>,
+): number {
+  const from = activity?.type === 'weekly_n' ? startOfWeekMonday(date) : date
+  const to = activity?.type === 'weekly_n' ? endOfWeekSunday(date) : date
+  return draft.logs.reduce((sum, log) => {
+    if (log.kind === 'count' || log.localActivityId !== localId) return sum
+    if (log.date < from || log.date > to) return sum
+    return sum + log.durationSeconds
+  }, 0)
+}
+
+/** Minutes done against the session length. Short bouts add up. */
+export function guestTimerProgress(
+  activity: Pick<GuestActivity, 'targetValue' | 'targetUnit'> & {
+    type?: GuestActivity['type']
+    weeklyTarget?: number | null
+  },
+  seconds: number,
+): { done: boolean; label: string; targetSeconds: number } {
+  const repeats = activity.type === 'weekly_n' ? Math.max(1, activity.weeklyTarget ?? 1) : 1
+  const amount = (activity.targetValue ?? 2) * repeats
+  const targetSeconds = activity.targetUnit === 'seconds' ? amount : amount * 60
+  const unitLabel = activity.targetUnit === 'seconds' ? 'sec' : 'min'
+  return {
+    done: targetSeconds > 0 && seconds >= targetSeconds,
+    targetSeconds,
+    label: `${formatSecondsAsTargetUnit(seconds, activity.targetUnit)} / ${amount} ${unitLabel}`,
+  }
+}
+
+/** How far a guest count habit is today. Each protein tap is 5 g. */
+export function guestCountProgress(
+  activity: Pick<GuestActivity, 'targetValue' | 'targetUnit'>,
+  completions: number,
+): { value: number; target: number; done: boolean; label: string } {
+  if (activity.targetUnit === 'g' || activity.targetUnit === 'hours' || activity.targetUnit === 'hr') {
+    const portion = countPortion(activity.targetUnit)
+    const value = completions * portion
+    const target = activity.targetValue ?? portion
+    const unit = activity.targetUnit === 'g' ? 'g' : 'hours'
+    return { value, target, done: value >= target, label: `${value} ${unit} / ${target} ${unit}` }
+  }
+  const target = activity.targetValue ?? 1
+  const value = completions
+  return { value, target, done: value >= target, label: `${value}/${target}` }
+}
+
+/** One tap toward today's count. Protein and fasting can go past the goal. */
+export function appendGuestCount(
+  draft: GuestDraft,
+  localId: string,
+  date: string,
+  now = new Date(),
+): GuestDraft {
+  const activity = draft.activities.find((item) => item.localId === localId)
+  if (!activity || activity.trackingMode !== 'count') return draft
+  const soFar = guestCountProgress(activity, guestCountsOnDate(draft, localId, date))
+  if (soFar.done && !canLogPastGoal(activity.targetUnit)) return draft
+  return appendGuestLog(draft, {
+    localActivityId: localId,
+    startedAt: now.toISOString(),
+    durationSeconds: 0,
+    date,
+    kind: 'count',
+  })
+}
+
+export function guestReadingOnDate(
+  draft: GuestDraft,
+  localId: string,
+  date: string,
+): GuestReading | null {
+  return (
+    draft.readings.find((reading) => reading.localActivityId === localId && reading.date === date) ??
+    null
+  )
+}
+
+/** Save today's typed vital. A later entry for the same day replaces the earlier one. */
+export function upsertGuestReading(
+  draft: GuestDraft,
+  reading: GuestReading,
+): GuestDraft {
+  const readings = draft.readings.filter(
+    (item) => !(item.localActivityId === reading.localActivityId && item.date === reading.date),
+  )
+  return saveGuestDraft({ ...draft, readings: [...readings, reading] })
 }
 
 /** Shape sent to merge_guest_draft. No extra personal fields. */
@@ -258,6 +435,7 @@ export function guestDraftToPayload(draft: GuestDraft) {
     guestId: normalized.guestId,
     timezone: normalized.timezone,
     reminderTime: normalized.reminderTime,
+    reminderTimes: normalized.reminderTimes,
     slipAnswer: normalized.slipAnswer,
     activities: normalized.activities.map((a) => ({
       localId: a.localId,
@@ -277,6 +455,7 @@ export function guestDraftToPayload(draft: GuestDraft) {
       startedAt: log.startedAt,
       durationSeconds: log.durationSeconds,
       date: log.date,
+      kind: log.kind ?? 'session',
     })),
   }
 }

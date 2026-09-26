@@ -18,7 +18,7 @@ import { NotFoundPage } from './components/NotFoundPage'
 import { DeleteAccountPage } from './components/DeleteAccountPage'
 import { StartPage } from './components/StartPage'
 import { GuestMergeBanner } from './components/GuestMergeBanner'
-import { GuestTodayPage } from './components/GuestTodayPage'
+import { GuestAppShell, isGuestAppPath } from './components/GuestAppShell'
 import { hideNativeSplash } from './lib/nativeChrome'
 import { loadGuestDraft } from './lib/guestDraft'
 import { markCheckinOpened } from './lib/checkinPrefs'
@@ -91,6 +91,11 @@ function IndexRoute() {
     return <Navigate to={next ?? '/today'} replace />
   }
 
+  const next = safeNextPath(params.get('next'))
+  if (next && loadGuestDraft() && isGuestAppPath(next.split('?')[0] ?? next)) {
+    return <Navigate to={next} replace />
+  }
+
   return (
     <LandingPage
       configured={configured}
@@ -113,8 +118,11 @@ function RequireAuth() {
   if (loading) return <LoadingScreen />
 
   if (!user) {
-    if (location.pathname === '/today' && loadGuestDraft()) return <GuestTodayPage />
+    if (loadGuestDraft() && isGuestAppPath(location.pathname)) {
+      return <GuestAppShell />
+    }
     const next = safeNextPath(`${location.pathname}${location.search}`) ?? '/today'
+    stashAuthNext(next)
     return <Navigate to={`/?next=${encodeURIComponent(next)}`} replace />
   }
 

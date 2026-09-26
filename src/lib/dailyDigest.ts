@@ -6,11 +6,18 @@ export const DIGEST_LOOKAHEAD_DAYS = 3
 export const DIGEST_NOTIFICATION_ID_BASE = 7100
 export const DEFAULT_DIGEST_HOUR = 19
 export const DEFAULT_DIGEST_MINUTE = 0
+/** How many nudges someone can set in one day. */
+export const MAX_DAILY_REMINDERS = 5
+
+export type DigestTime = { hour: number; minute: number }
 
 export interface DailyDigestPrefs {
   enabled: boolean
+  /** First nudge — kept for older callers and storage. */
   hour: number
   minute: number
+  /** All daily nudge times, 1–5, sorted. */
+  times: DigestTime[]
 }
 
 export interface DigestItem {
@@ -34,6 +41,7 @@ export const DEFAULT_DAILY_DIGEST_PREFS: DailyDigestPrefs = {
   enabled: false,
   hour: DEFAULT_DIGEST_HOUR,
   minute: DEFAULT_DIGEST_MINUTE,
+  times: [{ hour: DEFAULT_DIGEST_HOUR, minute: DEFAULT_DIGEST_MINUTE }],
 }
 
 function clampInt(value: unknown, min: number, max: number, fallback: number): number {
@@ -42,17 +50,62 @@ function clampInt(value: unknown, min: number, max: number, fallback: number): n
   return n
 }
 
+function timeKey(time: DigestTime): string {
+  return `${time.hour}:${time.minute}`
+}
+
+/** Dedupe, sort, and cap nudge times. Always returns at least one. */
+export function normalizeDigestTimes(times: readonly DigestTime[]): DigestTime[] {
+  const cleaned = times
+    .map((time) => ({
+      hour: clampInt(time.hour, 0, 23, DEFAULT_DIGEST_HOUR),
+      minute: clampInt(time.minute, 0, 59, DEFAULT_DIGEST_MINUTE),
+    }))
+    .sort((a, b) => a.hour - b.hour || a.minute - b.minute)
+
+  const unique: DigestTime[] = []
+  for (const time of cleaned) {
+    if (unique.some((item) => timeKey(item) === timeKey(time))) continue
+    unique.push(time)
+    if (unique.length >= MAX_DAILY_REMINDERS) break
+  }
+
+  return unique.length > 0
+    ? unique
+    : [{ hour: DEFAULT_DIGEST_HOUR, minute: DEFAULT_DIGEST_MINUTE }]
+}
+
+export function withDigestTimes(
+  prefs: Pick<DailyDigestPrefs, 'enabled'> & Partial<DailyDigestPrefs>,
+  times: readonly DigestTime[],
+): DailyDigestPrefs {
+  const normalized = normalizeDigestTimes(times)
+  return {
+    enabled: prefs.enabled === true,
+    hour: normalized[0].hour,
+    minute: normalized[0].minute,
+    times: normalized,
+  }
+}
+
 export function parseDailyDigestPrefs(raw: string | null): DailyDigestPrefs {
-  if (!raw) return { ...DEFAULT_DAILY_DIGEST_PREFS }
+  if (!raw) return { ...DEFAULT_DAILY_DIGEST_PREFS, times: [...DEFAULT_DAILY_DIGEST_PREFS.times] }
   try {
-    const parsed = JSON.parse(raw) as Partial<DailyDigestPrefs>
-    return {
-      enabled: parsed.enabled === true,
-      hour: clampInt(parsed.hour, 0, 23, DEFAULT_DIGEST_HOUR),
-      minute: clampInt(parsed.minute, 0, 59, DEFAULT_DIGEST_MINUTE),
+    const parsed = JSON.parse(raw) as Partial<DailyDigestPrefs> & {
+      times?: Array<Partial<DigestTime>>
     }
+    const hour = clampInt(parsed.hour, 0, 23, DEFAULT_DIGEST_HOUR)
+    const minute = clampInt(parsed.minute, 0, 59, DEFAULT_DIGEST_MINUTE)
+    const rawTimes =
+      Array.isArray(parsed.times) && parsed.times.length > 0
+        ? parsed.times.map((time) => ({
+            hour: clampInt(time?.hour, 0, 23, hour),
+            minute: clampInt(time?.minute, 0, 59, minute),
+          }))
+        : [{ hour, minute }]
+    return withDigestTimes({ enabled: parsed.enabled === true }, rawTimes)
   } catch {
-    return { ...DEFAULT_DAILY_DIGEST_PREFS }
+    return { ...DEFAULT_DAILY_DIGEST_PREFS, times: [...DEFAULT_DAILY_DIGEST_PREFS.times] }
   }
 }
 
@@ -61,22 +114,26 @@ function canUseStorage(): boolean {
 }
 
 export function loadDailyDigestPrefs(): DailyDigestPrefs {
-  if (!canUseStorage()) return { ...DEFAULT_DAILY_DIGEST_PREFS }
+  if (!canUseStorage()) {
+    return { ...DEFAULT_DAILY_DIGEST_PREFS, times: [...DEFAULT_DAILY_DIGEST_PREFS.times] }
+  }
   try {
     return parseDailyDigestPrefs(window.localStorage.getItem(DAILY_DIGEST_STORAGE_KEY))
   } catch {
-    return { ...DEFAULT_DAILY_DIGEST_PREFS }
+    return { ...DEFAULT_DAILY_DIGEST_PREFS, times: [...DEFAULT_DAILY_DIGEST_PREFS.times] }
   }
 }
 
 export function saveDailyDigestPrefs(prefs: DailyDigestPrefs): void {
   if (!canUseStorage()) return
+  const next = withDigestTimes(prefs, prefs.times?.length ? prefs.times : [{ hour: prefs.hour, minute: prefs.minute }])
   window.localStorage.setItem(
     DAILY_DIGEST_STORAGE_KEY,
     JSON.stringify({
-      enabled: prefs.enabled === true,
-      hour: clampInt(prefs.hour, 0, 23, DEFAULT_DIGEST_HOUR),
-      minute: clampInt(prefs.minute, 0, 59, DEFAULT_DIGEST_MINUTE),
+      enabled: next.enabled,
+      hour: next.hour,
+      minute: next.minute,
+      times: next.times,
     }),
   )
   window.dispatchEvent(new Event(DAILY_DIGEST_CHANGED))
@@ -88,7 +145,7 @@ export function formatTimeInput(hour: number, minute: number): string {
   ).padStart(2, '0')}`
 }
 
-export function parseTimeInput(value: string): { hour: number; minute: number } | null {
+export function parseTimeInput(value: string): DigestTime | null {
   const match = /^(\d{1,2}):(\d{2})$/.exec(value.trim())
   if (!match) return null
   const hour = Number(match[1])
@@ -100,9 +157,10 @@ export function parseTimeInput(value: string): { hour: number; minute: number } 
 
 export function digestNotificationIds(
   lookaheadDays = DIGEST_LOOKAHEAD_DAYS,
+  reminderCount = MAX_DAILY_REMINDERS,
 ): number[] {
   return Array.from(
-    { length: lookaheadDays },
+    { length: lookaheadDays * reminderCount },
     (_, i) => DIGEST_NOTIFICATION_ID_BASE + i,
   )
 }
@@ -123,6 +181,11 @@ export function formatClock(at: Date): string {
   return `${h}:${String(at.getMinutes()).padStart(2, '0')} ${suffix}`
 }
 
+function digestTimesOf(prefs: DailyDigestPrefs): DigestTime[] {
+  if (prefs.times?.length) return normalizeDigestTimes(prefs.times)
+  return [{ hour: prefs.hour, minute: prefs.minute }]
+}
+
 /** Explains what the local scheduler will actually do right now. */
 export function digestScheduleHint(
   rows: DigestItem[],
@@ -134,16 +197,21 @@ export function digestScheduleHint(
     return 'Nothing to remind you about yet. Add something on Today first.'
   }
 
-  const todayAt = new Date(now)
-  todayAt.setHours(prefs.hour, prefs.minute, 0, 0)
-  const clock = formatClock(todayAt)
-  const doneToday = rows.every((row) => row.done)
-
-  if (doneToday) {
-    return `You're done today, so no ping at ${clock}. Next try is tomorrow.`
+  const fires = nextDigestFires(prefs, now, {
+    skipToday: rows.every((row) => row.done),
+  })
+  if (fires.length === 0) {
+    return "You're done today, so no more pings. Next try is tomorrow."
   }
-  if (todayAt.getTime() <= now.getTime()) {
-    return `That time already passed today. Next ping is tomorrow at ${clock}.`
+
+  const next = fires[0]
+  const clock = formatClock(next.at)
+  if (next.kind === 'later') {
+    return `Next ping is tomorrow at ${clock}.`
+  }
+  const count = digestTimesOf(prefs).length
+  if (count > 1) {
+    return `Next ping today at ${clock} (${count} nudges set). Silent once you're done.`
   }
   return `Next ping today at ${clock} if something is still open.`
 }
@@ -156,23 +224,26 @@ export function nextDigestFires(
   if (!prefs.enabled) return []
 
   const lookahead = options.lookaheadDays ?? DIGEST_LOOKAHEAD_DAYS
+  const times = digestTimesOf(prefs)
   const fires: DigestFire[] = []
 
   for (let offset = 0; offset < lookahead; offset += 1) {
-    const at = new Date(now)
-    at.setDate(at.getDate() + offset)
-    at.setHours(prefs.hour, prefs.minute, 0, 0)
+    for (const time of times) {
+      const at = new Date(now)
+      at.setDate(at.getDate() + offset)
+      at.setHours(time.hour, time.minute, 0, 0)
 
-    const kind: DigestFire['kind'] = offset === 0 ? 'today' : 'later'
-    if (kind === 'today') {
-      if (options.skipToday) continue
-      if (at.getTime() <= now.getTime()) continue
+      const kind: DigestFire['kind'] = offset === 0 ? 'today' : 'later'
+      if (kind === 'today') {
+        if (options.skipToday) continue
+        if (at.getTime() <= now.getTime()) continue
+      }
+
+      fires.push({ at, kind })
     }
-
-    fires.push({ at, kind })
   }
 
-  return fires
+  return fires.sort((a, b) => a.at.getTime() - b.at.getTime())
 }
 
 /**

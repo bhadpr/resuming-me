@@ -27,7 +27,7 @@ export default defineConfig({
         id: '/',
         name: 'Resuming',
         short_name: 'Resuming',
-        description: 'Track what you postpone. Resume what matters.',
+        description: 'A small habit you can start again. Do two minutes.',
         theme_color: '#fff4e8',
         background_color: '#fff4e8',
         display: 'standalone',
