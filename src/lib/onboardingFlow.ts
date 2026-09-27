@@ -14,23 +14,23 @@ export const GAP_OPTIONS = [
 
 export type GapId = (typeof GAP_OPTIONS)[number]['id']
 
-export function isWaterHabit(activity: Pick<GuestActivity, 'templateId'>): boolean {
+export function isWaterHabit(activity: { templateId?: string | null }): boolean {
   return activity.templateId === 'water'
 }
 
-export function isProteinHabit(activity: Pick<GuestActivity, 'templateId'>): boolean {
+export function isProteinHabit(activity: { templateId?: string | null }): boolean {
   return activity.templateId === 'protein'
 }
 
-export function isFastingHabit(activity: Pick<GuestActivity, 'templateId'>): boolean {
+export function isFastingHabit(activity: { templateId?: string | null }): boolean {
   return activity.templateId === 'fasting'
 }
 
-export function isSleepHabit(activity: Pick<GuestActivity, 'templateId'>): boolean {
+export function isSleepHabit(activity: { templateId?: string | null }): boolean {
   return activity.templateId === 'sleep_hours'
 }
 
-export function isStepsHabit(activity: Pick<GuestActivity, 'templateId'>): boolean {
+export function isStepsHabit(activity: { templateId?: string | null }): boolean {
   return activity.templateId === 'steps'
 }
 
@@ -43,7 +43,11 @@ const LOGGED_VITAL_IDS = new Set([
 ])
 
 /** Weight, steps, and blood pressure are logged as numbers, so they skip the minute-size step. */
-export function isLoggedVital(activity: Pick<GuestActivity, 'templateId'>): boolean {
+export function isLoggedVital(activity: {
+  templateId?: string | null
+  measure?: string | null
+}): boolean {
+  if (activity.measure === 'log') return true
   return activity.templateId != null && LOGGED_VITAL_IDS.has(activity.templateId)
 }
 
@@ -52,8 +56,20 @@ export function isNumberEntryVital(activity: Pick<GuestActivity, 'templateId'>):
   return activity.templateId === 'blood_pressure' || activity.templateId === 'heart_rate'
 }
 
-/** Water, protein, fasting, and sleep ask for a daily amount, then skip the 1× size chips. */
-export function isDailyGoalHabit(activity: Pick<GuestActivity, 'templateId'>): boolean {
+/** Water, protein, fasting, sleep, and a typed gram goal ask for a daily amount. */
+export function isDailyGoalHabit(activity: {
+  templateId?: string | null
+  measure?: string | null
+}): boolean {
+  if (
+    activity.measure === 'grams' ||
+    activity.measure === 'glasses' ||
+    activity.measure === 'hours' ||
+    activity.measure === 'sleep' ||
+    activity.measure === 'steps'
+  ) {
+    return true
+  }
   return (
     isWaterHabit(activity) ||
     isProteinHabit(activity) ||
@@ -64,11 +80,16 @@ export function isDailyGoalHabit(activity: Pick<GuestActivity, 'templateId'>): b
 }
 
 /** Habits that pick session length + how often on start step 3. */
-export function needsSizeStep(activity: Pick<GuestActivity, 'templateId'>): boolean {
+export function needsSizeStep(activity: {
+  templateId?: string | null
+  measure?: string | null
+}): boolean {
   return !isDailyGoalHabit(activity) && !isLoggedVital(activity)
 }
 
-export function sizeStepActivities<T extends Pick<GuestActivity, 'templateId'>>(activities: T[]): T[] {
+export function sizeStepActivities<
+  T extends { templateId?: string | null; measure?: string | null },
+>(activities: T[]): T[] {
   return activities.filter(needsSizeStep)
 }
 
@@ -102,8 +123,25 @@ export function showsHabitVideo(templateId: string | null | undefined): boolean 
 }
 
 /** Caption under the habit video (real clip or placeholder). */
-export function habitVideoCaption(templateId: string | null, name: string): string {
-  if (templateId === 'water' || templateId === 'protein' || templateId === 'fasting' || templateId === 'sleep_hours') {
+export function habitVideoCaption(
+  templateId: string | null,
+  name: string,
+  measure?: string | null,
+): string {
+  const measured =
+    measure === 'grams' ||
+    measure === 'glasses' ||
+    measure === 'hours' ||
+    measure === 'sleep' ||
+    measure === 'steps' ||
+    measure === 'log'
+  if (
+    measured ||
+    templateId === 'water' ||
+    templateId === 'protein' ||
+    templateId === 'fasting' ||
+    templateId === 'sleep_hours'
+  ) {
     return t('video.why', { name: name.toLowerCase() })
   }
   if (templateId && habitVideoFor(templateId)) {
@@ -228,30 +266,86 @@ export const SLEEP_GAP_OPTIONS = SLEEP_HOUR_STEPS.map((hours) => ({
       : `${hourLabel(hours)} is your nightly goal. You can change it any time.`,
 }))
 
-export function gapHeading(activity: Pick<GuestActivity, 'templateId'>): string {
-  if (isWaterHabit(activity)) return t('gap.water')
+type GoalAsk = {
+  templateId?: string | null
+  measure?: string | null
+  recommended?: number | null
+  goalSteps?: number[] | null
+}
+
+function stepsOr(activity: GoalAsk, fallback: readonly number[]): number[] {
+  const custom = activity.goalSteps?.filter((step) => typeof step === 'number' && step > 0)
+  return custom && custom.length > 0 ? custom : [...fallback]
+}
+
+export function gapHeading(activity: GoalAsk): string {
+  if (isWaterHabit(activity) || activity.measure === 'glasses') return t('gap.water')
   if (isProteinHabit(activity)) return t('gap.protein')
-  if (isFastingHabit(activity)) return t('gap.fasting')
-  if (isSleepHabit(activity)) return t('gap.sleep')
-  if (isStepsHabit(activity)) return t('gap.steps')
+  if (activity.measure === 'grams') return t('gap.grams')
+  if (isFastingHabit(activity) || activity.measure === 'hours') return t('gap.fasting')
+  if (isSleepHabit(activity) || activity.measure === 'sleep') return t('gap.sleep')
+  if (isStepsHabit(activity) || activity.measure === 'steps') return t('gap.steps')
   return t('gap.when')
 }
 
-export function gapNote(activity: Pick<GuestActivity, 'templateId'>): string | null {
-  if (isWaterHabit(activity)) return t('notes.waterGoal')
+export function gapNote(activity: GoalAsk): string | null {
+  if (isWaterHabit(activity) || activity.measure === 'glasses') return t('notes.waterGoal')
   if (isProteinHabit(activity)) return t('notes.protein')
-  if (isFastingHabit(activity)) return t('notes.fasting')
-  if (isSleepHabit(activity)) return t('notes.sleep')
-  if (isStepsHabit(activity)) return t('notes.steps')
+  if (activity.measure === 'grams' && activity.recommended) {
+    return t('notes.grams', { amount: String(activity.recommended) })
+  }
+  if (isFastingHabit(activity) || activity.measure === 'hours') return t('notes.fasting')
+  if (isSleepHabit(activity) || activity.measure === 'sleep') return t('notes.sleep')
+  if (isStepsHabit(activity) || activity.measure === 'steps') return t('notes.steps')
   return null
 }
 
-export function gapOptionsFor(activity: Pick<GuestActivity, 'templateId'>) {
+export function gapOptionsFor(activity: GoalAsk) {
   if (isWaterHabit(activity)) return WATER_GAP_OPTIONS
   if (isProteinHabit(activity)) return PROTEIN_GAP_OPTIONS
   if (isFastingHabit(activity)) return FASTING_GAP_OPTIONS
   if (isSleepHabit(activity)) return SLEEP_GAP_OPTIONS
   if (isStepsHabit(activity)) return STEP_GAP_OPTIONS
+  if (activity.measure === 'grams') {
+    return stepsOr(activity, PROTEIN_GRAM_STEPS).map((grams) => ({
+      id: `grams_${grams}`,
+      label: proteinLabel(grams),
+      grams,
+      reassurance: '',
+    }))
+  }
+  if (activity.measure === 'glasses') {
+    return stepsOr(activity, WATER_GLASS_STEPS).map((glasses) => ({
+      id: `glasses_${glasses}`,
+      label: glassLabel(glasses),
+      glasses,
+      reassurance: '',
+    }))
+  }
+  if (activity.measure === 'hours') {
+    return stepsOr(activity, FASTING_HOUR_STEPS).map((hours) => ({
+      id: `fasting_${hours}`,
+      label: hourLabel(hours),
+      hours,
+      reassurance: '',
+    }))
+  }
+  if (activity.measure === 'sleep') {
+    return stepsOr(activity, SLEEP_HOUR_STEPS).map((hours) => ({
+      id: `sleep_${hours}`,
+      label: hourLabel(hours),
+      hours,
+      reassurance: '',
+    }))
+  }
+  if (activity.measure === 'steps') {
+    return stepsOr(activity, STEP_COUNT_TARGETS).map((count) => ({
+      id: `steps_${count}`,
+      label: stepCountLabel(count),
+      count,
+      reassurance: '',
+    }))
+  }
   return GAP_OPTIONS
 }
 
@@ -324,7 +418,13 @@ export function gapReassurance(id: string): string {
   const option = [...GAP_OPTIONS, ...WATER_GAP_OPTIONS, ...PROTEIN_GAP_OPTIONS, ...FASTING_GAP_OPTIONS, ...SLEEP_GAP_OPTIONS, ...STEP_GAP_OPTIONS].find(
     (item) => item.id === id,
   )
-  if (!option) return ''
+  if (!option) {
+    if (id.startsWith('grams_')) {
+      const grams = Number(id.slice('grams_'.length))
+      if (grams > 0) return t('reassure.dailyGoal', { label: `${grams} ${t('unit.g')}` })
+    }
+    return ''
+  }
   const key = `reassure.${id}`
   const hit = t(key)
   if (hit !== key) return hit
@@ -340,7 +440,12 @@ export function gapReassurance(id: string): string {
             : option.label
   if (id.startsWith('sleep_')) return t('reassure.nightlyGoal', { label })
   if (id.startsWith('steps_')) return t('reassure.stepsGoal', { label })
-  if (id.startsWith('glasses_') || id.startsWith('protein_') || id.startsWith('fasting_')) {
+  if (
+    id.startsWith('glasses_') ||
+    id.startsWith('protein_') ||
+    id.startsWith('grams_') ||
+    id.startsWith('fasting_')
+  ) {
     return t('reassure.dailyGoal', { label })
   }
   return option.reassurance

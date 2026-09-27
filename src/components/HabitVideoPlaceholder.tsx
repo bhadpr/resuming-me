@@ -13,16 +13,18 @@ function postYoutubeCommand(iframe: HTMLIFrameElement | null, func: 'playVideo' 
 export function HabitVideoPlaceholder({
   templateId,
   name,
+  measure = null,
   playing = false,
   paused = false,
 }: {
   templateId: string | null
   name: string
+  measure?: string | null
   playing?: boolean
   paused?: boolean
 }) {
   const video = habitVideoFor(templateId)
-  const caption = habitVideoCaption(templateId, name)
+  const caption = habitVideoCaption(templateId, name, measure)
   const withTimer = playing || paused
   const iframeRef = useRef<HTMLIFrameElement>(null)
   /** Tracks play state after the live session iframe is up; first start uses embed autoplay. */

@@ -3,6 +3,7 @@ import { getLocale, t } from './i18n'
 import { canLogPastGoal, countPortion } from './dayStatus'
 import { endOfWeekSunday, startOfWeekMonday } from './dates'
 import { formatSecondsAsTargetUnit } from './timer'
+import type { HabitMeasure } from './habitKind'
 import type { ActivityType, TrackingMode } from '../types/database'
 
 export const GUEST_DRAFT_KEY = 'resuming-guest-draft'
@@ -30,6 +31,12 @@ export type GuestActivity = {
   templateId: string | null
   why: string | null
   usuallyWhen: string | null
+  /** How a typed name is measured. Catalog habits leave this empty. */
+  measure?: HabitMeasure | null
+  /** Common daily amount for a typed vital, such as 250 g of carbs. */
+  recommended?: number | null
+  /** Choices on the amount screen, such as 100, 150, 200, 250, 300. */
+  goalSteps?: number[] | null
 }
 
 export type GuestLog = {
@@ -376,7 +383,7 @@ export function guestCountProgress(
   completions: number,
 ): { value: number; target: number; done: boolean; label: string } {
   if (activity.targetUnit === 'g' || activity.targetUnit === 'hours' || activity.targetUnit === 'hr') {
-    const portion = countPortion(activity.targetUnit)
+    const portion = countPortion(activity.targetUnit, activity.targetValue)
     const value = completions * portion
     const target = activity.targetValue ?? portion
     const unit = activity.targetUnit === 'g' ? 'g' : 'hours'

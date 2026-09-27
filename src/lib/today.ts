@@ -242,7 +242,7 @@ export function buildTodayProgress(
           )
         : completedCountInWindow(entries, activity.id, from, to)
 
-    const portion = actionKind === 'count' ? countPortion(activity.target_unit) : 1
+    const portion = actionKind === 'count' ? countPortion(activity.target_unit, activity.target_value) : 1
     let current = periodCompletedEntries.length * portion
     let target = periodTarget(activity)
     let daysRemaining: number | null = null

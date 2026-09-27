@@ -1250,7 +1250,7 @@ export function AppShell() {
         activityId: row.activity.id,
         date: today,
       })
-      const nextValue = row.current + countPortion(row.activity.target_unit)
+      const nextValue = row.current + countPortion(row.activity.target_unit, row.activity.target_value)
       trackLogAndComeback({
         activity: row.activity,
         kind: 'count',

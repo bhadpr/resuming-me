@@ -61,13 +61,6 @@ const INTENT_STEPS = [
     imageAlt: 'A person taking one small step on a path at sunrise.',
   },
   {
-    id: 'gaps',
-    question: 'Quiet days happen. Still come back after?',
-    action: 'Yes',
-    image: '/intent/restart.webp',
-    imageAlt: 'Soft light after clouds — standing up again.',
-  },
-  {
     id: 'promise',
     question: 'I’ll come back when I drift.',
     action: 'I promise',
@@ -188,9 +181,7 @@ export function LandingPage({
               ? t('landing.postponed')
               : intentStep.id === 'small'
                 ? t('landing.small')
-                : intentStep.id === 'gaps'
-                  ? t('landing.gaps')
-                  : t('landing.promiseQ')}
+                : t('landing.promiseQ')}
           </h1>
           <button type="button" className="btn btn-primary btn-lg" onClick={advanceIntent}>
             {intentStep.id === 'promise' ? t('landing.promise') : t('landing.yes')}

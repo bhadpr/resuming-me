@@ -11,8 +11,11 @@ import {
   WATER_GLASS_NOTE,
   habitVideoCaption,
   gapHeading,
+  gapNote,
   gapOptionsFor,
   gapReassurance,
+  isDailyGoalHabit,
+  needsSizeStep,
   onboardingSummary,
   smallestStep,
   TIMER_MINUTE_STEPS,
@@ -183,5 +186,21 @@ describe('onboarding flow copy', () => {
         templateId: 'protein',
       }),
     ).toBeNull()
+  })
+
+  it('asks for grams when a typed habit is a carb goal', () => {
+    const carbs = {
+      templateId: null,
+      measure: 'grams' as const,
+      recommended: 250,
+      goalSteps: [100, 150, 200, 250, 300],
+    }
+    expect(isDailyGoalHabit(carbs)).toBe(true)
+    expect(needsSizeStep(carbs)).toBe(false)
+    expect(gapHeading(carbs)).toBe('How many grams is your goal?')
+    expect(gapNote(carbs)).toBe('A common day is about 250 g.')
+    expect(gapOptionsFor(carbs).map((option) => ('grams' in option ? option.grams : null))).toEqual([
+      100, 150, 200, 250, 300,
+    ])
   })
 })

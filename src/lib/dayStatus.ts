@@ -17,8 +17,12 @@ export const PROTEIN_GRAMS_PER_PORTION = 5
 /** One fasting tap adds 4 hours. */
 export const FASTING_HOURS_PER_TAP = 4
 
-export function countPortion(unit: string | null | undefined): number {
-  if (unit === 'g') return PROTEIN_GRAMS_PER_PORTION
+export function countPortion(unit: string | null | undefined, target?: number | null): number {
+  if (unit === 'g') {
+    if (target != null && target >= 150) return 25
+    if (target != null && target >= 80) return 10
+    return PROTEIN_GRAMS_PER_PORTION
+  }
   if (unit === 'hours') return FASTING_HOURS_PER_TAP
   return 1
 }
@@ -243,7 +247,7 @@ function progressAndTarget(
       e.date === date,
   ).length
   if (activity.target_unit === 'g' || activity.target_unit === 'hours' || activity.target_unit === 'hr') {
-    const portion = countPortion(activity.target_unit)
+    const portion = countPortion(activity.target_unit, activity.target_value)
     const value = completions * portion
     const target = activity.target_value ?? portion
     return { value, target, met: value >= target }

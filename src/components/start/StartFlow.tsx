@@ -26,15 +26,10 @@ import {
   applyWeekCadence,
   durationChipParts,
   gapNote,
-  glassesInGap,
-  gramsInGap,
   habitSizeTagline,
-  hoursInGap,
   isDailyGoalHabit,
   isWaterHabit,
-  sleepHoursInGap,
   sizeStepActivities,
-  stepsInGap,
   continueLabel,
   gapHeading,
   gapOptionsFor,
@@ -45,6 +40,7 @@ import {
   type WeekCadence,
 } from '../../lib/onboardingFlow'
 import { catalogTrackId, groupTitle, templateLabel, visibleName } from '../../lib/catalogName'
+import { applyHabitPlan, classifyHabitLocally, refineHabitKind } from '../../lib/habitKind'
 import { track } from '../../lib/track'
 import { useLocale } from '../../hooks/useLocale'
 import { BrandTitle } from '../BrandTitle'
@@ -54,9 +50,6 @@ function newLocalId(): string {
   if (typeof crypto !== 'undefined' && 'randomUUID' in crypto) return crypto.randomUUID()
   return `g-${Date.now()}`
 }
-
-/** Hidden on the first start screen for now. The habits stay in the catalog. */
-const START_HIDDEN_GROUPS = new Set(['Learn', 'Creativity'])
 
 const START_VITALS: { id: string; label: string; caption?: string }[] = [
   { id: 'weight', label: 'Weight' },
@@ -68,6 +61,16 @@ const START_VITALS: { id: string; label: string; caption?: string }[] = [
   { id: 'blood_pressure', label: 'Blood Pressure' },
   { id: 'heart_rate', label: 'Heart Rate' },
 ]
+
+/** Short first question. Explore more opens the rest of the catalog. */
+const START_FEATURED: { id: string; labelKey: string }[] = [
+  { id: 'walk', labelKey: 'start.featuredWalk' },
+  { id: 'water', labelKey: 'start.featuredWater' },
+  { id: 'stretching', labelKey: 'start.featuredExercise' },
+  { id: 'anuloma_viloma', labelKey: 'start.featuredPranayam' },
+  { id: 'reading', labelKey: 'start.featuredReading' },
+]
+const FEATURED_IDS = new Set(START_FEATURED.map((item) => item.id))
 /** First visit asks for a few. Adding from Today can go past this. */
 const START_PICK_MAX = 3
 
@@ -107,6 +110,8 @@ export function StartFlow({
   const [sizeIndex, setSizeIndex] = useState(0)
   const [customOpen, setCustomOpen] = useState(false)
   const [customName, setCustomName] = useState('')
+  const [typeError, setTypeError] = useState(false)
+  const [exploreMore, setExploreMore] = useState(false)
   const [reassurance, setReassurance] = useState<string | null>(null)
   const [googleBusy, setGoogleBusy] = useState(false)
   const [nudgeTimes, setNudgeTimes] = useState<string[]>(() => {
@@ -114,6 +119,8 @@ export function StartFlow({
     return [draft.reminderTime ?? '19:00']
   })
   const gapTimer = useRef<number | null>(null)
+  const draftRef = useRef(draft)
+  draftRef.current = draft
 
   useEffect(() => {
     return () => {
@@ -196,35 +203,108 @@ export function StartFlow({
     })
   }
 
+  function refineTypedHabit(localId: string, name: string) {
+    void refineHabitKind(name).then((nextPlan) => {
+      if (!nextPlan) return
+      const apply = () => {
+        const current = draftRef.current
+        const item = current.activities.find((activity) => activity.localId === localId)
+        if (!item || current.gapAnswer[localId] || current.step > 2) return
+        if (
+          item.measure === nextPlan.measure &&
+          item.recommended === nextPlan.recommended &&
+          JSON.stringify(item.goalSteps ?? []) === JSON.stringify(nextPlan.goalSteps)
+        ) {
+          return
+        }
+        const updated = applyHabitPlan(item, nextPlan)
+        persist(upsertGuestActivity(current, updated))
+      }
+      if (draftRef.current.activities.some((activity) => activity.localId === localId)) apply()
+      else window.setTimeout(apply, 0)
+    })
+  }
+
+  function draftWithTypedHabit(base: GuestDraft): GuestDraft {
+    const name = customName.trim()
+    if (!name) return base
+    if (!classifyHabitLocally(name).confident) return base
+    const pickMax = adding ? GUEST_MAX_ACTIVITIES : START_PICK_MAX
+    if (base.activities.length >= pickMax) return base
+    const localId = newLocalId()
+    const habitPlan = classifyHabitLocally(name)
+    refineTypedHabit(localId, name)
+    return upsertGuestActivity(
+      base,
+      applyHabitPlan(
+        {
+          localId,
+          name,
+          emoji: habitPlan.emoji,
+          type: 'daily',
+          trackingMode: habitPlan.trackingMode,
+          targetValue: habitPlan.targetValue,
+          targetUnit: habitPlan.targetUnit,
+          weeklyTarget: null,
+          deadline: null,
+          templateId: null,
+          why: null,
+          usuallyWhen: null,
+        },
+        habitPlan,
+      ),
+    )
+  }
+
   function addCustomHabit() {
     const name = customName.trim()
-    if (!name) return
-    const pickMax = adding ? GUEST_MAX_ACTIVITIES : START_PICK_MAX
-    if (draft.activities.length >= pickMax) return
-    persist(
-      upsertGuestActivity(draft, {
-        localId: newLocalId(),
-        name,
-        emoji: '📌',
-        type: 'daily',
-        trackingMode: 'timer',
-        targetValue: 10,
-        targetUnit: 'minutes',
-        weeklyTarget: null,
-        deadline: null,
-        templateId: null,
-        why: null,
-        usuallyWhen: null,
-      }),
-    )
+    const habitPlan = name ? classifyHabitLocally(name) : null
+    if (name && habitPlan && !habitPlan.confident) {
+      setTypeError(true)
+      return
+    }
+    setTypeError(false)
+    const next = draftWithTypedHabit(draft)
+    if (next === draft) return
     setCustomName('')
     setCustomOpen(false)
+    persist(next)
     track('activity_created', {
       template_id: 'custom',
       type: 'daily',
-      tracking: 'timer',
+      tracking: habitPlan?.trackingMode ?? 'timer',
       signed_in: false,
     })
+  }
+
+  const typedNameCounts =
+    customName.trim() !== '' && classifyHabitLocally(customName).confident
+
+  function continueFromPick() {
+    const name = customName.trim()
+    const habitPlan = name ? classifyHabitLocally(name) : null
+    if (name && habitPlan && !habitPlan.confident) {
+      setTypeError(true)
+      if (draft.activities.length === 0) return
+    } else {
+      setTypeError(false)
+    }
+    const next = draftWithTypedHabit(draft)
+    if (next.activities.length === 0) return
+    if (next !== draft) {
+      setCustomName('')
+      track('activity_created', {
+        template_id: 'custom',
+        type: 'daily',
+        tracking: habitPlan?.trackingMode ?? 'timer',
+        signed_in: false,
+      })
+    }
+    finishStep(
+      1,
+      choiceCode(next.activities.map((item) => item.templateId ?? 'custom')),
+      draftAfterPick(next),
+    )
   }
 
   function hasSizeStep(base: GuestDraft): boolean {
@@ -272,21 +352,22 @@ export function StartFlow({
 
   function pickGap(id: string) {
     if (!gapActivity) return
-    const glasses = glassesInGap(id)
-    const grams = gramsInGap(id)
-    const hours = hoursInGap(id)
-    const sleepHours = sleepHoursInGap(id)
-    const stepCount = stepsInGap(id)
+    const option = gapOptionsFor(gapActivity).find((item) => item.id === id)
+    const glasses = option && 'glasses' in option ? option.glasses : undefined
+    const grams = option && 'grams' in option ? option.grams : undefined
+    const hours = option && 'hours' in option ? option.hours : undefined
+    const stepCount = option && 'count' in option ? option.count : undefined
     const activities =
-      glasses == null && grams == null && hours == null && sleepHours == null && stepCount == null
+      glasses == null && grams == null && hours == null && stepCount == null
         ? draft.activities
         : draft.activities.map((item) => {
             if (item.localId !== gapActivity.localId) return item
             if (glasses != null) return { ...item, targetValue: glasses, targetUnit: 'glasses' as const }
             if (grams != null) return { ...item, targetValue: grams, targetUnit: 'g' as const }
-            if (sleepHours != null) return { ...item, targetValue: sleepHours, targetUnit: 'hr' as const }
             if (stepCount != null) return { ...item, targetValue: stepCount, targetUnit: 'steps' as const }
-            return { ...item, targetValue: hours, targetUnit: 'hours' as const }
+            if (hours == null) return item
+            const unit = item.measure === 'sleep' || item.targetUnit === 'hr' || item.templateId === 'sleep_hours' ? 'hr' as const : 'hours' as const
+            return { ...item, targetValue: hours, targetUnit: unit }
           })
     const next = saveGuestDraft({
       ...draft,
@@ -491,12 +572,98 @@ export function StartFlow({
           <p className="screen-sub">
             {adding ? t('start.addSub') : t('start.pickSub')}
           </p>
+          <form
+            className="start-type"
+            onSubmit={(event) => {
+              event.preventDefault()
+              addCustomHabit()
+            }}
+          >
+            <label className="field">
+              <span className="visually-hidden">{t('start.name')}</span>
+              <input
+                className="field-input"
+                value={customName}
+              onChange={(event) => {
+                setCustomName(event.target.value)
+                setTypeError(false)
+              }}
+              placeholder={t('start.typePlaceholder')}
+              maxLength={60}
+              enterKeyHint="done"
+              aria-invalid={typeError}
+            />
+            </label>
+            <button
+              type="submit"
+              className="btn btn-secondary"
+              disabled={
+                !customName.trim() ||
+                draft.activities.length >= (adding ? GUEST_MAX_ACTIVITIES : START_PICK_MAX)
+              }
+            >
+              {t('start.addName')}
+            </button>
+          </form>
+          {typeError && (
+            <p className="error start-type-error" role="alert">
+              {t('start.unknown')}
+            </p>
+          )}
+          {draft.activities.some((item) => item.templateId == null) && (
+            <div className="start-featured">
+              {draft.activities
+                .filter((item) => item.templateId == null)
+                .map((item) => (
+                  <button
+                    key={item.localId}
+                    type="button"
+                    className="start-featured-option is-selected"
+                    onClick={() => persist(removeGuestActivity(draft, item.localId))}
+                  >
+                    {item.name}
+                  </button>
+                ))}
+            </div>
+          )}
+          <div className="start-featured">
+            {START_FEATURED.map((item) => {
+              const selected = draft.activities.some((activity) => activity.templateId === item.id)
+              const pickMax = adding ? GUEST_MAX_ACTIVITIES : START_PICK_MAX
+              const full = draft.activities.length >= pickMax && !selected
+              return (
+                <button
+                  key={item.id}
+                  type="button"
+                  className={`start-featured-option${selected ? ' is-selected' : ''}`}
+                  disabled={full}
+                  aria-pressed={selected}
+                  onClick={() => toggleTemplate(item.id)}
+                >
+                  <HabitMark templateId={item.id} />
+                  <span>{t(item.labelKey)}</span>
+                </button>
+              )
+            })}
+          </div>
+          <button
+            type="button"
+            className="btn btn-ghost start-explore"
+            onClick={() => setExploreMore((open) => !open)}
+            aria-expanded={exploreMore}
+          >
+            {exploreMore ? t('start.exploreLess') : t('start.explore')}
+          </button>
+          {exploreMore && (
           <div className="habit-groups habit-pick">
-            {HABIT_GROUPS.filter((group) => !START_HIDDEN_GROUPS.has(group.title)).map((group) => (
+            {HABIT_GROUPS.map((group) => {
+              const ids = group.ids.filter((id) => !FEATURED_IDS.has(id))
+              if (ids.length === 0) return null
+              return (
               <section key={group.title} className="habit-group">
                 <h2 className="habit-group-title">{groupTitle(group.title, locale)}</h2>
                 <div className="onboarding-chips">
-                  {group.ids.map((id) => {
+                  {ids.map((id) => {
                     const template = templateById(id)
                     if (!template) return null
                     const selected = draft.activities.some((item) => item.templateId === template.id)
@@ -526,11 +693,12 @@ export function StartFlow({
                   })}
                 </div>
               </section>
-            ))}
+              )
+            })}
             <section className="habit-group">
               <h2 className="habit-group-title">{t('start.vitals')}</h2>
               <div className="onboarding-chips">
-                {START_VITALS.map((vital) => {
+                {START_VITALS.filter((vital) => !FEATURED_IDS.has(vital.id)).map((vital) => {
                   const selected = draft.activities.some((item) => item.templateId === vital.id)
                   const pickMax = adding ? GUEST_MAX_ACTIVITIES : START_PICK_MAX
                   const full = draft.activities.length >= pickMax && !selected
@@ -561,51 +729,16 @@ export function StartFlow({
                 })}
               </div>
             </section>
-            {draft.activities.some((item) => item.templateId == null) && (
-              <div className="onboarding-chips">
-                {draft.activities
-                  .filter((item) => item.templateId == null)
-                  .map((item) => (
-                    <button
-                      key={item.localId}
-                      type="button"
-                      className="onboarding-chip habit-tile onboarding-chip-selected"
-                      onClick={() => persist(removeGuestActivity(draft, item.localId))}
-                    >
-                      <span className="habit-tile-icon" aria-hidden>
-                        <HabitIcon id="custom" />
-                      </span>
-                      <span className="habit-tile-label">{item.name}</span>
-                    </button>
-                  ))}
-              </div>
-            )}
           </div>
-          <button
-            type="button"
-            className="btn btn-secondary"
-            disabled={draft.activities.length >= (adding ? GUEST_MAX_ACTIVITIES : START_PICK_MAX)}
-            onClick={() => {
-              setCustomName('')
-              setCustomOpen(true)
-            }}
-          >
-            {t('start.create')}
-          </button>
+          )}
           <div className="start-flow-footer">
             <button
               type="button"
               className="btn btn-primary"
-              disabled={draft.activities.length === 0}
-              onClick={() =>
-                finishStep(
-                  1,
-                  choiceCode(draft.activities.map((item) => item.templateId ?? 'custom')),
-                  draftAfterPick(draft),
-                )
-              }
+              disabled={draft.activities.length === 0 && !typedNameCounts}
+              onClick={continueFromPick}
             >
-              {continueLabel(draft.activities.length)}
+              {continueLabel(draft.activities.length + (typedNameCounts ? 1 : 0))}
             </button>
           </div>
         </>
@@ -618,7 +751,11 @@ export function StartFlow({
             {gapActivity.emoji} {visibleName(gapActivity, locale)}
           </p>
           {gapNote(gapActivity) && <p className="screen-sub">{gapNote(gapActivity)}</p>}
-          <HabitVideoPlaceholder templateId={gapActivity.templateId} name={visibleName(gapActivity, locale)} />
+          <HabitVideoPlaceholder
+            templateId={gapActivity.templateId}
+            name={visibleName(gapActivity, locale)}
+            measure={gapActivity.measure}
+          />
           <div className="choice-grid choice-grid-size" role="group" aria-label={gapHeading(gapActivity)}>
             {gapOptionsFor(gapActivity).map((option) => {
               const selected = draft.gapAnswer[gapActivity.localId] === option.id
