@@ -1,4 +1,6 @@
 import { describeMetric, type Metric } from '../lib/metrics'
+import { visibleName } from '../lib/catalogName'
+import { useLocale } from '../hooks/useLocale'
 import { ArchivedFilter } from './ArchivedFilter'
 import { HabitMark } from './HabitMark'
 
@@ -19,6 +21,7 @@ export function MetricList({
   onSelect,
   onAdd,
 }: MetricListProps) {
+  const { locale, t } = useLocale()
   const visible = showArchived ? metrics : metrics.filter((m) => !m.archived)
   const archivedCount = metrics.filter((m) => m.archived).length
 
@@ -26,11 +29,11 @@ export function MetricList({
     <div className="activity-list-screen">
       <div className="screen-heading">
         <div>
-          <h2>Vitals</h2>
-          <p className="screen-sub">Numbers you check in on.</p>
+          <h2>{t('nav.vitals')}</h2>
+          <p className="screen-sub">{t('list.vitalSub')}</p>
         </div>
         <button type="button" className="btn btn-primary btn-compact" onClick={onAdd}>
-          Add
+          {t('list.add')}
         </button>
       </div>
 
@@ -38,18 +41,18 @@ export function MetricList({
         showArchived={showArchived}
         archivedCount={archivedCount}
         onToggle={onToggleArchived}
-        showLabel="Show hidden from Vitals"
+        showLabel={t('list.showHiddenVitals')}
       />
 
       {loading ? (
-        <p className="muted-center">Loading…</p>
+        <p className="muted-center">{t('list.loading')}</p>
       ) : visible.length === 0 ? (
         <section className="empty-state">
           <p className="empty-state-emoji">⚖️</p>
-          <h2>Nothing here yet</h2>
-          <p>Weight, steps, blood pressure, or another number you want to keep.</p>
+          <h2>{t('list.empty')}</h2>
+          <p>{t('list.vitalEmpty')}</p>
           <button type="button" className="btn btn-primary" onClick={onAdd}>
-            Add vital
+            {t('list.addVital')}
           </button>
         </section>
       ) : (
@@ -61,11 +64,11 @@ export function MetricList({
                 className={`activity-row ${metric.archived ? 'activity-row-archived' : ''}`}
                 onClick={() => onSelect(metric)}
               >
-                <HabitMark name={metric.name} />
+                <HabitMark name={visibleName(metric, locale)} templateId={metric.template_id} />
                 <span className="activity-meta">
                   <span className="activity-name">
-                    {metric.name}
-                    {metric.archived && <span className="badge">Archived</span>}
+                    {visibleName(metric, locale)}
+                    {metric.archived && <span className="badge">{t('list.archived')}</span>}
                   </span>
                   <span className="activity-desc">{describeMetric(metric)}</span>
                 </span>

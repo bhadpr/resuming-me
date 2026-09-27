@@ -2,7 +2,7 @@ import { useEffect } from 'react'
 
 const DEFAULT_TITLE = 'Resuming — Get back to what you put off'
 const DEFAULT_DESCRIPTION =
-  'For the habits you keep postponing. Start again when you drift — without the guilt.'
+  'A personal growth app for the habits you keep postponing. Start again when you drift.'
 
 function upsertMeta(attr: 'name' | 'property', key: string, content: string) {
   let el = document.head.querySelector(`meta[${attr}="${key}"]`)

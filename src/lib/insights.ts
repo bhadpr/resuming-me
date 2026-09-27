@@ -1,4 +1,6 @@
 import type { Activity } from './activities'
+import { visibleName } from './catalogName'
+import { t } from './i18n'
 import type { LogEntry } from './logs'
 import { coveragePhrase, freshStartCovering, type FreshStartRange } from './comeback'
 import { addDays, endOfMonth, endOfWeekSunday, parseLocalDate, startOfMonth, startOfWeekMonday, todayLocalDate } from './dates'
@@ -78,7 +80,11 @@ export interface ActivitySeriesPoint {
   unit: string
 }
 
-const DOW_LABELS = ['Sun', 'Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat']
+const DOW_KEYS = ['sun', 'mon', 'tue', 'wed', 'thu', 'fri', 'sat'] as const
+
+function dowLabel(index: number): string {
+  return t(`insights.dow.${DOW_KEYS[index]}`)
+}
 
 function eachDateInclusive(from: string, to: string): string[] {
   const out: string[] = []
@@ -104,7 +110,7 @@ function shortDateLabel(date: string): string {
 }
 
 function dayLabel(date: string, window: InsightsWindow): string {
-  if (window === 'week') return DOW_LABELS[parseLocalDate(date).getDay()]
+  if (window === 'week') return dowLabel(parseLocalDate(date).getDay())
   return shortDateLabel(date)
 }
 
@@ -411,21 +417,14 @@ function buildDayOfWeekSkips(entries: LogEntry[], from: string, to: string): Day
     const dow = parseLocalDate(e.date).getDay()
     counts[dow] += 1
   }
-  return DOW_LABELS.map((label, key) => ({
-    key: String(key),
-    label,
-    count: counts[key],
+  return DOW_KEYS.map((_, index) => ({
+    key: String(index),
+    label: dowLabel(index),
+    count: counts[index],
   }))
 }
 
 type TimeBucketKey = 'morning' | 'afternoon' | 'evening' | 'night'
-
-const TIME_BUCKET_LABELS: Record<TimeBucketKey, string> = {
-  morning: 'Morning',
-  afternoon: 'Afternoon',
-  evening: 'Evening',
-  night: 'Night',
-}
 
 function hourBucket(hour: number): TimeBucketKey {
   if (hour >= 5 && hour < 12) return 'morning'
@@ -464,7 +463,7 @@ function buildSessionTimeBuckets(
 
   return BUCKET_ORDER.map((key) => ({
     key,
-    label: TIME_BUCKET_LABELS[key],
+    label: t(`insights.time.${key}`),
     count: counts[key],
   }))
 }
@@ -501,7 +500,7 @@ export function mostResumableActivity(
 
 function formatSlip(slip: readonly string[]): string {
   if (slip.length === 1) return slip[0] ?? ''
-  return `${slip[0]} and ${slip[1]}`
+  return t('insights.slipJoin', { a: slip[0] ?? '', b: slip[1] ?? '' })
 }
 
 /**
@@ -516,9 +515,9 @@ function buildSummary(
   entries: LogEntry[],
   slipAnswer?: readonly string[],
 ): string {
-  const period = window === 'week' ? 'this week' : 'this month'
+  const period = t(window === 'week' ? 'insights.periodWeek' : 'insights.periodMonth')
   if (total === 0) {
-    return `No habits ${period} yet. Log a few days and Insights will fill in.`
+    return t('insights.noHabitsPeriod', { period })
   }
 
   const loggedDays = loggedDayCount(entries)
@@ -531,18 +530,18 @@ function buildSummary(
 
   const parts: string[] = []
   if (useSlip) {
-    parts.push(`You said it usually slips ${formatSlip(slip)}.`)
+    parts.push(t('insights.slipSaid', { when: formatSlip(slip) }))
   }
   if (easiest && easiest.showedUp > 0) {
-    parts.push(`${easiest.name} looks easiest to pick back up.`)
+    parts.push(t('insights.easiestPick', { name: easiest.name }))
   } else if (easiest) {
-    parts.push(`${easiest.name} is a small enough place to start.`)
+    parts.push(t('insights.smallStart', { name: easiest.name }))
   }
   if (!useSlip && slipsMost && slipsMost.name !== easiest?.name) {
-    parts.push(`${slipsMost.name} is the one that slips most.`)
+    parts.push(t('insights.slipsMost', { name: slipsMost.name }))
   }
   if (parts.length === 0) {
-    return `Log a few days ${period} and Insights will fill in.`
+    return t('insights.fillIn', { period })
   }
   return parts.join(' ')
 }
@@ -572,7 +571,7 @@ export function computeInsights(
       stats.scheduled === 0 ? 0 : stats.postponed / stats.scheduled
     return {
       activityId: activity.id,
-      name: activity.name,
+      name: visibleName(activity),
       emoji: activity.emoji,
       type: activity.type,
       ...stats,

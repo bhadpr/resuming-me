@@ -51,6 +51,7 @@ import { TodayScreen } from './TodayScreen'
 import { OnboardingScreen } from './OnboardingScreen'
 import { InstallPrompt } from './InstallPrompt'
 import { BrandTitle } from './BrandTitle'
+import { LanguagePicker } from './LanguagePicker'
 import { BottomNav } from './BottomNav'
 import { Toast } from './Toast'
 import { SiteFooter } from './SiteFooter'
@@ -90,7 +91,10 @@ import {
 } from '../lib/undoMessages'
 import { trackPageView } from '../lib/analytics'
 import { useDocumentMeta } from '../hooks/useDocumentMeta'
+import { catalogTrackId, visibleName } from '../lib/catalogName'
+import { formatLongDate, t } from '../lib/i18n'
 import { comebackGapDays, track } from '../lib/track'
+import { useLocale } from '../hooks/useLocale'
 import { targetToSeconds } from '../lib/timer'
 import {
   archiveActivity,
@@ -191,6 +195,15 @@ function trackActivityCreated(activity: Activity): void {
     type: activity.type,
     tracking: activity.tracking_mode,
     target: activity.target_value ?? activity.weekly_target ?? null,
+    template_id: catalogTrackId(activity.template_id),
+    signed_in: true,
+  })
+}
+
+function trackMetricCreated(metric: { template_id?: string | null }): void {
+  track('metric_created', {
+    template_id: catalogTrackId(metric.template_id),
+    signed_in: true,
   })
 }
 
@@ -209,6 +222,8 @@ function trackLogAndComeback(opts: {
     kind: opts.kind,
     minutes: opts.minutes,
     was_partial: opts.wasPartial,
+    template_id: catalogTrackId(opts.activity?.template_id),
+    signed_in: true,
   })
 
   const activeIds = new Set(
@@ -234,6 +249,7 @@ function sessionWasPartial(
 
 export function AppShell() {
   const { user, signOut, isAdmin } = useAuth()
+  const { locale } = useLocale()
   const native = Capacitor.isNativePlatform()
   const navigate = useNavigate()
   const location = useLocation()
@@ -747,6 +763,8 @@ export function AppShell() {
       deadline: activity.deadline,
       whyMatters: activity.why_matters,
       usuallyWhen: activity.usually_when,
+      templateId: activity.template_id ?? null,
+      nameOverridden: activity.name_overridden ?? false,
     }
   }
 
@@ -894,7 +912,7 @@ export function AppShell() {
       return
     }
     if (tab === 'today') trackPageView('/today', 'Today')
-    else if (tab === 'activities') trackPageView('/activities', 'Abhyas')
+    else if (tab === 'activities') trackPageView('/activities', 'Activity')
     else if (tab === 'metrics') trackPageView('/numbers', 'Vitals')
     else if (tab === 'insights') {
       trackPageView('/insights', 'Insights')
@@ -915,12 +933,12 @@ export function AppShell() {
     : settingsOpen
       ? 'Settings · Resuming'
       : tab === 'today'
-        ? 'Today · Resuming'
+        ? `${t('nav.today')} · Resuming`
         : tab === 'activities'
-          ? 'Abhyas · Resuming'
+          ? `${t('nav.abhyas')} · Resuming`
           : tab === 'metrics'
-            ? 'Vitals · Resuming'
-            : 'Insights · Resuming'
+            ? `${t('nav.vitals')} · Resuming`
+            : `${t('nav.insights')} · Resuming`
 
   useDocumentMeta({
     title: appTitle,
@@ -1047,7 +1065,7 @@ export function AppShell() {
           ...dayStatusOpts,
           slipAnswer,
         }),
-    [activities, insightsEntries, insightsWindow, today, dayStatusOpts, slipAnswer],
+    [activities, insightsEntries, insightsWindow, today, dayStatusOpts, slipAnswer, locale],
   )
 
   async function handleActivitySave(input: ActivityInput) {
@@ -1088,6 +1106,7 @@ export function AppShell() {
         navigate(`/numbers/${updated.id}`)
       } else {
         const created = await createMetric(user.id, input)
+        trackMetricCreated(created)
         setMetrics((prev) => [created, ...prev])
         navigate(`/numbers/${created.id}`)
       }
@@ -1104,6 +1123,7 @@ export function AppShell() {
     setError(null)
     try {
       const created = await createMetric(user.id, input)
+      trackMetricCreated(created)
       setMetrics((prev) => [created, ...prev])
     } catch (err) {
       setError(err instanceof Error ? err.message : 'Could not add number')
@@ -1173,7 +1193,7 @@ export function AppShell() {
         today,
       })
       setLogEntries((prev) => [created, ...prev])
-      undoToast.show(formatCompletedUndoMessage(row.activity.name), () =>
+      undoToast.show(formatCompletedUndoMessage(visibleName(row.activity, locale)), () =>
         undoLogEntry({
           entryId: created.id,
           activityId: row.activity.id,
@@ -1241,7 +1261,7 @@ export function AppShell() {
         today,
       })
       setLogEntries((prev) => [created, ...prev])
-      undoToast.show(formatCountUndoMessage(row.activity.name), () =>
+      undoToast.show(formatCountUndoMessage(visibleName(row.activity, locale)), () =>
         undoLogEntry({
           entryId: created.id,
           activityId: row.activity.id,
@@ -1270,7 +1290,7 @@ export function AppShell() {
       if (!created) return
       setLogEntries((prev) => [created, ...prev])
       setPostponedEntries((prev) => [created, ...prev])
-      undoToast.show(formatSkipUndoMessage(row.activity.name), () =>
+      undoToast.show(formatSkipUndoMessage(visibleName(row.activity, locale)), () =>
         undoLogEntry({ entryId: created.id, activityId: row.activity.id }),
       )
       track('skip_today', { reason })
@@ -1361,7 +1381,7 @@ export function AppShell() {
         return [...without, entry]
       })
       const label = metric
-        ? formatMetricUndoMessage(metric.name, value, metric.unit, secondaryValue)
+        ? formatMetricUndoMessage(visibleName(metric, locale), value, metric.unit, secondaryValue)
         : `Logged ${value}`
       undoToast.show(label, async () => {
         try {
@@ -1491,7 +1511,7 @@ export function AppShell() {
             : null)
         if (activity && maxMinutes != null) {
           setReentryFollowUp({
-            activityName: activity.name,
+            activityName: visibleName(activity, locale),
             maxTargetMinutes: maxMinutes,
             excludeActivityId: stopped.activityId,
           })
@@ -1536,7 +1556,7 @@ export function AppShell() {
         today,
       })
       undoToast.show(
-        formatSessionUndoMessage(row.activity.name, durationSeconds),
+        formatSessionUndoMessage(visibleName(row.activity, locale), durationSeconds),
         () =>
           undoLogEntry({
             entryId: entry.id,
@@ -1621,11 +1641,7 @@ export function AppShell() {
     !loadingMetrics &&
     needsOnboarding(activeActivityCount, onboardingDismissed)
 
-  const dateLabel = new Date().toLocaleDateString(undefined, {
-    weekday: 'long',
-    month: 'short',
-    day: 'numeric',
-  })
+  const dateLabel = formatLongDate(locale)
 
   if (view?.name === 'admin' && !isAdmin) {
     return <Navigate to="/settings" replace />
@@ -1644,6 +1660,7 @@ export function AppShell() {
           <BrandTitle className="app-title" />
         )}
         <div className="app-header-actions">
+          <LanguagePicker />
           <button
             type="button"
             className={`icon-btn ${settingsOpen || adminPage ? 'icon-btn-active' : ''}`}
@@ -1691,7 +1708,7 @@ export function AppShell() {
                 <SettingsScreen
                   isAdmin={isAdmin}
                   todayItems={todayRows.map((row) => ({
-                    name: row.activity.name,
+                    name: visibleName(row.activity, locale),
                     done: row.done,
                   }))}
                   onBack={() => navigateBack(navigate, '/today')}

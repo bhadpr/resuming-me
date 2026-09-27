@@ -23,7 +23,7 @@ import { downloadUserDataExport } from '../lib/exportData'
 import { loadCheckinOptOut, loadReminderTime, saveCheckinOptOut, saveReminderTime, emailReminderLine } from '../lib/checkinPrefs'
 import { deleteCurrentAccount } from '../lib/deleteAccount'
 import { REVIEW_WEEKDAYS } from '../lib/weeklyReview'
-
+import { useLocale } from '../hooks/useLocale'
 interface SettingsScreenProps {
   onBack: () => void
   isAdmin?: boolean
@@ -66,6 +66,7 @@ export function SettingsScreen({
   onReviewsOff,
 }: SettingsScreenProps) {
   const { user } = useAuth()
+  const { t } = useLocale()
   const { themeId, themes, setThemeId } = useTheme()
   const native = Capacitor.isNativePlatform()
   const [digest, setDigest] = useState<DailyDigestPrefs>(loadDailyDigestPrefs)
@@ -200,7 +201,7 @@ export function SettingsScreen({
   return (
     <div className="settings-screen">
       <button type="button" className="btn btn-ghost btn-sm back-btn" onClick={onBack}>
-        ← Back
+        {t('settings.back')}
       </button>
 
       <section className="today-section">

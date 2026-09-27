@@ -1,5 +1,6 @@
 import type { GuestActivity, GuestDraft } from './guestDraft'
 import { habitVideoFor } from '../data/habitVideos'
+import { t } from './i18n'
 import { formatReminderClock } from './checkinPrefs'
 import { FASTING_HOURS_PER_TAP, PROTEIN_GRAMS_PER_PORTION } from './dayStatus'
 
@@ -72,35 +73,13 @@ export function sizeStepActivities<T extends Pick<GuestActivity, 'templateId'>>(
 }
 
 /** Short benefit line under the habit name on the size step. */
-const HABIT_SIZE_TAGLINES: Record<string, string> = {
-  walk: 'Walking clears your head and steadies your energy.',
-  running: 'A short run wakes up your body and mood.',
-  exercise: 'A little strength keeps you capable for everything else.',
-  stretching: 'A few minutes of movement loosens what the day tightens.',
-  meditate: 'A quiet pause helps you return without the spiral.',
-  reading: 'A few pages keep the habit alive when life gets loud.',
-  writing: 'Putting words down makes the rest of the day clearer.',
-  daily_writing: 'A short page keeps the writing muscle warm.',
-  journaling: 'A few lines help you notice what you are carrying.',
-  study: 'Short study blocks beat waiting for a free afternoon.',
-  language: 'A little practice compounds into real confidence.',
-  music: 'Playing a little keeps joy from getting postponed.',
-  painting: 'Making something small is still making something.',
-  dancing: 'Moving to music shakes off what sitting builds up.',
-  bhastrika: 'Energizing breath that wakes you without the spike.',
-  kapalabhati: 'A cleansing breath that clears fog from the day.',
-  anuloma_viloma: 'Balanced breathing that settles a busy mind.',
-  bhramari: 'A humming breath that softens tension fast.',
-  rejuvenation: 'A short reset so you can meet the day again.',
-  prayer: 'A quiet moment that anchors what matters.',
-  relaxation: 'A few calm minutes help your body catch up.',
-}
-
 export function habitSizeTagline(activity: Pick<GuestActivity, 'templateId' | 'name'>): string {
-  if (activity.templateId && HABIT_SIZE_TAGLINES[activity.templateId]) {
-    return HABIT_SIZE_TAGLINES[activity.templateId]
+  if (activity.templateId) {
+    const key = `tagline.${activity.templateId}`
+    const hit = t(key)
+    if (hit !== key) return hit
   }
-  return `${activity.name} works best when it stays small enough to start.`
+  return t('tagline.custom', { name: activity.name })
 }
 
 const PRANAYAM_IDS = new Set(['bhastrika', 'kapalabhati', 'anuloma_viloma', 'bhramari'])
@@ -125,15 +104,12 @@ export function showsHabitVideo(templateId: string | null | undefined): boolean 
 /** Caption under the habit video (real clip or placeholder). */
 export function habitVideoCaption(templateId: string | null, name: string): string {
   if (templateId === 'water' || templateId === 'protein' || templateId === 'fasting' || templateId === 'sleep_hours') {
-    return `A short video will show why ${name.toLowerCase()} is important.`
+    return t('video.why', { name: name.toLowerCase() })
   }
   if (templateId && habitVideoFor(templateId)) {
-    return `Follow along with this ${name} video.`
+    return t('video.follow', { name })
   }
-  if (templateId && PRANAYAM_IDS.has(templateId)) {
-    return `A short video will show how to do ${name}.`
-  }
-  return `A short video will show how to do ${name}.`
+  return t('video.how', { name })
 }
 
 export const SLIP_OPTIONS = [
@@ -157,9 +133,9 @@ export function durationChipLabel(minutes: number): string {
 
 /** Two-line tile parts: large number / unit. */
 export function durationChipParts(minutes: number): { primary: string; secondary: string } {
-  if (minutes === 60) return { primary: '1', secondary: 'hour' }
-  if (minutes === 120) return { primary: '2', secondary: 'hours' }
-  return { primary: String(minutes), secondary: 'mins' }
+  if (minutes === 60) return { primary: '1', secondary: t('unit.hour') }
+  if (minutes === 120) return { primary: '2', secondary: t('unit.hours') }
+  return { primary: String(minutes), secondary: t('unit.mins') }
 }
 export const COUNT_STEPS = [1, 2, 3, 4, 5] as const
 /** 250 ml each, so 8 glasses is the common 2,000 ml day. */
@@ -253,20 +229,20 @@ export const SLEEP_GAP_OPTIONS = SLEEP_HOUR_STEPS.map((hours) => ({
 }))
 
 export function gapHeading(activity: Pick<GuestActivity, 'templateId'>): string {
-  if (isWaterHabit(activity)) return WATER_GOAL_HEADING
-  if (isProteinHabit(activity)) return PROTEIN_GOAL_HEADING
-  if (isFastingHabit(activity)) return FASTING_GOAL_HEADING
-  if (isSleepHabit(activity)) return SLEEP_GOAL_HEADING
-  if (isStepsHabit(activity)) return STEPS_GOAL_HEADING
-  return 'When did you last do this?'
+  if (isWaterHabit(activity)) return t('gap.water')
+  if (isProteinHabit(activity)) return t('gap.protein')
+  if (isFastingHabit(activity)) return t('gap.fasting')
+  if (isSleepHabit(activity)) return t('gap.sleep')
+  if (isStepsHabit(activity)) return t('gap.steps')
+  return t('gap.when')
 }
 
 export function gapNote(activity: Pick<GuestActivity, 'templateId'>): string | null {
-  if (isWaterHabit(activity)) return WATER_GOAL_NOTE
-  if (isProteinHabit(activity)) return PROTEIN_GOAL_NOTE
-  if (isFastingHabit(activity)) return FASTING_HOURS_NOTE
-  if (isSleepHabit(activity)) return SLEEP_HOURS_NOTE
-  if (isStepsHabit(activity)) return STEPS_GOAL_NOTE
+  if (isWaterHabit(activity)) return t('notes.waterGoal')
+  if (isProteinHabit(activity)) return t('notes.protein')
+  if (isFastingHabit(activity)) return t('notes.fasting')
+  if (isSleepHabit(activity)) return t('notes.sleep')
+  if (isStepsHabit(activity)) return t('notes.steps')
   return null
 }
 
@@ -290,22 +266,22 @@ export function gapOptionParts(option: {
   if (option.glasses != null) {
     return {
       primary: String(option.glasses),
-      secondary: option.glasses === 1 ? 'glass' : 'glasses',
+      secondary: option.glasses === 1 ? t('unit.glass') : t('unit.glasses'),
     }
   }
   if (option.grams != null) {
-    return { primary: String(option.grams), secondary: 'g' }
+    return { primary: String(option.grams), secondary: t('unit.g') }
   }
   if (option.hours != null) {
     return {
       primary: String(option.hours),
-      secondary: option.hours === 1 ? 'hour' : 'hours',
+      secondary: option.hours === 1 ? t('unit.hour') : t('unit.hours'),
     }
   }
   if (option.count != null) {
     const n = option.count
     const primary = n >= 1000 && n % 1000 === 0 ? `${n / 1000}k` : stepCountLabel(n)
-    return { primary, secondary: 'steps' }
+    return { primary, secondary: t('unit.steps') }
   }
   return { primary: option.label, secondary: null }
 }
@@ -336,19 +312,38 @@ export function sleepHoursInGap(id: string): number | null {
 }
 
 export function countTapLabel(unit: string | null | undefined, done: boolean): string {
-  if (unit === 'g') return '+5 g'
-  if (unit === 'hours') return '+4 hours'
-  if (unit === 'hr') return '+1 hour'
-  if (done) return 'Done'
-  if (unit === 'glasses') return '1 glass'
-  return '+1'
+  if (unit === 'g') return t('count.grams')
+  if (unit === 'hours') return t('count.hours')
+  if (unit === 'hr') return t('count.hour')
+  if (done) return t('today.done')
+  if (unit === 'glasses') return t('count.glass')
+  return t('count.plus')
 }
 
 export function gapReassurance(id: string): string {
   const option = [...GAP_OPTIONS, ...WATER_GAP_OPTIONS, ...PROTEIN_GAP_OPTIONS, ...FASTING_GAP_OPTIONS, ...SLEEP_GAP_OPTIONS, ...STEP_GAP_OPTIONS].find(
     (item) => item.id === id,
   )
-  return option?.reassurance ?? ''
+  if (!option) return ''
+  const key = `reassure.${id}`
+  const hit = t(key)
+  if (hit !== key) return hit
+  const label =
+    'glasses' in option && option.glasses != null
+      ? `${option.glasses} ${t('unit.glasses')}`
+      : 'grams' in option && option.grams != null
+        ? `${option.grams} ${t('unit.g')}`
+        : 'hours' in option && option.hours != null
+          ? `${option.hours} ${t('unit.hours')}`
+          : 'count' in option && option.count != null
+            ? stepCountLabel(option.count)
+            : option.label
+  if (id.startsWith('sleep_')) return t('reassure.nightlyGoal', { label })
+  if (id.startsWith('steps_')) return t('reassure.stepsGoal', { label })
+  if (id.startsWith('glasses_') || id.startsWith('protein_') || id.startsWith('fasting_')) {
+    return t('reassure.dailyGoal', { label })
+  }
+  return option.reassurance
 }
 
 /** Mornings 08:00, evenings 19:00, weekends 10:00, otherwise 19:00. */
@@ -360,7 +355,7 @@ export function defaultReminderTime(slip: readonly string[]): string {
 }
 
 export function continueLabel(count: number): string {
-  return `Continue with ${count}`
+  return t('start.continueWith', { count })
 }
 
 export type SizeControl = {
@@ -436,17 +431,18 @@ export function onboardingSummary(
   draft: Pick<GuestDraft, 'activities' | 'logs' | 'reminderTime' | 'reminderTimes' | 'reminderDeclined'>,
 ): string {
   const count = draft.activities.length
-  const activityWord = count === 1 ? 'habit' : 'habits'
-  const parts = [`${count} ${activityWord}`]
-  if (draft.logs.length > 0) parts.push('1 resumed today')
+  const parts = [
+    count === 1 ? t('summary.habitOne') : t('summary.habitMany', { count }),
+  ]
+  if (draft.logs.length > 0) parts.push(t('summary.resumed'))
   const times = draft.reminderTimes?.length
     ? draft.reminderTimes
     : draft.reminderTime
       ? [draft.reminderTime]
       : []
-  if (times.length === 1) parts.push(`nudge at ${formatReminderClock(times[0])}`)
-  else if (times.length > 1) parts.push(`${times.length} nudges`)
-  else if (draft.reminderDeclined) parts.push('no nudges')
+  if (times.length === 1) parts.push(t('summary.nudge', { time: formatReminderClock(times[0]) }))
+  else if (times.length > 1) parts.push(t('summary.nudges', { count: times.length }))
+  else if (draft.reminderDeclined) parts.push(t('summary.noNudges'))
   return parts.join(' · ')
 }
 

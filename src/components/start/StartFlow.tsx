@@ -31,7 +31,6 @@ import {
   habitSizeTagline,
   hoursInGap,
   isDailyGoalHabit,
-  isLoggedVital,
   isWaterHabit,
   sleepHoursInGap,
   sizeStepActivities,
@@ -45,7 +44,11 @@ import {
   weekCadenceOf,
   type WeekCadence,
 } from '../../lib/onboardingFlow'
+import { catalogTrackId, groupTitle, templateLabel, visibleName } from '../../lib/catalogName'
 import { track } from '../../lib/track'
+import { useLocale } from '../../hooks/useLocale'
+import { BrandTitle } from '../BrandTitle'
+import { LanguagePicker } from '../LanguagePicker'
 
 function newLocalId(): string {
   if (typeof crypto !== 'undefined' && 'randomUUID' in crypto) return crypto.randomUUID()
@@ -99,6 +102,7 @@ export function StartFlow({
   adding?: boolean
 }) {
   const navigate = useNavigate()
+  const { locale, t } = useLocale()
   const [gapIndex, setGapIndex] = useState(0)
   const [sizeIndex, setSizeIndex] = useState(0)
   const [customOpen, setCustomOpen] = useState(false)
@@ -184,6 +188,12 @@ export function StartFlow({
         usuallyWhen: null,
       }),
     )
+    track('activity_created', {
+      template_id: catalogTrackId(template.id),
+      type: template.type,
+      tracking: template.trackingMode,
+      signed_in: false,
+    })
   }
 
   function addCustomHabit() {
@@ -209,6 +219,12 @@ export function StartFlow({
     )
     setCustomName('')
     setCustomOpen(false)
+    track('activity_created', {
+      template_id: 'custom',
+      type: 'daily',
+      tracking: 'timer',
+      signed_in: false,
+    })
   }
 
   function hasSizeStep(base: GuestDraft): boolean {
@@ -395,6 +411,10 @@ export function StartFlow({
 
   return (
     <div className="start-flow">
+      <div className="brand-line">
+        <BrandTitle className="app-title" />
+        <LanguagePicker />
+      </div>
       <div className="onboarding-dots" aria-label={`Step ${draft.step} of 8`}>
         {Array.from({ length: 8 }, (_, index) => (
           <span
@@ -421,7 +441,7 @@ export function StartFlow({
             go(previous)
           }}
         >
-          Back
+          {t('start.back')}
         </button>
       )}
 
@@ -435,17 +455,17 @@ export function StartFlow({
               setCustomName('')
             }}
           >
-            Back
+            {t('start.back')}
           </button>
-          <h1 className="screen-heading">Create a habit</h1>
-          <p className="screen-sub">Name it. You can change the details later.</p>
+          <h1 className="screen-heading">{t('start.createTitle')}</h1>
+          <p className="screen-sub">{t('start.createSub')}</p>
           <label className="field">
-            <span className="field-label">Name</span>
+            <span className="field-label">{t('start.name')}</span>
             <input
               className="field-input"
               value={customName}
               onChange={(event) => setCustomName(event.target.value)}
-              placeholder="e.g. Read book"
+              placeholder={t('start.namePlaceholder')}
               autoFocus
               maxLength={60}
             />
@@ -457,7 +477,7 @@ export function StartFlow({
               disabled={!customName.trim() || draft.activities.length >= (adding ? GUEST_MAX_ACTIVITIES : START_PICK_MAX)}
               onClick={addCustomHabit}
             >
-              Continue
+              {t('start.continue')}
             </button>
           </div>
         </>
@@ -466,17 +486,15 @@ export function StartFlow({
       {draft.step === 1 && !customOpen && (
         <>
           <h1 className="screen-heading">
-            {adding ? 'Add another habit' : 'What do you want to start from today?'}
+            {adding ? t('start.add') : t('start.pick')}
           </h1>
           <p className="screen-sub">
-            {adding
-              ? 'Pick as many as you want. The ones you already have stay.'
-              : 'Pick up to three habits. You can change these later.'}
+            {adding ? t('start.addSub') : t('start.pickSub')}
           </p>
           <div className="habit-groups habit-pick">
             {HABIT_GROUPS.filter((group) => !START_HIDDEN_GROUPS.has(group.title)).map((group) => (
               <section key={group.title} className="habit-group">
-                <h2 className="habit-group-title">{group.title}</h2>
+                <h2 className="habit-group-title">{groupTitle(group.title, locale)}</h2>
                 <div className="onboarding-chips">
                   {group.ids.map((id) => {
                     const template = templateById(id)
@@ -502,7 +520,7 @@ export function StartFlow({
                             <HabitIcon id={template.id} />
                           )}
                         </span>
-                        <span className="habit-tile-label">{template.label}</span>
+                        <span className="habit-tile-label">{templateLabel(template.id, locale)}</span>
                       </button>
                     )
                   })}
@@ -510,7 +528,7 @@ export function StartFlow({
               </section>
             ))}
             <section className="habit-group">
-              <h2 className="habit-group-title">Vitals</h2>
+              <h2 className="habit-group-title">{t('start.vitals')}</h2>
               <div className="onboarding-chips">
                 {START_VITALS.map((vital) => {
                   const selected = draft.activities.some((item) => item.templateId === vital.id)
@@ -535,7 +553,7 @@ export function StartFlow({
                         )}
                       </span>
                       <span className="habit-tile-label">
-                        {vital.label}
+                        {templateLabel(vital.id, locale) ?? vital.label}
                         {vital.caption ? <span className="habit-tile-caption">{vital.caption}</span> : null}
                       </span>
                     </button>
@@ -572,7 +590,7 @@ export function StartFlow({
               setCustomOpen(true)
             }}
           >
-            Create your own
+            {t('start.create')}
           </button>
           <div className="start-flow-footer">
             <button
@@ -597,10 +615,10 @@ export function StartFlow({
         <>
           <h1 className="screen-heading">{gapHeading(gapActivity)}</h1>
           <p className="screen-sub">
-            {gapActivity.emoji} {gapActivity.name}
+            {gapActivity.emoji} {visibleName(gapActivity, locale)}
           </p>
           {gapNote(gapActivity) && <p className="screen-sub">{gapNote(gapActivity)}</p>}
-          <HabitVideoPlaceholder templateId={gapActivity.templateId} name={gapActivity.name} />
+          <HabitVideoPlaceholder templateId={gapActivity.templateId} name={visibleName(gapActivity, locale)} />
           <div className="choice-grid choice-grid-size" role="group" aria-label={gapHeading(gapActivity)}>
             {gapOptionsFor(gapActivity).map((option) => {
               const selected = draft.gapAnswer[gapActivity.localId] === option.id
@@ -627,23 +645,23 @@ export function StartFlow({
             className="btn btn-ghost"
             onClick={() => finishGoals(draft, 'skip')}
           >
-            Skip
+            {t('landing.skip')}
           </button>
         </>
       )}
 
       {draft.step === 3 && sizeActivity && (
         <>
-          <h1 className="screen-heading">Let's make it small enough to actually do.</h1>
-          <p className="screen-sub">Small is the point. You can raise it any time.</p>
+          <h1 className="screen-heading">{t('start.sizeTitle')}</h1>
+          <p className="screen-sub">{t('start.sizeSub')}</p>
           <fieldset className="field habit-size-block">
             <legend className="field-label habit-size-title">
               <HabitMark
                 templateId={sizeActivity.templateId}
-                name={sizeActivity.name}
+                name={visibleName(sizeActivity, locale)}
                 emoji={sizeActivity.emoji}
               />
-              <span>{sizeActivity.name}</span>
+              <span>{visibleName(sizeActivity, locale)}</span>
             </legend>
             <p className="habit-size-tagline">{habitSizeTagline(sizeActivity)}</p>
             {sizeArt ? (
@@ -653,7 +671,7 @@ export function StartFlow({
               <div
                 className="choice-grid choice-grid-size"
                 role="group"
-                aria-label={`${sizeActivity.name} length`}
+                aria-label={t('start.length', { name: visibleName(sizeActivity, locale) })}
               >
                 {sizeControl.steps.map((step) => {
                   const parts = sizeControl.label
@@ -680,48 +698,47 @@ export function StartFlow({
                 })}
               </div>
             ) : (
-              <p className="screen-sub">Checking it off is enough.</p>
+              <p className="screen-sub">{t('start.checkOff')}</p>
             )}
-            <span className="field-label habit-often">How often?</span>
+            <span className="field-label habit-often">{t('start.often')}</span>
             <div
               className="choice-grid choice-grid-cadence"
               role="group"
-              aria-label={`${sizeActivity.name} how often`}
+              aria-label={t('start.cadence', { name: visibleName(sizeActivity, locale) })}
             >
               {WEEK_CADENCE.map((option) => (
                 <button
                   key={option.id}
                   type="button"
                   className={`choice-tile choice-tile-stack ${sizeCadence === option.id ? 'choice-tile-selected' : ''}`}
-                  aria-label={option.label}
+                  aria-label={option.id === 'daily' ? t('cadence.daily') : option.id === 'once' ? t('cadence.onceLabel') : t('cadence.twiceLabel')}
                   onClick={() => setWeekCadence(sizeActivity.localId, option.id)}
                 >
-                  <span className="choice-tile-primary">{option.primary}</span>
+                  <span className="choice-tile-primary">
+                    {option.id === 'daily' ? t('cadence.daily') : option.id === 'once' ? t('cadence.once') : t('cadence.twice')}
+                  </span>
                   {option.secondary ? (
-                    <span className="choice-tile-secondary">{option.secondary}</span>
+                    <span className="choice-tile-secondary">{t('cadence.week')}</span>
                   ) : null}
                 </button>
               ))}
             </div>
           </fieldset>
           <button type="button" className="btn btn-primary" onClick={advanceSizeStep}>
-            Continue
+            {t('start.continue')}
           </button>
         </>
       )}
 
       {draft.step === 4 && (
         <>
-          <h1 className="screen-heading">Set a reminder</h1>
-          <p className="screen-sub">
-            Early on, a few nudges help you come back. Later you can keep just one —
-            or none. We only ping if something is still open.
-          </p>
+          <h1 className="screen-heading">{t('start.reminderTitle')}</h1>
+          <p className="screen-sub">{t('start.reminderSub')}</p>
           <div className="reminder-times">
             {nudgeTimes.map((time, index) => (
               <label key={`reminder-${index}`} className="field">
                 <span className="field-label">
-                  {index === 0 ? 'Reminder' : `Reminder ${index + 1}`}
+                  {index === 0 ? t('start.reminder') : t('start.reminderN', { n: index + 1 })}
                 </span>
                 <div className="reminder-time-row">
                   <input
@@ -738,10 +755,10 @@ export function StartFlow({
                     <button
                       type="button"
                       className="btn btn-ghost btn-sm"
-                      aria-label={`Remove reminder ${index + 1}`}
+                      aria-label={t('start.removeN', { n: index + 1 })}
                       onClick={() => setNudgeTimes(nudgeTimes.filter((_, i) => i !== index))}
                     >
-                      Remove
+                      {t('start.remove')}
                     </button>
                   )}
                 </div>
@@ -754,23 +771,23 @@ export function StartFlow({
               className="btn btn-secondary"
               onClick={() => setNudgeTimes([...nudgeTimes, '12:00'])}
             >
-              Add more reminder
+              {t('start.addReminder')}
             </button>
           )}
           <button type="button" className="btn btn-primary" onClick={() => openTodayAfterReminder(true)}>
             {nudgeTimes.length === 1
-              ? `Remind me at ${formatReminderClock(nudgeTimes[0] || '19:00')}`
-              : `Remind me ${nudgeTimes.length} times`}
+              ? t('start.remindAt', { time: formatReminderClock(nudgeTimes[0] || '19:00') })
+              : t('start.remindTimes', { count: nudgeTimes.length })}
           </button>
           <button type="button" className="btn btn-ghost" onClick={() => openTodayAfterReminder(false)}>
-            Not now
+            {t('start.notNow')}
           </button>
         </>
       )}
 
       {draft.step === 8 && (
         <>
-          <h1 className="screen-heading">Save what you just set up.</h1>
+          <h1 className="screen-heading">{t('start.saveTitle')}</h1>
           <p className="screen-sub">{onboardingSummary(draft)}</p>
           <button
             type="button"
@@ -785,9 +802,9 @@ export function StartFlow({
             {AUTH_PROVIDERS[0].label}
           </button>
           <EmailSignInForm onClick={() => track('signin_method_clicked', { method: 'email' })} />
-          <p className="onboarding-hint">Free. No ads. Your data stays yours.</p>
+          <p className="onboarding-hint">{t('start.free')}</p>
           <button type="button" className="btn btn-ghost" onClick={() => navigate('/today')}>
-            Not now
+            {t('start.notNow')}
           </button>
         </>
       )}

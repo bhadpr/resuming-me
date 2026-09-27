@@ -6,6 +6,8 @@ import {
   type MetricWindowDays,
 } from '../lib/stats'
 import { HabitMark } from './HabitMark'
+import { visibleName } from '../lib/catalogName'
+import { useLocale } from '../hooks/useLocale'
 import { MetricTrendChart } from './MetricTrendChart'
 
 interface MetricDetailProps {
@@ -33,6 +35,8 @@ export function MetricDetail({
   onUnarchive,
   onDelete,
 }: MetricDetailProps) {
+  const { locale, t } = useLocale()
+  const name = visibleName(metric, locale)
   const [confirmDelete, setConfirmDelete] = useState(false)
   const [windowDays, setWindowDays] = useState<MetricWindowDays>(30)
 
@@ -48,8 +52,8 @@ export function MetricDetail({
       </button>
 
       <div className="detail-hero">
-        <HabitMark name={metric.name} />
-        <h2>{metric.name}</h2>
+        <HabitMark name={name} templateId={metric.template_id} />
+        <h2>{name}</h2>
         <p className="screen-sub">{describeMetric(metric)}</p>
         {metric.archived && <span className="badge">Archived</span>}
       </div>
@@ -122,9 +126,9 @@ export function MetricDetail({
               onClick={() => onUnarchive()}
               disabled={busy}
             >
-              Show on Vitals again
+              {t('metricDetail.showAgain')}
             </button>
-            <p className="activity-desc">Hidden from Vitals. Logged values stay.</p>
+            <p className="activity-desc">{t('metricDetail.hidden')}</p>
           </div>
         ) : (
           <div className="detail-archive">
@@ -134,7 +138,7 @@ export function MetricDetail({
               onClick={() => onArchive()}
               disabled={busy}
             >
-              Hide from Vitals
+              {t('metricDetail.hide')}
             </button>
             <p className="activity-desc">
               Hide from the list. Logged values stay. Delete is what removes them.
@@ -154,7 +158,7 @@ export function MetricDetail({
         ) : (
           <div className="confirm-delete">
             <p>
-              This permanently deletes <strong>{metric.name}</strong> and any logged values.
+              This permanently deletes <strong>{name}</strong> and any logged values.
               This can&apos;t be undone.
             </p>
             <div className="form-actions">

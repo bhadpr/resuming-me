@@ -1,5 +1,7 @@
 import { useState } from 'react'
 import type { Activity } from '../lib/activities'
+import { visibleName } from '../lib/catalogName'
+import { useLocale } from '../hooks/useLocale'
 
 interface DeadlineOverduePromptProps {
   activity: Activity
@@ -14,13 +16,14 @@ export function DeadlineOverduePrompt({
   onMarkComplete,
   onReschedule,
 }: DeadlineOverduePromptProps) {
+  const { locale } = useLocale()
   const [newDeadline, setNewDeadline] = useState('')
   const [showReschedule, setShowReschedule] = useState(false)
 
   return (
     <div className="deadline-prompt">
       <p className="deadline-prompt-title">
-        {activity.emoji} {activity.name} is past the date
+        {activity.emoji} {visibleName(activity, locale)} is past the date
       </p>
       <p className="deadline-prompt-body">
         Still open. Mark it done, or pick a new date.

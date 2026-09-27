@@ -4,6 +4,8 @@ import { HABIT_ART } from '../data/habitArt'
 import { HabitIcon } from './HabitIcon'
 import { addDays, todayLocalDate } from '../lib/dates'
 import type { Activity, ActivityInput } from '../lib/activities'
+import { groupTitle, isCatalogLabel, templateLabel } from '../lib/catalogName'
+import { useLocale } from '../hooks/useLocale'
 import type { ActivityType, TrackingMode } from '../types/database'
 
 function fromActivity(activity: Activity): ActivityInput {
@@ -22,6 +24,16 @@ function fromActivity(activity: Activity): ActivityInput {
     whyMatters: activity.why_matters,
     usuallyWhen: activity.usually_when,
     offWeekdays: activity.off_weekdays ?? [],
+    templateId: activity.template_id ?? null,
+    nameOverridden: activity.name_overridden ?? false,
+  }
+}
+
+function withCatalog(input: ActivityInput, templateId: string | null): ActivityInput {
+  return {
+    ...input,
+    templateId,
+    nameOverridden: templateId != null && !isCatalogLabel(templateId, input.name),
   }
 }
 
@@ -69,8 +81,11 @@ export function ActivityForm({
   onCancel: () => void
   onPhaseChange?: (phase: 'pick' | 'details') => void
 }) {
+  const { locale, t } = useLocale()
   const [phase, setPhase] = useState<'pick' | 'details'>(initial ? 'details' : 'pick')
-  const [selectedTemplateId, setSelectedTemplateId] = useState<string | null>(null)
+  const [selectedTemplateId, setSelectedTemplateId] = useState<string | null>(
+    initial?.template_id ?? null,
+  )
   const [input, setInput] = useState<ActivityInput>(
     initial ? fromActivity(initial) : emptyInput,
   )
@@ -147,12 +162,12 @@ export function ActivityForm({
 
   async function handleSubmit(e: FormEvent) {
     e.preventDefault()
-    await onSubmit(input)
+    await onSubmit(withCatalog(input, selectedTemplateId ?? input.templateId ?? null))
   }
 
   async function continueWithTemplate() {
     if (!selectedTemplateId || !input.name.trim()) return
-    await onSubmit(input)
+    await onSubmit(withCatalog(input, selectedTemplateId))
   }
 
   const showTarget =
@@ -172,11 +187,11 @@ export function ActivityForm({
       <div className="activity-form activity-pick">
         <div className="activity-pick-body">
           <div className="field">
-            <span className="field-label">Start from a template</span>
+            <span className="field-label">{t('form.template')}</span>
             <div className="habit-groups habit-pick">
               {HABIT_GROUPS.map((group) => (
                 <section key={group.title} className="habit-group">
-                  <h2 className="habit-group-title">{group.title}</h2>
+                  <h2 className="habit-group-title">{groupTitle(group.title, locale)}</h2>
                   <div className="onboarding-chips">
                     {group.ids.map((id) => {
                       const template = templateById(id)
@@ -200,7 +215,7 @@ export function ActivityForm({
                               <HabitIcon id={template.id} />
                             )}
                           </span>
-                          <span className="habit-tile-label">{template.label}</span>
+                          <span className="habit-tile-label">{templateLabel(template.id, locale)}</span>
                         </button>
                       )
                     })}

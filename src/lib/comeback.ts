@@ -1,4 +1,6 @@
 import type { Activity } from './activities'
+import { visibleName } from './catalogName'
+import { t } from './i18n'
 import type { LogEntry } from './logs'
 import { addDays, daysBetween } from './dates.ts'
 import {
@@ -47,40 +49,47 @@ export function isShowedUpStatus(status: DayStatus): boolean {
 }
 
 export function welcomeBackLine(gapDays: number): string {
-  if (gapDays >= 21) return "It's been a while. That's completely normal."
-  if (gapDays >= 7) return "It's been a couple of weeks. Good to see you."
-  return "It's been a few days. Welcome back."
+  if (gapDays >= 21) return t('welcome.while')
+  if (gapDays >= 7) return t('welcome.weeks')
+  return t('welcome.days')
 }
 
 export function tinyStartLine(
-  activity: Pick<Activity, 'name' | 'tracking_mode' | 'target_value' | 'target_unit'>,
+  activity: Pick<Activity, 'name' | 'tracking_mode' | 'target_value' | 'target_unit'> & {
+    template_id?: string | null
+    name_overridden?: boolean
+  },
 ): string {
+  const name = visibleName(activity)
   if (activity.tracking_mode === 'timer') {
     const minutes =
       activity.target_unit === 'seconds'
         ? Math.max(1, Math.round((activity.target_value ?? 120) / 60))
         : Math.max(1, activity.target_value ?? 2)
     const tiny = Math.min(minutes, 2)
-    return `Start with ${tiny} minute${tiny === 1 ? '' : 's'} of ${activity.name}.`
+    return t(tiny === 1 ? 'welcome.startMinute' : 'welcome.startMinutes', {
+      minutes: tiny,
+      name,
+    })
   }
   if (activity.tracking_mode === 'count') {
     const count = Math.max(1, activity.target_value ?? 1)
     const tiny = Math.min(count, 2)
     if (activity.target_unit === 'glasses') {
-      return `Start with ${tiny} ${tiny === 1 ? 'glass' : 'glasses'} of ${activity.name}.`
+      return t(tiny === 1 ? 'welcome.startGlass' : 'welcome.startGlasses', { count: tiny, name })
     }
     if (activity.target_unit === 'g') {
-      return `Start with ${PROTEIN_GRAMS_PER_PORTION} g of ${activity.name}.`
+      return t('welcome.startGrams', { grams: PROTEIN_GRAMS_PER_PORTION, name })
     }
     if (activity.target_unit === 'hours') {
-      return `Start with ${FASTING_HOURS_PER_TAP} hours of ${activity.name}.`
+      return t('welcome.startHours', { hours: FASTING_HOURS_PER_TAP, name })
     }
     if (activity.target_unit === 'hr') {
-      return `Start with 1 hour of ${activity.name}.`
+      return t('welcome.startHour', { name })
     }
-    return `Start with ${tiny} of ${activity.name}.`
+    return t('welcome.startCount', { count: tiny, name })
   }
-  return `Start with ${activity.name}.`
+  return t('welcome.startName', { name })
 }
 
 /** Minutes to open the timer at. Null when Start should use the normal action. */
@@ -349,7 +358,7 @@ export function coveragePhrase(
   if (showEverything || ranges.length === 0) return null
   const hit = ranges.find((range) => range.coversTo >= from && range.coversFrom <= to)
   if (!hit) return null
-  return `Since your fresh start on ${formatMonthDay(hit.startedOn)}.`
+  return t('insights.freshStart', { date: formatMonthDay(hit.startedOn) })
 }
 
 export type ComebackHit = {

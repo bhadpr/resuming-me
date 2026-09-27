@@ -1,5 +1,7 @@
 import { useEffect, useMemo, useState } from 'react'
 import { describeActivity, type Activity } from '../lib/activities'
+import { visibleName } from '../lib/catalogName'
+import { useLocale } from '../hooks/useLocale'
 import { HabitMark } from './HabitMark'
 import type { LogEntry } from '../lib/logs'
 import {
@@ -103,6 +105,8 @@ export function ActivityDetail({
   onResume,
   onShrink,
 }: ActivityDetailProps) {
+  const { locale } = useLocale()
+  const name = visibleName(activity, locale)
   const [confirmDelete, setConfirmDelete] = useState(false)
   const [editingId, setEditingId] = useState<string | null>(null)
   const [windowDays, setWindowDays] = useState<ActivityChartWindowDays>(30)
@@ -190,8 +194,8 @@ export function ActivityDetail({
       </button>
 
       <div className="detail-hero">
-        <HabitMark name={activity.name} />
-        <h2>{activity.name}</h2>
+        <HabitMark name={name} templateId={activity.template_id} />
+        <h2>{name}</h2>
         <p className="screen-sub">{describeActivity(activity)}</p>
         {activity.archived && <span className="badge">Archived</span>}
         {activePause && <span className="badge">Paused</span>}
@@ -587,7 +591,7 @@ export function ActivityDetail({
         ) : (
           <div className="confirm-delete">
             <p>
-              This permanently deletes <strong>{activity.name}</strong> and all its history.
+              This permanently deletes <strong>{name}</strong> and all its history.
               This can&apos;t be undone.
             </p>
             <div className="form-actions">

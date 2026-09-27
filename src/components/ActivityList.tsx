@@ -1,4 +1,6 @@
 import { describeActivity, type Activity } from '../lib/activities'
+import { visibleName } from '../lib/catalogName'
+import { useLocale } from '../hooks/useLocale'
 import { ArchivedFilter } from './ArchivedFilter'
 import { HabitMark } from './HabitMark'
 
@@ -19,6 +21,7 @@ export function ActivityList({
   onSelect,
   onAdd,
 }: ActivityListProps) {
+  const { locale, t } = useLocale()
   const visible = showArchived
     ? activities
     : activities.filter((a) => !a.archived)
@@ -28,11 +31,11 @@ export function ActivityList({
     <div className="activity-list-screen">
       <div className="screen-heading">
         <div>
-          <h2>Abhyas</h2>
-          <p className="screen-sub">What you want to pick back up.</p>
+          <h2>{t('nav.abhyas')}</h2>
+          <p className="screen-sub">{t('list.activitySub')}</p>
         </div>
         <button type="button" className="btn btn-primary btn-compact" onClick={onAdd}>
-          Add
+          {t('list.add')}
         </button>
       </div>
 
@@ -40,18 +43,18 @@ export function ActivityList({
         showArchived={showArchived}
         archivedCount={archivedCount}
         onToggle={onToggleArchived}
-        showLabel="Show hidden from Today"
+        showLabel={t('list.showHiddenToday')}
       />
 
       {loading ? (
-        <p className="muted-center">Loading…</p>
+        <p className="muted-center">{t('list.loading')}</p>
       ) : visible.length === 0 ? (
         <section className="empty-state">
           <p className="empty-state-emoji">📌</p>
-          <h2>Nothing here yet</h2>
-          <p>Not chores to clear. A walk, a weekly practice, or a due date you keep moving.</p>
+          <h2>{t('list.empty')}</h2>
+          <p>{t('list.activityEmpty')}</p>
           <button type="button" className="btn btn-primary" onClick={onAdd}>
-            Add habit
+            {t('list.addHabit')}
           </button>
         </section>
       ) : (
@@ -63,11 +66,11 @@ export function ActivityList({
                 className={`activity-row ${activity.archived ? 'activity-row-archived' : ''}`}
                 onClick={() => onSelect(activity)}
               >
-                <HabitMark name={activity.name} />
+                <HabitMark name={visibleName(activity, locale)} templateId={activity.template_id} />
                 <span className="activity-meta">
                   <span className="activity-name">
-                    {activity.name}
-                    {activity.archived && <span className="badge">Archived</span>}
+                    {visibleName(activity, locale)}
+                    {activity.archived && <span className="badge">{t('list.archived')}</span>}
                   </span>
                   <span className="activity-desc">{describeActivity(activity)}</span>
                 </span>

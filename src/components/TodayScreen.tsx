@@ -16,6 +16,8 @@ import {
   type SmallerChoiceMinutes,
 } from '../lib/reentry'
 import { formatMetricReading, isBloodPressure, type Metric } from '../lib/metrics'
+import { visibleName } from '../lib/catalogName'
+import { useLocale } from '../hooks/useLocale'
 import type { MetricEntry } from '../lib/metricEntries'
 import type { ActiveTimerState } from '../lib/timerStorage'
 import { formatDuration } from '../lib/timer'
@@ -136,6 +138,7 @@ export function TodayScreen({
   onOpenReview,
   focusActivityId = null,
 }: TodayScreenProps) {
+  const { t, locale } = useLocale()
   const quietSuggested = quietReentry ? pickEasiestReentryRow(rows) : null
   const followUpSuggested = reentryFollowUp
     ? pickFollowUpReentryRow(
@@ -166,7 +169,7 @@ export function TodayScreen({
     <div className="today-screen">
       <div className="screen-heading">
         <div>
-          <h2>Today</h2>
+          <h2>{t('nav.today')}</h2>
           <p className="screen-sub">{dateLabel}</p>
         </div>
       </div>
@@ -189,9 +192,9 @@ export function TodayScreen({
         <>
           {emptyKind === 'setup' && (
             <div className="today-empty">
-              <p className="today-empty-title">Today is waiting</p>
+              <p className="today-empty-title">{t('today.waiting')}</p>
               <p className="today-empty-copy">
-                Add one habit. It isn't a list to finish.
+                {t('today.waitingCopy')}
               </p>
               {onEmptySetup && (
                 <button type="button" className="btn btn-primary" onClick={onEmptySetup}>
@@ -311,7 +314,7 @@ export function TodayScreen({
 
               {alsoDue.length > 0 && (
                 <section className="today-section">
-                  <h3 className="section-label">Also on Today</h3>
+                  <h3 className="section-label">{t('today.also')}</h3>
                   <ul className="today-list">
                     {alsoDue.map((row) => (
                       <TodayActivityRow
@@ -331,16 +334,12 @@ export function TodayScreen({
                         onRescheduleDeadline={(date) => onRescheduleDeadline(row, date)}
                         onShrinkRunningTimer={onShrinkRunningTimer}
                         onSkipToday={
-                          onSkipToday
-                            ? (reason) => onSkipToday(row, reason)
-                            : undefined
+                          onSkipToday ? (reason) => onSkipToday(row, reason) : undefined
                         }
                         onTakeRestDay={onTakeRestDay}
                         isRestDay={isRestDay}
                         onPauseHabit={
-                          onPauseHabit
-                            ? (duration) => onPauseHabit(row, duration)
-                            : undefined
+                          onPauseHabit ? (duration) => onPauseHabit(row, duration) : undefined
                         }
                       />
                     ))}
@@ -391,24 +390,18 @@ export function TodayScreen({
             </>
           )}
 
-          {emptyKind !== 'setup' && onAddActivity && (
-            <button type="button" className="btn btn-secondary today-add" onClick={onAddActivity}>
-              Add a habit
-            </button>
-          )}
-
           {metrics.length > 0 && (
             <section className="today-section today-checkin">
-              <h3 className="section-label">Vitals</h3>
+              <h3 className="section-label">{t('nav.vitals')}</h3>
               <ul className="today-list">
                 {[...pendingMetrics, ...loggedMetrics].map(({ metric, entry }) => (
                   <li
                     key={metric.id}
                     className={`today-row ${isBloodPressure(metric) ? 'vital-entry' : ''} ${entry ? 'today-row-done' : ''}`}
                   >
-                    <HabitMark name={metric.name} />
+                    <HabitMark name={visibleName(metric, locale)} templateId={metric.template_id} />
                     <span className="activity-meta">
-                      <span className="activity-name">{metric.name}</span>
+                      <span className="activity-name">{visibleName(metric, locale)}</span>
                       <span className="activity-desc">
                         {entry
                           ? `${formatMetricReading(entry.value, metric.unit, entry.secondary_value)} today`
@@ -429,6 +422,12 @@ export function TodayScreen({
                 ))}
               </ul>
             </section>
+          )}
+
+          {emptyKind !== 'setup' && onAddActivity && (
+            <button type="button" className="btn btn-secondary today-add" onClick={onAddActivity}>
+              {t('today.add')}
+            </button>
           )}
 
           {hasActivities && onTakeRestDay && (isRestDay || rows.length === 0) && (
@@ -694,6 +693,7 @@ function TodayActivityRow({
   isRestDay?: boolean
   onPauseHabit?: (duration: PauseDuration) => void
 }) {
+  const { t, locale } = useLocale()
   const { activity, actionKind, done, progressLabel, current, target, status } = row
   const isThisTimer = activeTimer?.activityId === activity.id
   const timerLive = isThisTimer && activeTimer?.status === 'running'
@@ -709,11 +709,11 @@ function TodayActivityRow({
           : 'Quiet yesterday'
       : null
   const desc = isThisTimer
-    ? `${progressLabel}${timerPaused ? ' · paused' : ' · running'}`
+    ? `${progressLabel}${timerPaused ? ` · ${t('today.paused')}` : ` · ${t('today.running')}`}`
     : postponeNote
       ? `${progressLabel} · ${postponeNote}`
       : progressLabel
-  const timerIdleLabel = postponeNote || partial ? 'Resume' : 'Start'
+  const timerIdleLabel = postponeNote || partial ? t('today.resume') : t('today.start')
   const [showManual, setShowManual] = useState(false)
   const [manualMinutes, setManualMinutes] = useState('')
   const [moreOpen, setMoreOpen] = useState(false)
@@ -779,14 +779,14 @@ function TodayActivityRow({
     >
       <div className="today-row-main">
         <StatusMark live={timerLive} paused={timerPaused} />
-        <HabitMark name={activity.name} emoji={activity.emoji} />
+        <HabitMark name={visibleName(activity, locale)} emoji={activity.emoji} templateId={activity.template_id} />
         <span className="activity-meta">
-          <span className="activity-name">{activity.name}</span>
+          <span className="activity-name">{visibleName(activity, locale)}</span>
           <span className="activity-desc">
             {desc}
-            {partial ? ' · partial' : ''}
-            {done ? ' · done' : ''}
-            {skipped ? ' · skipped' : ''}
+            {partial ? ` · ${t('today.partial')}` : ''}
+            {done ? ` · ${t('today.done')}` : ''}
+            {skipped ? ` · ${t('today.skipped')}` : ''}
           </span>
           {activity.target_unit === 'glasses' && (
             <span className="activity-desc">{WATER_GLASS_NOTE}</span>

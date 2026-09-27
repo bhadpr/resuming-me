@@ -1,21 +1,23 @@
 import { NavLink } from 'react-router-dom'
+import { useLocale } from '../hooks/useLocale'
 import { tabPath, type AppTab } from '../lib/navigation'
 
 interface BottomNavProps {
   tab: AppTab
 }
 
-const TABS: Array<{ id: AppTab; label: string }> = [
-  { id: 'today', label: 'Today' },
-  { id: 'activities', label: 'Abhyas' },
-  { id: 'metrics', label: 'Vitals' },
-  { id: 'insights', label: 'Insights' },
+const TABS: Array<{ id: AppTab; labelKey: string }> = [
+  { id: 'today', labelKey: 'nav.today' },
+  { id: 'activities', labelKey: 'nav.abhyas' },
+  { id: 'metrics', labelKey: 'nav.vitals' },
+  { id: 'insights', labelKey: 'nav.insights' },
 ]
 
 export function BottomNav({ tab }: BottomNavProps) {
+  const { t } = useLocale()
   return (
     <nav className="app-nav" aria-label="Main">
-      {TABS.map(({ id, label }) => (
+      {TABS.map(({ id, labelKey }) => (
         <NavLink
           key={id}
           to={tabPath(id)}
@@ -26,7 +28,7 @@ export function BottomNav({ tab }: BottomNavProps) {
           end={id === 'today' || id === 'insights'}
         >
           <NavIcon tab={id} />
-          <span className="nav-item-label">{label}</span>
+          <span className="nav-item-label">{t(labelKey)}</span>
         </NavLink>
       ))}
     </nav>

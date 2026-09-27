@@ -35,6 +35,7 @@ export interface Database {
           review_hour: number
           review_minute: number
           reviews_opt_out: boolean
+          locale?: string | null
           created_at: string
           updated_at: string
         }
@@ -58,6 +59,7 @@ export interface Database {
           review_hour?: number
           review_minute?: number
           reviews_opt_out?: boolean
+          locale?: string | null
           created_at?: string
           updated_at?: string
         }
@@ -79,6 +81,7 @@ export interface Database {
           review_hour?: number
           review_minute?: number
           reviews_opt_out?: boolean
+          locale?: string | null
           updated_at?: string
         }
         Relationships: []
@@ -101,6 +104,8 @@ export interface Database {
           off_weekdays?: number[]
           micro_steps: unknown[]
           archived: boolean
+          template_id?: string | null
+          name_overridden?: boolean
           created_at: string
           updated_at: string
         }
@@ -110,6 +115,8 @@ export interface Database {
           name: string
           emoji?: string
           type: ActivityType
+          template_id?: string | null
+          name_overridden?: boolean
           tracking_mode: TrackingMode
           target_value?: number | null
           target_unit?: string | null
@@ -139,6 +146,8 @@ export interface Database {
           off_weekdays?: number[]
           micro_steps?: unknown[]
           archived?: boolean
+          template_id?: string | null
+          name_overridden?: boolean
           updated_at?: string
         }
         Relationships: []
@@ -179,6 +188,8 @@ export interface Database {
           emoji: string
           unit: string
           archived: boolean
+          template_id?: string | null
+          name_overridden?: boolean
           created_at: string
           updated_at: string
         }
@@ -189,6 +200,8 @@ export interface Database {
           emoji?: string
           unit: string
           archived?: boolean
+          template_id?: string | null
+          name_overridden?: boolean
           created_at?: string
           updated_at?: string
         }
@@ -197,6 +210,8 @@ export interface Database {
           emoji?: string
           unit?: string
           archived?: boolean
+          template_id?: string | null
+          name_overridden?: boolean
           updated_at?: string
         }
         Relationships: []

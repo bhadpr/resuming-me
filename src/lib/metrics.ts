@@ -7,6 +7,8 @@ export interface MetricInput {
   name: string
   emoji: string
   unit: string
+  templateId?: string | null
+  nameOverridden?: boolean
 }
 
 export const STARTER_METRICS: MetricInput[] = [
@@ -59,6 +61,8 @@ export async function createMetric(
       emoji: input.emoji.trim(),
       unit: input.unit.trim(),
       archived: false,
+      template_id: input.templateId ?? null,
+      name_overridden: input.nameOverridden ?? false,
     })
     .select('*')
     .single()
@@ -81,6 +85,8 @@ export async function updateMetric(
       name: input.name.trim(),
       emoji: input.emoji.trim(),
       unit: input.unit.trim(),
+      template_id: input.templateId ?? existing.template_id ?? null,
+      name_overridden: input.nameOverridden ?? existing.name_overridden ?? false,
     })
     .eq('id', existing.id)
     .select('*')

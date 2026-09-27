@@ -481,6 +481,59 @@ select.field-input {
   flex: 1;
 }
 
+.brand-line {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 0.75rem;
+}
+
+.brand-line .language-picker,
+.app-header .language-picker {
+  margin: 0;
+  flex-shrink: 0;
+}
+
+.brand-line .landing-brand,
+.brand-line .app-title {
+  flex: 1;
+  min-width: 0;
+}
+
+.brand-line select.field-input.language-select,
+.app-header select.field-input.language-select {
+  min-width: 7.25rem;
+  min-height: 36px;
+  font-size: 0.8125rem;
+}
+
+.language-picker {
+  display: block;
+  width: fit-content;
+  max-width: 100%;
+  margin: 0;
+}
+
+select.field-input.language-select {
+  width: auto;
+  min-width: 9.5rem;
+  padding-right: 2rem;
+  font-weight: 600;
+  letter-spacing: 0;
+}
+
+.visually-hidden {
+  position: absolute;
+  width: 1px;
+  height: 1px;
+  padding: 0;
+  margin: -1px;
+  overflow: hidden;
+  clip: rect(0, 0, 0, 0);
+  white-space: nowrap;
+  border: 0;
+}
+
 .segmented {
   display: flex;
   flex-wrap: wrap;

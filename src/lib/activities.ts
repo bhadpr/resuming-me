@@ -15,9 +15,13 @@ export interface ActivityInput {
   weeklyTarget: number | null
   deadline: string | null
   whyMatters?: string | null
-    usuallyWhen?: string | null
+  usuallyWhen?: string | null
   /** 0 = Sunday … 6 = Saturday. Empty means every scheduled day. */
   offWeekdays?: number[]
+  /** Catalog id such as `walk`. Null when the person named it themselves. */
+  templateId?: string | null
+  /** True when they renamed a catalog habit. That text stays in every language. */
+  nameOverridden?: boolean
 }
 
 export function validateActivityInput(input: ActivityInput): string | null {
@@ -88,6 +92,8 @@ function toInsertRow(userId: string, input: ActivityInput, effectiveFrom: string
     usually_when: input.usuallyWhen?.trim() || null,
     off_weekdays: input.offWeekdays ?? [],
     archived: false,
+    template_id: input.templateId ?? null,
+    name_overridden: input.nameOverridden ?? false,
   }
 }
 
@@ -182,6 +188,8 @@ export async function updateActivity(
     why_matters: input.whyMatters?.trim() || null,
     usually_when: input.usuallyWhen?.trim() || null,
     off_weekdays: input.offWeekdays ?? [],
+    template_id: input.templateId ?? existing.template_id ?? null,
+    name_overridden: input.nameOverridden ?? existing.name_overridden ?? false,
   }
 
   if (targetChanged) {

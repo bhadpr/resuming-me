@@ -3,6 +3,9 @@ import type { Activity } from '../lib/activities'
 import { tinyStartLine, tinyTimerMinutes, welcomeBackLine } from '../lib/comeback'
 import type { ActivityTodayProgress } from '../lib/today'
 import { track } from '../lib/track'
+import { visibleName } from '../lib/catalogName'
+import { t } from '../lib/i18n'
+import { useLocale } from '../hooks/useLocale'
 
 export type WelcomeBackModel = {
   gapDays: number
@@ -27,6 +30,7 @@ export function WelcomeBackCard({
   onDismiss: () => void
   onFreshStart: () => void
 }) {
+  const { locale } = useLocale()
   const [pickerOpen, setPickerOpen] = useState(false)
   const [freshNote, setFreshNote] = useState<string | null>(null)
   const rowFor = (activity: Activity) => rows.find((row) => row.activity.id === activity.id) ?? null
@@ -39,7 +43,9 @@ export function WelcomeBackCard({
   }
 
   const startMinutes = tinyTimerMinutes(model.suggestion) ?? 2
-  const startLabel = `Start ${startMinutes} ${startMinutes === 1 ? 'minute' : 'minutes'}`
+  const startLabel = t(startMinutes === 1 ? 'welcome.buttonMinute' : 'welcome.buttonMinutes', {
+    minutes: startMinutes,
+  })
 
   return (
     <div className="today-welcome">
@@ -56,7 +62,7 @@ export function WelcomeBackCard({
               disabled={busyId === activity.id}
               onClick={() => start(activity)}
             >
-              {activity.emoji} {activity.name}
+              {activity.emoji} {visibleName(activity, locale)}
             </button>
           ))}
         </div>
@@ -72,7 +78,7 @@ export function WelcomeBackCard({
           </button>
           {model.alternatives.length > 0 && (
             <button type="button" className="btn btn-secondary" onClick={() => setPickerOpen(true)}>
-              Something else
+              {t('welcome.else')}
             </button>
           )}
           <button
@@ -83,13 +89,13 @@ export function WelcomeBackCard({
               onDismiss()
             }}
           >
-            Just looking today
+            {t('welcome.looking')}
           </button>
         </div>
       )}
       {model.gapDays >= 7 && (
         <div className="today-welcome-actions">
-          <p className="onboarding-hint">Fresh start. Quiet days before today stay covered.</p>
+          <p className="onboarding-hint">{t('welcome.freshHint')}</p>
           <button
             type="button"
             className="btn btn-ghost"
@@ -102,7 +108,7 @@ export function WelcomeBackCard({
               onFreshStart()
             }}
           >
-            Want to start fresh from today?
+            {t('welcome.fresh')}
           </button>
           {(freshNote || (!model.freshStart.allowed && model.freshStart.line)) && (
             <p className="onboarding-hint">{freshNote ?? model.freshStart.line}</p>

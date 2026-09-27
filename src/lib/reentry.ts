@@ -1,4 +1,6 @@
+import { visibleName } from './catalogName'
 import { addDays, daysBetween, todayLocalDate } from './dates'
+import { t } from './i18n'
 import type { Activity } from './activities'
 import type { LogEntry } from './logs'
 import type { ActivityTodayProgress } from './today'
@@ -105,9 +107,9 @@ export function buildQuietInsightLine(opts: {
   if (!isQuietReentry(opts)) return null
   const suggested = pickEasiestReentryRow(opts.rows)
   if (suggested) {
-    return `Last 5 days were quiet. ${suggested.activity.name} is an easy place to pick up.`
+    return t('insights.quietNamed', { name: visibleName(suggested.activity) })
   }
-  return "Last 5 days were quiet. One small thing is enough when you're ready."
+  return t('insights.quietPlain')
 }
 
 function quietStreakStart(opts: {

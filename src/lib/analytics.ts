@@ -31,7 +31,7 @@ export type AppAnalyticsPath =
 const PATH_LABELS: Record<string, string> = {
   '/': 'Landing',
   '/app/today': 'Today',
-  '/app/activities': 'Abhyas',
+  '/app/activities': 'Activity',
   '/app/metrics': 'Vitals',
   '/app/insights': 'Insights',
   '/settings': 'Settings',
@@ -396,6 +396,37 @@ const ONBOARDING_EVENT_NAMES = [
   'signup_completed',
   'log_created',
 ] as const
+
+const JOURNEY_EVENT_NAMES = [
+  'landing_viewed',
+  'intent_journey_started',
+  'onboarding_started',
+  'onboarding_step_completed',
+  'log_created',
+  'signin_shown',
+  'signup_completed',
+  'activity_created',
+  'metric_created',
+] as const
+
+export async function fetchJourneyEvents(window: AnalyticsWindow) {
+  const client = createSupabaseClient()
+  const days = ANALYTICS_WINDOW_DAYS[window]
+  const since = new Date()
+  since.setUTCDate(since.getUTCDate() - (days - 1))
+  since.setUTCHours(0, 0, 0, 0)
+
+  const { data, error } = await client
+    .from('events')
+    .select('name, props, created_at, anon_id, user_id')
+    .gte('created_at', since.toISOString())
+    .in('name', [...JOURNEY_EVENT_NAMES])
+    .order('created_at', { ascending: true })
+    .limit(8000)
+
+  if (error) throw error
+  return data ?? []
+}
 
 export async function fetchOnboardingEvents(window: AnalyticsWindow) {
   const client = createSupabaseClient()

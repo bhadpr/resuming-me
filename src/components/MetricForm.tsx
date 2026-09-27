@@ -1,5 +1,7 @@
 import { useEffect, useState, type FormEvent } from 'react'
 import { habitArtFor, habitTemplateId } from '../data/habitArt'
+import { isCatalogLabel, templateLabel } from '../lib/catalogName'
+import { useLocale } from '../hooks/useLocale'
 import { HabitIcon } from './HabitIcon'
 import { STARTER_METRICS, type Metric, type MetricInput } from '../lib/metrics'
 
@@ -15,6 +17,8 @@ function fromMetric(metric: Metric): MetricInput {
     name: metric.name,
     emoji: metric.emoji,
     unit: metric.unit,
+    templateId: metric.template_id ?? null,
+    nameOverridden: metric.name_overridden ?? false,
   }
 }
 
@@ -56,6 +60,7 @@ export function MetricForm({
   onCancel: () => void
   onPhaseChange?: (phase: 'pick' | 'details') => void
 }) {
+  const { locale } = useLocale()
   const starting = initial ? fromMetric(initial) : emptyInput
   const [phase, setPhase] = useState<'pick' | 'details'>(initial ? 'details' : 'pick')
   const [selectedName, setSelectedName] = useState<string | null>(null)
@@ -120,7 +125,11 @@ export function MetricForm({
                         aria-pressed={chosen}
                         onClick={() => {
                           setSelectedName(metric.name)
-                          setInput(metric)
+                          setInput({
+                            ...metric,
+                            templateId: habitTemplateId({ name: metric.name }),
+                            nameOverridden: false,
+                          })
                           setUseCustomUnit(!isPresetUnit(metric.unit))
                         }}
                       >
@@ -132,7 +141,7 @@ export function MetricForm({
                           )}
                         </span>
                         <span className="habit-tile-label">
-                          {metric.name}
+                          {templateLabel(habitTemplateId({ name: metric.name }) ?? '', locale) ?? metric.name}
                           {caption ? <span className="habit-tile-caption">{caption}</span> : null}
                         </span>
                       </button>
@@ -198,7 +207,17 @@ export function MetricForm({
         <input
           className="field-input"
           value={input.name}
-          onChange={(e) => setInput((prev) => ({ ...prev, name: e.target.value }))}
+          onChange={(e) =>
+            setInput((prev) => {
+              const name = e.target.value
+              const templateId = prev.templateId ?? null
+              return {
+                ...prev,
+                name,
+                nameOverridden: templateId != null && !isCatalogLabel(templateId, name),
+              }
+            })
+          }
           placeholder="e.g. Weight"
           autoFocus
           required

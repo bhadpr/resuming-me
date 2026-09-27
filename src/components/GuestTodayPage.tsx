@@ -3,9 +3,6 @@ import { Link } from 'react-router-dom'
 import { todayLocalDate } from '../lib/dates'
 import { canLogPastGoal, stacksSessionMinutes } from '../lib/dayStatus'
 import {
-  FASTING_HOURS_NOTE,
-  SLEEP_HOURS_NOTE,
-  WATER_GLASS_NOTE,
   countTapLabel,
   isNumberEntryVital,
   isStepsHabit,
@@ -16,6 +13,10 @@ import {
 import { formatDuration } from '../lib/timer'
 import { HabitMark } from './HabitMark'
 import { HabitVideoPlaceholder } from './HabitVideoPlaceholder'
+import { catalogTrackId, visibleName } from '../lib/catalogName'
+import { track } from '../lib/track'
+import { useLocale } from '../hooks/useLocale'
+import { formatLongDate } from '../lib/i18n'
 import {
   appendGuestCount,
   appendGuestLog,
@@ -34,7 +35,23 @@ import {
 } from '../lib/guestDraft'
 
 /** Local Today for someone who has not saved an account yet — same chrome as signed-in. */
+function trackGuestLog(
+  activity: GuestActivity,
+  kind: 'session' | 'count' | 'vital',
+  minutes: number | null,
+): void {
+  track('log_created', {
+    activity_type: activity.type,
+    kind,
+    minutes,
+    was_partial: false,
+    template_id: catalogTrackId(activity.templateId),
+    signed_in: false,
+  })
+}
+
 export function GuestTodayPage() {
+  const { t, locale } = useLocale()
   const [draft, setDraft] = useState<GuestDraft | null>(() => loadGuestDraft())
   const [runningId, setRunningId] = useState<string | null>(null)
   const [elapsed, setElapsed] = useState(0)
@@ -55,11 +72,7 @@ export function GuestTodayPage() {
       : 0
   const goalSeconds = running ? guestTimerProgress(running, 0).targetSeconds : 0
   const sessionGoalSeconds = Math.max(0, goalSeconds - alreadySeconds)
-  const dateLabel = new Date().toLocaleDateString(undefined, {
-    weekday: 'long',
-    month: 'short',
-    day: 'numeric',
-  })
+  const dateLabel = formatLongDate(locale)
 
   useEffect(() => {
     if (!runningId || paused) return
@@ -90,9 +103,11 @@ export function GuestTodayPage() {
           date: todayLocalDate(),
         }),
       )
+      const activity = current.activities.find((item) => item.localId === activityId)
+      if (activity) trackGuestLog(activity, 'session', Math.round(whole / 60))
       setNote(null)
     } else {
-      setNote('No worries. Try again anytime.')
+      setNote(t('today.tryAgain'))
     }
     setRunningId(null)
     setPaused(false)
@@ -131,14 +146,14 @@ export function GuestTodayPage() {
               to="/start?step=8"
               onClick={() => setGuestStep(draft, 8)}
             >
-              Save your progress
+              {t('today.save')}
             </Link>
-            <p className="guest-save-widget-note">Stays on this device for 7 days.</p>
+            <p className="guest-save-widget-note">{t('today.stays')}</p>
           </div>
 
           <div className="screen-heading">
             <div>
-              <h2>Today</h2>
+              <h2>{t('nav.today')}</h2>
               <p className="screen-sub">{dateLabel}</p>
             </div>
           </div>
@@ -151,10 +166,10 @@ export function GuestTodayPage() {
 
           {draft.activities.length === 0 ? (
             <div className="today-empty">
-              <p className="today-empty-title">Today is waiting</p>
-              <p className="today-empty-copy">Add one habit. It isn&apos;t a list to finish.</p>
+              <p className="today-empty-title">{t('today.waiting')}</p>
+              <p className="today-empty-copy">{t('today.waitingCopy')}</p>
               <Link className="btn btn-primary" to="/start?step=1&add=1">
-                Add a habit
+                {t('today.add')}
               </Link>
             </div>
           ) : (
@@ -214,17 +229,17 @@ export function GuestTodayPage() {
                           <StatusMark live={isRunning && !paused} paused={isRunning && paused} />
                           <HabitMark
                             templateId={activity.templateId}
-                            name={activity.name}
+                            name={visibleName(activity, locale)}
                             emoji={activity.emoji}
                           />
                           <span className="activity-meta">
-                            <span className="activity-name">{activity.name}</span>
+                            <span className="activity-name">{visibleName(activity, locale)}</span>
                             <span className="activity-desc">
                               {isRunning
-                                ? `${liveProgress.label}${paused ? ' · paused' : ' · running'}`
+                                ? `${liveProgress.label}${paused ? ` · ${t('today.paused')}` : ` · ${t('today.running')}`}`
                                 : progress.label}
-                              {partial && !isRunning ? ' · partial' : ''}
-                              {progress.done && !isRunning ? ' · done' : ''}
+                              {partial && !isRunning ? ` · ${t('today.partial')}` : ''}
+                              {progress.done && !isRunning ? ` · ${t('today.done')}` : ''}
                             </span>
                             {!isRunning && (
                               <div className="progress-bar" aria-hidden>
@@ -250,7 +265,7 @@ export function GuestTodayPage() {
                                   )
                                 }
                               >
-                                {showVideo ? 'Hide video' : 'Video'}
+                                {showVideo ? t('today.hideVideo') : t('today.video')}
                               </button>
                             )}
                           </span>
@@ -262,14 +277,14 @@ export function GuestTodayPage() {
                                   className="btn btn-secondary btn-today"
                                   onClick={() => setPaused((value) => !value)}
                                 >
-                                  {paused ? 'Resume' : 'Pause'}
+                                  {paused ? t('today.resume') : t('today.pause')}
                                 </button>
                                 <button
                                   type="button"
                                   className="btn btn-primary btn-today"
                                   onClick={() => finishTimer(elapsed)}
                                 >
-                                  Done
+                                  {t('today.done')}
                                 </button>
                               </>
                             ) : (
@@ -279,7 +294,7 @@ export function GuestTodayPage() {
                                 disabled={Boolean(runningId) || (progress.done && !stacking)}
                                 onClick={() => startTimer(activity.localId)}
                               >
-                                {progress.done && !stacking ? 'Done' : partial ? 'Resume' : 'Start'}
+                                {progress.done && !stacking ? t('today.done') : partial ? t('today.resume') : t('today.start')}
                               </button>
                             )}
                           </span>
@@ -314,7 +329,7 @@ export function GuestTodayPage() {
                         {canShowVideo && showVideo && (
                           <HabitVideoPlaceholder
                             templateId={activity.templateId}
-                            name={activity.name}
+                            name={visibleName(activity, locale)}
                             playing={isRunning && !paused}
                             paused={isRunning && paused}
                           />
@@ -335,23 +350,23 @@ export function GuestTodayPage() {
                       <div className="today-row-main">
                         <HabitMark
                           templateId={activity.templateId}
-                          name={activity.name}
+                          name={visibleName(activity, locale)}
                           emoji={activity.emoji}
                         />
                         <span className="activity-meta">
-                          <span className="activity-name">{activity.name}</span>
+                          <span className="activity-name">{visibleName(activity, locale)}</span>
                           <span className="activity-desc">
                             {progress.label}
-                            {progress.done ? ' · done' : ''}
+                            {progress.done ? ` · ${t('today.done')}` : ''}
                           </span>
                           {activity.targetUnit === 'glasses' && (
-                            <span className="activity-desc">{WATER_GLASS_NOTE}</span>
+                            <span className="activity-desc">{t('notes.waterGlass')}</span>
                           )}
                           {activity.targetUnit === 'hours' && (
-                            <span className="activity-desc">{FASTING_HOURS_NOTE}</span>
+                            <span className="activity-desc">{t('notes.fasting')}</span>
                           )}
                           {activity.targetUnit === 'hr' && (
-                            <span className="activity-desc">{SLEEP_HOURS_NOTE}</span>
+                            <span className="activity-desc">{t('notes.sleep')}</span>
                           )}
                           <div className="progress-bar" aria-hidden>
                             <div
@@ -374,7 +389,7 @@ export function GuestTodayPage() {
                               )
                             }
                           >
-                            {videoId === activity.localId ? 'Hide video' : 'Video'}
+                            {videoId === activity.localId ? t('today.hideVideo') : t('today.video')}
                           </button>
                         </span>
                         <span className="today-actions">
@@ -382,7 +397,10 @@ export function GuestTodayPage() {
                             type="button"
                             className={`btn btn-today ${progress.done && !openEnded ? 'btn-today-done' : 'btn-primary'}`}
                             disabled={progress.done && !openEnded}
-                            onClick={() => setDraft(appendGuestCount(draft, activity.localId, today))}
+                            onClick={() => {
+                              setDraft(appendGuestCount(draft, activity.localId, today))
+                              trackGuestLog(activity, 'count', null)
+                            }}
                           >
                             {countTapLabel(activity.targetUnit, progress.done)}
                           </button>
@@ -391,15 +409,15 @@ export function GuestTodayPage() {
                       {videoId === activity.localId && (
                         <HabitVideoPlaceholder
                           templateId={activity.templateId}
-                          name={activity.name}
-                        />
+                            name={visibleName(activity, locale)}
+                          />
                       )}
                     </li>
                   )
                 })}
               </ul>
               <Link className="btn btn-secondary today-add" to="/start?step=1&add=1">
-                Add a habit
+                {t('today.add')}
               </Link>
             </section>
           )}
@@ -418,6 +436,7 @@ function NumberVitalRow({
   target?: number | null
   onSave: (value: number, secondaryValue: number | null) => void
 }) {
+  const { t, locale } = useLocale()
   const paired = activity.templateId === 'blood_pressure'
   const steps = activity.templateId === 'steps'
   const [value, setValue] = useState(reading ? String(reading.value) : '')
@@ -436,31 +455,36 @@ function NumberVitalRow({
     if (value === '' || Number.isNaN(parsed)) return
     if (!paired) {
       onSave(parsed, null)
+      trackGuestLog(activity, 'vital', null)
       return
     }
     const lower = Number(secondary)
     if (secondary === '' || Number.isNaN(lower)) return
     onSave(parsed, lower)
+    trackGuestLog(activity, 'vital', null)
   }
 
   const summary = steps
     ? reading
-      ? `${stepCountLabel(reading.value)} / ${stepCountLabel(target ?? 10000)} today`
-      : `Goal ${stepCountLabel(target ?? 10000)}`
+      ? t('today.stepsToday', {
+          value: stepCountLabel(reading.value),
+          goal: stepCountLabel(target ?? 10000),
+        })
+      : t('today.goalSteps', { goal: stepCountLabel(target ?? 10000) })
     : !reading
       ? paired
-        ? 'Upper and lower'
-        : 'Beats per minute'
+        ? t('today.upperLower')
+        : t('today.beats')
       : paired && reading.secondaryValue != null
-        ? `${reading.value}/${reading.secondaryValue} mmHg today`
-        : `${reading.value} bpm today`
+        ? t('today.mmHg', { value: `${reading.value}/${reading.secondaryValue}` })
+        : t('today.bpmToday', { value: reading.value })
 
   return (
     <li className="today-row today-row-stack">
       <form className="today-row-main vital-entry" onSubmit={handleSubmit}>
-        <HabitMark templateId={activity.templateId} name={activity.name} emoji={activity.emoji} />
+        <HabitMark templateId={activity.templateId} name={visibleName(activity, locale)} emoji={activity.emoji} />
         <span className="activity-meta">
-          <span className="activity-name">{activity.name}</span>
+          <span className="activity-name">{visibleName(activity, locale)}</span>
           <span className="activity-desc">{summary}</span>
         </span>
         <span className="today-actions">
@@ -469,7 +493,7 @@ function NumberVitalRow({
             type="number"
             step="any"
             inputMode="numeric"
-            placeholder={paired ? 'Upper' : steps ? 'Steps' : 'bpm'}
+            placeholder={paired ? t('today.upper') : steps ? t('today.steps') : t('today.bpm')}
             value={value}
             aria-label={paired ? 'Upper blood pressure' : steps ? 'Steps today' : 'Heart rate'}
             onChange={(event) => setValue(event.target.value)}
@@ -480,7 +504,7 @@ function NumberVitalRow({
               type="number"
               step="any"
               inputMode="numeric"
-              placeholder="Lower"
+              placeholder={t('today.lower')}
               value={secondary}
               aria-label="Lower blood pressure"
               onChange={(event) => setSecondary(event.target.value)}

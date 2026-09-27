@@ -1,4 +1,5 @@
 import { templateById } from '../data/activityTemplates'
+import { getLocale, t } from './i18n'
 import { canLogPastGoal, countPortion } from './dayStatus'
 import { endOfWeekSunday, startOfWeekMonday } from './dates'
 import { formatSecondsAsTargetUnit } from './timer'
@@ -133,9 +134,9 @@ export function guestSaveWarning(draft: GuestDraft, now = Date.now()): string | 
   const age = guestDraftAgeDays(draft, now)
   if (age < GUEST_SAVE_WARN_DAY) return null
   const left = Math.max(0, 7 - age)
-  if (left <= 0) return 'This setup expires today. Save it to keep it.'
-  if (left === 1) return 'Save your progress — it expires tomorrow.'
-  return `Save your progress — it expires in ${left} days.`
+  if (left <= 0) return t('guest.expiresToday')
+  if (left === 1) return t('guest.expiresTomorrow')
+  return t('guest.expiresDays', { days: left })
 }
 
 function isDraft(value: unknown): value is GuestDraft {
@@ -434,6 +435,7 @@ export function guestDraftToPayload(draft: GuestDraft) {
   return {
     guestId: normalized.guestId,
     timezone: normalized.timezone,
+    locale: getLocale(),
     reminderTime: normalized.reminderTime,
     reminderTimes: normalized.reminderTimes,
     slipAnswer: normalized.slipAnswer,
@@ -449,6 +451,8 @@ export function guestDraftToPayload(draft: GuestDraft) {
       deadline: a.deadline,
       why: a.why,
       usuallyWhen: a.usuallyWhen,
+      templateId: a.templateId,
+      nameOverridden: false,
     })),
     logs: normalized.logs.map((log) => ({
       localActivityId: log.localActivityId,

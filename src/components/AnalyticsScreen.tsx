@@ -1,5 +1,6 @@
 import { useEffect, useState } from 'react'
 import {
+  fetchJourneyEvents,
   fetchOnboardingEvents,
   fetchPageViewsForAnalytics,
   fetchProductAnalytics,
@@ -14,6 +15,8 @@ import {
   type SignedInAccount,
 } from '../lib/analytics'
 import { summarizeOnboardingFunnel } from '../lib/onboardingFunnel'
+import { summarizeCreates, summarizeGuestJourney } from '../lib/guestJourney'
+import { templateLabel } from '../lib/catalogName'
 import { cohortRetention, fetchLoopEvents, summarizeComebackLoop } from '../lib/loopAnalytics'
 
 export function AnalyticsScreen() {
@@ -31,6 +34,9 @@ export function AnalyticsScreen() {
   const [loop, setLoop] = useState<ReturnType<typeof summarizeComebackLoop> | null>(null)
   const [cohorts, setCohorts] = useState<ReturnType<typeof cohortRetention>>([])
   const [loopError, setLoopError] = useState<string | null>(null)
+  const [journey, setJourney] = useState<ReturnType<typeof summarizeGuestJourney> | null>(null)
+  const [creates, setCreates] = useState<ReturnType<typeof summarizeCreates> | null>(null)
+  const [journeyError, setJourneyError] = useState<string | null>(null)
 
   useEffect(() => {
     let mounted = true
@@ -72,6 +78,26 @@ export function AnalyticsScreen() {
       })
       .finally(() => {
         if (mounted) setProductLoading(false)
+      })
+    return () => {
+      mounted = false
+    }
+  }, [window])
+
+  useEffect(() => {
+    let mounted = true
+    setJourneyError(null)
+    fetchJourneyEvents(window)
+      .then((rows) => {
+        if (!mounted) return
+        setJourney(summarizeGuestJourney(rows))
+        setCreates(summarizeCreates(rows))
+      })
+      .catch((err) => {
+        if (!mounted) return
+        setJourney(null)
+        setCreates(null)
+        setJourneyError(err instanceof Error ? err.message : 'Could not load guest journeys')
       })
     return () => {
       mounted = false
@@ -304,6 +330,45 @@ export function AnalyticsScreen() {
           </section>
         </>
       )}
+
+      <section className="today-section">
+        <h3 className="section-label">Guest journey</h3>
+        <p className="screen-sub insights-hint">
+          People before an account, counted by anonymous id. A later sign-up stays on the same id.
+        </p>
+        {journeyError && <p className="error">{journeyError}</p>}
+        {journey && (
+          <ul className="analytics-rank-list">
+            <li className="analytics-rank-row">Landing · {journey.landing}</li>
+            <li className="analytics-rank-row">Intent started · {journey.intentStarted}</li>
+            <li className="analytics-rank-row">Setup started · {journey.setupStarted}</li>
+            <li className="analytics-rank-row">Habits picked · {journey.habitsPicked}</li>
+            <li className="analytics-rank-row">First guest log · {journey.firstLog}</li>
+            <li className="analytics-rank-row">Sign-in shown · {journey.signInShown}</li>
+            <li className="analytics-rank-row">Accounts · {journey.signups}</li>
+          </ul>
+        )}
+        {creates && (
+          <>
+            <p className="screen-sub insights-hint">
+              Habits from the list {creates.habitsCatalog} · habits they named {creates.habitsCustom}
+              · vitals from the list {creates.vitalsCatalog} · vitals they named {creates.vitalsCustom}
+            </p>
+            <ul className="analytics-rank-list">
+              {creates.topHabits.map((row) => (
+                <li key={`habit-${row.id}`} className="analytics-rank-row">
+                  {templateLabel(row.id) ?? row.id} · {row.count}
+                </li>
+              ))}
+              {creates.topVitals.map((row) => (
+                <li key={`vital-${row.id}`} className="analytics-rank-row">
+                  {templateLabel(row.id) ?? row.id} · {row.count}
+                </li>
+              ))}
+            </ul>
+          </>
+        )}
+      </section>
 
       <section className="today-section">
         <h3 className="section-label">Onboarding</h3>

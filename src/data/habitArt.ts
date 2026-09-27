@@ -47,13 +47,16 @@ const NAME_ALIASES: Record<string, string> = {
   diastolic: 'diastolic',
   'blood pressure': 'blood_pressure',
   'heart rate': 'heart_rate',
+  cleaning: 'rejuvenation',
 }
 
 export function habitTemplateId(activity: {
   templateId?: string | null
+  template_id?: string | null
   name?: string | null
 }): string | null {
   if (activity.templateId) return activity.templateId
+  if (activity.template_id) return activity.template_id
   const name = activity.name?.trim().toLowerCase()
   if (!name) return null
   if (NAME_ALIASES[name]) return NAME_ALIASES[name]
@@ -63,9 +66,11 @@ export function habitTemplateId(activity: {
 
 export function habitArtFor(activity: {
   templateId?: string | null
+  template_id?: string | null
   name?: string | null
 }): string | null {
-  if (activity.templateId && HABIT_ART[activity.templateId]) return HABIT_ART[activity.templateId]
+  const id = activity.templateId ?? activity.template_id
+  if (id && HABIT_ART[id]) return HABIT_ART[id]
   const name = activity.name?.trim().toLowerCase()
   if (!name) return null
   const alias = NAME_ALIASES[name]

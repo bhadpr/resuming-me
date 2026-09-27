@@ -12,6 +12,18 @@ import {
   useDocumentMeta,
 } from '../hooks/useDocumentMeta'
 import { track } from '../lib/track'
+import { templateLabel } from '../lib/catalogName'
+import { useLocale } from '../hooks/useLocale'
+import { LanguagePicker } from './LanguagePicker'
+
+function LandingBrand() {
+  return (
+    <div className="brand-line">
+      <BrandTitle size="lg" className="landing-brand" />
+      <LanguagePicker />
+    </div>
+  )
+}
 
 interface LandingPageProps {
   configured: boolean
@@ -75,6 +87,7 @@ export function LandingPage({
   onSignIn,
 }: LandingPageProps) {
   const navigate = useNavigate()
+  const { t, locale } = useLocale()
   const native = Capacitor.isNativePlatform()
   const [error, setError] = useState<string | null>(null)
   const [signingIn, setSigningIn] = useState(false)
@@ -136,8 +149,8 @@ export function LandingPage({
     return (
       <div className="landing">
         <div className="landing-card">
-          <BrandTitle size="lg" className="landing-brand" />
-          <p className="tagline">Get back to what you put off.</p>
+          <LandingBrand />
+          <p className="tagline">{t('landing.tagline')}</p>
           <div className="notice notice-warning">
             <p>{configError ?? 'Supabase is not configured.'}</p>
           </div>
@@ -151,7 +164,7 @@ export function LandingPage({
     return (
       <div className="landing">
         <div className="landing-card landing-intent">
-          <BrandTitle size="lg" className="landing-brand" />
+          <LandingBrand />
           <p className="landing-intent-progress" aria-hidden>
             {INTENT_STEPS.map((step, index) => (
               <span
@@ -170,9 +183,17 @@ export function LandingPage({
               decoding="async"
             />
           </figure>
-          <h1 className="landing-intent-question">{intentStep.question}</h1>
+          <h1 className="landing-intent-question">
+            {intentStep.id === 'postponed'
+              ? t('landing.postponed')
+              : intentStep.id === 'small'
+                ? t('landing.small')
+                : intentStep.id === 'gaps'
+                  ? t('landing.gaps')
+                  : t('landing.promiseQ')}
+          </h1>
           <button type="button" className="btn btn-primary btn-lg" onClick={advanceIntent}>
-            {intentStep.action}
+            {intentStep.id === 'promise' ? t('landing.promise') : t('landing.yes')}
           </button>
           <button
             type="button"
@@ -184,7 +205,7 @@ export function LandingPage({
               navigate('/start?step=1')
             }}
           >
-            Skip
+            {t('landing.skip')}
           </button>
         </div>
       </div>
@@ -194,12 +215,9 @@ export function LandingPage({
   return (
     <div className="landing">
       <div className="landing-card">
-        <BrandTitle size="lg" className="landing-brand" />
-        <p className="tagline">Get back to what you put off.</p>
-        <p className="explainer">
-          Not another streak app. When life interrupts and the habit slips, Resuming
-          helps you pick it up again — quietly, without the guilt.
-        </p>
+        <LandingBrand />
+        <p className="tagline">{t('landing.tagline')}</p>
+        <p className="explainer">{t('landing.explainer')}</p>
 
         <figure className="landing-hero-figure">
           <img
@@ -214,7 +232,7 @@ export function LandingPage({
 
         {accountDeleted && (
           <div className="notice" role="status">
-            <p>Your account has been deleted.</p>
+            <p>{t('landing.deleted')}</p>
           </div>
         )}
         {displayError && (
@@ -223,10 +241,10 @@ export function LandingPage({
           </div>
         )}
 
-        <div className="landing-preview" aria-label="Sample week for Walking">
+        <div className="landing-preview" aria-label={t('landing.previewLabel')}>
           <div className="landing-preview-header">
-            <p className="landing-preview-title">This week</p>
-            <p className="landing-preview-sub">This is what getting back looks like.</p>
+            <p className="landing-preview-title">{t('landing.thisWeek')}</p>
+            <p className="landing-preview-sub">{t('landing.previewSub')}</p>
           </div>
           <ul className="landing-preview-list">
             {PREVIEW_SERIES.map((series) => {
@@ -234,9 +252,14 @@ export function LandingPage({
               return (
                 <li key={series.name} className="landing-preview-row">
                   <div className="landing-preview-meta">
-                    <span className="landing-preview-name">{series.name}</span>
+                    <span className="landing-preview-name">{templateLabel('walk', locale)}</span>
                     <span className="landing-preview-stat">
-                      {doneDays}/{PREVIEW_DAYS.length} days · goal {series.target} {series.unit}
+                      {t('landing.days', {
+                        done: doneDays,
+                        total: PREVIEW_DAYS.length,
+                        target: series.target,
+                        unit: series.unit,
+                      })}
                     </span>
                   </div>
                   <div className="landing-preview-chart" aria-hidden>
@@ -266,9 +289,9 @@ export function LandingPage({
 
         <div className="landing-actions">
           <button type="button" className="btn btn-primary btn-lg" onClick={startIntent}>
-            Get started
+            {t('landing.getStarted')}
           </button>
-          <p className="landing-actions-note">No account needed to try it.</p>
+          <p className="landing-actions-note">{t('landing.noAccount')}</p>
         </div>
 
         {!showSignIn ? (
@@ -280,11 +303,11 @@ export function LandingPage({
               setShowSignIn(true)
             }}
           >
-            Already have an account? Sign in
+            {t('landing.haveAccount')}
           </button>
         ) : (
           <div className="landing-signin">
-            <p className="landing-signin-heading">Sign in</p>
+            <p className="landing-signin-heading">{t('landing.signIn')}</p>
             <EmailSignInForm
               onClick={() => track('signin_method_clicked', { method: 'email' })}
             />
@@ -297,7 +320,7 @@ export function LandingPage({
               }}
               disabled={signingIn}
             >
-              {signingIn ? 'Redirecting…' : 'Continue with Google'}
+              {signingIn ? t('landing.redirecting') : t('landing.google')}
             </button>
           </div>
         )}

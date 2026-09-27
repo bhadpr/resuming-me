@@ -1,4 +1,6 @@
 import type { Activity } from './activities'
+import { visibleName } from './catalogName'
+import { t } from './i18n'
 import {
   currentQuietRun,
   freshStartCovering,
@@ -31,8 +33,12 @@ export type Pattern = {
 }
 
 const CAUSAL = /\b(because|causes|makes you)\b/i
-const WEEKDAY = ['Sunday', 'Monday', 'Tuesday', 'Wednesday', 'Thursday', 'Friday', 'Saturday']
+const WEEKDAY_KEYS = ['sun', 'mon', 'tue', 'wed', 'thu', 'fri', 'sat'] as const
 const LOOKBACK_DAYS = 56
+
+function weekdayName(index: number): string {
+  return t(`pattern.day.${WEEKDAY_KEYS[index]}`)
+}
 
 export function patternTextIsCausal(text: string): boolean {
   return CAUSAL.test(text)
@@ -79,7 +85,7 @@ export function weekdayPattern(
   today: string,
   opts?: DayOpts,
 ): Pattern | null {
-  const counts = WEEKDAY.map(() => ({ missed: 0, scheduled: 0 }))
+  const counts = WEEKDAY_KEYS.map(() => ({ missed: 0, scheduled: 0 }))
   const from = addDays(today, -(LOOKBACK_DAYS - 1))
   for (const activity of activities) {
     if (activity.archived || activity.type === 'deadline') continue
@@ -108,12 +114,12 @@ export function weekdayPattern(
   if (!worst || !best || worst.index === best.index) return null
   const gap = worst.slip - best.slip
   if (gap < 0.2) return null
-  const name = WEEKDAY[worst.index]
+  const name = weekdayName(worst.index)
   if (worst.scheduled < 5) {
     if (worst.scheduled < 2) return null
     return {
       kind: 'weekday',
-      text: `Do ${name}s slip more than other days? Early guess.`,
+      text: t('pattern.weekdayEarly', { day: name }),
       confidence: worst.scheduled / 5,
       evidenceCount: worst.scheduled,
       earlyGuess: true,
@@ -121,7 +127,7 @@ export function weekdayPattern(
   }
   return {
     kind: 'weekday',
-    text: `${name}s slip the most. You miss them more often than ${WEEKDAY[best.index]}s.`,
+    text: t('pattern.weekdayMost', { day: name, other: weekdayName(best.index) }),
     confidence: gap,
     evidenceCount: worst.scheduled,
     earlyGuess: false,
@@ -129,10 +135,10 @@ export function weekdayPattern(
 }
 
 const BUCKETS = [
-  { id: 'morning', label: 'in the morning', from: 5, to: 12 },
-  { id: 'afternoon', label: 'in the afternoon', from: 12, to: 17 },
-  { id: 'evening', label: 'in the evening', from: 17, to: 22 },
-  { id: 'night', label: 'at night', from: 22, to: 29 },
+  { id: 'morning', from: 5, to: 12 },
+  { id: 'afternoon', from: 12, to: 17 },
+  { id: 'evening', from: 17, to: 22 },
+  { id: 'night', from: 22, to: 29 },
 ] as const
 
 function bucketFor(hour: number): (typeof BUCKETS)[number] {
@@ -154,11 +160,11 @@ export function timeOfDayPattern(hours: readonly number[]): Pattern | null {
   const share = top[1] / hours.length
   const nextShare = second / hours.length
   if (share - nextShare < 0.2) return null
-  const label = BUCKETS.find((bucket) => bucket.id === top[0])?.label ?? 'then'
+  const label = t(`pattern.when.${top[0]}`)
   if (hours.length < 5) {
     return {
       kind: 'timeOfDay',
-      text: `You may show up ${label}. Early guess.`,
+      text: t('pattern.mayShow', { when: label }),
       confidence: hours.length / 5,
       evidenceCount: hours.length,
       earlyGuess: true,
@@ -166,7 +172,7 @@ export function timeOfDayPattern(hours: readonly number[]): Pattern | null {
   }
   return {
     kind: 'timeOfDay',
-    text: `You usually show up ${label}.`,
+    text: t('pattern.usuallyShow', { when: label }),
     confidence: share - nextShare,
     evidenceCount: hours.length,
     earlyGuess: false,
@@ -178,10 +184,10 @@ export function activityGapPattern(
 ): Pattern | null {
   const top = [...gaps].sort((a, b) => b.quietDays - a.quietDays)[0]
   if (!top || top.quietDays < 1) return null
-  const days = top.quietDays === 1 ? 'day' : 'days'
+  const unit = top.quietDays === 1 ? t('pattern.dayUnit') : t('pattern.daysUnit')
   return {
     kind: 'activityGap',
-    text: `${top.name} has been quiet for ${top.quietDays} ${days}.`,
+    text: t('pattern.quiet', { name: top.name, count: top.quietDays, unit }),
     confidence: Math.min(1, top.quietDays / 7),
     evidenceCount: top.quietDays,
     earlyGuess: false,
@@ -203,10 +209,10 @@ export function numberLinkPattern(
   const half =
     restRate > 0 && lowRate / restRate >= 0.4 && lowRate / restRate <= 0.6
   const text = half
-    ? 'On days after less than 6 hours of sleep, you showed up about half as often.'
+    ? t('pattern.sleepHalf')
     : lowRate < restRate
-      ? 'On days you logged under 6 hours of sleep, you showed up less often than on other days.'
-      : 'On days you logged under 6 hours of sleep, you showed up more often than on other days.'
+      ? t('pattern.sleepLess')
+      : t('pattern.sleepMore')
   return {
     kind: 'numberLink',
     text,
@@ -232,7 +238,7 @@ export function sizeEffectPattern(
   if (smallRate - largeRate < 0.2) return null
   return {
     kind: 'sizeEffect',
-    text: 'Days with a smaller target were finished more often than days with a larger one.',
+    text: t('pattern.smaller'),
     confidence: smallRate - largeRate,
     evidenceCount: days.length,
     earlyGuess: false,
@@ -250,8 +256,8 @@ export function restEffectPattern(
   if (Math.abs(afterRate - otherRate) < 0.2) return null
   const text =
     afterRate > otherRate
-      ? 'The day after a rest day, you showed up more often.'
-      : 'The day after a rest day, you showed up less often.'
+      ? t('pattern.restMore')
+      : t('pattern.restLess')
   return {
     kind: 'restEffect',
     text,
@@ -266,7 +272,7 @@ export function slipPlaceholder(slipAnswer: string | null | undefined): Pattern 
   if (!slip || /^not sure$/i.test(slip)) return null
   return {
     kind: 'slip',
-    text: `You mentioned ${slip.toLowerCase()} as when things slip. Early guess.`,
+    text: t('pattern.slip', { when: slip.toLowerCase() }),
     confidence: 0.1,
     evidenceCount: 0,
     earlyGuess: true,
@@ -313,7 +319,7 @@ export function findPatterns(opts: {
     .filter((activity) => !activity.archived && activity.type !== 'deadline')
     .map((activity) => ({
       activityId: activity.id,
-      name: activity.name,
+      name: visibleName(activity),
       quietDays: currentQuietRun(activity, opts.entries, opts.today, dayOpts),
     }))
   const gap = activityGapPattern(gaps)

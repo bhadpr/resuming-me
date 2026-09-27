@@ -15,6 +15,9 @@ import { listAccountComebacks } from '../lib/comeback'
 import { daysBetween } from '../lib/dates'
 import { findPatterns, patternTextIsCausal } from '../lib/patterns'
 import { track } from '../lib/track'
+import { templateLabel, visibleName } from '../lib/catalogName'
+import { habitTemplateId } from '../data/habitArt'
+import { useLocale } from '../hooks/useLocale'
 import { ActivityInsightChart } from './ActivityInsightChart'
 import { HabitMark } from './HabitMark'
 import { MetricTrendChart } from './MetricTrendChart'
@@ -74,6 +77,8 @@ export function InsightsScreen({
   slipAnswer = null,
   onOpenActivity,
 }: InsightsScreenProps) {
+  const { locale, t } = useLocale()
+  const windowWord = t(window === 'week' ? 'insights.week' : 'insights.month')
   const [openKeys, setOpenKeys] = useState<Set<string>>(() => new Set())
   const [didInitOpen, setDidInitOpen] = useState(false)
 
@@ -103,7 +108,7 @@ export function InsightsScreen({
         freshStarts: dayStatusOpts?.freshStarts,
         showEverything: dayStatusOpts?.showEverything,
       }).filter((pattern) => !patternTextIsCausal(pattern.text)),
-    [activities, entries, metrics, metricEntries, today, slipAnswer, dayStatusOpts],
+    [activities, entries, metrics, metricEntries, today, slipAnswer, dayStatusOpts, locale],
   )
   const earlyAccount = useMemo(() => {
     const started = activeActivities
@@ -169,38 +174,42 @@ export function InsightsScreen({
     <div className="insights-screen">
       <div className="screen-heading">
         <div>
-          <h2>Insights</h2>
-          <p className="screen-sub">What you pick back up.</p>
+          <h2>{t('nav.insights')}</h2>
+          <p className="screen-sub">{t('insights.sub')}</p>
         </div>
       </div>
 
       {error && <p className="error">{error}</p>}
 
       {loading ? (
-        <p className="muted-center">Loading…</p>
+        <p className="muted-center">{t('list.loading')}</p>
       ) : empty ? (
         <section className="empty-state">
           <p className="empty-state-emoji">📊</p>
-          <h2>Insights need a few days</h2>
-          <p>Add one small habit. Two minutes counts.</p>
+          <h2>{t('insights.needDays')}</h2>
+          <p>{t('insights.addOne')}</p>
           <div className="onboarding-chips">
-            {STARTER_METRICS.map((metric) => (
-              <button
-                key={metric.name}
-                type="button"
-                className="onboarding-chip"
-                onClick={() => onAddMetric(metric)}
-              >
-                {metric.name}
-              </button>
-            ))}
+            {STARTER_METRICS.map((metric) => {
+              const id = habitTemplateId({ name: metric.name })
+              const label = (id && templateLabel(id, locale)) || metric.name
+              return (
+                <button
+                  key={metric.name}
+                  type="button"
+                  className="onboarding-chip"
+                  onClick={() => onAddMetric(metric)}
+                >
+                  {label}
+                </button>
+              )
+            })}
           </div>
           <button type="button" className="btn btn-primary" onClick={onAddActivity}>
-            Add a habit
+            {t('insights.addHabit')}
           </button>
         </section>
       ) : !insights ? (
-        <p className="muted-center">Loading…</p>
+        <p className="muted-center">{t('list.loading')}</p>
       ) : (
         <>
           {quietLine && (
@@ -208,27 +217,29 @@ export function InsightsScreen({
           )}
           <section className="insights-summary comeback-hero">
             <p>
-              {comebacks.length} comeback{comebacks.length === 1 ? '' : 's'} in the last 30 days
+              {t(comebacks.length === 1 ? 'insights.comeback' : 'insights.comebacks', {
+                count: comebacks.length,
+              })}
             </p>
             {showComebackHelp && (
-              <p className="screen-sub">
-                A comeback is picking something up again after a couple of quiet days. That's the skill.
-              </p>
+              <p className="screen-sub">{t('insights.help')}</p>
             )}
           </section>
           {earlyAccount ? (
             <section className="today-section">
-              <h3 className="section-label">Patterns</h3>
+              <h3 className="section-label">{t('insights.patterns')}</h3>
               <p>
-                Too early for a pattern.
+                {t('insights.tooEarly')}
                 {comebacks.length === 0
-                  ? ' A comeback is picking something up after a couple of quiet days.'
-                  : ` You've had ${comebacks.length} comeback${comebacks.length === 1 ? '' : 's'}.`}
+                  ? t('insights.comebackExplain')
+                  : t(comebacks.length === 1 ? 'insights.hadComeback' : 'insights.hadComebacks', {
+                      count: comebacks.length,
+                    })}
               </p>
             </section>
           ) : patterns.length > 0 && (
             <section className="today-section">
-              <h3 className="section-label">Patterns</h3>
+              <h3 className="section-label">{t('insights.patterns')}</h3>
               <ul className="insights-list">
                 {patterns.map((pattern) => (
                   <li key={pattern.kind}>
@@ -241,7 +252,7 @@ export function InsightsScreen({
                       }}
                     >
                       <span className="activity-meta">
-                        <span className="activity-name">{pattern.earlyGuess ? 'Early guess' : 'Pattern'}</span>
+                        <span className="activity-name">{pattern.earlyGuess ? t('insights.earlyGuess') : t('insights.pattern')}</span>
                         <span className="activity-desc">{pattern.text}</span>
                       </span>
                     </button>
@@ -256,14 +267,14 @@ export function InsightsScreen({
               className={`segmented-btn ${window === 'week' ? 'segmented-btn-active' : ''}`}
               onClick={() => onWindowChange('week')}
             >
-              7 days
+              {t('insights.days7')}
             </button>
             <button
               type="button"
               className={`segmented-btn ${window === 'month' ? 'segmented-btn-active' : ''}`}
               onClick={() => onWindowChange('month')}
             >
-              30 days
+              {t('insights.days30')}
             </button>
           </div>
           <section className="insights-summary">
@@ -274,12 +285,12 @@ export function InsightsScreen({
           </section>
 
           <section className="today-section">
-            <h3 className="section-label">Easiest to pick up</h3>
+            <h3 className="section-label">{t('insights.easiest')}</h3>
             <p className="screen-sub insights-hint">
-              Tap a habit for its {window} chart.
+              {t('insights.tapHabit', { window: windowWord })}
             </p>
             {insights.activities.length === 0 ? (
-              <p className="muted-center">No habits here yet.</p>
+              <p className="muted-center">{t('insights.noHabits')}</p>
             ) : (
               <ul className="insights-list">
                 {insights.activities.map((a) => {
@@ -301,15 +312,27 @@ export function InsightsScreen({
                         onClick={() => toggle(key)}
                         aria-expanded={open}
                       >
-                        <HabitMark name={a.name} emoji={a.emoji} />
+                        <HabitMark
+                          name={activity ? visibleName(activity, locale) : a.name}
+                          templateId={activity?.template_id}
+                        />
                         <span className="activity-meta">
-                          <span className="activity-name">{a.name}</span>
+                          <span className="activity-name">
+                            {activity ? visibleName(activity, locale) : a.name}
+                          </span>
                           <span className="activity-desc">
                             {a.scheduled === 0
-                              ? 'Nothing scheduled yet'
-                              : `Showed up ${a.showedUp} of ${a.scheduled}${
-                                  a.postponed > 0 ? ` · skipped ${a.postponed}` : ''
-                                }`}
+                              ? t('insights.nothingScheduled')
+                              : a.postponed > 0
+                                ? t('insights.showedUpSkipped', {
+                                    done: a.showedUp,
+                                    scheduled: a.scheduled,
+                                    count: a.postponed,
+                                  })
+                                : t('insights.showedUp', {
+                                    done: a.showedUp,
+                                    scheduled: a.scheduled,
+                                  })}
                           </span>
                           <div className="progress-bar" aria-hidden>
                             <div
@@ -328,7 +351,7 @@ export function InsightsScreen({
                         <div className="insights-row-chart">
                           <ActivityInsightChart
                             points={series}
-                            windowLabel={window === 'week' ? '7-day' : '30-day'}
+                            windowLabel={window === 'week' ? t('insights.chart7') : t('insights.chart30')}
                             target={chartTarget(activity)}
                           />
                         </div>
@@ -341,12 +364,12 @@ export function InsightsScreen({
           </section>
 
           <section className="today-section">
-            <h3 className="section-label">Vitals</h3>
+            <h3 className="section-label">{t('nav.vitals')}</h3>
             <p className="screen-sub insights-hint">
-              Tap a number for its {window} trend.
+              {t('insights.tapNumber', { window: windowWord })}
             </p>
             {activeMetrics.length === 0 ? (
-              <p className="muted-center">Add Weight or Sleep, or your own.</p>
+              <p className="muted-center">{t('insights.addWeight')}</p>
             ) : (
               <ul className="insights-list">
                 {activeMetrics.map((m) => {
@@ -374,13 +397,17 @@ export function InsightsScreen({
                         onClick={() => toggle(key)}
                         aria-expanded={open}
                       >
-                        <HabitMark name={m.name} emoji={m.emoji} />
+                        <HabitMark name={visibleName(m, locale)} templateId={m.template_id} />
                         <span className="activity-meta">
-                          <span className="activity-name">{m.name}</span>
+                          <span className="activity-name">{visibleName(m, locale)}</span>
                           <span className="activity-desc">
                             {latest
-                              ? `Latest ${latest.value} ${m.unit} · ${trend.values.length} points`
-                              : `No logs in this ${window} yet`}
+                              ? t('insights.latest', {
+                                  value: latest.value,
+                                  unit: m.unit,
+                                  count: trend.values.length,
+                                })
+                              : t('insights.noLogs', { window: windowWord })}
                           </span>
                         </span>
                         <span className="insights-rate">
@@ -409,9 +436,9 @@ export function InsightsScreen({
           </section>
 
           <section className="today-section">
-            <h3 className="section-label">Patterns</h3>
+            <h3 className="section-label">{t('insights.patterns')}</h3>
             <p className="screen-sub insights-hint">
-              Tap a pattern for its {window} chart.
+              {t('insights.tapPattern', { window: windowWord })}
             </p>
             <ul className="insights-list">
               <li
@@ -427,11 +454,15 @@ export function InsightsScreen({
                     📅
                   </span>
                   <span className="activity-meta">
-                    <span className="activity-name">When you put things off</span>
+                    <span className="activity-name">{t('insights.whenSkip')}</span>
                     <span className="activity-desc">
                       {insights.peakSkipDay
-                        ? `${insights.peakSkipDay.label} shows up most (${insights.peakSkipDay.count} this ${window}).`
-                        : 'Nothing put off in this window yet.'}
+                        ? t('insights.skipMost', {
+                            day: insights.peakSkipDay.label,
+                            count: insights.peakSkipDay.count,
+                            window: windowWord,
+                          })
+                        : t('insights.nothingSkipped')}
                     </span>
                   </span>
                   <span className="insights-rate">
@@ -474,11 +505,14 @@ export function InsightsScreen({
                     ⏰
                   </span>
                   <span className="activity-meta">
-                    <span className="activity-name">When you show up</span>
+                    <span className="activity-name">{t('insights.whenShow')}</span>
                     <span className="activity-desc">
                       {insights.peakSessionBucket
-                        ? `Most completions/sessions land in the ${insights.peakSessionBucket.label} (${insights.peakSessionBucket.count}).`
-                        : 'No timed completions in this window yet.'}
+                        ? t('insights.mostLand', {
+                            bucket: insights.peakSessionBucket.label,
+                            count: insights.peakSessionBucket.count,
+                          })
+                        : t('insights.noTimed')}
                     </span>
                   </span>
                   <span className="insights-rate">
