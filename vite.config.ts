@@ -58,6 +58,8 @@ export default defineConfig({
       },
       workbox: {
         globPatterns: ['**/*.{js,css,html,ico,png,svg,woff2}'],
+        // This URL is a static page for Play. The app shell must not replace it.
+        navigateFallbackDenylist: [/^\/delete-account\/?$/],
       },
       devOptions: {
         enabled: true,
