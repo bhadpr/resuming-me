@@ -45,7 +45,7 @@ export const SITE_PAGE_TITLES: Record<SitePageId, string> = {
   privacy: 'Privacy · Resuming',
   terms: 'Terms · Resuming',
   feedback: 'Feedback · Resuming',
-  'delete-account': 'Delete account · Resuming',
+  'delete-account': 'Delete your data · Resuming',
 }
 
 export type SocialLinkId =

@@ -35,9 +35,12 @@ describe('sitePageFromPath', () => {
 
   it('ships a static delete-account page for store listings', () => {
     const html = readFileSync('public/delete-account.html', 'utf8')
-    expect(html).toContain('Delete your account')
+    expect(html).toContain('Delete your data')
+    expect(html).toContain(PRODUCT_NAME)
+    expect(html).toContain(COMPANY_NAME)
     expect(html).toContain(CONTACT_EMAIL)
     expect(html).toContain('DELETE')
+    expect(html).toContain('What we keep')
   })
 })
 
