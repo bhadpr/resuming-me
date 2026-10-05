@@ -1,10 +1,13 @@
-// Day 2 / 3 / 7 check-ins. Deploy:
+// Day 2 / 3 / 7 check-ins, then a birthday email for someone away 30 days. Deploy:
 //   supabase functions deploy send-check-ins --project-ref <ref>
 // Hourly POST with Authorization: Bearer <service role>.
 // Quiet hours, one a day, and stop-after-3 live in due_checkins().
+// Birthday rules live in due_birthday_emails(). Check-ins run first so both
+// cannot go out the same local day.
 // Email provider is Resend (RESEND_API_KEY + RESEND_FROM). Without them, nothing is sent.
 
 import { createClient } from 'https://esm.sh/@supabase/supabase-js@2.49.1'
+import { birthdayEmailCopy } from '../../../src/lib/birthdayEmail.ts'
 
 const corsHeaders = {
   'Access-Control-Allow-Origin': '*',
@@ -135,5 +138,53 @@ Deno.serve(async (req) => {
     }
   }
 
-  return json({ ok: failures.length === 0, sent, skipped, due: due.length, failures })
+  const birthdays = await admin.rpc('due_birthday_emails')
+  if (birthdays.error) {
+    failures.push(birthdays.error.message)
+    return json({ ok: false, sent, skipped, due: due.length, failures })
+  }
+
+  const birthdayDue = (birthdays.data ?? []) as Array<{
+    user_id: string
+    email: string
+    local_date: string
+    checkin_token: string
+  }>
+  const birthdayCopy = birthdayEmailCopy()
+  let birthdaySent = 0
+
+  for (const row of birthdayDue) {
+    const open = `${SITE}/today`
+    const optOut = `${supabaseUrl}/functions/v1/send-check-ins?unsubscribe=${row.checkin_token}`
+    const text = `${birthdayCopy.text}\n\nOpen Today: ${open}\n\nTurn these off: ${optOut}`
+    try {
+      const result = await sendEmail({
+        to: row.email,
+        subject: birthdayCopy.subject,
+        text,
+      })
+      if (result.skipped) {
+        skipped += 1
+        continue
+      }
+      const { error: insertError } = await admin.from('birthday_emails').insert({
+        user_id: row.user_id,
+        sent_on: row.local_date,
+      })
+      if (insertError) throw insertError
+      birthdaySent += 1
+    } catch (err) {
+      failures.push(err instanceof Error ? err.message : 'birthday send failed')
+    }
+  }
+
+  return json({
+    ok: failures.length === 0,
+    sent,
+    birthdaySent,
+    skipped,
+    due: due.length,
+    birthdayDue: birthdayDue.length,
+    failures,
+  })
 })

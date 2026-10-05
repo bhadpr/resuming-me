@@ -92,7 +92,21 @@ Deno.serve(async (req) => {
       )
     }
 
-    // Cascades: profiles, activities (+ history/logs), metrics (+ entries).
+    // Medicine photos are not removed by deleting the auth user.
+    try {
+      const { data: photos, error: photoListError } = await admin.storage
+        .from('medicine-photos')
+        .list(user.id)
+      if (!photoListError && photos && photos.length > 0) {
+        await admin.storage
+          .from('medicine-photos')
+          .remove(photos.map((file) => `${user.id}/${file.name}`))
+      }
+    } catch {
+      /* bucket may not exist yet */
+    }
+
+    // Cascades: profiles, activities (+ history/logs), metrics (+ entries), medicines.
     const { error: deleteError } = await admin.auth.admin.deleteUser(user.id)
     if (deleteError) {
       return new Response(JSON.stringify({ ok: false, error: deleteError.message }), {
