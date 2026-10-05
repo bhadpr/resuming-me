@@ -200,6 +200,15 @@ export function formatReminderTime(hour: number, minute: number, locale: Locale)
   return date.toLocaleTimeString(localeTag(locale), { hour: 'numeric', minute: '2-digit' })
 }
 
+/** "9 am" on the hour, "9:30 am" otherwise. */
+export function formatShortReminderTime(hour: number, minute: number, locale: Locale): string {
+  const date = new Date(2024, 0, 7, hour, minute)
+  return date.toLocaleTimeString(
+    localeTag(locale),
+    minute === 0 ? { hour: 'numeric' } : { hour: 'numeric', minute: '2-digit' },
+  )
+}
+
 /** Weekday name within the past or coming week, otherwise a short date. */
 export function formatReminderDay(day: string, today: string, locale: Locale): string {
   const date = parseLocalDate(day)

@@ -2,6 +2,7 @@ import { describe, expect, it } from 'vitest'
 import {
   DEFAULT_PART_TIMES,
   cleanReminderText,
+  formatShortReminderTime,
   isNextYearCopyOf,
   nextYearCopy,
   nextYearDay,
@@ -145,5 +146,16 @@ describe('partOfTime', () => {
     expect(partOfTime(9, 0, DEFAULT_PART_TIMES)).toBe('morning')
     expect(partOfTime(18, 0, DEFAULT_PART_TIMES)).toBe('evening')
     expect(partOfTime(11, 15, DEFAULT_PART_TIMES)).toBe('pick')
+  })
+})
+
+describe('formatShortReminderTime', () => {
+  it('drops the minutes on the hour so the time chips stay short', () => {
+    expect(formatShortReminderTime(9, 0, 'en')).not.toContain(':')
+    expect(formatShortReminderTime(9, 0, 'en')).toMatch(/^9\s?(am|AM)$/)
+  })
+
+  it('keeps the minutes otherwise', () => {
+    expect(formatShortReminderTime(9, 30, 'en')).toContain('9:30')
   })
 })

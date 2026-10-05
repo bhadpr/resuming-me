@@ -6,6 +6,7 @@ import {
   REMINDER_PARTS,
   REMINDER_TEXT_MAX,
   formatReminderTime,
+  formatShortReminderTime,
   partOfTime,
   readPartTimes,
   tomorrowOf,
@@ -110,7 +111,7 @@ export function ReminderForm({ initial, today, saving, error, onSubmit, onDelete
           : null
 
   return (
-    <form className="activity-form" noValidate onSubmit={(event) => void submit(event)}>
+    <form className="activity-form reminder-form" noValidate onSubmit={(event) => void submit(event)}>
       <button type="button" className="btn btn-ghost btn-sm back-btn" onClick={onCancel}>
         <Icon name="back" />
         {t('reminders.back')}
@@ -122,7 +123,7 @@ export function ReminderForm({ initial, today, saving, error, onSubmit, onDelete
         <textarea
           className="field-input reminder-text"
           value={text}
-          rows={2}
+          rows={1}
           maxLength={REMINDER_TEXT_MAX}
           placeholder={t('reminders.placeholder')}
           onChange={(event) => {
@@ -133,12 +134,12 @@ export function ReminderForm({ initial, today, saving, error, onSubmit, onDelete
       </label>
 
       <p className="reminder-question">{t('reminders.kind')}</p>
-      <div className="reminder-choices">
+      <div className="reminder-kinds">
         {REMINDER_KINDS.map((choice) => (
           <button
             key={choice}
             type="button"
-            className={choiceClass(kind === choice)}
+            className={`${choiceClass(kind === choice)} reminder-kind`}
             aria-pressed={kind === choice}
             onClick={() => setKind((current) => (current === choice ? null : choice))}
           >
@@ -197,12 +198,10 @@ export function ReminderForm({ initial, today, saving, error, onSubmit, onDelete
             type="button"
             className={choiceClass(timeChoice === part)}
             aria-pressed={timeChoice === part}
+            aria-label={`${t(`reminders.${part}`)} ${formatReminderTime(parts[part].hour, parts[part].minute, locale)}`}
             onClick={() => setTimeChoice(part)}
           >
-            {t(`reminders.${part}`)}
-            <span className="reminder-choice-time">
-              {formatReminderTime(parts[part].hour, parts[part].minute, locale)}
-            </span>
+            {formatShortReminderTime(parts[part].hour, parts[part].minute, locale)}
           </button>
         ))}
         <button

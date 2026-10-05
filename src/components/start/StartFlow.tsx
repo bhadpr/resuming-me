@@ -1107,7 +1107,7 @@ export function StartFlow({
           onCancel={() => navigate('/numbers')}
           onSubmit={async (input) => {
             const photo = input.photo ? await blobToDataUrl(input.photo) : null
-            persist({
+            saveGuestDraft({
               ...draft,
               medicineDaily: true,
               medicines: [
@@ -1292,12 +1292,14 @@ export function StartFlow({
                 ...(photo ? { photo } : {}),
               },
             ].slice(0, GUEST_MAX_MEDICINES)
-            persist({
-              ...draft,
-              pickPhase: 'medicines',
-              medicineDaily: true,
-              medicines: next,
-            })
+            persist(
+              saveGuestDraft({
+                ...draft,
+                pickPhase: 'medicines',
+                medicineDaily: true,
+                medicines: next,
+              }),
+            )
           }}
         />
       )}
