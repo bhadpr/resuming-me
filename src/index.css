@@ -3003,11 +3003,14 @@ select.field-input.language-select {
   margin-right: var(--space-1);
 }
 
-.habit-mark.reminder-mark,
-.today-row .habit-mark.reminder-mark {
-  width: 2.5rem;
-  height: 2.5rem;
-  border-radius: 28%;
+.activity-emoji-art.reminder-mark {
+  width: 2.75rem;
+  height: 2.75rem;
+}
+
+.today-row .activity-emoji-art.reminder-mark {
+  width: 3.5rem;
+  height: 3.5rem;
 }
 
 .reminder-switch {
