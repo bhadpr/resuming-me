@@ -172,7 +172,10 @@ export function TodayScreen({
       ),
     [rows, activeTimer?.activityId, suggested?.activity.id, focusActivityId],
   )
-  const visibleMetrics = metrics.filter(({ metric }) => !isDailyStepsMetric(metric))
+  const stepsCardShown = rows.some((row) => row.activity.template_id === 'steps')
+  const visibleMetrics = stepsCardShown
+    ? metrics.filter(({ metric }) => !isDailyStepsMetric(metric))
+    : metrics
   const pendingMetrics = visibleMetrics.filter(({ entry }) => !entry)
   const loggedMetrics = visibleMetrics.filter(({ entry }) => entry)
   const emptyKind = todayEmptyKind({

@@ -122,6 +122,7 @@ import {
   type Activity,
   type ActivityInput,
 } from '../lib/activities'
+import { activityInputFromTemplate, templateById } from '../data/activityTemplates'
 import {
   archiveMetric,
   createMetric,
@@ -1165,6 +1166,30 @@ export function AppShell() {
         setMetrics((prev) => [created, ...prev])
         navigate(`/numbers/${created.id}`)
       }
+    } catch (err) {
+      setError(err instanceof Error ? err.message : 'Save failed')
+    } finally {
+      setSaving(false)
+    }
+  }
+
+  async function handleAddStepsHabit(goal: number) {
+    if (!user) return
+    const template = templateById('steps')
+    if (!template) return
+    setSaving(true)
+    setError(null)
+    try {
+      const created = await createActivity(user.id, {
+        ...activityInputFromTemplate(template),
+        targetValue: goal,
+        templateId: template.id,
+        nameOverridden: false,
+      })
+      trackActivityCreated(created)
+      setActivities((prev) => [created, ...prev])
+      navigate(`/activities/${created.id}`)
+      await refreshTodayData(await listActivities(true))
     } catch (err) {
       setError(err instanceof Error ? err.message : 'Save failed')
     } finally {
@@ -2274,7 +2299,11 @@ export function AppShell() {
                   saving={saving}
                   error={error}
                   onPhaseChange={setVitalFormPhase}
+                  hasStepsHabit={activities.some(
+                    (item) => !item.archived && item.template_id === 'steps',
+                  )}
                   onSubmit={handleMetricSave}
+                  onAddSteps={handleAddStepsHabit}
                   onCancel={() =>
                     navigate(
                       selectedMetric ? `/numbers/${selectedMetric.id}` : '/numbers',

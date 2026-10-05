@@ -3,7 +3,9 @@ import { habitArtFor, habitTemplateId } from '../data/habitArt'
 import { isCatalogLabel, templateLabel } from '../lib/catalogName'
 import { useLocale } from '../hooks/useLocale'
 import { HabitIcon } from './HabitIcon'
+import { StepGoalField } from './StepGoalField'
 import { STARTER_METRICS, type Metric, type MetricInput } from '../lib/metrics'
+import { DEFAULT_STEP_GOAL, isDailyStepsMetric, parseStepGoal } from '../lib/steps'
 
 const UNIT_SUGGESTIONS = ['lbs', 'kg', 'hrs', 'bpm', 'score', '%', 'oz', 'glasses'] as const
 const CUSTOM_UNIT = '__custom__'
@@ -48,7 +50,9 @@ export function MetricForm({
   existingNames = [],
   saving = false,
   error = null,
+  hasStepsHabit = false,
   onSubmit,
+  onAddSteps,
   onCancel,
   onPhaseChange,
 }: {
@@ -56,7 +60,10 @@ export function MetricForm({
   existingNames?: readonly string[]
   saving?: boolean
   error?: string | null
+  hasStepsHabit?: boolean
   onSubmit: (input: MetricInput) => Promise<void> | void
+  /** Steps has a daily goal, so it is created as the Steps habit instead of a vital. */
+  onAddSteps?: (goal: number) => Promise<void> | void
   onCancel: () => void
   onPhaseChange?: (phase: 'pick' | 'details') => void
 }) {
@@ -66,9 +73,14 @@ export function MetricForm({
   const [selectedName, setSelectedName] = useState<string | null>(null)
   const [input, setInput] = useState<MetricInput>(starting)
   const [useCustomUnit, setUseCustomUnit] = useState(() => !isPresetUnit(starting.unit))
+  const [stepGoalText, setStepGoalText] = useState(String(DEFAULT_STEP_GOAL))
+  const pickingSteps = onAddSteps != null && selectedName != null && isDailyStepsMetric(input)
+  const stepGoal = parseStepGoal(stepGoalText)
 
   const remaining = STARTER_METRICS.filter(
-    (metric) => !metricAlreadyAdded(metric.name, existingNames),
+    (metric) =>
+      !metricAlreadyAdded(metric.name, existingNames) &&
+      !(hasStepsHabit && isDailyStepsMetric(metric)),
   )
 
   useEffect(() => {
@@ -99,6 +111,10 @@ export function MetricForm({
 
   async function continueWithStarter() {
     if (!selectedName || !input.name.trim()) return
+    if (pickingSteps) {
+      if (stepGoal != null) await onAddSteps?.(stepGoal)
+      return
+    }
     await onSubmit(input)
   }
 
@@ -150,6 +166,7 @@ export function MetricForm({
                 </div>
               </div>
             )}
+            {pickingSteps && <StepGoalField value={stepGoalText} onChange={setStepGoalText} />}
           </div>
 
           <button
@@ -175,7 +192,7 @@ export function MetricForm({
           <button
             type="button"
             className="btn btn-primary"
-            disabled={saving || !selectedName}
+            disabled={saving || !selectedName || (pickingSteps && stepGoal == null)}
             onClick={() => void continueWithStarter()}
           >
             {saving ? 'Saving…' : 'Continue'}

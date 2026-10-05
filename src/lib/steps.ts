@@ -25,6 +25,12 @@ export function parseStepAmount(raw: string): number | null {
   return value
 }
 
+/** A daily step goal: a whole number of at least one step. */
+export function parseStepGoal(raw: string): number | null {
+  const value = parseStepAmount(raw)
+  return value == null || value < 1 ? null : value
+}
+
 export function formatStepCount(value: number, locale: Locale): string {
   return Math.max(0, Math.round(value)).toLocaleString(localeTag(locale))
 }

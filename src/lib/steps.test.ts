@@ -6,6 +6,7 @@ import {
   loadStepGoal,
   loadTypedSteps,
   parseStepAmount,
+  parseStepGoal,
   saveStepGoal,
   saveTypedSteps,
 } from './steps'
@@ -66,5 +67,19 @@ describe('step goal and typed count', () => {
     expect(loadTypedSteps('2026-10-02')).toBeNull()
     saveTypedSteps('2026-10-02', 4280)
     expect(loadTypedSteps('2026-10-02')).toBe(4280)
+  })
+})
+
+describe('parseStepGoal', () => {
+  it('takes a whole number of steps, with or without commas', () => {
+    expect(parseStepGoal('8000')).toBe(8000)
+    expect(parseStepGoal(' 12,000 ')).toBe(12000)
+  })
+
+  it('refuses zero, decimals, and words', () => {
+    expect(parseStepGoal('0')).toBeNull()
+    expect(parseStepGoal('7.5')).toBeNull()
+    expect(parseStepGoal('lots')).toBeNull()
+    expect(parseStepGoal('')).toBeNull()
   })
 })

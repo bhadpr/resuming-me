@@ -2,7 +2,9 @@ import { useEffect, useState, type FormEvent } from 'react'
 import { ACTIVITY_TEMPLATES, HABIT_GROUPS, activityInputFromTemplate, templateById, tinyHint } from '../data/activityTemplates'
 import { HABIT_ART } from '../data/habitArt'
 import { HabitIcon } from './HabitIcon'
+import { StepGoalField } from './StepGoalField'
 import { addDays, todayLocalDate } from '../lib/dates'
+import { DEFAULT_STEP_GOAL, parseStepGoal } from '../lib/steps'
 import type { Activity, ActivityInput } from '../lib/activities'
 import { groupTitle, isCatalogLabel, templateLabel } from '../lib/catalogName'
 import { useLocale } from '../hooks/useLocale'
@@ -89,6 +91,9 @@ export function ActivityForm({
   const [input, setInput] = useState<ActivityInput>(
     initial ? fromActivity(initial) : emptyInput,
   )
+  const [stepGoalText, setStepGoalText] = useState(String(DEFAULT_STEP_GOAL))
+  const pickingSteps = selectedTemplateId === 'steps'
+  const stepGoal = parseStepGoal(stepGoalText)
 
   useEffect(() => {
     onPhaseChange?.(phase)
@@ -167,6 +172,11 @@ export function ActivityForm({
 
   async function continueWithTemplate() {
     if (!selectedTemplateId || !input.name.trim()) return
+    if (pickingSteps) {
+      if (stepGoal == null) return
+      await onSubmit(withCatalog({ ...input, targetValue: stepGoal, targetUnit: 'steps' }, selectedTemplateId))
+      return
+    }
     await onSubmit(withCatalog(input, selectedTemplateId))
   }
 
@@ -223,7 +233,11 @@ export function ActivityForm({
                 </section>
               ))}
             </div>
-            {selectedHint ? <p className="screen-sub">{selectedHint}</p> : null}
+            {pickingSteps ? (
+              <StepGoalField value={stepGoalText} onChange={setStepGoalText} />
+            ) : selectedHint ? (
+              <p className="screen-sub">{selectedHint}</p>
+            ) : null}
           </div>
 
           <button
@@ -248,7 +262,7 @@ export function ActivityForm({
           <button
             type="button"
             className="btn btn-primary"
-            disabled={saving || !selectedTemplateId}
+            disabled={saving || !selectedTemplateId || (pickingSteps && stepGoal == null)}
             onClick={() => void continueWithTemplate()}
           >
             {saving ? 'Saving…' : 'Continue'}
@@ -343,9 +357,11 @@ export function ActivityForm({
                   ? 'Grams a day'
                   : input.targetUnit === 'hours' || input.targetUnit === 'hr'
                     ? 'Hours a day'
-                    : input.trackingMode === 'timer'
-                      ? 'Minutes'
-                      : 'Count target'}
+                    : input.targetUnit === 'steps'
+                      ? t('start.targetSteps')
+                      : input.trackingMode === 'timer'
+                        ? 'Minutes'
+                        : 'Count target'}
             </span>
             <input
               className="field-input"
