@@ -2978,19 +2978,43 @@ select.field-input.language-select {
   font-weight: var(--weight-semibold);
 }
 
+.medicine-form {
+  gap: 0.75rem;
+}
+
+.medicine-form .back-btn {
+  min-height: 2rem;
+  margin-bottom: -0.5rem;
+}
+
+.medicine-form .form-title {
+  margin: 0;
+}
+
 .medicine-part {
   display: flex;
   flex-direction: column;
-  gap: var(--space-3);
-  margin-top: var(--space-1);
-  padding: var(--space-4) var(--space-4);
+  gap: var(--space-2);
+  padding: var(--space-3);
   border: 1px solid var(--color-border);
   border-radius: var(--radius);
   background: var(--color-surface);
 }
 
-.medicine-part .field {
+.medicine-part-head {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
   gap: var(--space-2);
+}
+
+.medicine-part-head .medicine-question {
+  font-size: var(--text-md);
+}
+
+.medicine-time {
+  width: auto;
+  flex: 0 1 9.5rem;
 }
 
 .reminder-question {

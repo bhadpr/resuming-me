@@ -257,7 +257,7 @@ export function MedicineForm({
   }
 
   return (
-    <form className="activity-form" onSubmit={(event) => void submit(event)}>
+    <form className="activity-form medicine-form" onSubmit={(event) => void submit(event)}>
       <button type="button" className="btn btn-ghost btn-sm back-btn" onClick={goBack}>
         <Icon name="back" />
         {t('medicines.back')}
@@ -377,13 +377,12 @@ export function MedicineForm({
           </div>
           {slots.map((slot) => (
             <div key={slot.id} className="medicine-part">
-              <p className="medicine-question">
-                {slot.label === 'time' ? t('medicines.remindTimes') : t(`medicines.${slot.label}`)}
-              </p>
-              <label className="field">
-                {slot.label !== 'time' && <span className="field-label">{t('medicines.remindTimes')}</span>}
+              <label className="medicine-part-head">
+                <span className="medicine-question">
+                  {slot.label === 'time' ? t('medicines.remindTimes') : t(`medicines.${slot.label}`)}
+                </span>
                 <input
-                  className="field-input"
+                  className="field-input medicine-time"
                   type="time"
                   value={slot.time}
                   aria-label={slot.label === 'time' ? t('medicines.remindTimes') : t(`medicines.${slot.label}`)}
