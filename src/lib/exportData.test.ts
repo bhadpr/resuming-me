@@ -34,6 +34,7 @@ describe('export helpers', () => {
       'metrics',
       'metric_entries',
       'feedback',
+      'reminders',
     ])
   })
 

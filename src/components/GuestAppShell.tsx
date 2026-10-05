@@ -13,6 +13,7 @@ import { BrandTitle } from './BrandTitle'
 import { BottomNav } from './BottomNav'
 import { EmailSignInForm } from './EmailSignInForm'
 import { GuestActivitiesPage, GuestVitalsPage } from './GuestLibrary'
+import { GuestReminderEditor } from './GuestReminders'
 import { GuestTodayPage } from './GuestTodayPage'
 
 function guestTabFromPath(pathname: string): AppTab {
@@ -24,6 +25,7 @@ export function GuestAppShell() {
   const location = useLocation()
   const { t } = useLocale()
   useGuestMedicineAlarms()
+  const view = parseAppPath(location.pathname)
   const tab = guestTabFromPath(location.pathname)
   const label =
     tab === 'activities'
@@ -46,7 +48,11 @@ export function GuestAppShell() {
         <BrandTitle className="app-title" />
       </header>
       <main className="app-main">
-        {tab === 'today' && <GuestTodayPage />}
+        {view?.name === 'reminders' ? (
+          <GuestReminderEditor key={view.reminderId ?? 'new'} reminderId={view.reminderId} />
+        ) : (
+          tab === 'today' && <GuestTodayPage />
+        )}
         {tab === 'activities' && <GuestActivitiesPage />}
         {tab === 'metrics' && <GuestVitalsPage />}
         {tab === 'insights' && <GuestSignInPanel tab={tab} />}
@@ -160,5 +166,6 @@ export function isGuestAppPath(pathname: string): boolean {
   if (pathname === '/today' || pathname === '/insights') return true
   if (pathname === '/activities' || pathname.startsWith('/activities/')) return true
   if (pathname === '/numbers' || pathname.startsWith('/numbers/')) return true
+  if (pathname.startsWith('/reminders/')) return true
   return false
 }

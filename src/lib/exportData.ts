@@ -11,6 +11,7 @@ export interface UserDataExport {
   metrics: unknown[]
   metric_entries: unknown[]
   feedback: unknown[]
+  reminders: unknown[]
 }
 
 /** Tables included in an export (and scoped to the signed-in user). */
@@ -22,6 +23,7 @@ export const EXPORT_TABLES = [
   'metrics',
   'metric_entries',
   'feedback',
+  'reminders',
 ] as const satisfies ReadonlyArray<keyof Omit<UserDataExport, 'exported_at'>>
 
 
@@ -66,7 +68,8 @@ async function fetchAllForUser(
     | 'log_entries'
     | 'metrics'
     | 'metric_entries'
-    | 'feedback',
+    | 'feedback'
+    | 'reminders',
   userId: string,
 ): Promise<unknown[]> {
   const client = createSupabaseClient()
@@ -90,6 +93,7 @@ export async function fetchUserDataExport(userId: string): Promise<UserDataExpor
     metrics,
     metric_entries,
     feedback,
+    reminders,
   ] = await Promise.all([
     fetchAllForUser('profiles', userId),
     fetchAllForUser('activities', userId),
@@ -98,6 +102,7 @@ export async function fetchUserDataExport(userId: string): Promise<UserDataExpor
     fetchAllForUser('metrics', userId),
     fetchAllForUser('metric_entries', userId),
     fetchAllForUser('feedback', userId),
+    fetchAllForUser('reminders', userId),
   ])
 
   return {
@@ -109,6 +114,7 @@ export async function fetchUserDataExport(userId: string): Promise<UserDataExpor
     metrics,
     metric_entries,
     feedback,
+    reminders,
   }
 }
 

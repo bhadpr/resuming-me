@@ -1,0 +1,66 @@
+import { useState } from 'react'
+import { useNavigate } from 'react-router-dom'
+import { todayLocalDate } from '../lib/dates'
+import {
+  addGuestReminder,
+  loadGuestDraft,
+  removeGuestReminder,
+  updateGuestReminder,
+  type GuestDraft,
+} from '../lib/guestDraft'
+import { navigateBack } from '../lib/navigation'
+import { remindersComingUp } from '../lib/reminderSchedule'
+import { track } from '../lib/track'
+import { ReminderEditor } from './ReminderForm'
+import { ComingUpList } from './ReminderSection'
+
+export function GuestReminderEditor({ reminderId }: { reminderId?: string }) {
+  const navigate = useNavigate()
+  const [draft] = useState<GuestDraft | null>(() => loadGuestDraft())
+  if (!draft) return null
+
+  return (
+    <ReminderEditor
+      reminderId={reminderId}
+      reminders={draft.reminders}
+      today={todayLocalDate()}
+      loading={false}
+      saving={false}
+      error={null}
+      onCancel={() => navigateBack(navigate, '/today')}
+      onSubmit={async (input) => {
+        const current = loadGuestDraft()
+        if (!current) return
+        if (reminderId) {
+          updateGuestReminder(current, reminderId, input)
+        } else {
+          if (!addGuestReminder(current, input)) return 'full'
+          track('reminder_added', { has_time: input.hour != null, signed_in: false })
+        }
+        navigateBack(navigate, '/today')
+      }}
+      onDelete={async (reminder) => {
+        const current = loadGuestDraft()
+        if (current) removeGuestReminder(current, reminder.id)
+        navigateBack(navigate, '/today')
+      }}
+    />
+  )
+}
+
+export function GuestComingUp() {
+  const navigate = useNavigate()
+  const [draft, setDraft] = useState<GuestDraft | null>(() => loadGuestDraft())
+  if (!draft) return null
+  const today = todayLocalDate()
+
+  return (
+    <ComingUpList
+      reminders={remindersComingUp(draft.reminders, today)}
+      today={today}
+      busyId={null}
+      onMove={(reminder, day) => setDraft(updateGuestReminder(draft, reminder.id, { day }))}
+      onEdit={(reminder) => navigate(`/reminders/${reminder.id}`)}
+    />
+  )
+}

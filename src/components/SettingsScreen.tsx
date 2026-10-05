@@ -25,6 +25,7 @@ import { REVIEW_WEEKDAYS } from '../lib/weeklyReview'
 import { useLocale } from '../hooks/useLocale'
 import { localeTag } from '../lib/i18n'
 import { applyTextSize, readTextSize, TEXT_SIZES, type TextSize } from '../lib/textSize'
+import { REMINDER_PARTS, readPartTimes, savePartTimes, type PartTimes } from '../lib/reminderSchedule'
 import { LanguagePicker } from './LanguagePicker'
 import { fetchMyMarketingGroups, type MyMarketingGroup } from '../lib/marketingData'
 import { Icon } from './Icon'
@@ -171,6 +172,7 @@ export function SettingsScreen({
   const scheduleHint = digestScheduleHint(todayItems, digest)
   const [checkinsOff, setCheckinsOff] = useState(false)
   const [reminderTime, setReminderTime] = useState<string | null>(null)
+  const [partTimes, setPartTimes] = useState<PartTimes>(readPartTimes)
 
   useEffect(() => {
     if (!user) return
@@ -511,6 +513,30 @@ export function SettingsScreen({
               onChange={(event) => onReviewSchedule?.(reviewWeekday, event.target.value || '18:00')}
             />
           </label>
+        </div>
+      </section>
+
+      <section className="today-section">
+        <h3 className="section-label">{t('reminders.partTimes')}</h3>
+        <div className="digest-card">
+          {REMINDER_PARTS.map((part) => (
+            <label key={part} className="field">
+              <span className="field-label">{t(`reminders.${part}`)}</span>
+              <input
+                className="field-input"
+                type="time"
+                value={`${String(partTimes[part].hour).padStart(2, '0')}:${String(partTimes[part].minute).padStart(2, '0')}`}
+                onChange={(event) => {
+                  const match = /^(\d{2}):(\d{2})$/.exec(event.target.value)
+                  if (!match) return
+                  const next = { ...partTimes, [part]: { hour: Number(match[1]), minute: Number(match[2]) } }
+                  setPartTimes(next)
+                  savePartTimes(next)
+                }}
+              />
+            </label>
+          ))}
+          <p className="digest-hint">{t('reminders.partTimesHint')}</p>
         </div>
       </section>
 

@@ -2968,6 +2968,81 @@ select.field-input.language-select {
   gap: var(--space-2);
 }
 
+.reminder-question {
+  margin: 0;
+  font-size: var(--text-lg);
+  font-weight: var(--weight-semibold);
+}
+
+.reminder-text {
+  resize: vertical;
+  min-height: 4.5rem;
+}
+
+.reminder-choices,
+.reminder-delete {
+  display: flex;
+  flex-wrap: wrap;
+  gap: var(--space-2);
+  align-items: center;
+}
+
+.reminder-choices .btn,
+.reminder-delete .btn {
+  width: auto;
+  flex: 0 0 auto;
+}
+
+.reminder-choice-time {
+  margin-left: var(--space-1);
+  font-weight: var(--weight-regular);
+  opacity: 0.8;
+}
+
+.today-add-row {
+  display: flex;
+  flex-wrap: wrap;
+  gap: var(--space-2);
+}
+
+.today-add-row .today-add {
+  flex: 1 1 10rem;
+  width: auto;
+}
+
+.reminder-text-line {
+  overflow-wrap: anywhere;
+}
+
+.reminder-struck {
+  text-decoration: line-through;
+  color: var(--color-text-muted);
+}
+
+.reminder-pick-day {
+  margin-top: var(--space-2);
+  width: fit-content;
+}
+
+.reminder-done-today {
+  margin-top: var(--space-2);
+}
+
+.reminder-coming-up {
+  margin-top: var(--space-5);
+}
+
+.reminder-day-group + .reminder-day-group {
+  margin-top: var(--space-3);
+}
+
+.reminder-day-label {
+  margin: 0 0 var(--space-2);
+  color: var(--color-text-muted);
+  font-size: var(--text-sm);
+  font-weight: var(--weight-semibold);
+}
+
 .medicine-time-row .field-input {
   width: auto;
 }

@@ -8,6 +8,15 @@ import {
   type MedicineSystem,
 } from './medicineSchedule'
 import { clearSkip, clearSnooze, isDoseSkipped } from './medicineReminderState'
+import {
+  REMINDER_DONE_KEEP_MS,
+  REMINDER_OPEN_MAX,
+  cleanReminderText,
+  isDay,
+  openReminderCount,
+  type Reminder,
+  type ReminderInput,
+} from './reminderSchedule'
 import { getLocale, t } from './i18n'
 import { canLogPastGoal, countPortion } from './dayStatus'
 import { endOfWeekSunday, startOfWeekMonday } from './dates'
@@ -130,6 +139,8 @@ export type GuestDraft = {
   medicines: GuestMedicine[]
   /** Doses marked taken on Today before sign-in. */
   medicineMarks: GuestDoseMark[]
+  /** One-off things to do on a day. Not the daily nudge times above. */
+  reminders: Reminder[]
   /** First-visit question, then medicines, pranayam, then the activity list. */
   pickPhase: StartPickPhase
 }
@@ -177,6 +188,7 @@ export function createGuestDraft(now = new Date(), timezone = 'UTC'): GuestDraft
     medicineDaily: false,
     medicines: [],
     medicineMarks: [],
+    reminders: [],
     pickPhase: 'ask',
   }
 }
@@ -417,6 +429,64 @@ export function toggleGuestDose(draft: GuestDraft, dose: DueDose, date: string):
   return next
 }
 
+function normalizeGuestReminders(list: unknown, now = Date.now()): Reminder[] {
+  if (!Array.isArray(list)) return []
+  const reminders: Reminder[] = []
+  let open = 0
+  for (const item of list as Partial<Reminder>[]) {
+    if (!item || typeof item.id !== 'string' || typeof item.text !== 'string') continue
+    const text = cleanReminderText(item.text)
+    if (!text || !isDay(item.day)) continue
+    const timed =
+      Number.isInteger(item.hour) &&
+      Number.isInteger(item.minute) &&
+      item.hour! >= 0 &&
+      item.hour! <= 23 &&
+      item.minute! >= 0 &&
+      item.minute! <= 59
+    const doneAt = typeof item.doneAt === 'string' && Number.isFinite(Date.parse(item.doneAt)) ? item.doneAt : null
+    if (doneAt && now - Date.parse(doneAt) > REMINDER_DONE_KEEP_MS) continue
+    if (!doneAt) {
+      if (open >= REMINDER_OPEN_MAX) continue
+      open += 1
+    }
+    reminders.push({
+      id: item.id,
+      text,
+      day: item.day,
+      hour: timed ? item.hour! : null,
+      minute: timed ? item.minute! : null,
+      doneAt,
+    })
+  }
+  return reminders
+}
+
+/** Null when the guest already has the most open reminders allowed. */
+export function addGuestReminder(draft: GuestDraft, input: ReminderInput): GuestDraft | null {
+  if (openReminderCount(draft.reminders) >= REMINDER_OPEN_MAX) return null
+  const reminder: Reminder = {
+    id: `guest-${newId()}`,
+    text: cleanReminderText(input.text),
+    day: input.day,
+    hour: input.hour,
+    minute: input.hour == null ? null : input.minute,
+    doneAt: null,
+  }
+  return saveGuestDraft({ ...draft, reminders: [...draft.reminders, reminder] })
+}
+
+export function updateGuestReminder(draft: GuestDraft, id: string, patch: Partial<Reminder>): GuestDraft {
+  return saveGuestDraft({
+    ...draft,
+    reminders: draft.reminders.map((item) => (item.id === id ? { ...item, ...patch } : item)),
+  })
+}
+
+export function removeGuestReminder(draft: GuestDraft, id: string): GuestDraft {
+  return saveGuestDraft({ ...draft, reminders: draft.reminders.filter((item) => item.id !== id) })
+}
+
 function normalizeDraft(draft: GuestDraft): GuestDraft {
   const stored = draft as GuestDraft & { medicine?: GuestMedicine | null }
   const medicines = normalizeGuestMedicines(stored)
@@ -454,6 +524,7 @@ function normalizeDraft(draft: GuestDraft): GuestDraft {
     medicines,
     medicineMarks: normalizeMedicineMarks(draft, medicines),
     medicineDaily: medicines.length > 0,
+    reminders: normalizeGuestReminders(draft.reminders),
     pickPhase:
       draft.pickPhase === 'medicine' ||
       draft.pickPhase === 'medicines' ||

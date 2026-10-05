@@ -28,6 +28,7 @@ import { HabitMark } from './HabitMark'
 import { HabitVideoPlaceholder } from './HabitVideoPlaceholder'
 import { StepsCard } from './StepsCard'
 import { MedicineDoses } from './MedicineDoses'
+import { ReminderSection, type ReminderSectionProps } from './ReminderSection'
 import type { DueDose } from '../lib/medicineSchedule'
 import { habitTemplateId } from '../data/habitArt'
 import { WelcomeBackCard, type WelcomeBackModel } from './WelcomeBackCard'
@@ -100,6 +101,8 @@ interface TodayScreenProps {
   medicineBusyKey?: string | null
   medicineError?: string | null
   onToggleMedicineDose?: (dose: DueDose) => void
+  reminders?: ReminderSectionProps & { error: string | null }
+  onAddReminder?: () => void
 }
 
 export function TodayScreen({
@@ -147,6 +150,8 @@ export function TodayScreen({
   medicineBusyKey = null,
   medicineError = null,
   onToggleMedicineDose,
+  reminders,
+  onAddReminder,
 }: TodayScreenProps) {
   const { t, locale } = useLocale()
   const quietSuggested = quietReentry ? pickEasiestReentryRow(rows) : null
@@ -312,6 +317,13 @@ export function TodayScreen({
             </>
           )}
 
+          {reminders && (
+            <>
+              {reminders.error && <p className="error">{reminders.error}</p>}
+              <ReminderSection {...reminders} />
+            </>
+          )}
+
           {(emptyKind !== 'setup' || openRows.length > 0 || done.length > 0) && (
           <section className="today-section">
             <h3 className="section-label">{t('today.logActivities')}</h3>
@@ -329,10 +341,19 @@ export function TodayScreen({
                 {done.map((row) => renderActivity(row))}
               </ul>
             )}
-            {emptyKind !== 'setup' && onAddActivity && (
-              <button type="button" className="btn btn-secondary today-add" onClick={onAddActivity}>
-                {t('today.add')}
-              </button>
+            {emptyKind !== 'setup' && (onAddActivity || onAddReminder) && (
+              <div className="today-add-row">
+                {onAddActivity && (
+                  <button type="button" className="btn btn-secondary today-add" onClick={onAddActivity}>
+                    {t('today.add')}
+                  </button>
+                )}
+                {onAddReminder && (
+                  <button type="button" className="btn btn-secondary today-add" onClick={onAddReminder}>
+                    {t('reminders.add')}
+                  </button>
+                )}
+              </div>
             )}
           </section>
           )}

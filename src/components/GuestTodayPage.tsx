@@ -1,5 +1,5 @@
 import { useEffect, useRef, useState, type FormEvent } from 'react'
-import { Link } from 'react-router-dom'
+import { Link, useNavigate } from 'react-router-dom'
 import { todayLocalDate } from '../lib/dates'
 import { canLogPastGoal, stacksSessionMinutes } from '../lib/dayStatus'
 import {
@@ -17,7 +17,9 @@ import { useUndoToast } from '../hooks/useUndoToast'
 import { formatCountUndoMessage, formatSessionUndoMessage } from '../lib/undoMessages'
 import { HabitVideoPlaceholder } from './HabitVideoPlaceholder'
 import { MedicineDoses } from './MedicineDoses'
+import { ReminderSection } from './ReminderSection'
 import { StepsCard } from './StepsCard'
+import { remindersDoneToday, remindersForToday, type Reminder } from '../lib/reminderSchedule'
 import { catalogTrackId, visibleName } from '../lib/catalogName'
 import { MEDICINE_REMINDER_CHANGED, clearSkip } from '../lib/medicineReminderState'
 import { track } from '../lib/track'
@@ -38,6 +40,7 @@ import {
   loadGuestDraft,
   setGuestStep,
   toggleGuestDose,
+  updateGuestReminder,
   type GuestActivity,
   type GuestDraft,
   type GuestReading,
@@ -61,6 +64,7 @@ function trackGuestLog(
 
 export function GuestTodayPage() {
   const { t, locale } = useLocale()
+  const navigate = useNavigate()
   const undoToast = useUndoToast()
   const [draft, setDraft] = useState<GuestDraft | null>(() => loadGuestDraft())
   const [runningId, setRunningId] = useState<string | null>(null)
@@ -155,6 +159,19 @@ export function GuestTodayPage() {
     if (activity && playsVideoWithTimer(activity.templateId)) setVideoId(localId)
   }
 
+  function patchReminder(id: string, patch: Partial<Reminder>) {
+    const latest = draftRef.current
+    if (latest) setDraft(updateGuestReminder(latest, id, patch))
+  }
+
+  function markReminderDone(reminder: Reminder) {
+    patchReminder(reminder.id, { doneAt: new Date().toISOString() })
+    track('reminder_done', { signed_in: false })
+    undoToast.show(t('reminders.doneToast', { text: reminder.text }), () =>
+      patchReminder(reminder.id, { doneAt: null }),
+    )
+  }
+
   if (!draft) return null
 
   const warning = guestSaveWarning(draft)
@@ -199,6 +216,17 @@ export function GuestTodayPage() {
               }}
             />
           )}
+
+          <ReminderSection
+            open={remindersForToday(draft.reminders, today)}
+            doneToday={remindersDoneToday(draft.reminders, today)}
+            today={today}
+            busyId={null}
+            onDone={markReminderDone}
+            onNotDone={(reminder) => patchReminder(reminder.id, { doneAt: null })}
+            onMove={(reminder, day) => patchReminder(reminder.id, { day })}
+            onEdit={(reminder) => navigate(`/reminders/${reminder.id}`)}
+          />
 
           {note && (
             <div className="notice">
@@ -475,9 +503,14 @@ export function GuestTodayPage() {
                   )
                 })}
               </ul>
-              <Link className="btn btn-secondary today-add" to="/start?step=1&add=1">
-                {t('today.add')}
-              </Link>
+              <div className="today-add-row">
+                <Link className="btn btn-secondary today-add" to="/start?step=1&add=1">
+                  {t('today.add')}
+                </Link>
+                <Link className="btn btn-secondary today-add" to="/reminders/new">
+                  {t('reminders.add')}
+                </Link>
+              </div>
             </section>
           )}
           {undoToast.toast && (

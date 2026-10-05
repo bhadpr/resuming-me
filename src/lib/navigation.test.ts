@@ -39,6 +39,8 @@ describe('parseAppPath', () => {
     })
     expect(parseAppPath('/medicines/new')).toEqual({ name: 'medicines' })
     expect(parseAppPath('/medicines/med-1')).toEqual({ name: 'medicines', medicineId: 'med-1' })
+    expect(parseAppPath('/reminders/new')).toEqual({ name: 'reminders' })
+    expect(parseAppPath('/reminders/r-1')).toEqual({ name: 'reminders', reminderId: 'r-1' })
     expect(parseAppPath('/insights')).toEqual({ name: 'insights' })
     expect(parseAppPath('/review/2026-09-14')).toEqual({ name: 'review', weekStart: '2026-09-14' })
     expect(parseAppPath('/settings')).toEqual({ name: 'settings' })
@@ -63,6 +65,7 @@ describe('tab helpers', () => {
   it('maps views to tabs and paths', () => {
     expect(tabFromView({ name: 'numbers', screen: 'list' })).toBe('metrics')
     expect(tabFromView({ name: 'medicines', medicineId: 'med-1' })).toBe('metrics')
+    expect(tabFromView({ name: 'reminders' })).toBe('today')
     expect(tabPath('metrics')).toBe('/numbers')
     expect(tabPath('today')).toBe('/today')
   })

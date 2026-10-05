@@ -327,6 +327,38 @@ export interface Database {
         }
         Relationships: []
       }
+      reminders: {
+        Row: {
+          id: string
+          user_id: string
+          text: string
+          day: string
+          hour: number | null
+          minute: number | null
+          done_at: string | null
+          created_at: string
+          updated_at: string
+        }
+        Insert: {
+          id?: string
+          user_id: string
+          text: string
+          day: string
+          hour?: number | null
+          minute?: number | null
+          done_at?: string | null
+          created_at?: string
+          updated_at?: string
+        }
+        Update: {
+          text?: string
+          day?: string
+          hour?: number | null
+          minute?: number | null
+          done_at?: string | null
+        }
+        Relationships: []
+      }
       log_entries: {
         Row: {
           id: string

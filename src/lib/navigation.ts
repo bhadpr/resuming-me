@@ -19,6 +19,7 @@ export type AppView =
   | { name: 'numbers'; screen: 'form'; metricId?: string }
   | { name: 'numbers'; screen: 'detail'; metricId: string }
   | { name: 'medicines'; medicineId?: string }
+  | { name: 'reminders'; reminderId?: string }
   | { name: 'insights' }
   | { name: 'review'; weekStart: string }
   | { name: 'settings' }
@@ -51,6 +52,11 @@ const APP_ROUTES: Array<{ pattern: string; parse: (params: Record<string, string
   {
     pattern: '/medicines/:id',
     parse: (p) => ({ name: 'medicines', medicineId: p.id }),
+  },
+  { pattern: '/reminders/new', parse: () => ({ name: 'reminders' }) },
+  {
+    pattern: '/reminders/:id',
+    parse: (p) => ({ name: 'reminders', reminderId: p.id }),
   },
   { pattern: '/insights', parse: () => ({ name: 'insights' }) },
   { pattern: '/review/:weekStart', parse: (p) => ({ name: 'review', weekStart: p.weekStart! }) },
@@ -93,6 +99,7 @@ export function showAppChrome(view: AppView | null): boolean {
     view.name === 'activities' ||
     view.name === 'numbers' ||
     view.name === 'medicines' ||
+    view.name === 'reminders' ||
     view.name === 'insights' ||
     view.name === 'review'
   )

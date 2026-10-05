@@ -43,6 +43,8 @@ export type TrackedEventName =
   | 'review_shrink_used'
   | 'pattern_shown'
   | 'pattern_tapped'
+  | 'reminder_added'
+  | 'reminder_done'
 
 type EventInsert = Database['public']['Tables']['events']['Insert']
 

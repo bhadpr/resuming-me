@@ -15,6 +15,7 @@ import {
 } from '../lib/guestDraft'
 import { isLoggedVital, isNumberEntryVital, isStepsHabit } from '../lib/onboardingFlow'
 import { Icon, type IconName } from './Icon'
+import { GuestComingUp } from './GuestReminders'
 
 function useGuestDraft(): GuestDraft | null {
   const [draft, setDraft] = useState<GuestDraft | null>(() => loadGuestDraft())
@@ -103,15 +104,18 @@ export function GuestActivitiesPage() {
   const draft = useGuestDraft()
   const habits = (draft?.activities ?? []).filter((activity) => !isGuestVital(activity))
   return (
-    <ItemList
-      title={t('nav.abhyas')}
-      sub={t('list.activitySub')}
-      empty={t('list.activityEmpty')}
-      emptyIcon="activities"
-      addLabel={t('list.addHabit')}
-      items={habits}
-      onAdd={() => navigate('/start?step=1&add=1')}
-    />
+    <>
+      <ItemList
+        title={t('nav.abhyas')}
+        sub={t('list.activitySub')}
+        empty={t('list.activityEmpty')}
+        emptyIcon="activities"
+        addLabel={t('list.addHabit')}
+        items={habits}
+        onAdd={() => navigate('/start?step=1&add=1')}
+      />
+      <GuestComingUp />
+    </>
   )
 }
 

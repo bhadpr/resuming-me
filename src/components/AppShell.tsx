@@ -43,6 +43,8 @@ import {
 import { useDailyDigest } from '../hooks/useDailyDigest'
 import { useMedicines } from '../hooks/useMedicines'
 import { deleteMedicine, saveMedicine } from '../lib/medicines'
+import { useReminders } from '../hooks/useReminders'
+import type { Reminder } from '../lib/reminderSchedule'
 import { useTimer } from '../hooks/useTimer'
 import { ActivityList } from './ActivityList'
 import { ActivityDetail } from './ActivityDetail'
@@ -52,6 +54,8 @@ import { MetricDetail } from './MetricDetail'
 import { TodayScreen } from './TodayScreen'
 import { MedicineSection } from './MedicineSection'
 import { MedicineEditor } from './MedicineForm'
+import { ReminderEditor } from './ReminderForm'
+import { ComingUpList } from './ReminderSection'
 import { OnboardingScreen } from './OnboardingScreen'
 import { InstallPrompt } from './InstallPrompt'
 import { BrandTitle } from './BrandTitle'
@@ -894,6 +898,14 @@ export function AppShell() {
   )
 
   const medicineState = useMedicines(user?.id)
+  const reminderState = useReminders(user?.id)
+
+  async function handleReminderDone(reminder: Reminder) {
+    if (!(await reminderState.markDone(reminder))) return
+    undoToast.show(t('reminders.doneToast', { text: reminder.text }), async () => {
+      await reminderState.markNotDone(reminder)
+    })
+  }
 
   const activeMetrics = useMemo(
     () => metrics.filter((m) => !m.archived),
@@ -937,6 +949,10 @@ export function AppShell() {
         view.medicineId ? `/medicines/${view.medicineId}` : '/medicines/new',
         'Medicine',
       )
+      return
+    }
+    if (view?.name === 'reminders') {
+      trackPageView(view.reminderId ? '/reminders/edit' : '/reminders/new', 'Reminder')
       return
     }
     if (tab === 'today') trackPageView('/today', 'Today')
@@ -1817,7 +1833,7 @@ export function AppShell() {
               )
             ) : (
               <>
-                {tab === 'today' && (
+                {tab === 'today' && view?.name !== 'reminders' && (
                   <TodayScreen
                     dateLabel={dateLabel}
                     rows={todayRows}
@@ -1874,6 +1890,63 @@ export function AppShell() {
                     medicineBusyKey={medicineState.busyKey}
                     medicineError={medicineState.error}
                     onToggleMedicineDose={(dose) => void medicineState.toggleDose(dose)}
+                    reminders={{
+                      open: reminderState.open,
+                      doneToday: reminderState.doneToday,
+                      today: reminderState.today,
+                      busyId: reminderState.busyId,
+                      error: reminderState.error,
+                      onDone: (reminder) => void handleReminderDone(reminder),
+                      onNotDone: (reminder) => void reminderState.markNotDone(reminder),
+                      onMove: (reminder, day) => void reminderState.move(reminder, day),
+                      onEdit: (reminder) => navigate(`/reminders/${reminder.id}`),
+                    }}
+                    onAddReminder={() => {
+                      setError(null)
+                      navigate('/reminders/new')
+                    }}
+                  />
+                )}
+
+                {view?.name === 'reminders' && (
+                  <ReminderEditor
+                    reminderId={view.reminderId}
+                    reminders={reminderState.reminders}
+                    today={reminderState.today}
+                    loading={reminderState.loading}
+                    saving={saving}
+                    error={error}
+                    onCancel={() => navigateBack(navigate, '/today')}
+                    onSubmit={async (input) => {
+                      if (view?.name !== 'reminders') return
+                      const reminderId = view.reminderId
+                      setSaving(true)
+                      setError(null)
+                      try {
+                        if (reminderId) {
+                          await reminderState.update(reminderId, input)
+                        } else if ((await reminderState.add(input)) === 'full') {
+                          return 'full'
+                        }
+                        navigateBack(navigate, '/today')
+                      } catch (err) {
+                        setError(err instanceof Error ? err.message : 'Could not save that reminder')
+                      } finally {
+                        setSaving(false)
+                      }
+                    }}
+                    onDelete={async (reminder) => {
+                      setSaving(true)
+                      setError(null)
+                      try {
+                        await reminderState.remove(reminder.id)
+                        navigateBack(navigate, '/today')
+                      } catch (err) {
+                        setError(err instanceof Error ? err.message : 'Could not delete that reminder')
+                      } finally {
+                        setSaving(false)
+                      }
+                    }}
                   />
                 )}
 
@@ -1892,6 +1965,13 @@ export function AppShell() {
                     setError(null)
                     navigate('/activities/new')
                   }}
+                />
+                <ComingUpList
+                  reminders={reminderState.comingUp}
+                  today={reminderState.today}
+                  busyId={reminderState.busyId}
+                  onMove={(reminder, day) => void reminderState.move(reminder, day)}
+                  onEdit={(reminder) => navigate(`/reminders/${reminder.id}`)}
                 />
               </>
             )}

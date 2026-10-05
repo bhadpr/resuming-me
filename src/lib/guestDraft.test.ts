@@ -20,6 +20,9 @@ import {
   saveGuestDraft,
   setGuestStep,
   upsertGuestActivity,
+  addGuestReminder,
+  removeGuestReminder,
+  updateGuestReminder,
   type GuestDraft,
 } from './guestDraft'
 
@@ -396,5 +399,49 @@ describe('guest draft storage', () => {
     expect(payload.logs[0]?.startedAt).toBe('2026-09-22T18:00:00.000Z')
     expect(payload).not.toHaveProperty('email')
     expect(JSON.stringify(payload)).not.toContain('note')
+  })
+})
+
+describe('guest reminders', () => {
+  afterEach(() => {
+    vi.unstubAllGlobals()
+  })
+
+  it('adds, marks done, and removes a reminder on this device', () => {
+    memoryStorage()
+    let draft = ensureGuestDraft('UTC')
+    draft = addGuestReminder(draft, { text: '  File   tax ', day: '2026-10-06', hour: 9, minute: 0 })!
+    expect(draft.reminders).toHaveLength(1)
+    expect(draft.reminders[0]).toMatchObject({ text: 'File tax', day: '2026-10-06', hour: 9, doneAt: null })
+
+    const id = draft.reminders[0].id
+    draft = updateGuestReminder(draft, id, { doneAt: new Date().toISOString() })
+    expect(loadGuestDraft()?.reminders[0].doneAt).not.toBeNull()
+
+    draft = removeGuestReminder(draft, id)
+    expect(loadGuestDraft()?.reminders).toEqual([])
+  })
+
+  it('stops at 100 open reminders', () => {
+    memoryStorage()
+    let draft = ensureGuestDraft('UTC')
+    for (let index = 0; index < 100; index += 1) {
+      draft = addGuestReminder(draft, { text: `Item ${index}`, day: '2026-10-06', hour: null, minute: null })!
+    }
+    expect(addGuestReminder(draft, { text: 'One more', day: '2026-10-06', hour: null, minute: null })).toBeNull()
+  })
+
+  it('drops reminders done more than a day and a half ago', () => {
+    memoryStorage()
+    const draft = ensureGuestDraft('UTC')
+    const old = new Date(Date.now() - 3 * 24 * 60 * 60 * 1000).toISOString()
+    const saved = saveGuestDraft({
+      ...draft,
+      reminders: [
+        { id: 'old', text: 'Old', day: '2026-10-01', hour: null, minute: null, doneAt: old },
+        { id: 'open', text: 'Open', day: '2026-10-01', hour: null, minute: null, doneAt: null },
+      ],
+    })
+    expect(saved.reminders.map((item) => item.id)).toEqual(['open'])
   })
 })
