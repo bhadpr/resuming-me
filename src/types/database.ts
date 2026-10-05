@@ -35,6 +35,7 @@ export interface Database {
           review_hour: number
           review_minute: number
           reviews_opt_out: boolean
+          reminder_emails: boolean
           locale?: string | null
           created_at: string
           updated_at: string
@@ -59,6 +60,7 @@ export interface Database {
           review_hour?: number
           review_minute?: number
           reviews_opt_out?: boolean
+          reminder_emails?: boolean
           locale?: string | null
           created_at?: string
           updated_at?: string
@@ -81,6 +83,7 @@ export interface Database {
           review_hour?: number
           review_minute?: number
           reviews_opt_out?: boolean
+          reminder_emails?: boolean
           locale?: string | null
           updated_at?: string
         }

@@ -463,6 +463,8 @@ export const en = {
     emails: 'Emails',
     checkins: 'Day 2, 3, and 7 emails',
     checkinsDesc: 'A short email on day 2, day 3, and day 7 if something is still open. Nothing if you are done.',
+    reminderEmails: 'Reminder emails',
+    reminderEmailsDesc: 'An email in the morning on a day you have reminders. For when you do not use the Android app.',
     emailTime: 'Email time',
     review: 'Weekly review',
     reviewDesc: 'A card on Today for two days, and an email if you have not opened it. Off hides both.',

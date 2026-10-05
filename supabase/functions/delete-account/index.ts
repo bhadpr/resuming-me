@@ -106,7 +106,7 @@ Deno.serve(async (req) => {
       /* bucket may not exist yet */
     }
 
-    // Cascades: profiles, activities (+ history/logs), metrics (+ entries), medicines, reminders.
+    // Cascades: profiles, activities (+ history/logs), metrics (+ entries), medicines, reminders, reminder emails.
     const { error: deleteError } = await admin.auth.admin.deleteUser(user.id)
     if (deleteError) {
       return new Response(JSON.stringify({ ok: false, error: deleteError.message }), {

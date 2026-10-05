@@ -4,10 +4,13 @@
 // Quiet hours, one a day, and stop-after-3 live in due_checkins().
 // Birthday rules live in due_birthday_emails(). Check-ins run first so both
 // cannot go out the same local day.
+// Morning reminder emails (Settings switch, off by default) live in
+// due_reminder_emails(). They run before birthdays and do not count toward it.
 // Email provider is Resend (RESEND_API_KEY + RESEND_FROM). Without them, nothing is sent.
 
 import { createClient } from 'https://esm.sh/@supabase/supabase-js@2.49.1'
 import { birthdayEmailCopy } from '../../../src/lib/birthdayEmail.ts'
+import { reminderEmailCopy, type ReminderEmailItem } from '../../../src/lib/reminderEmail.ts'
 
 const corsHeaders = {
   'Access-Control-Allow-Origin': '*',
@@ -96,7 +99,7 @@ Deno.serve(async (req) => {
     const { data, error } = await admin.rpc('opt_out_checkins', { p_token: unsubscribe })
     if (error) return json({ ok: false, error: error.message }, 400)
     const message = data
-      ? 'Check-in emails are off. You can turn them back on in Settings.'
+      ? 'Emails from Resuming are off. You can turn them back on in Settings.'
       : 'That link is no longer valid.'
     return new Response(`<!doctype html><title>Resuming</title><p>${message}</p>`, {
       headers: { ...corsHeaders, 'Content-Type': 'text/html; charset=utf-8' },
@@ -138,10 +141,50 @@ Deno.serve(async (req) => {
     }
   }
 
+  let reminderSent = 0
+  let reminderDue = 0
+  const reminders = await admin.rpc('due_reminder_emails')
+  if (reminders.error) {
+    failures.push(reminders.error.message)
+  } else {
+    const rows = (reminders.data ?? []) as Array<{
+      user_id: string
+      email: string
+      locale: string | null
+      local_date: string
+      checkin_token: string
+      items: ReminderEmailItem[] | null
+    }>
+    reminderDue = rows.length
+    for (const row of rows) {
+      const items = row.items ?? []
+      if (items.length === 0) continue
+      const copy = reminderEmailCopy(row.locale, items, {
+        open: `${SITE}/today`,
+        off: `${supabaseUrl}/functions/v1/send-check-ins?unsubscribe=${row.checkin_token}`,
+      })
+      try {
+        const result = await sendEmail({ to: row.email, subject: copy.subject, text: copy.text })
+        if (result.skipped) {
+          skipped += 1
+          continue
+        }
+        const { error: insertError } = await admin.from('reminder_emails').insert({
+          user_id: row.user_id,
+          sent_on: row.local_date,
+        })
+        if (insertError) throw insertError
+        reminderSent += 1
+      } catch (err) {
+        failures.push(err instanceof Error ? err.message : 'reminder send failed')
+      }
+    }
+  }
+
   const birthdays = await admin.rpc('due_birthday_emails')
   if (birthdays.error) {
     failures.push(birthdays.error.message)
-    return json({ ok: false, sent, skipped, due: due.length, failures })
+    return json({ ok: false, sent, reminderSent, skipped, due: due.length, reminderDue, failures })
   }
 
   const birthdayDue = (birthdays.data ?? []) as Array<{
@@ -181,9 +224,11 @@ Deno.serve(async (req) => {
   return json({
     ok: failures.length === 0,
     sent,
+    reminderSent,
     birthdaySent,
     skipped,
     due: due.length,
+    reminderDue,
     birthdayDue: birthdayDue.length,
     failures,
   })

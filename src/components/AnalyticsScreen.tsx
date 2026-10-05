@@ -18,6 +18,7 @@ import { summarizeOnboardingFunnel } from '../lib/onboardingFunnel'
 import { summarizeCreates, summarizeGuestJourney } from '../lib/guestJourney'
 import { templateLabel } from '../lib/catalogName'
 import { cohortRetention, fetchLoopEvents, summarizeComebackLoop } from '../lib/loopAnalytics'
+import { fetchReminderEvents, summarizeReminderEvents, type ReminderSummary } from '../lib/reminderAnalytics'
 
 export function AnalyticsScreen() {
   const [window, setWindow] = useState<AnalyticsWindow>('7d')
@@ -37,6 +38,25 @@ export function AnalyticsScreen() {
   const [journey, setJourney] = useState<ReturnType<typeof summarizeGuestJourney> | null>(null)
   const [creates, setCreates] = useState<ReturnType<typeof summarizeCreates> | null>(null)
   const [journeyError, setJourneyError] = useState<string | null>(null)
+  const [reminders, setReminders] = useState<ReminderSummary | null>(null)
+  const [remindersError, setRemindersError] = useState<string | null>(null)
+
+  useEffect(() => {
+    let mounted = true
+    setRemindersError(null)
+    fetchReminderEvents(window)
+      .then((rows) => {
+        if (mounted) setReminders(summarizeReminderEvents(rows))
+      })
+      .catch((err) => {
+        if (!mounted) return
+        setReminders(null)
+        setRemindersError(err instanceof Error ? err.message : 'Could not load reminders')
+      })
+    return () => {
+      mounted = false
+    }
+  }, [window])
 
   useEffect(() => {
     let mounted = true
@@ -367,6 +387,34 @@ export function AnalyticsScreen() {
               ))}
             </ul>
           </>
+        )}
+      </section>
+
+      <section className="today-section">
+        <h3 className="section-label">Reminders</h3>
+        <p className="screen-sub insights-hint">Counts only. Reminder text is never sent to analytics.</p>
+        {remindersError && <p className="error">{remindersError}</p>}
+        {reminders && (
+          <ul className="analytics-rank-list">
+            <li className="analytics-rank-row">
+              Added · {reminders.added} · by {reminders.people} {reminders.people === 1 ? 'person' : 'people'}
+            </li>
+            <li className="analytics-rank-row">
+              Done · {reminders.done} · from a notification {reminders.doneFromNotification}
+            </li>
+            <li className="analytics-rank-row">
+              With a time {reminders.withTime} · day before {reminders.dayBefore} · every year{' '}
+              {reminders.everyYear}
+            </li>
+            <li className="analytics-rank-row">
+              Signed in {reminders.signedIn} · guests {reminders.added - reminders.signedIn}
+            </li>
+            {reminders.kinds.length > 0 && (
+              <li className="analytics-rank-row">
+                {reminders.kinds.map((row) => `${row.kind} ${row.count}`).join(' · ')}
+              </li>
+            )}
+          </ul>
         )}
       </section>
 

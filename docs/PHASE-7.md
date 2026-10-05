@@ -113,13 +113,19 @@ At the end of M3, reminders have a kind and an icon, and birthdays come back eac
 ### P7-09 — Email for website users
 
 - Signed-in people who do not use the Android app can choose to get an email on the morning of a reminder's day.
-- Off by default. One switch in Settings.
+- Off by default. One switch in Settings, shown on the website only.
+- One email a day, between 7:00 and noon local time, listing that day's open reminders.
+- The email's off link is the check-in one. It turns off check-ins and reminder emails together.
 - Uses the existing check-in email function and its opt-out.
 
 ### P7-10 — Data, privacy, and Play
 
 - Privacy policy and Terms say reminders are stored to show and alert them, and are not shared.
-- Play Data safety form lists reminder text as user content.
+- Play Data safety form lists reminder text as user content. Answers to give in Play Console, under **App activity → Other user-generated content**:
+  - Collected: yes. Shared: no. Resend sends the morning email as our service provider, which Play does not count as sharing.
+  - Processed ephemerally: no. Required: no, people choose to add reminders.
+  - Purpose: App functionality.
+  - Encrypted in transit and can be deleted: unchanged, yes to both.
 - Admin analytics counts reminders added and done, not their text.
 
 ## Out of this phase

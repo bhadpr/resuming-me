@@ -91,6 +91,13 @@
           They are not medical advice.
         </li>
         <li>
+          <strong>Reminders.</strong> If you are signed in, we store each reminder’s
+          text, its day, an optional time, its kind, whether it comes back every year,
+          whether you asked for an alert the day before, and when you marked it done. We
+          store them to show them on Today and to alert you. A guest’s reminders stay on
+          the device.
+        </li>
+        <li>
           <strong>Steps.</strong> On Android, if you allow it, the app reads today’s
           step count from Health Connect on your phone and shows it on Today. We do
           not write steps to Health Connect, and we do not send that count to our
@@ -119,7 +126,8 @@
           credentials, theme preference, onboarding state, daily reminder preference,
           active timer state, and offline sync queues so the app works reliably between
           visits. See “Cookies &amp; local storage” below. On Android, an optional daily
-          reminder and any medicine reminders are scheduled on the device only. They
+          reminder, medicine reminders, and alerts for your own reminders are scheduled
+          on the device only. They
           are not delivered through a cloud push service. A typed step count and the
           daily step goal stay on the device.
         </li>
@@ -139,6 +147,10 @@
       <p>
         We do not sell your personal information, and we do not share it for
         cross-context behavioral advertising.
+      </p>
+      <p>
+        Reminders are not shared with other people. Their text is not sent to our
+        analytics, which count only how many reminders are added and done.
       </p>
 
       <h2>Health information</h2>
@@ -172,7 +184,9 @@
           <strong>Service providers.</strong> Google and email magic links (sign-in; the
           same email can belong to one account when it is already linked), Supabase
           (authentication, database, and related backend services), Resend (optional day
-          2, 3, and 7 check-in emails, only if you ask for a reminder), and hosting/CDN
+          2, 3, and 7 check-in emails, only if you ask for a reminder, and a morning
+          email listing that day’s reminders, only if you turn it on in Settings), and
+          hosting/CDN
           providers that process data on our behalf to run the Service.
         </li>
         <li>
@@ -247,7 +261,7 @@
       <p>
         You can edit or delete many records directly in the app, and you can sign out at
         any time. In Settings → Account you can <strong>Export my data</strong> (download a
-        copy of your activities, logs, and metrics — medicine names, times, and bottle
+        copy of your activities, logs, metrics, and reminders — medicine names, times, and bottle
         photos are not included) or <strong>Delete my account</strong>
         (permanent removal after typing DELETE). Email us for a copy of those medicine
         records. See also
@@ -289,7 +303,7 @@
         Privacy requests, and complaints from people in India:
         <a href="mailto:resuming.me@gmail.com">resuming.me@gmail.com</a>
       </p>
-      <p class="muted">Last updated: October 2, 2026</p>
+      <p class="muted">Last updated: October 5, 2026</p>
       <p class="muted">© 2026 Cheerful Games, Inc.</p>
     </main>
   </body>

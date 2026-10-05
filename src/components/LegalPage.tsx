@@ -118,6 +118,13 @@ function PrivacyContent() {
           They are not medical advice.
         </li>
         <li>
+          <strong>Reminders.</strong> If you are signed in, we store each reminder’s
+          text, its day, an optional time, its kind, whether it comes back every year,
+          whether you asked for an alert the day before, and when you marked it done. We
+          store them to show them on Today and to alert you. A guest’s reminders stay on
+          the device.
+        </li>
+        <li>
           <strong>Steps.</strong> On Android, if you allow it, the app reads today’s
           step count from Health Connect on your phone and shows it on Today. We do
           not write steps to Health Connect, and we do not send that count to our
@@ -146,7 +153,8 @@ function PrivacyContent() {
           credentials, theme preference, onboarding state, daily reminder preference,
           active timer state, and offline sync queues so the app works reliably between
           visits. See “Cookies &amp; local storage” below. On Android, an optional daily
-          reminder and any medicine reminders are scheduled on the device only. They
+          reminder, medicine reminders, and alerts for your own reminders are scheduled
+          on the device only. They
           are not delivered through a cloud push service. A typed step count and the
           daily step goal stay on the device.
         </li>
@@ -166,6 +174,10 @@ function PrivacyContent() {
       <p>
         We do not sell your personal information, and we do not share it for
         cross-context behavioral advertising.
+      </p>
+      <p>
+        Reminders are not shared with other people. Their text is not sent to our
+        analytics, which count only how many reminders are added and done.
       </p>
 
       <h3>Health information</h3>
@@ -199,7 +211,9 @@ function PrivacyContent() {
           <strong>Service providers.</strong> Google and email magic links (sign-in; the
           same email can belong to one account when it is already linked), Supabase
           (authentication, database, and related backend services), Resend (optional day
-          2, 3, and 7 check-in emails, only if you ask for a reminder), and hosting/CDN
+          2, 3, and 7 check-in emails, only if you ask for a reminder, and a morning
+          email listing that day’s reminders, only if you turn it on in Settings), and
+          hosting/CDN
           providers that process data on our behalf to run the Service.
         </li>
         <li>
@@ -274,7 +288,7 @@ function PrivacyContent() {
       <p>
         You can edit or delete many records directly in the app, and you can sign out at
         any time. In Settings → Account you can <strong>Export my data</strong> (download a
-        copy of your activities, logs, and metrics — medicine names, times, and bottle
+        copy of your activities, logs, metrics, and reminders — medicine names, times, and bottle
         photos are not included) or <strong>Delete my account</strong>{' '}
         (permanent removal after typing DELETE). Email us for a copy of those medicine
         records. See also{' '}
@@ -351,7 +365,8 @@ function TermsContent() {
         You sign in with Google or an email magic link. If that email is already linked
         to Google, it is the same account. You are responsible for activity under your
         account and for keeping access to that email secure. Optional day 2, 3, and 7
-        check-in emails can be turned off in the message or in Settings. Notify us
+        check-in emails, and an optional morning email on a day with reminders, can be
+        turned off in the message or in Settings. Notify us
         promptly if you believe your {PRODUCT_NAME} account has been compromised. We may
         suspend or terminate access if we reasonably believe these Terms have been
         violated or if needed to protect the Service or other users.
@@ -379,7 +394,7 @@ function TermsContent() {
 
       <h3>Your content</h3>
       <p>
-        You retain ownership of the activities, health measurements, medicines, logs,
+        You retain ownership of the activities, health measurements, medicines, reminders, logs,
         feedback, and other content you submit (“Your Content”). You grant {COMPANY_NAME}{' '}
         a worldwide, non-exclusive, royalty-free license to host, store, and display Your
         Content so your account works for you. We do not use medicine names, notes,
@@ -408,6 +423,14 @@ function TermsContent() {
         (backend infrastructure). Your use of those services may be subject to their
         terms and policies. We are not responsible for third-party services we do not
         control.
+      </p>
+
+      <h3>Reminders</h3>
+      <p>
+        Reminders you add are stored so the Service can show them on Today and, if you
+        ask, alert you on your Android phone or by email. They are not shared with other
+        people. An alert or an email can arrive late or not at all. Do not rely on{' '}
+        {PRODUCT_NAME} alone for anything where a missed reminder could cause harm.
       </p>
 
       <h3>Health, medicines, and vitals</h3>

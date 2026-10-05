@@ -20,6 +20,24 @@ export async function saveCheckinOptOut(userId: string, optOut: boolean): Promis
   if (error) throw error
 }
 
+/** Morning email on a day with open reminders. Off unless turned on. */
+export async function loadReminderEmails(userId: string): Promise<boolean> {
+  const client = createSupabaseClient()
+  const { data, error } = await client
+    .from('profiles')
+    .select('reminder_emails')
+    .eq('id', userId)
+    .maybeSingle()
+  if (error) throw error
+  return data?.reminder_emails ?? false
+}
+
+export async function saveReminderEmails(userId: string, on: boolean): Promise<void> {
+  const client = createSupabaseClient()
+  const { error } = await client.from('profiles').update({ reminder_emails: on }).eq('id', userId)
+  if (error) throw error
+}
+
 export async function loadReminderTime(userId: string): Promise<string | null> {
   const client = createSupabaseClient()
   const { data, error } = await client

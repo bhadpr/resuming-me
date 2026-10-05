@@ -19,7 +19,15 @@ import {
   scheduleTestDigest,
 } from '../lib/localNotifications'
 import { downloadUserDataExport } from '../lib/exportData'
-import { loadCheckinOptOut, loadReminderTime, saveCheckinOptOut, saveReminderTime, emailReminderLine } from '../lib/checkinPrefs'
+import {
+  emailReminderLine,
+  loadCheckinOptOut,
+  loadReminderEmails,
+  loadReminderTime,
+  saveCheckinOptOut,
+  saveReminderEmails,
+  saveReminderTime,
+} from '../lib/checkinPrefs'
 import { deleteCurrentAccount } from '../lib/deleteAccount'
 import { REVIEW_WEEKDAYS } from '../lib/weeklyReview'
 import { useLocale } from '../hooks/useLocale'
@@ -172,6 +180,7 @@ export function SettingsScreen({
   const scheduleHint = digestScheduleHint(todayItems, digest)
   const [checkinsOff, setCheckinsOff] = useState(false)
   const [reminderTime, setReminderTime] = useState<string | null>(null)
+  const [reminderEmails, setReminderEmails] = useState(false)
   const [partTimes, setPartTimes] = useState<PartTimes>(readPartTimes)
 
   useEffect(() => {
@@ -182,6 +191,11 @@ export function SettingsScreen({
         if (!mounted) return
         setCheckinsOff(off)
         setReminderTime(time)
+      })
+      .catch(() => {})
+    void loadReminderEmails(user.id)
+      .then((on) => {
+        if (mounted) setReminderEmails(on)
       })
       .catch(() => {})
     return () => {
@@ -467,6 +481,29 @@ export function SettingsScreen({
                 }}
               />
             </label>
+          )}
+          {!native && (
+            <div className="digest-toggle">
+              <span className="activity-meta">
+                <span className="activity-name">{t('settings.reminderEmails')}</span>
+                <span className="activity-desc">{t('settings.reminderEmailsDesc')}</span>
+              </span>
+              <button
+                type="button"
+                className={`digest-switch ${reminderEmails ? 'digest-switch-on' : ''}`}
+                role="switch"
+                aria-checked={reminderEmails}
+                aria-label={t('settings.reminderEmails')}
+                onClick={() => {
+                  if (!user) return
+                  const next = !reminderEmails
+                  setReminderEmails(next)
+                  void saveReminderEmails(user.id, next).catch(() => setReminderEmails(!next))
+                }}
+              >
+                <span className="digest-switch-knob" aria-hidden />
+              </button>
+            </div>
           )}
         </div>
       </section>

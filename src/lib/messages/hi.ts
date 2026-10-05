@@ -467,6 +467,8 @@ export const hi: DeepString<typeof en> = {
     emails: 'ईमेल',
     checkins: 'दिन 2, 3 और 7 के ईमेल',
     checkinsDesc: 'अगर कुछ बाकी हो तो दिन 2, 3 और 7 पर एक छोटा ईमेल। सब हो जाने पर कुछ नहीं।',
+    reminderEmails: 'याद के ईमेल',
+    reminderEmailsDesc: 'जिस दिन याद हो, उस सुबह एक ईमेल। जब आप Android ऐप नहीं चलाते, तब के लिए।',
     emailTime: 'ईमेल का समय',
     review: 'साप्ताहिक समीक्षा',
     reviewDesc: 'आज पर दो दिन के लिए एक कार्ड, और न खोलने पर एक ईमेल। बंद करने पर दोनों छिप जाते हैं।',
