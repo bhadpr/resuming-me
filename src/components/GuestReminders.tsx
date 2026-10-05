@@ -39,6 +39,8 @@ export function GuestReminderEditor({ reminderId }: { reminderId?: string }) {
           track('reminder_added', {
             has_time: input.hour != null,
             day_before: input.remindBefore === true,
+            kind: input.kind ?? 'other',
+            every_year: input.everyYear === true,
             signed_in: false,
           })
         }

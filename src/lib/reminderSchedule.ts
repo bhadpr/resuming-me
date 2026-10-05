@@ -16,6 +16,9 @@ export interface Reminder {
   minute: number | null
   /** An evening alert on the day before. */
   remindBefore: boolean
+  kind: ReminderKind
+  /** Done makes next year's copy. */
+  everyYear: boolean
   doneAt: string | null
 }
 
@@ -25,6 +28,47 @@ export interface ReminderInput {
   hour: number | null
   minute: number | null
   remindBefore?: boolean
+  kind?: ReminderKind
+  everyYear?: boolean
+}
+
+/** Only changes the icon. A reminder with no kind chosen is Other. */
+export const REMINDER_KINDS = ['errand', 'bill', 'doctor', 'event', 'other'] as const
+export type ReminderKind = (typeof REMINDER_KINDS)[number]
+
+export function reminderKindOf(value: unknown): ReminderKind {
+  return REMINDER_KINDS.includes(value as ReminderKind) ? (value as ReminderKind) : 'other'
+}
+
+/** Same date next year. 29 February becomes 28 February. */
+export function nextYearDay(day: string): string {
+  const [year, month, date] = day.split('-').map(Number)
+  const last = new Date(year + 1, month, 0).getDate()
+  return `${year + 1}-${String(month).padStart(2, '0')}-${String(Math.min(date, last)).padStart(2, '0')}`
+}
+
+/** The open copy that appears when an every-year reminder is done. */
+export function nextYearCopy(reminder: Reminder): ReminderInput {
+  return {
+    text: reminder.text,
+    day: nextYearDay(reminder.day),
+    hour: reminder.hour,
+    minute: reminder.minute,
+    remindBefore: reminder.remindBefore,
+    kind: reminder.kind,
+    everyYear: true,
+  }
+}
+
+/** Whether a reminder is the copy made when this every-year reminder was done. */
+export function isNextYearCopyOf(candidate: Reminder, reminder: Reminder): boolean {
+  return (
+    candidate.id !== reminder.id &&
+    candidate.everyYear &&
+    !candidate.doneAt &&
+    candidate.text === reminder.text &&
+    candidate.day === nextYearDay(reminder.day)
+  )
 }
 
 export type ReminderIssue = 'text' | 'day' | 'full'

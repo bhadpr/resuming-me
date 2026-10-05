@@ -296,6 +296,16 @@ export const gu: DeepString<typeof en> = {
     dayBefore: 'એક દિવસ પહેલાં પણ યાદ અપાવો',
     dayBeforeHint: 'આગલી સાંજે {time} પર આવશે.',
     alertsAppOnly: 'સૂચનાઓ Android ઍપ પર આવે છે.',
+    kind: 'કયા પ્રકારની? (જરૂરી નથી)',
+    kinds: {
+      errand: 'કામ',
+      bill: 'બિલ કે ટેક્સ',
+      doctor: 'ડૉક્ટર',
+      event: 'પ્રસંગ',
+      other: 'બીજું',
+    },
+    everyYear: 'દર વર્ષે',
+    everyYearHint: 'જન્મદિવસ, વર્ષગાંઠ અને તહેવારો માટે. થયું કરો ત્યારે આવતા વર્ષની યાદ આવી જશે.',
   },
   welcome: {
     days: 'થોડા દિવસ થયા. ફરી સ્વાગત છે.',

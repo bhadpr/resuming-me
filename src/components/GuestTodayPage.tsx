@@ -45,6 +45,8 @@ import {
   loadGuestDraft,
   setGuestStep,
   toggleGuestDose,
+  completeGuestReminder,
+  reopenGuestReminder,
   updateGuestReminder,
   type GuestActivity,
   type GuestDraft,
@@ -173,12 +175,17 @@ export function GuestTodayPage() {
     if (latest) setDraft(updateGuestReminder(latest, id, patch))
   }
 
+  function reopenReminder(reminder: Reminder) {
+    const latest = loadGuestDraft()
+    if (latest) setDraft(reopenGuestReminder(latest, reminder.id))
+  }
+
   function markReminderDone(reminder: Reminder) {
-    patchReminder(reminder.id, { doneAt: new Date().toISOString() })
-    track('reminder_done', { signed_in: false })
-    undoToast.show(t('reminders.doneToast', { text: reminder.text }), () =>
-      patchReminder(reminder.id, { doneAt: null }),
-    )
+    const latest = draftRef.current
+    if (!latest) return
+    setDraft(completeGuestReminder(latest, reminder.id, new Date().toISOString()))
+    track('reminder_done', { signed_in: false, every_year: reminder.everyYear })
+    undoToast.show(t('reminders.doneToast', { text: reminder.text }), () => reopenReminder(reminder))
   }
 
   if (!draft) return null
@@ -232,7 +239,7 @@ export function GuestTodayPage() {
             today={today}
             busyId={null}
             onDone={markReminderDone}
-            onNotDone={(reminder) => patchReminder(reminder.id, { doneAt: null })}
+            onNotDone={reopenReminder}
             onMove={(reminder, day) => patchReminder(reminder.id, { day })}
             onEdit={(reminder) => navigate(`/reminders/${reminder.id}`)}
           />

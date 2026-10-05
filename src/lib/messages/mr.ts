@@ -296,6 +296,16 @@ export const mr: DeepString<typeof en> = {
     dayBefore: 'एक दिवस आधीही आठवण करून द्या',
     dayBeforeHint: 'आदल्या संध्याकाळी {time} ला येईल.',
     alertsAppOnly: 'सूचना Android ॲपवर येतात.',
+    kind: 'कोणत्या प्रकारची? (गरजेचे नाही)',
+    kinds: {
+      errand: 'काम',
+      bill: 'बिल किंवा कर',
+      doctor: 'डॉक्टर',
+      event: 'कार्यक्रम',
+      other: 'इतर',
+    },
+    everyYear: 'दर वर्षी',
+    everyYearHint: 'वाढदिवस, वर्धापनदिन आणि सणांसाठी. झाले केल्यावर पुढच्या वर्षीची आठवण येईल.',
   },
   welcome: {
     days: 'काही दिवस झाले. परत स्वागत आहे.',

@@ -8,6 +8,7 @@ import {
   type Reminder,
 } from '../lib/reminderSchedule'
 import { Icon } from './Icon'
+import { ReminderKindMark } from './ReminderKindIcon'
 
 /** Time, or any time, plus "From Tuesday" when an earlier day is still open. */
 function reminderWhen(
@@ -16,12 +17,14 @@ function reminderWhen(
   locale: Locale,
   t: (key: string, vars?: Record<string, string | number>) => string,
 ): string {
-  const when =
+  const parts = [
     reminder.hour != null && reminder.minute != null
       ? formatReminderTime(reminder.hour, reminder.minute, locale)
-      : t('reminders.anyTime')
-  if (reminder.day >= today) return when
-  return `${when} · ${t('reminders.from', { day: formatReminderDay(reminder.day, today, locale) })}`
+      : t('reminders.anyTime'),
+  ]
+  if (reminder.day < today) parts.push(t('reminders.from', { day: formatReminderDay(reminder.day, today, locale) }))
+  if (reminder.everyYear) parts.push(t('reminders.everyYear'))
+  return parts.join(' · ')
 }
 
 interface ReminderRowProps {
@@ -40,6 +43,7 @@ function ReminderRow({ reminder, today, busy, onDone, onMove, onEdit }: Reminder
   return (
     <li className="today-row today-row-stack">
       <div className="today-row-main">
+        <ReminderKindMark kind={reminder.kind} />
         <span className="activity-meta">
           <span className="activity-name reminder-text-line">{reminder.text}</span>
           <span className="activity-desc">{reminderWhen(reminder, today, locale, t)}</span>
@@ -232,6 +236,7 @@ export function ReminderListSection({
               {group.items.map((reminder) => (
                 <li key={reminder.id}>
                   <button type="button" className="activity-row" onClick={() => onOpen(reminder)}>
+                    <ReminderKindMark kind={reminder.kind} />
                     <span className="activity-meta">
                       <span className="activity-name reminder-text-line">{reminder.text}</span>
                       <span className="activity-desc">{reminderWhen(reminder, today, locale, t)}</span>

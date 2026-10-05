@@ -1,7 +1,7 @@
 import { Capacitor } from '@capacitor/core'
 import { LocalNotifications } from '@capacitor/local-notifications'
 import { todayLocalDate } from './dates'
-import { loadGuestDraft, updateGuestReminder } from './guestDraft'
+import { completeGuestReminder, loadGuestDraft, updateGuestReminder } from './guestDraft'
 import { translate, type Locale } from './i18n'
 import { requestDailyDigestPermission } from './localNotifications'
 import {
@@ -12,7 +12,7 @@ import {
   snoozeReminder,
   type ReminderAlertCopy,
 } from './reminderAlerts'
-import { moveReminder, setReminderDone } from './reminders'
+import { completeReminder, getReminder, moveReminder } from './reminders'
 import {
   announceRemindersChanged,
   formatReminderTime,
@@ -132,22 +132,25 @@ export async function askForReminderAlerts(input: ReminderInput): Promise<void> 
   announceRemindersChanged()
 }
 
-async function signedIn(): Promise<boolean> {
+async function signedInUserId(): Promise<string | null> {
   const { data } = await createSupabaseClient().auth.getUser()
-  return !!data.user
+  return data.user?.id ?? null
 }
 
 async function markDoneFromNotification(reminderId: string): Promise<void> {
   const doneAt = new Date().toISOString()
   if (reminderId.startsWith('guest-')) {
     const draft = loadGuestDraft()
-    if (draft) updateGuestReminder(draft, reminderId, { doneAt })
+    if (draft) completeGuestReminder(draft, reminderId, doneAt)
     track('reminder_done', { signed_in: false, from: 'notification' })
     return
   }
-  if (!(await signedIn())) return
-  await setReminderDone(reminderId, doneAt)
-  track('reminder_done', { signed_in: true, from: 'notification' })
+  const userId = await signedInUserId()
+  if (!userId) return
+  const reminder = await getReminder(reminderId)
+  if (!reminder || reminder.doneAt) return
+  await completeReminder(userId, reminder, doneAt)
+  track('reminder_done', { signed_in: true, from: 'notification', every_year: reminder.everyYear })
 }
 
 async function moveToTomorrowFromNotification(reminderId: string): Promise<void> {
@@ -157,7 +160,7 @@ async function moveToTomorrowFromNotification(reminderId: string): Promise<void>
     if (draft) updateGuestReminder(draft, reminderId, { day })
     return
   }
-  if (!(await signedIn())) return
+  if (!(await signedInUserId())) return
   await moveReminder(reminderId, day)
 }
 

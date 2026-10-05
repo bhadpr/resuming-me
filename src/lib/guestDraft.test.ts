@@ -21,7 +21,9 @@ import {
   setGuestStep,
   upsertGuestActivity,
   addGuestReminder,
+  completeGuestReminder,
   removeGuestReminder,
+  reopenGuestReminder,
   updateGuestReminder,
   type GuestDraft,
 } from './guestDraft'
@@ -438,8 +440,8 @@ describe('guest reminders', () => {
     const saved = saveGuestDraft({
       ...draft,
       reminders: [
-        { id: 'old', text: 'Old', day: '2026-10-01', hour: null, minute: null, remindBefore: false, doneAt: old },
-        { id: 'open', text: 'Open', day: '2026-10-01', hour: null, minute: null, remindBefore: false, doneAt: null },
+        { ...stored('old', 'Old'), doneAt: old },
+        { ...stored('open', 'Open'), doneAt: null },
       ],
     })
     expect(saved.reminders.map((item) => item.id)).toEqual(['open'])
@@ -457,4 +459,51 @@ describe('guest reminders', () => {
     addGuestReminder(draft, { text: 'Post office', day: '2026-10-08', hour: null, minute: null })
     expect(loadGuestDraft()?.reminders.map((item) => item.remindBefore)).toEqual([true, false])
   })
+
+  it('makes next year’s copy when an every-year reminder is done, and takes it back on Not done', () => {
+    memoryStorage()
+    let draft = addGuestReminder(ensureGuestDraft('UTC'), {
+      text: 'Wedding anniversary',
+      day: '2026-10-10',
+      hour: null,
+      minute: null,
+      kind: 'event',
+      everyYear: true,
+    })!
+    const id = draft.reminders[0].id
+    draft = completeGuestReminder(draft, id, new Date().toISOString())
+    expect(draft.reminders).toHaveLength(2)
+    expect(draft.reminders[1]).toMatchObject({
+      text: 'Wedding anniversary',
+      day: '2027-10-10',
+      kind: 'event',
+      everyYear: true,
+      doneAt: null,
+    })
+
+    draft = reopenGuestReminder(draft, id)
+    expect(draft.reminders).toHaveLength(1)
+    expect(draft.reminders[0]).toMatchObject({ id, doneAt: null })
+  })
+
+  it('does not copy a one-off reminder when it is done', () => {
+    memoryStorage()
+    let draft = addGuestReminder(ensureGuestDraft('UTC'), { text: 'Post office', day: '2026-10-06', hour: null, minute: null })!
+    draft = completeGuestReminder(draft, draft.reminders[0].id, new Date().toISOString())
+    expect(draft.reminders).toHaveLength(1)
+    expect(draft.reminders[0].kind).toBe('other')
+  })
 })
+
+function stored(id: string, text: string) {
+  return {
+    id,
+    text,
+    day: '2026-10-01',
+    hour: null,
+    minute: null,
+    remindBefore: false,
+    kind: 'other' as const,
+    everyYear: false,
+  }
+}

@@ -12,7 +12,18 @@ import {
 import type { Reminder } from './reminderSchedule'
 
 function reminder(id: string, day: string, extra: Partial<Reminder> = {}): Reminder {
-  return { id, text: id, day, hour: null, minute: null, remindBefore: false, doneAt: null, ...extra }
+  return {
+    id,
+    text: id,
+    day,
+    hour: null,
+    minute: null,
+    remindBefore: false,
+    kind: 'other',
+    everyYear: false,
+    doneAt: null,
+    ...extra,
+  }
 }
 
 const copy: ReminderAlertCopy = {

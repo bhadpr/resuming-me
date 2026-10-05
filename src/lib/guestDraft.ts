@@ -14,7 +14,10 @@ import {
   announceRemindersChanged,
   cleanReminderText,
   isDay,
+  isNextYearCopyOf,
+  nextYearCopy,
   openReminderCount,
+  reminderKindOf,
   type Reminder,
   type ReminderInput,
 } from './reminderSchedule'
@@ -458,25 +461,57 @@ function normalizeGuestReminders(list: unknown, now = Date.now()): Reminder[] {
       hour: timed ? item.hour! : null,
       minute: timed ? item.minute! : null,
       remindBefore: item.remindBefore === true,
+      kind: reminderKindOf(item.kind),
+      everyYear: item.everyYear === true,
       doneAt,
     })
   }
   return reminders
 }
 
-/** Null when the guest already has the most open reminders allowed. */
-export function addGuestReminder(draft: GuestDraft, input: ReminderInput): GuestDraft | null {
-  if (openReminderCount(draft.reminders) >= REMINDER_OPEN_MAX) return null
-  const reminder: Reminder = {
+function newGuestReminder(input: ReminderInput): Reminder {
+  return {
     id: `guest-${newId()}`,
     text: cleanReminderText(input.text),
     day: input.day,
     hour: input.hour,
     minute: input.hour == null ? null : input.minute,
     remindBefore: input.remindBefore === true,
+    kind: reminderKindOf(input.kind),
+    everyYear: input.everyYear === true,
     doneAt: null,
   }
-  const next = saveGuestDraft({ ...draft, reminders: [...draft.reminders, reminder] })
+}
+
+/** Null when the guest already has the most open reminders allowed. */
+export function addGuestReminder(draft: GuestDraft, input: ReminderInput): GuestDraft | null {
+  if (openReminderCount(draft.reminders) >= REMINDER_OPEN_MAX) return null
+  const next = saveGuestDraft({ ...draft, reminders: [...draft.reminders, newGuestReminder(input)] })
+  announceRemindersChanged()
+  return next
+}
+
+/** Marks done. An every-year reminder also gets next year's copy, unless the list is full. */
+export function completeGuestReminder(draft: GuestDraft, id: string, doneAt: string): GuestDraft {
+  const reminder = draft.reminders.find((item) => item.id === id)
+  if (!reminder) return draft
+  let reminders = draft.reminders.map((item) => (item.id === id ? { ...item, doneAt } : item))
+  if (reminder.everyYear && openReminderCount(reminders) < REMINDER_OPEN_MAX) {
+    reminders = [...reminders, newGuestReminder(nextYearCopy(reminder))]
+  }
+  const next = saveGuestDraft({ ...draft, reminders })
+  announceRemindersChanged()
+  return next
+}
+
+/** Puts a done reminder back, and removes the next-year copy that Done made. */
+export function reopenGuestReminder(draft: GuestDraft, id: string): GuestDraft {
+  const reminder = draft.reminders.find((item) => item.id === id)
+  if (!reminder) return draft
+  const reminders = draft.reminders
+    .filter((item) => !(reminder.everyYear && isNextYearCopyOf(item, reminder)))
+    .map((item) => (item.id === id ? { ...item, doneAt: null } : item))
+  const next = saveGuestDraft({ ...draft, reminders })
   announceRemindersChanged()
   return next
 }

@@ -292,6 +292,16 @@ export const en = {
     dayBefore: 'Also remind me the day before',
     dayBeforeHint: 'Comes the evening before, at {time}.',
     alertsAppOnly: 'Alerts come on the Android app.',
+    kind: 'What kind? (optional)',
+    kinds: {
+      errand: 'Errand',
+      bill: 'Bill or tax',
+      doctor: 'Doctor',
+      event: 'Event',
+      other: 'Other',
+    },
+    everyYear: 'Every year',
+    everyYearHint: "For birthdays, anniversaries, and festivals. When it's done, next year's comes back.",
   },
   welcome: {
     days: "It's been a few days. Welcome back.",

@@ -10,7 +10,9 @@ import {
 import {
   REMINDERS_CHANGED,
   REMINDER_OPEN_MAX,
+  isNextYearCopyOf,
   openReminderCount,
+  reminderKindOf,
   remindersComingUp,
   remindersDoneToday,
   remindersForToday,
@@ -20,10 +22,11 @@ import {
 import {
   ReminderCapError,
   addReminder,
+  completeReminder,
   deleteReminder,
   listReminders,
   moveReminder,
-  setReminderDone,
+  reopenReminder,
   updateReminder,
 } from '../lib/reminders'
 import { track } from '../lib/track'
@@ -155,6 +158,8 @@ export function useReminders(userId: string | undefined) {
       track('reminder_added', {
         has_time: input.hour != null,
         day_before: input.remindBefore === true,
+        kind: saved.kind,
+        every_year: saved.everyYear,
         signed_in: true,
       })
       return 'ok'
@@ -166,7 +171,12 @@ export function useReminders(userId: string | undefined) {
 
   async function update(id: string, input: ReminderInput): Promise<void> {
     await updateReminder(id, input)
-    patchLocal(id, { ...input, remindBefore: input.remindBefore === true })
+    patchLocal(id, {
+      ...input,
+      remindBefore: input.remindBefore === true,
+      kind: reminderKindOf(input.kind),
+      everyYear: input.everyYear === true,
+    })
   }
 
   async function remove(id: string): Promise<void> {
@@ -176,13 +186,20 @@ export function useReminders(userId: string | undefined) {
 
   async function markDone(reminder: Reminder): Promise<boolean> {
     const doneAt = new Date().toISOString()
-    const ok = await run(reminder.id, { doneAt }, () => setReminderDone(reminder.id, doneAt))
-    if (ok) track('reminder_done', { signed_in: true })
-    return ok
+    if (!userId) return false
+    const ok = await run(reminder.id, { doneAt }, () => completeReminder(userId, reminder, doneAt))
+    if (!ok) return false
+    track('reminder_done', { signed_in: true, every_year: reminder.everyYear })
+    if (reminder.everyYear) await reload(true)
+    return true
   }
 
   async function markNotDone(reminder: Reminder): Promise<boolean> {
-    return run(reminder.id, { doneAt: null }, () => setReminderDone(reminder.id, null))
+    const ok = await run(reminder.id, { doneAt: null }, () => reopenReminder(reminder))
+    if (ok && reminder.everyYear) {
+      setReminders((current) => current.filter((item) => !isNextYearCopyOf(item, reminder)))
+    }
+    return ok
   }
 
   async function move(reminder: Reminder, day: string): Promise<boolean> {

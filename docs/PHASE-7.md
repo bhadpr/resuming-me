@@ -98,13 +98,14 @@ At the end of M3, reminders have a kind and an icon, and birthdays come back eac
 ### P7-07 — Kind of reminder
 
 - An optional kind with an icon: **Errand**, **Bill or tax**, **Doctor**, **Event**, **Other**.
-- The kind is for the icon and the Coming up list. It does not change how the reminder works.
+- The kind is for the icon on Today and in the Reminders list on Activities. It does not change how the reminder works.
 - No kind is required. Skipping it is Other.
 
 ### P7-08 — Every year
 
 - An optional **Every year** switch for birthdays, anniversaries, and festivals.
-- When an every-year reminder is marked done, the next year's copy appears in Coming up.
+- When an every-year reminder is marked done, the next year's copy appears in the Reminders list on Activities. Undo or Not done takes that copy away again.
+- 29 February comes back on 28 February in years without it.
 - No weekly or custom repeats. Repeating every day or week is a habit, and habits already exist.
 
 ## Milestone 4 — Off the phone

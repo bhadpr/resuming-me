@@ -2,6 +2,7 @@ import { useState, type FormEvent } from 'react'
 import { Capacitor } from '@capacitor/core'
 import { useLocale } from '../hooks/useLocale'
 import {
+  REMINDER_KINDS,
   REMINDER_PARTS,
   REMINDER_TEXT_MAX,
   formatReminderTime,
@@ -12,9 +13,11 @@ import {
   type Reminder,
   type ReminderInput,
   type ReminderIssue,
+  type ReminderKind,
   type ReminderPart,
 } from '../lib/reminderSchedule'
 import { Icon } from './Icon'
+import { ReminderKindIcon } from './ReminderKindIcon'
 
 type DayChoice = 'today' | 'tomorrow' | 'pick'
 type TimeChoice = ReminderPart | 'any' | 'pick'
@@ -57,6 +60,8 @@ export function ReminderForm({ initial, today, saving, error, onSubmit, onDelete
     initial?.hour != null ? `${pad(initial.hour)}:${pad(initial.minute ?? 0)}` : '10:00',
   )
   const [remindBefore, setRemindBefore] = useState(initial?.remindBefore ?? false)
+  const [kind, setKind] = useState<ReminderKind | null>(initial?.kind ?? null)
+  const [everyYear, setEveryYear] = useState(initial?.everyYear ?? false)
   const [issue, setIssue] = useState<ReminderIssue | null>(null)
   const [confirmDelete, setConfirmDelete] = useState(false)
   const canRemindBefore = resolvedDay() > today
@@ -80,7 +85,14 @@ export function ReminderForm({ initial, today, saving, error, onSubmit, onDelete
 
   async function submit(event: FormEvent) {
     event.preventDefault()
-    const input: ReminderInput = { text, day: resolvedDay(), ...resolvedTime(), remindBefore: dayBeforeOn }
+    const input: ReminderInput = {
+      text,
+      day: resolvedDay(),
+      ...resolvedTime(),
+      remindBefore: dayBeforeOn,
+      kind: kind ?? 'other',
+      everyYear,
+    }
     const nextIssue = validateReminder(input)
     setIssue(nextIssue)
     if (nextIssue) return
@@ -120,6 +132,22 @@ export function ReminderForm({ initial, today, saving, error, onSubmit, onDelete
         />
       </label>
 
+      <p className="reminder-question">{t('reminders.kind')}</p>
+      <div className="reminder-choices">
+        {REMINDER_KINDS.map((choice) => (
+          <button
+            key={choice}
+            type="button"
+            className={choiceClass(kind === choice)}
+            aria-pressed={kind === choice}
+            onClick={() => setKind((current) => (current === choice ? null : choice))}
+          >
+            <ReminderKindIcon kind={choice} />
+            {t(`reminders.kinds.${choice}`)}
+          </button>
+        ))}
+      </div>
+
       <p className="reminder-question">{t('reminders.day')}</p>
       <div className="reminder-choices">
         {(['today', 'tomorrow', 'pick'] as const).map((choice) => (
@@ -144,6 +172,14 @@ export function ReminderForm({ initial, today, saving, error, onSubmit, onDelete
           onChange={(event) => setPickedDay(event.target.value)}
         />
       )}
+
+      <label className="reminder-switch">
+        <input type="checkbox" checked={everyYear} onChange={(event) => setEveryYear(event.target.checked)} />
+        <span>
+          {t('reminders.everyYear')}
+          <span className="reminder-switch-hint">{t('reminders.everyYearHint')}</span>
+        </span>
+      </label>
 
       <p className="reminder-question">{t('reminders.time')}</p>
       <div className="reminder-choices">
