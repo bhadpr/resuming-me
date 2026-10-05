@@ -2999,10 +2999,6 @@ select.field-input.language-select {
   opacity: 0.8;
 }
 
-.reminder-choice .habit-icon {
-  margin-right: var(--space-1);
-}
-
 .activity-emoji-art.reminder-mark {
   width: 2.75rem;
   height: 2.75rem;
@@ -3011,6 +3007,16 @@ select.field-input.language-select {
 .today-row .activity-emoji-art.reminder-mark {
   width: 3.5rem;
   height: 3.5rem;
+}
+
+.reminder-choice:has(.reminder-mark) {
+  padding-left: 0.4rem;
+}
+
+.reminder-choice .activity-emoji-art.reminder-mark {
+  width: 2rem;
+  height: 2rem;
+  margin-right: var(--space-2);
 }
 
 .reminder-switch {

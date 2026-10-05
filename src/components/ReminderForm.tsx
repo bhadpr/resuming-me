@@ -17,7 +17,7 @@ import {
   type ReminderPart,
 } from '../lib/reminderSchedule'
 import { Icon } from './Icon'
-import { ReminderKindIcon } from './ReminderKindIcon'
+import { ReminderKindMark } from './ReminderKindIcon'
 
 type DayChoice = 'today' | 'tomorrow' | 'pick'
 type TimeChoice = ReminderPart | 'any' | 'pick'
@@ -142,7 +142,7 @@ export function ReminderForm({ initial, today, saving, error, onSubmit, onDelete
             aria-pressed={kind === choice}
             onClick={() => setKind((current) => (current === choice ? null : choice))}
           >
-            <ReminderKindIcon kind={choice} />
+            <ReminderKindMark kind={choice} />
             {t(`reminders.kinds.${choice}`)}
           </button>
         ))}
