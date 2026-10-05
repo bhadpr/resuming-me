@@ -14,7 +14,7 @@ Four milestones. Each one is usable on its own. Finish a milestone before starti
 
 - A reminder is not a habit. No streak, no Insight, no "you moved this three times."
 - An unfinished reminder is not marked late or red. It stays on Today until it is done or removed.
-- Bottom nav stays four tabs. Reminders live on Today, with the upcoming ones on Activities.
+- Bottom nav stays four tabs. Reminders live on Today, and all open ones are listed on Activities.
 - No calendar grid. Days are chips: Today, Tomorrow, Pick a date.
 - A time is optional. A reminder with no time is for "any time that day."
 - No contacts, calendar, or location permission. No sharing with other people.
@@ -28,7 +28,7 @@ Four milestones. Each one is usable on its own. Finish a milestone before starti
 | M1 See it on Today | P7-01 Reminder records | M |
 | | P7-02 Add a reminder | M |
 | | P7-03 Reminders on Today | M |
-| | P7-04 Coming up | S |
+| | P7-04 Reminders on Activities | S |
 | M2 Phone alerts | P7-05 Alert at the time | M |
 | | P7-06 A day before | S |
 | M3 Easier to add | P7-07 Kind of reminder | S |
@@ -66,10 +66,11 @@ One screen, reached from **Add reminder** on Today, next to Add habit.
 - A reminder from an earlier day that is still open stays on Today with a quiet "From Tuesday" line. It does not turn red.
 - Edit and delete from the reminder itself.
 
-### P7-04 — Coming up
+### P7-04 — Reminders on Activities
 
-- The Activities tab gets a **Coming up** list: open reminders after today, by date.
-- Same edit, move, and delete as on Today.
+- The Activities tab gets a **Reminders** section below the habits, with its own **Add reminder** button, like Medicines on Vitals.
+- It lists every open reminder by day: Today first (with earlier open days), then Tomorrow and later dates.
+- Tap a reminder to edit it, change its day, or delete it.
 - Done reminders are not listed. Only today's show, under Done today on Today. No history screen in this phase.
 
 ## Milestone 2 — Phone alerts

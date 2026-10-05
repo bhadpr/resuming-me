@@ -55,7 +55,7 @@ import { TodayScreen } from './TodayScreen'
 import { MedicineSection } from './MedicineSection'
 import { MedicineEditor } from './MedicineForm'
 import { ReminderEditor } from './ReminderForm'
-import { ComingUpList } from './ReminderSection'
+import { ReminderListSection } from './ReminderSection'
 import { OnboardingScreen } from './OnboardingScreen'
 import { InstallPrompt } from './InstallPrompt'
 import { BrandTitle } from './BrandTitle'
@@ -1966,12 +1966,20 @@ export function AppShell() {
                     navigate('/activities/new')
                   }}
                 />
-                <ComingUpList
-                  reminders={reminderState.comingUp}
+                <ReminderListSection
+                  dueNow={reminderState.open}
+                  later={reminderState.comingUp}
                   today={reminderState.today}
-                  busyId={reminderState.busyId}
-                  onMove={(reminder, day) => void reminderState.move(reminder, day)}
-                  onEdit={(reminder) => navigate(`/reminders/${reminder.id}`)}
+                  loading={reminderState.loading}
+                  error={reminderState.error}
+                  onAdd={() => {
+                    setError(null)
+                    navigate('/reminders/new')
+                  }}
+                  onOpen={(reminder) => {
+                    setError(null)
+                    navigate(`/reminders/${reminder.id}`)
+                  }}
                 />
               </>
             )}

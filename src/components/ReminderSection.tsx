@@ -1,17 +1,34 @@
 import { useState } from 'react'
 import { useLocale } from '../hooks/useLocale'
+import type { Locale } from '../lib/i18n'
 import {
   formatReminderDay,
   formatReminderTime,
   tomorrowOf,
   type Reminder,
 } from '../lib/reminderSchedule'
+import { Icon } from './Icon'
+
+/** Time, or any time, plus "From Tuesday" when an earlier day is still open. */
+function reminderWhen(
+  reminder: Reminder,
+  today: string,
+  locale: Locale,
+  t: (key: string, vars?: Record<string, string | number>) => string,
+): string {
+  const when =
+    reminder.hour != null && reminder.minute != null
+      ? formatReminderTime(reminder.hour, reminder.minute, locale)
+      : t('reminders.anyTime')
+  if (reminder.day >= today) return when
+  return `${when} · ${t('reminders.from', { day: formatReminderDay(reminder.day, today, locale) })}`
+}
 
 interface ReminderRowProps {
   reminder: Reminder
   today: string
   busy: boolean
-  onDone?: () => void
+  onDone: () => void
   onMove: (day: string) => void
   onEdit: () => void
 }
@@ -19,34 +36,24 @@ interface ReminderRowProps {
 function ReminderRow({ reminder, today, busy, onDone, onMove, onEdit }: ReminderRowProps) {
   const { locale, t } = useLocale()
   const [picking, setPicking] = useState(false)
-  const tomorrow = tomorrowOf(today)
-  const when =
-    reminder.hour != null && reminder.minute != null
-      ? formatReminderTime(reminder.hour, reminder.minute, locale)
-      : t('reminders.anyTime')
-  const from = reminder.day < today ? t('reminders.from', { day: formatReminderDay(reminder.day, today, locale) }) : null
 
   return (
     <li className="today-row today-row-stack">
       <div className="today-row-main">
         <span className="activity-meta">
           <span className="activity-name reminder-text-line">{reminder.text}</span>
-          <span className="activity-desc">{from ? `${when} · ${from}` : when}</span>
+          <span className="activity-desc">{reminderWhen(reminder, today, locale, t)}</span>
         </span>
-        {onDone && (
-          <span className="today-actions">
-            <button type="button" className="btn btn-primary btn-today" disabled={busy} onClick={onDone}>
-              {t('reminders.done')}
-            </button>
-          </span>
-        )}
+        <span className="today-actions">
+          <button type="button" className="btn btn-primary btn-today" disabled={busy} onClick={onDone}>
+            {t('reminders.done')}
+          </button>
+        </span>
       </div>
       <div className="today-extra">
-        {onDone && (
-          <button type="button" className="today-extra-btn" disabled={busy} onClick={() => onMove(tomorrow)}>
-            {t('reminders.moveTomorrow')}
-          </button>
-        )}
+        <button type="button" className="today-extra-btn" disabled={busy} onClick={() => onMove(tomorrowOf(today))}>
+          {t('reminders.moveTomorrow')}
+        </button>
         <button
           type="button"
           className="today-extra-btn"
@@ -160,48 +167,85 @@ export function ReminderSection({
   )
 }
 
-interface ComingUpListProps {
-  reminders: Reminder[]
+interface ReminderListSectionProps {
+  /** Open reminders for today, including earlier days still open. */
+  dueNow: Reminder[]
+  /** Open reminders after today, by date. */
+  later: Reminder[]
   today: string
-  busyId: string | null
-  onMove: (reminder: Reminder, day: string) => void
-  onEdit: (reminder: Reminder) => void
+  loading: boolean
+  error: string | null
+  onAdd: () => void
+  onOpen: (reminder: Reminder) => void
 }
 
-/** Open reminders after today, grouped by day. Done ones are not listed. */
-export function ComingUpList({ reminders, today, busyId, onMove, onEdit }: ComingUpListProps) {
+/** Every open reminder on the Activity tab, grouped by day. Done ones are not listed. */
+export function ReminderListSection({
+  dueNow,
+  later,
+  today,
+  loading,
+  error,
+  onAdd,
+  onOpen,
+}: ReminderListSectionProps) {
   const { locale, t } = useLocale()
-  if (reminders.length === 0) return null
   const tomorrow = tomorrowOf(today)
-  const days: { day: string; items: Reminder[] }[] = []
-  for (const reminder of reminders) {
-    const last = days[days.length - 1]
-    if (last?.day === reminder.day) last.items.push(reminder)
-    else days.push({ day: reminder.day, items: [reminder] })
+  const groups: { key: string; label: string; items: Reminder[] }[] = []
+  if (dueNow.length > 0) groups.push({ key: 'today', label: t('reminders.today'), items: dueNow })
+  for (const reminder of later) {
+    const last = groups[groups.length - 1]
+    if (last?.key === reminder.day) {
+      last.items.push(reminder)
+      continue
+    }
+    groups.push({
+      key: reminder.day,
+      label: reminder.day === tomorrow ? t('reminders.tomorrow') : formatReminderDay(reminder.day, today, locale),
+      items: [reminder],
+    })
   }
 
   return (
-    <section className="today-section reminder-coming-up" aria-label={t('reminders.comingUp')}>
-      <h3 className="section-label">{t('reminders.comingUp')}</h3>
-      {days.map(({ day, items }) => (
-        <div key={day} className="reminder-day-group">
-          <p className="reminder-day-label">
-            {day === tomorrow ? t('reminders.tomorrow') : formatReminderDay(day, today, locale)}
-          </p>
-          <ul className="today-list">
-            {items.map((reminder) => (
-              <ReminderRow
-                key={reminder.id}
-                reminder={reminder}
-                today={today}
-                busy={busyId === reminder.id}
-                onMove={(next) => onMove(reminder, next)}
-                onEdit={() => onEdit(reminder)}
-              />
-            ))}
-          </ul>
+    <section className="medicine-section reminder-list-section">
+      <div className="screen-heading">
+        <div>
+          <h2>{t('reminders.title')}</h2>
+          <p className="screen-sub">{t('reminders.sub')}</p>
         </div>
-      ))}
+        <button type="button" className="btn btn-primary btn-compact" onClick={onAdd}>
+          {t('reminders.add')}
+        </button>
+      </div>
+
+      {error && <p className="error">{error}</p>}
+
+      {loading && groups.length === 0 ? (
+        <p className="muted-center">{t('reminders.loading')}</p>
+      ) : groups.length === 0 ? (
+        <p className="medicine-empty">{t('reminders.empty')}</p>
+      ) : (
+        groups.map((group) => (
+          <div key={group.key} className="reminder-day-group">
+            <p className="reminder-day-label">{group.label}</p>
+            <ul className="activity-list">
+              {group.items.map((reminder) => (
+                <li key={reminder.id}>
+                  <button type="button" className="activity-row" onClick={() => onOpen(reminder)}>
+                    <span className="activity-meta">
+                      <span className="activity-name reminder-text-line">{reminder.text}</span>
+                      <span className="activity-desc">{reminderWhen(reminder, today, locale, t)}</span>
+                    </span>
+                    <span className="activity-chevron" aria-hidden>
+                      <Icon name="chevron" />
+                    </span>
+                  </button>
+                </li>
+              ))}
+            </ul>
+          </div>
+        ))
+      )}
     </section>
   )
 }

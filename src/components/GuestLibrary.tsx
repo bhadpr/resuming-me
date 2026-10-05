@@ -15,7 +15,7 @@ import {
 } from '../lib/guestDraft'
 import { isLoggedVital, isNumberEntryVital, isStepsHabit } from '../lib/onboardingFlow'
 import { Icon, type IconName } from './Icon'
-import { GuestComingUp } from './GuestReminders'
+import { GuestReminderList } from './GuestReminders'
 
 function useGuestDraft(): GuestDraft | null {
   const [draft, setDraft] = useState<GuestDraft | null>(() => loadGuestDraft())
@@ -114,7 +114,7 @@ export function GuestActivitiesPage() {
         items={habits}
         onAdd={() => navigate('/start?step=1&add=1')}
       />
-      <GuestComingUp />
+      <GuestReminderList />
     </>
   )
 }
