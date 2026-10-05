@@ -3,6 +3,7 @@ import { visibleName } from '../lib/catalogName'
 import { useLocale } from '../hooks/useLocale'
 import { ArchivedFilter } from './ArchivedFilter'
 import { HabitMark } from './HabitMark'
+import { Icon } from './Icon'
 
 interface ActivityListProps {
   activities: Activity[]
@@ -50,7 +51,7 @@ export function ActivityList({
         <p className="muted-center">{t('list.loading')}</p>
       ) : visible.length === 0 ? (
         <section className="empty-state">
-          <p className="empty-state-emoji">📌</p>
+          <span className="empty-state-icon"><Icon name="activities" size={24} /></span>
           <h2>{t('list.empty')}</h2>
           <p>{t('list.activityEmpty')}</p>
           <button type="button" className="btn btn-primary" onClick={onAdd}>
@@ -75,7 +76,7 @@ export function ActivityList({
                   <span className="activity-desc">{describeActivity(activity)}</span>
                 </span>
                 <span className="activity-chevron" aria-hidden>
-                  ›
+                  <Icon name="chevron" />
                 </span>
               </button>
             </li>

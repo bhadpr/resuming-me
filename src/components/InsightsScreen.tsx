@@ -21,6 +21,7 @@ import { useLocale } from '../hooks/useLocale'
 import { ActivityInsightChart } from './ActivityInsightChart'
 import { HabitMark } from './HabitMark'
 import { MetricTrendChart } from './MetricTrendChart'
+import { Icon } from './Icon'
 
 function chartTarget(activity: Activity | undefined): number | null {
   if (!activity || activity.type === 'deadline') return null
@@ -185,7 +186,7 @@ export function InsightsScreen({
         <p className="muted-center">{t('list.loading')}</p>
       ) : empty ? (
         <section className="empty-state">
-          <p className="empty-state-emoji">📊</p>
+          <span className="empty-state-icon"><Icon name="insights" size={24} /></span>
           <h2>{t('insights.needDays')}</h2>
           <p>{t('insights.addOne')}</p>
           <div className="onboarding-chips">
@@ -450,8 +451,8 @@ export function InsightsScreen({
                   onClick={() => toggle('skip-days')}
                   aria-expanded={isOpen('skip-days')}
                 >
-                  <span className="activity-emoji" aria-hidden>
-                    📅
+                  <span className="activity-emoji insights-row-icon" aria-hidden>
+                    <Icon name="calendar" size={24} />
                   </span>
                   <span className="activity-meta">
                     <span className="activity-name">{t('insights.whenSkip')}</span>

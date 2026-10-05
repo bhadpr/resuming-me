@@ -41,6 +41,8 @@ import {
   saveWelcomeBackState,
 } from '../lib/freshStarts'
 import { useDailyDigest } from '../hooks/useDailyDigest'
+import { useMedicines } from '../hooks/useMedicines'
+import { deleteMedicine, saveMedicine } from '../lib/medicines'
 import { useTimer } from '../hooks/useTimer'
 import { ActivityList } from './ActivityList'
 import { ActivityDetail } from './ActivityDetail'
@@ -48,10 +50,11 @@ import { MetricList } from './MetricList'
 import { MetricForm } from './MetricForm'
 import { MetricDetail } from './MetricDetail'
 import { TodayScreen } from './TodayScreen'
+import { MedicineSection } from './MedicineSection'
+import { MedicineEditor } from './MedicineForm'
 import { OnboardingScreen } from './OnboardingScreen'
 import { InstallPrompt } from './InstallPrompt'
 import { BrandTitle } from './BrandTitle'
-import { LanguagePicker } from './LanguagePicker'
 import { BottomNav } from './BottomNav'
 import { Toast } from './Toast'
 import { SiteFooter } from './SiteFooter'
@@ -70,6 +73,12 @@ const AnalyticsScreen = lazy(() =>
 )
 const AdminFeedbackScreen = lazy(() =>
   import('./AdminFeedbackScreen').then((m) => ({ default: m.AdminFeedbackScreen })),
+)
+const AdminGroupsScreen = lazy(() =>
+  import('./AdminGroupsScreen').then((m) => ({ default: m.AdminGroupsScreen })),
+)
+const ThemesScreen = lazy(() =>
+  import('./ThemesScreen').then((m) => ({ default: m.ThemesScreen })),
 )
 import {
   activityTargetMinutes,
@@ -185,6 +194,7 @@ import {
   type OnboardingCompletePayload,
 } from '../lib/onboarding'
 import { readTodayCache, writeTodayCache } from '../lib/todayCache'
+import { Icon } from './Icon'
 
 function ScreenChunkFallback() {
   return <p className="muted-center">Loading…</p>
@@ -268,6 +278,7 @@ export function AppShell() {
   const view = parseAppPath(location.pathname)
   const tab = tabFromView(view)
   const settingsOpen = view?.name === 'settings'
+  const themesOpen = view?.name === 'themes'
   const adminPage = view?.name === 'admin' ? view.page : null
   const activityScreen =
     view?.name === 'activities'
@@ -882,6 +893,8 @@ export function AppShell() {
     quietSchedule,
   )
 
+  const medicineState = useMedicines(user?.id)
+
   const activeMetrics = useMemo(
     () => metrics.filter((m) => !m.archived),
     [metrics],
@@ -903,12 +916,27 @@ export function AppShell() {
       trackPageView('/admin/feedback', 'Admin feedback')
       return
     }
+    if (adminPage === 'groups') {
+      trackPageView(location.pathname, 'Group numbers')
+      return
+    }
+    if (themesOpen) {
+      trackPageView('/settings/themes', 'Themes')
+      return
+    }
     if (settingsOpen) {
       trackPageView('/settings', 'Settings')
       return
     }
     if (reviewWeekStart) {
       trackPageView(`/review/${reviewWeekStart}`, 'Weekly review')
+      return
+    }
+    if (view?.name === 'medicines') {
+      trackPageView(
+        view.medicineId ? `/medicines/${view.medicineId}` : '/medicines/new',
+        'Medicine',
+      )
       return
     }
     if (tab === 'today') trackPageView('/today', 'Today')
@@ -918,18 +946,22 @@ export function AppShell() {
       trackPageView('/insights', 'Insights')
       track('insights_viewed', { range: insightsWindow })
     }
-  }, [tab, settingsOpen, adminPage, location.pathname, insightsWindow, reviewWeekStart])
+  }, [tab, settingsOpen, themesOpen, adminPage, location.pathname, insightsWindow, reviewWeekStart])
 
   useEffect(() => {
-    if (!isAdmin && adminPage) navigate('/today', { replace: true })
+    if (!isAdmin && adminPage && adminPage !== 'groups') navigate('/today', { replace: true })
   }, [isAdmin, adminPage, navigate])
 
   const appTitle = adminPage
     ? adminPage === 'analytics'
       ? 'Analytics · Resuming'
-      : 'Feedback · Resuming'
+      : adminPage === 'groups'
+        ? 'Group numbers · Resuming'
+        : 'Feedback · Resuming'
     : reviewWeekStart
       ? 'This week · Resuming'
+    : themesOpen
+      ? 'Themes · Resuming'
     : settingsOpen
       ? 'Settings · Resuming'
       : tab === 'today'
@@ -1643,7 +1675,7 @@ export function AppShell() {
 
   const dateLabel = formatLongDate(locale)
 
-  if (view?.name === 'admin' && !isAdmin) {
+  if (view?.name === 'admin' && view.page !== 'groups' && !isAdmin) {
     return <Navigate to="/settings" replace />
   }
 
@@ -1654,39 +1686,31 @@ export function AppShell() {
           <h1 className="app-title">Analytics</h1>
         ) : adminPage === 'feedback' ? (
           <h1 className="app-title">Feedback</h1>
+        ) : adminPage === 'groups' ? (
+          <h1 className="app-title">Group numbers</h1>
+        ) : themesOpen ? (
+          <h1 className="app-title">{t('settings.themes')}</h1>
         ) : settingsOpen ? (
-          <h1 className="app-title">Settings</h1>
+          <h1 className="app-title">{t('settings.title')}</h1>
         ) : (
           <BrandTitle className="app-title" />
         )}
         <div className="app-header-actions">
-          <LanguagePicker />
           <button
             type="button"
-            className={`icon-btn ${settingsOpen || adminPage ? 'icon-btn-active' : ''}`}
-            aria-label={settingsOpen || adminPage ? 'Close settings' : 'Open settings'}
-            aria-pressed={Boolean(settingsOpen || adminPage)}
+            className={`icon-btn ${settingsOpen || themesOpen || adminPage ? 'icon-btn-active' : ''}`}
+            aria-label={settingsOpen || themesOpen || adminPage ? t('settings.close') : t('settings.open')}
+            aria-pressed={Boolean(settingsOpen || themesOpen || adminPage)}
             onClick={() => {
               setError(null)
-              if (adminPage || settingsOpen) {
+              if (adminPage || settingsOpen || themesOpen) {
                 navigateBack(navigate, '/today')
                 return
               }
               navigate('/settings')
             }}
           >
-            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8" aria-hidden>
-              <path
-                strokeLinecap="round"
-                strokeLinejoin="round"
-                d="M10.325 4.317c.426-1.756 2.924-1.756 3.35 0a1.724 1.724 0 0 0 2.573 1.066c1.543-.94 3.31.826 2.37 2.37a1.724 1.724 0 0 0 1.065 2.572c1.756.426 1.756 2.924 0 3.35a1.724 1.724 0 0 0-1.066 2.573c.94 1.543-.826 3.31-2.37 2.37a1.724 1.724 0 0 0-2.572 1.065c-.426 1.756-2.924 1.756-3.35 0a1.724 1.724 0 0 0-2.573-1.066c-1.543.94-3.31-.826-2.37-2.37a1.724 1.724 0 0 0-1.065-2.572c-1.756-.426-1.756-2.924 0-3.35a1.724 1.724 0 0 0 1.066-2.573c-.94-1.543.826-3.31 2.37-2.37.996.608 2.296.07 2.572-1.065Z"
-              />
-              <path
-                strokeLinecap="round"
-                strokeLinejoin="round"
-                d="M15 12a3 3 0 1 1-6 0 3 3 0 0 1 6 0Z"
-              />
-            </svg>
+            <Icon name="settings" size={24} />
           </button>
         </div>
       </header>
@@ -1701,9 +1725,19 @@ export function AppShell() {
           <Suspense fallback={<ScreenChunkFallback />}>
             <AdminFeedbackScreen />
           </Suspense>
+        ) : adminPage === 'groups' ? (
+          <Suspense fallback={<ScreenChunkFallback />}>
+            <AdminGroupsScreen
+              groupId={view?.name === 'admin' && view.page === 'groups' ? view.groupId : undefined}
+            />
+          </Suspense>
         ) : (
           <>
-            {settingsOpen ? (
+            {themesOpen ? (
+              <Suspense fallback={<ScreenChunkFallback />}>
+                <ThemesScreen onBack={() => navigate('/settings')} />
+              </Suspense>
+            ) : settingsOpen ? (
               <Suspense fallback={<ScreenChunkFallback />}>
                 <SettingsScreen
                   isAdmin={isAdmin}
@@ -1720,6 +1754,10 @@ export function AppShell() {
                     if (!isAdmin) return
                     navigate('/admin/feedback')
                   }}
+                  onOpenGroups={(groupId) => {
+                    navigate(groupId ? `/admin/groups/${groupId}` : '/admin/groups')
+                  }}
+                  onOpenThemes={() => navigate('/settings/themes')}
                   onOpenPrivacy={() => navigate('/privacy')}
                   onSignOut={() => void signOut()}
                   showEverything={showEverything}
@@ -1818,10 +1856,6 @@ export function AppShell() {
                     onWelcomeStart={handleWelcomeStart}
                     onWelcomeDismiss={dismissWelcomeBack}
                     onFreshStart={() => void handleFreshStart()}
-                    onEmptySetup={() => {
-                      writeDismissedFlag(ONBOARDING_DISMISS_KEY, false)
-                      setOnboardingDismissed(false)
-                    }}
                     onAddActivity={() => {
                       setError(null)
                       navigate('/activities/new')
@@ -1836,6 +1870,10 @@ export function AppShell() {
                     }
                     onOpenReview={(weekStart) => navigate(`/review/${weekStart}?source=app`)}
                     focusActivityId={focusApplies(focusWeekStart, today) ? focusActivityId : null}
+                    medicineDoses={medicineState.doses}
+                    medicineBusyKey={medicineState.busyKey}
+                    medicineError={medicineState.error}
+                    onToggleMedicineDose={(dose) => void medicineState.toggleDose(dose)}
                   />
                 )}
 
@@ -1872,7 +1910,8 @@ export function AppShell() {
                     )
                   }
                 >
-                  ← Back
+                  <Icon name="back" />
+                  Back
                 </button>
                 <h2 className="form-title">
                   {selectedActivity
@@ -2075,7 +2114,7 @@ export function AppShell() {
           </>
         )}
 
-        {tab === 'metrics' && (
+        {tab === 'metrics' && view?.name === 'numbers' && (
           <>
             {metricScreen.name === 'list' && (
               <>
@@ -2089,6 +2128,19 @@ export function AppShell() {
                   onAdd={() => {
                     setError(null)
                     navigate('/numbers/new')
+                  }}
+                />
+                <MedicineSection
+                  medicines={medicineState.medicines}
+                  loading={medicineState.loading}
+                  error={medicineState.error}
+                  onAdd={() => {
+                    setError(null)
+                    navigate('/medicines/new')
+                  }}
+                  onOpen={(medicine) => {
+                    setError(null)
+                    navigate(`/medicines/${medicine.id}`)
                   }}
                 />
               </>
@@ -2108,7 +2160,8 @@ export function AppShell() {
                     )
                   }
                 >
-                  ← Back
+                  <Icon name="back" />
+                  Back
                 </button>
                 <h2 className="form-title">
                   {selectedMetric
@@ -2201,6 +2254,45 @@ export function AppShell() {
               </section>
             )}
           </>
+        )}
+
+        {view?.name === 'medicines' && (
+          <MedicineEditor
+            medicineId={view.medicineId}
+            medicines={medicineState.medicines}
+            loading={medicineState.loading}
+            saving={saving}
+            error={error ?? medicineState.error}
+            onSubmit={async (input) => {
+              if (!user || view?.name !== 'medicines') return
+              const medicineId = view.medicineId
+              setSaving(true)
+              setError(null)
+              try {
+                await saveMedicine(user.id, input, medicineId)
+                await medicineState.reload(true)
+                navigate('/numbers')
+              } catch (err) {
+                setError(err instanceof Error ? err.message : 'Could not save that medicine')
+              } finally {
+                setSaving(false)
+              }
+            }}
+            onDelete={async (medicine) => {
+              if (!user) return
+              setSaving(true)
+              setError(null)
+              try {
+                await deleteMedicine(user.id, medicine)
+                await medicineState.reload(true)
+                navigate('/numbers')
+              } catch (err) {
+                setError(err instanceof Error ? err.message : 'Could not delete that medicine')
+              } finally {
+                setSaving(false)
+              }
+            }}
+          />
         )}
 
         {tab === 'insights' && (

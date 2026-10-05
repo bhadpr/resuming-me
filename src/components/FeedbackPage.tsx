@@ -1,6 +1,7 @@
 import { useState, type FormEvent } from 'react'
 import { submitFeedback } from '../lib/feedback'
 import { PRODUCT_NAME } from '../lib/site'
+import { Icon } from './Icon'
 
 interface FeedbackPageProps {
   onBack: () => void
@@ -42,7 +43,8 @@ export function FeedbackPage({ onBack, defaultName = '', defaultEmail = '' }: Fe
   return (
     <div className="feedback-page">
       <button type="button" className="btn btn-ghost btn-sm back-btn" onClick={onBack}>
-        ← Back
+        <Icon name="back" />
+        Back
       </button>
 
       <div className="screen-heading">

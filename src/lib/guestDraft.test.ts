@@ -7,7 +7,9 @@ import {
   guestCountProgress,
   guestSessionSeconds,
   guestTimerProgress,
+  guestDosesOnDate,
   guestDraftToPayload,
+  toggleGuestDose,
   clampStep,
   clearGuestDraft,
   createGuestDraft,
@@ -342,6 +344,35 @@ describe('guest draft storage', () => {
     expect(loaded?.activities[0]?.templateId).toBe('music')
     expect(loaded?.activities[0]?.name).toBe('Music')
     expect(loaded?.activities[0]?.emoji).toBe('🎵')
+  })
+
+  it('shows a welcome bottle on today and remembers a taken dose', () => {
+    memoryStorage()
+    const draft = saveGuestDraft({
+      ...createGuestDraft(new Date('2026-10-03T12:00:00.000Z'), 'UTC'),
+      medicines: [
+        {
+          name: 'Vitamin D',
+          weekdays: [0, 1, 2, 3, 4, 5, 6],
+          times: [{ hour: 8, minute: 0, meal: 'before' }],
+          photo: 'data:image/jpeg;base64,abc',
+          system: 'ayurvedic',
+        },
+      ],
+    })
+    expect(draft.medicines[0]?.system).toBe('ayurvedic')
+    const doses = guestDosesOnDate(draft, '2026-10-03')
+    expect(doses).toHaveLength(1)
+    expect(doses[0]).toMatchObject({
+      name: 'Vitamin D',
+      hour: 8,
+      minute: 0,
+      meal: 'before',
+      photoUrl: 'data:image/jpeg;base64,abc',
+      taken: false,
+    })
+    const taken = toggleGuestDose(draft, doses[0]!, '2026-10-03')
+    expect(guestDosesOnDate(taken, '2026-10-03')[0]?.taken).toBe(true)
   })
 
   it('clear removes the draft', () => {

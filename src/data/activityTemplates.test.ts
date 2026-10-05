@@ -13,6 +13,7 @@ describe('activity templates', () => {
     expect(HABIT_GROUPS.flatMap((group) => group.ids).map((id) => templateById(id)?.label)).toEqual([
       'Walking',
       'Running',
+      'Steps',
       'Strength',
       'Exercises',
       'Bhastrika',

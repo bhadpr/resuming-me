@@ -3,6 +3,7 @@ import { visibleName } from '../lib/catalogName'
 import { useLocale } from '../hooks/useLocale'
 import { ArchivedFilter } from './ArchivedFilter'
 import { HabitMark } from './HabitMark'
+import { Icon } from './Icon'
 
 interface MetricListProps {
   metrics: Metric[]
@@ -48,7 +49,7 @@ export function MetricList({
         <p className="muted-center">{t('list.loading')}</p>
       ) : visible.length === 0 ? (
         <section className="empty-state">
-          <p className="empty-state-emoji">⚖️</p>
+          <span className="empty-state-icon"><Icon name="metrics" size={24} /></span>
           <h2>{t('list.empty')}</h2>
           <p>{t('list.vitalEmpty')}</p>
           <button type="button" className="btn btn-primary" onClick={onAdd}>
@@ -73,7 +74,7 @@ export function MetricList({
                   <span className="activity-desc">{describeMetric(metric)}</span>
                 </span>
                 <span className="activity-chevron" aria-hidden>
-                  ›
+                  <Icon name="chevron" />
                 </span>
               </button>
             </li>

@@ -44,31 +44,6 @@ const PREVIEW_SERIES = [
   },
 ] as const
 
-/** Resuming’s path — restart energy, not “become a better you.” */
-const INTENT_STEPS = [
-  {
-    id: 'postponed',
-    question: 'Got something you’ve been putting off?',
-    action: 'Yes',
-    image: '/intent/postponed.webp',
-    imageAlt: 'A quiet desk with a closed notebook waiting to be opened.',
-  },
-  {
-    id: 'small',
-    question: 'Okay starting small — even a few minutes?',
-    action: 'Yes',
-    image: '/intent/small.webp',
-    imageAlt: 'A person taking one small step on a path at sunrise.',
-  },
-  {
-    id: 'promise',
-    question: 'I’ll come back when I drift.',
-    action: 'I promise',
-    image: '/intent/promise.webp',
-    imageAlt: 'An open doorway with warm light — coming back home.',
-  },
-] as const
-
 function previewDoneDays(values: readonly number[], target: number): number {
   return values.filter((value) => value >= target).length
 }
@@ -86,7 +61,6 @@ export function LandingPage({
   const [signingIn, setSigningIn] = useState(false)
   const [accountDeleted] = useState(() => consumeAccountDeletedFlag())
   const [showSignIn, setShowSignIn] = useState(() => Boolean(authError) || accountDeleted)
-  const [intentIndex, setIntentIndex] = useState<number | null>(null)
 
   useDocumentMeta({
     title: DEFAULT_TITLE,
@@ -117,26 +91,12 @@ export function LandingPage({
     }
   }
 
-  function startIntent() {
+  function startSetup() {
     track('get_started_clicked')
-    track('intent_journey_started')
-    setIntentIndex(0)
-  }
-
-  function advanceIntent() {
-    if (intentIndex == null) return
-    const step = INTENT_STEPS[intentIndex]
-    track('intent_step_answered', { step: step.id, choice: step.action })
-    if (intentIndex + 1 >= INTENT_STEPS.length) {
-      track('intent_journey_completed')
-      navigate('/start?step=1')
-      return
-    }
-    setIntentIndex(intentIndex + 1)
+    navigate('/start?step=1')
   }
 
   const displayError = configError || authError || error
-  const intentStep = intentIndex != null ? INTENT_STEPS[intentIndex] : null
 
   if (!configured) {
     return (
@@ -148,56 +108,6 @@ export function LandingPage({
             <p>{configError ?? 'Supabase is not configured.'}</p>
           </div>
           <SiteFooter privacyOnly={native} />
-        </div>
-      </div>
-    )
-  }
-
-  if (intentStep) {
-    return (
-      <div className="landing">
-        <div className="landing-card landing-intent">
-          <LandingBrand />
-          <p className="landing-intent-progress" aria-hidden>
-            {INTENT_STEPS.map((step, index) => (
-              <span
-                key={step.id}
-                className={`landing-intent-dot${index <= intentIndex! ? ' landing-intent-dot-on' : ''}`}
-              />
-            ))}
-          </p>
-          <figure className="landing-intent-figure">
-            <img
-              className="landing-intent-image"
-              src={intentStep.image}
-              alt={intentStep.imageAlt}
-              width={768}
-              height={768}
-              decoding="async"
-            />
-          </figure>
-          <h1 className="landing-intent-question">
-            {intentStep.id === 'postponed'
-              ? t('landing.postponed')
-              : intentStep.id === 'small'
-                ? t('landing.small')
-                : t('landing.promiseQ')}
-          </h1>
-          <button type="button" className="btn btn-primary btn-lg" onClick={advanceIntent}>
-            {intentStep.id === 'promise' ? t('landing.promise') : t('landing.yes')}
-          </button>
-          <button
-            type="button"
-            className="btn btn-ghost"
-            onClick={() => {
-              track('intent_journey_skipped', {
-                at: intentStep.id,
-              })
-              navigate('/start?step=1')
-            }}
-          >
-            {t('landing.skip')}
-          </button>
         </div>
       </div>
     )
@@ -279,7 +189,7 @@ export function LandingPage({
         </div>
 
         <div className="landing-actions">
-          <button type="button" className="btn btn-primary btn-lg" onClick={startIntent}>
+          <button type="button" className="btn btn-primary btn-lg" onClick={startSetup}>
             {t('landing.getStarted')}
           </button>
           <p className="landing-actions-note">{t('landing.noAccount')}</p>

@@ -12,23 +12,32 @@ import {
 } from '../lib/onboardingFlow'
 import { formatDuration } from '../lib/timer'
 import { HabitMark } from './HabitMark'
+import { Toast } from './Toast'
+import { useUndoToast } from '../hooks/useUndoToast'
+import { formatCountUndoMessage, formatSessionUndoMessage } from '../lib/undoMessages'
 import { HabitVideoPlaceholder } from './HabitVideoPlaceholder'
+import { MedicineDoses } from './MedicineDoses'
+import { StepsCard } from './StepsCard'
 import { catalogTrackId, visibleName } from '../lib/catalogName'
+import { MEDICINE_REMINDER_CHANGED, clearSkip } from '../lib/medicineReminderState'
 import { track } from '../lib/track'
 import { useLocale } from '../hooks/useLocale'
 import { formatLongDate } from '../lib/i18n'
 import {
   appendGuestCount,
   appendGuestLog,
+  removeLastGuestLog,
   guestReadingOnDate,
   upsertGuestReading,
   guestCountProgress,
   guestCountsOnDate,
+  guestDosesOnDate,
   guestSaveWarning,
   guestSessionSeconds,
   guestTimerProgress,
   loadGuestDraft,
   setGuestStep,
+  toggleGuestDose,
   type GuestActivity,
   type GuestDraft,
   type GuestReading,
@@ -52,6 +61,7 @@ function trackGuestLog(
 
 export function GuestTodayPage() {
   const { t, locale } = useLocale()
+  const undoToast = useUndoToast()
   const [draft, setDraft] = useState<GuestDraft | null>(() => loadGuestDraft())
   const [runningId, setRunningId] = useState<string | null>(null)
   const [elapsed, setElapsed] = useState(0)
@@ -73,6 +83,12 @@ export function GuestTodayPage() {
   const goalSeconds = running ? guestTimerProgress(running, 0).targetSeconds : 0
   const sessionGoalSeconds = Math.max(0, goalSeconds - alreadySeconds)
   const dateLabel = formatLongDate(locale)
+
+  useEffect(() => {
+    const refresh = () => setDraft(loadGuestDraft())
+    window.addEventListener(MEDICINE_REMINDER_CHANGED, refresh)
+    return () => window.removeEventListener(MEDICINE_REMINDER_CHANGED, refresh)
+  }, [])
 
   useEffect(() => {
     if (!runningId || paused) return
@@ -105,6 +121,12 @@ export function GuestTodayPage() {
       )
       const activity = current.activities.find((item) => item.localId === activityId)
       if (activity) trackGuestLog(activity, 'session', Math.round(whole / 60))
+      undoToast.show(formatSessionUndoMessage(activity?.name ?? '', whole), () => {
+        const latest = draftRef.current
+        if (!latest) return
+        setDraft(removeLastGuestLog(latest, activityId, 'session'))
+        track('log_undone', { kind: 'session', signed_in: false })
+      })
       setNote(null)
     } else {
       setNote(t('today.tryAgain'))
@@ -158,25 +180,46 @@ export function GuestTodayPage() {
             </div>
           </div>
 
+          {draft.medicines.length > 0 && (
+            <MedicineDoses
+              doses={guestDosesOnDate(draft, today)}
+              busyKey={null}
+              onToggle={(dose) => {
+                if (dose.skipped) {
+                  clearSkip({
+                    medicineId: dose.medicineId,
+                    date: today,
+                    hour: dose.hour,
+                    minute: dose.minute,
+                  })
+                  setDraft(loadGuestDraft())
+                  return
+                }
+                setDraft(toggleGuestDose(draft, dose, today))
+              }}
+            />
+          )}
+
           {note && (
             <div className="notice">
               <p>{note}</p>
             </div>
           )}
 
-          {draft.activities.length === 0 ? (
-            <div className="today-empty">
-              <p className="today-empty-title">{t('today.waiting')}</p>
-              <p className="today-empty-copy">{t('today.waitingCopy')}</p>
-              <Link className="btn btn-primary" to="/start?step=1&add=1">
-                {t('today.add')}
-              </Link>
-            </div>
-          ) : (
+          {draft.activities.length > 0 && (
             <section className="today-section">
               <ul className="today-list today-guest-list">
                 {draft.activities.map((activity) => {
-                  if (isNumberEntryVital(activity) || isStepsHabit(activity)) {
+                  if (isStepsHabit(activity)) {
+                    return (
+                      <StepsCard
+                        key={activity.localId}
+                        goal={activity.targetValue ?? 10000}
+                        today={today}
+                      />
+                    )
+                  }
+                  if (isNumberEntryVital(activity)) {
                     return (
                       <NumberVitalRow
                         key={activity.localId}
@@ -225,15 +268,17 @@ export function GuestTodayPage() {
                         key={activity.localId}
                         className={`today-row today-row-stack ${rowState}`}
                       >
-                        <div className="today-row-main">
-                          <StatusMark live={isRunning && !paused} paused={isRunning && paused} />
+                        <div className="today-row-head">
                           <HabitMark
                             templateId={activity.templateId}
                             name={visibleName(activity, locale)}
                             emoji={activity.emoji}
                           />
+                          <span className="activity-name">{visibleName(activity, locale)}</span>
+                          <StatusMark live={isRunning && !paused} paused={isRunning && paused} />
+                        </div>
+                        <div className="today-row-main">
                           <span className="activity-meta">
-                            <span className="activity-name">{visibleName(activity, locale)}</span>
                             <span className="activity-desc">
                               {isRunning
                                 ? `${liveProgress.label}${paused ? ` · ${t('today.paused')}` : ` · ${t('today.running')}`}`
@@ -253,20 +298,6 @@ export function GuestTodayPage() {
                                   }}
                                 />
                               </div>
-                            )}
-                            {canShowVideo && (
-                              <button
-                                type="button"
-                                className="btn btn-ghost today-video-btn"
-                                aria-expanded={showVideo}
-                                onClick={() =>
-                                  setVideoId((current) =>
-                                    current === activity.localId ? null : activity.localId,
-                                  )
-                                }
-                              >
-                                {showVideo ? t('today.hideVideo') : t('today.video')}
-                              </button>
                             )}
                           </span>
                           <span className="today-actions">
@@ -326,6 +357,22 @@ export function GuestTodayPage() {
                             ) : null}
                           </div>
                         ) : null}
+                        {canShowVideo && (
+                          <div className="today-extra">
+                            <button
+                              type="button"
+                              className="today-extra-btn"
+                              aria-expanded={showVideo}
+                              onClick={() =>
+                                setVideoId((current) =>
+                                  current === activity.localId ? null : activity.localId,
+                                )
+                              }
+                            >
+                              {showVideo ? t('today.hideVideo') : t('today.video')}
+                            </button>
+                          </div>
+                        )}
                         {canShowVideo && showVideo && (
                           <HabitVideoPlaceholder
                             templateId={activity.templateId}
@@ -347,14 +394,16 @@ export function GuestTodayPage() {
                       key={activity.localId}
                       className={`today-row today-row-stack ${progress.done ? 'today-row-done' : ''}`}
                     >
-                      <div className="today-row-main">
+                      <div className="today-row-head">
                         <HabitMark
                           templateId={activity.templateId}
                           name={visibleName(activity, locale)}
                           emoji={activity.emoji}
                         />
+                        <span className="activity-name">{visibleName(activity, locale)}</span>
+                      </div>
+                      <div className="today-row-main">
                         <span className="activity-meta">
-                          <span className="activity-name">{visibleName(activity, locale)}</span>
                           <span className="activity-desc">
                             {progress.label}
                             {progress.done ? ` · ${t('today.done')}` : ''}
@@ -379,18 +428,6 @@ export function GuestTodayPage() {
                               }}
                             />
                           </div>
-                          <button
-                            type="button"
-                            className="btn btn-ghost today-video-btn"
-                            aria-expanded={videoId === activity.localId}
-                            onClick={() =>
-                              setVideoId((current) =>
-                                current === activity.localId ? null : activity.localId,
-                              )
-                            }
-                          >
-                            {videoId === activity.localId ? t('today.hideVideo') : t('today.video')}
-                          </button>
                         </span>
                         <span className="today-actions">
                           <button
@@ -400,12 +437,34 @@ export function GuestTodayPage() {
                             onClick={() => {
                               setDraft(appendGuestCount(draft, activity.localId, today))
                               trackGuestLog(activity, 'count', null)
+                              undoToast.show(formatCountUndoMessage(visibleName(activity, locale)), () => {
+                                const latest = draftRef.current
+                                if (!latest) return
+                                setDraft(removeLastGuestLog(latest, activity.localId, 'count'))
+                                track('log_undone', { kind: 'count', signed_in: false })
+                              })
                             }}
                           >
                             {countTapLabel(activity.targetUnit, progress.done)}
                           </button>
                         </span>
                       </div>
+                      {showsHabitVideo(activity.templateId) && (
+                        <div className="today-extra">
+                          <button
+                            type="button"
+                            className="today-extra-btn"
+                            aria-expanded={videoId === activity.localId}
+                            onClick={() =>
+                              setVideoId((current) =>
+                                current === activity.localId ? null : activity.localId,
+                              )
+                            }
+                          >
+                            {videoId === activity.localId ? t('today.hideVideo') : t('today.video')}
+                          </button>
+                        </div>
+                      )}
                       {videoId === activity.localId && (
                         <HabitVideoPlaceholder
                           templateId={activity.templateId}
@@ -420,6 +479,9 @@ export function GuestTodayPage() {
                 {t('today.add')}
               </Link>
             </section>
+          )}
+          {undoToast.toast && (
+            <Toast message={undoToast.toast.message} onUndo={() => void undoToast.undo()} />
           )}
         </div>
   )
@@ -481,10 +543,12 @@ function NumberVitalRow({
 
   return (
     <li className="today-row today-row-stack">
-      <form className="today-row-main vital-entry" onSubmit={handleSubmit}>
+      <div className="today-row-head">
         <HabitMark templateId={activity.templateId} name={visibleName(activity, locale)} emoji={activity.emoji} />
+        <span className="activity-name">{visibleName(activity, locale)}</span>
+      </div>
+      <form className={`today-row-main ${paired ? 'vital-entry' : ''}`} onSubmit={handleSubmit}>
         <span className="activity-meta">
-          <span className="activity-name">{visibleName(activity, locale)}</span>
           <span className="activity-desc">{summary}</span>
         </span>
         <span className="today-actions">

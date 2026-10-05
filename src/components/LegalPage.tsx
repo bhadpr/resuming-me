@@ -3,10 +3,13 @@ import {
   COPYRIGHT_YEAR,
   GOVERNING_LAW,
   LEGAL_LAST_UPDATED,
+  PRIVACY_LAST_UPDATED,
+  TERMS_LAST_UPDATED,
   PRODUCT_NAME,
   type LegalPageId,
 } from '../lib/site'
 import { CONTACT_EMAIL } from '../config'
+import { Icon } from './Icon'
 
 interface LegalPageProps {
   page: LegalPageId
@@ -20,7 +23,8 @@ export function LegalPage({ page, onBack }: LegalPageProps) {
   return (
     <div className="legal-page">
       <button type="button" className="btn btn-ghost btn-sm back-btn" onClick={onBack}>
-        ← Back
+        <Icon name="back" />
+        Back
       </button>
 
       <div className="screen-heading">
@@ -80,20 +84,44 @@ function PrivacyContent() {
         contact us at{' '}
         <a href={`mailto:${CONTACT_EMAIL}`}>{CONTACT_EMAIL}</a>.
       </p>
+      <p>
+        If you live in India, that address is our grievance contact under the Digital
+        Personal Data Protection Act, 2023. You may write to us to access, correct, or
+        erase your personal data, or to make a complaint. We may need to verify that the
+        request comes from you.
+      </p>
+      <p>
+        Where the law requires your consent, we rely on you choosing to create an account
+        and choosing to add a medicine, a health measurement, or another log.
+      </p>
 
       <h3>Information we collect</h3>
       <p>We collect the following categories of information:</p>
       <ul>
         <li>
-          <strong>Account information.</strong> When you sign in with Google, we receive
-          authentication details needed to create and maintain your account — typically
-          your email address, name (if provided by Google), profile image URL (if
-          provided), and a stable account identifier.
+          <strong>Account information.</strong> When you sign in with Google or an email
+          magic link, we receive authentication details needed to create and maintain
+          your account — typically your email address, name (if provided by Google),
+          profile image URL (if provided), and a stable account identifier.
         </li>
         <li>
-          <strong>App content you create.</strong> Activities, numbers, log entries,
-          timers, micro-steps, timezone preferences, and related settings you enter in
-          the Service.
+          <strong>App content you create.</strong> Activities, health measurements you
+          choose to log (such as blood pressure, heart rate, weight, and sleep), log
+          entries, timers, micro-steps, timezone preferences, and related settings you
+          enter in the Service.
+        </li>
+        <li>
+          <strong>Medicines.</strong> If you are signed in, we store each medicine’s
+          name, the days of the week, the times, and whether you marked a dose taken.
+          If you add a bottle photo, we store that image with your account. A guest
+          setup does not keep the photo. The photo and the reminders are a reminder.
+          They are not medical advice.
+        </li>
+        <li>
+          <strong>Steps.</strong> On Android, if you allow it, the app reads today’s
+          step count from Health Connect on your phone and shows it on Today. We do
+          not write steps to Health Connect, and we do not send that count to our
+          servers. A number you type, and your daily step goal, stay on this device.
         </li>
         <li>
           <strong>Feedback.</strong> If you submit feedback, we store your rating,
@@ -118,8 +146,9 @@ function PrivacyContent() {
           credentials, theme preference, onboarding state, daily reminder preference,
           active timer state, and offline sync queues so the app works reliably between
           visits. See “Cookies &amp; local storage” below. On Android, an optional daily
-          reminder is scheduled on the device only; it is not delivered through a cloud
-          push service.
+          reminder and any medicine reminders are scheduled on the device only. They
+          are not delivered through a cloud push service. A typed step count and the
+          daily step goal stay on the device.
         </li>
       </ul>
 
@@ -137,6 +166,28 @@ function PrivacyContent() {
       <p>
         We do not sell your personal information, and we do not share it for
         cross-context behavioral advertising.
+      </p>
+
+      <h3>Health information</h3>
+      <p>
+        Blood pressure, heart rate, weight, sleep, medicine names, dose times, dose
+        marks, and bottle photos are health information. We store them when you are
+        signed in and you add them, so the Service can show your log and your reminders.
+        We do not sell this information. We do not use it for advertising. Deleting the
+        item, or deleting your account, removes it from our active systems, subject to
+        ordinary backup cycles.
+      </p>
+      <p>
+        This Service is a personal log. It is not a clinic, a medical record under the
+        US HIPAA rules, or a medical device. A bottle photo and a reminder are a
+        reminder. They are not medical advice.
+      </p>
+      <p>
+        If you are a consumer in Washington State, this section is our notice for
+        consumer health data under the Washington My Health My Data Act. We collect that
+        data because you asked the Service to keep that log or reminder. We do not sell
+        it. You may ask us to delete it by deleting the item or the account, or by
+        emailing us.
       </p>
 
       <h3>How we share information</h3>
@@ -176,9 +227,9 @@ function PrivacyContent() {
       <ul>
         <li>Authentication / session storage so you stay signed in</li>
         <li>
-          Local preferences such as theme, a guest onboarding draft (kept on this device
-          for up to 7 days, until you save an account), daily reminder time, and
-          in-progress timer state
+          Local preferences such as theme, language, a guest onboarding draft (kept on
+          this device for up to 7 days, until you save an account), daily reminder time,
+          a typed step count, the daily step goal, and in-progress timer state
         </li>
         <li>
           A service worker / progressive web app cache that stores app assets for faster
@@ -200,6 +251,8 @@ function PrivacyContent() {
         improve the product and handle support. We may retain limited records where
         required for legal, security, or operational purposes. When you delete content in
         the app, we remove it from active systems subject to ordinary backup cycles.
+        Deleting a medicine removes its bottle photo. Deleting your account removes
+        those photos with the rest of your account data.
       </p>
 
       <h3>Security</h3>
@@ -221,8 +274,10 @@ function PrivacyContent() {
       <p>
         You can edit or delete many records directly in the app, and you can sign out at
         any time. In Settings → Account you can <strong>Export my data</strong> (download a
-        copy of your activities, logs, and metrics) or <strong>Delete my account</strong>{' '}
-        (permanent removal after typing DELETE). See also{' '}
+        copy of your activities, logs, and metrics — medicine names, times, and bottle
+        photos are not included) or <strong>Delete my account</strong>{' '}
+        (permanent removal after typing DELETE). Email us for a copy of those medicine
+        records. See also{' '}
         <a href="/delete-account">how to delete your account</a>. For help when you cannot
         use the app, or for other privacy requests, email{' '}
         <a href={`mailto:${CONTACT_EMAIL}`}>{CONTACT_EMAIL}</a>. We may need to verify
@@ -232,34 +287,36 @@ function PrivacyContent() {
 
       <h3>Children’s privacy</h3>
       <p>
-        {PRODUCT_NAME} is not directed to children under 13, and we do not knowingly
-        collect personal information from children under 13. If you believe a child has
-        provided us information, contact us and we will take appropriate steps to delete
-        it.
+        {PRODUCT_NAME} is for people 18 and older. We do not knowingly collect personal
+        information from anyone under 18. If you believe a person under 18 has provided
+        information, contact us and we will delete it.
       </p>
 
       <h3>International processing</h3>
       <p>
-        We and our service providers may process information in the United States and
-        other countries. Those locations may have different data-protection laws than
-        your home country. Where required, we rely on appropriate safeguards offered by
-        our providers for cross-border transfers.
+        We and our service providers process information in the United States and in
+        Canada, where the account database is hosted. Google processes sign-in. Our
+        email provider sends messages you ask for. Those locations may have different
+        data-protection laws than your home country. For people in India, we transfer
+        personal data outside India so we can provide the account. India allows that
+        transfer except to countries the Government of India restricts.
       </p>
 
       <h3>Changes to this Policy</h3>
       <p>
         We may update this Privacy Policy from time to time. We will revise the “Last
-        updated” date below, and for material changes we may provide additional notice
-        in the Service. Continued use after an update means you acknowledge the revised
-        Policy.
+        updated” date below. If we materially change what health information we collect
+        or how we use it, we will notify you in the Service before that change applies.
+        For other updates, continued use after the update means you acknowledge the
+        revised Policy.
       </p>
 
       <h3>Contact</h3>
       <p>
-        Privacy requests and questions:{' '}
+        Privacy requests, and complaints from people in India:{' '}
         <a href={`mailto:${CONTACT_EMAIL}`}>{CONTACT_EMAIL}</a>
       </p>
-      <p className="legal-muted">Last updated: {LEGAL_LAST_UPDATED}</p>
+      <p className="legal-muted">Last updated: {PRIVACY_LAST_UPDATED}</p>
     </>
   )
 }
@@ -277,17 +334,16 @@ function TermsContent() {
 
       <h3>Eligibility</h3>
       <p>
-        You must be at least 13 years old to use {PRODUCT_NAME}. If you are under the age
-        of majority where you live, you may use the Service only with the involvement of
-        a parent or legal guardian who agrees to these Terms.
+        You must be at least 18 years old to use {PRODUCT_NAME}. The Service is for
+        adults.
       </p>
 
       <h3>The Service</h3>
       <p>
-        {PRODUCT_NAME} is a personal activity-tracking tool. Features may change, and we
-        may add, modify, or discontinue functionality, or temporarily interrupt the
-        Service for maintenance, security, or operational reasons. We do not guarantee
-        uninterrupted or error-free availability.
+        {PRODUCT_NAME} is free. It does not show ads. It is a personal log and reminder.
+        Features may change, and we may add, modify, or discontinue functionality, or
+        temporarily interrupt the Service for maintenance, security, or operational
+        reasons. We do not guarantee uninterrupted or error-free availability.
       </p>
 
       <h3>Accounts</h3>
@@ -323,12 +379,12 @@ function TermsContent() {
 
       <h3>Your content</h3>
       <p>
-        You retain ownership of the activities, numbers, logs, feedback, and other
-        content you submit (“Your Content”). You grant {COMPANY_NAME} a worldwide,
-        non-exclusive, royalty-free license to host, store, process, transmit, and
-        display Your Content solely as needed to operate, maintain, and improve the
-        Service. You represent that you have the rights needed to submit Your Content and
-        that it does not violate law or third-party rights.
+        You retain ownership of the activities, health measurements, medicines, logs,
+        feedback, and other content you submit (“Your Content”). You grant {COMPANY_NAME}{' '}
+        a worldwide, non-exclusive, royalty-free license to host, store, and display Your
+        Content so your account works for you. We do not use medicine names, notes,
+        vitals, or logs to train models. You represent that you have the rights needed to
+        submit Your Content and that it does not violate law or third-party rights.
       </p>
 
       <h3>Our intellectual property</h3>
@@ -354,13 +410,19 @@ function TermsContent() {
         control.
       </p>
 
-      <h3>No professional advice</h3>
+      <h3>Health, medicines, and vitals</h3>
       <p>
-        {PRODUCT_NAME} is a personal productivity tool. It is not medical, mental-health,
-        legal, financial, or other professional advice. Insights are descriptive
-        summaries of data you log; they are not diagnoses, treatment plans, or
-        recommendations from a licensed professional. Do not disregard professional advice
-        or delay seeking it because of something in the Service.
+        {PRODUCT_NAME} is a reminder and a log. It is not a doctor, a pharmacist, or a
+        medical device, and it does not suggest a dose. A bottle photo is a picture you
+        chose. A reminder can fail to appear. A missed mark on Today is not a medical
+        record of a missed dose. You remain responsible for your own medicines and for
+        decisions about blood pressure, heart rate, weight, sleep, and steps. Do not
+        delay professional care because of something in the Service.
+      </p>
+      <p>
+        Insights are descriptive summaries of data you log. They are not diagnoses,
+        treatment plans, or recommendations from a licensed professional. The Service is
+        not legal, financial, or other professional advice.
       </p>
 
       <h3>Disclaimer of warranties</h3>
@@ -410,19 +472,30 @@ function TermsContent() {
       <h3>Changes to these Terms</h3>
       <p>
         We may update these Terms from time to time. We will revise the “Last updated”
-        date below. If a change is material, we may provide additional notice in the
-        Service. Continued use after changes become effective constitutes acceptance of
-        the updated Terms.
+        date below. If a change is material, including a change to what health
+        information we store, we will notify you in the Service before it applies. For
+        other changes, continued use after the update takes effect constitutes acceptance
+        of the updated Terms.
       </p>
 
       <h3>Governing law</h3>
       <p>
         These Terms are governed by the laws of {GOVERNING_LAW}, without regard to
-        conflict-of-law principles. Courts located in that jurisdiction will have
-        exclusive jurisdiction over disputes arising from these Terms, except that we may
-        seek injunctive relief in any appropriate forum. If you are a consumer in a
-        jurisdiction that requires different rules, those mandatory protections still
-        apply.
+        conflict-of-law principles, except where a law that applies to you does not allow
+        that choice.
+      </p>
+      <p>
+        If you are a consumer in India, you keep the protections of the Consumer
+        Protection Act, 2019, including the right to approach a consumer commission where
+        you live. If you are a consumer in a state of the United States, you keep the
+        mandatory protections of that state. Those rights stay in place under these
+        Terms.
+      </p>
+      <p>
+        We may seek injunctive relief in any appropriate court to protect the Service or
+        our intellectual property. Other disputes may be brought in the state or federal
+        courts located in Washington State, or in the forum the law gives you as a
+        consumer.
       </p>
 
       <h3>General</h3>
@@ -436,10 +509,11 @@ function TermsContent() {
 
       <h3>Contact</h3>
       <p>
-        Questions about these Terms:{' '}
-        <a href={`mailto:${CONTACT_EMAIL}`}>{CONTACT_EMAIL}</a>
+        Questions about these Terms, and privacy complaints from people in India, go to{' '}
+        <a href={`mailto:${CONTACT_EMAIL}`}>{CONTACT_EMAIL}</a>. For people in India, that
+        address is the grievance contact.
       </p>
-      <p className="legal-muted">Last updated: {LEGAL_LAST_UPDATED}</p>
+      <p className="legal-muted">Last updated: {TERMS_LAST_UPDATED}</p>
     </>
   )
 }

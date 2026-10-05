@@ -1,8 +1,21 @@
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest'
+
+const upsert = vi.fn()
+vi.mock('./supabase', () => ({
+  isSupabaseConfigured: () => true,
+  createSupabaseClient: () => ({
+    auth: {
+      getSession: async () => ({ data: { session: { user: { id: 'user-1' } } } }),
+    },
+    from: () => ({ upsert }),
+  }),
+}))
+
 import {
   _peekQueueForTests,
   _resetTrackStateForTests,
   comebackGapDays,
+  flushEvents,
   sanitizeEventProps,
   smallerChoiceProp,
   track,
@@ -127,5 +140,67 @@ describe('track queue', () => {
     track('skip_today', { reason: 'too_tired', name: 'Walk' })
     const skip = _peekQueueForTests().find((e) => e.name === 'skip_today')
     expect(skip?.props).toEqual({ reason: 'too_tired' })
+  })
+})
+
+describe('flushEvents', () => {
+  beforeEach(() => {
+    installMemoryStorage()
+    vi.stubGlobal('navigator', { onLine: true })
+    _resetTrackStateForTests()
+    upsert.mockReset()
+  })
+
+  afterEach(() => {
+    _resetTrackStateForTests()
+    vi.unstubAllGlobals()
+  })
+
+  it('skips ids the server already has and clears the queue', async () => {
+    upsert.mockResolvedValue({ error: null })
+    track('log_created')
+    await flushEvents()
+    expect(upsert).toHaveBeenCalledWith(expect.any(Array), {
+      onConflict: 'id',
+      ignoreDuplicates: true,
+    })
+    expect(_peekQueueForTests()).toEqual([])
+  })
+
+  it('keeps the queue on network or server errors', async () => {
+    upsert.mockResolvedValue({ error: { code: 'PGRST301', message: 'jwt expired' } })
+    track('log_created')
+    await flushEvents()
+    expect(_peekQueueForTests().some((e) => e.name === 'log_created')).toBe(true)
+  })
+
+  it('drops a batch the database rejects so it cannot block later events', async () => {
+    upsert.mockResolvedValue({ error: { code: '23514', message: 'check violation' } })
+    track('log_created')
+    await flushEvents()
+    expect(_peekQueueForTests()).toEqual([])
+  })
+
+  it('resends without the user when the account no longer exists', async () => {
+    upsert
+      .mockResolvedValueOnce({ error: { code: '23503', message: 'fk violation' } })
+      .mockResolvedValueOnce({ error: null })
+    track('log_created')
+    await flushEvents()
+    expect(upsert.mock.calls[0][0][0].user_id).toBe('user-1')
+    expect(upsert.mock.calls[1][0][0].user_id).toBeNull()
+    expect(_peekQueueForTests()).toEqual([])
+  })
+
+  it('keeps events tracked while a flush is in flight', async () => {
+    let finish: (v: { error: null }) => void = () => {}
+    upsert.mockReturnValue(new Promise((resolve) => (finish = resolve)))
+    track('log_created')
+    const flushing = flushEvents()
+    await Promise.resolve()
+    track('skip_today')
+    finish({ error: null })
+    await flushing
+    expect(_peekQueueForTests().map((e) => e.name)).toEqual(['skip_today'])
   })
 })

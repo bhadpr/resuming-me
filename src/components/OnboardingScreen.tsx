@@ -27,6 +27,7 @@ import {
 } from '../lib/onboarding'
 import { todayLocalDate } from '../lib/dates'
 import { formatTimeInput, parseTimeInput } from '../lib/dailyDigest'
+import { Icon } from './Icon'
 
 type Step =
   | 'chip'
@@ -797,7 +798,7 @@ function Choice({
       </span>
       {selected ? (
         <span className="theme-check" aria-hidden>
-          ✓
+          <Icon name="check" />
         </span>
       ) : (
         <span className="theme-check theme-check-empty" aria-hidden />

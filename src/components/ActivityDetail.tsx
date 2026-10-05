@@ -34,6 +34,7 @@ import { DeadlineOverduePrompt } from './DeadlineOverduePrompt'
 import { MicroStepsSection } from './MicroStepsSection'
 import { ActivityInsightChart } from './ActivityInsightChart'
 import type { MicroStep } from '../lib/microSteps'
+import { Icon } from './Icon'
 
 const PAUSE_OPTIONS: { duration: PauseDuration; label: string }[] = [
   { duration: '1_week', label: '1 week' },
@@ -190,7 +191,8 @@ export function ActivityDetail({
   return (
     <div className="activity-detail">
       <button type="button" className="btn btn-ghost btn-sm back-btn" onClick={onBack}>
-        ← Back
+        <Icon name="back" />
+        Back
       </button>
 
       <div className="detail-hero">
@@ -521,7 +523,7 @@ export function ActivityDetail({
                             )}
                           </span>
                           <span className="activity-chevron" aria-hidden>
-                            ›
+                            <Icon name="chevron" />
                           </span>
                         </button>
                       </li>

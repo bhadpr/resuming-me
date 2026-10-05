@@ -16,12 +16,18 @@ export function HabitVideoPlaceholder({
   measure = null,
   playing = false,
   paused = false,
+  placeholder = false,
+  shape = 'wide',
 }: {
   templateId: string | null
   name: string
   measure?: string | null
   playing?: boolean
   paused?: boolean
+  /** Empty frame, even when a clip exists. */
+  placeholder?: boolean
+  /** A Short is a tall 9:16 frame. */
+  shape?: 'wide' | 'short'
 }) {
   const video = habitVideoFor(templateId)
   const caption = habitVideoCaption(templateId, name, measure)
@@ -54,10 +60,19 @@ export function HabitVideoPlaceholder({
     postYoutubeCommand(iframeRef.current, playing ? 'playVideo' : 'pauseVideo')
   }, [playing, withTimer, video])
 
-  if (video) {
+  const figureClass = shape === 'short' ? 'habit-video habit-video-short' : 'habit-video'
+  const frameClass = [
+    'habit-video-frame',
+    shape === 'short' ? 'habit-video-frame-short' : '',
+    withTimer ? 'habit-video-frame-live' : '',
+  ]
+    .filter(Boolean)
+    .join(' ')
+
+  if (video && !placeholder) {
     return (
-      <figure className="habit-video">
-        <div className={`habit-video-frame habit-video-frame-embed${withTimer ? ' habit-video-frame-live' : ''}`}>
+      <figure className={figureClass}>
+        <div className={`${frameClass} habit-video-frame-embed`}>
           <iframe
             key={`${video.youtubeId}-${withTimer ? 'live' : 'idle'}`}
             ref={iframeRef}
@@ -76,9 +91,9 @@ export function HabitVideoPlaceholder({
   }
 
   return (
-    <figure className="habit-video">
+    <figure className={figureClass}>
       <div
-        className={`habit-video-frame${withTimer ? ' habit-video-frame-live' : ''}`}
+        className={frameClass}
         role="img"
         aria-label={playing ? `${caption} Playing.` : paused ? `${caption} Paused.` : caption}
       >

@@ -2,13 +2,17 @@ import { useEffect, useState } from 'react'
 import { useLocation } from 'react-router-dom'
 import { useAuth } from '../hooks/useAuth'
 import { useLocale } from '../hooks/useLocale'
+import { guestMedicineSchedules, guestTakenMarks, loadGuestDraft } from '../lib/guestDraft'
+import { mealMessageKey } from '../lib/medicineFormat'
+import { listenForMedicineNotificationActions, syncMedicineNotifications } from '../lib/medicineNotifications'
+import { MEDICINE_REMINDER_CHANGED } from '../lib/medicineReminderState'
 import { parseAppPath, stashAuthNext, tabFromView, type AppTab } from '../lib/navigation'
 import { track } from '../lib/track'
 import { useDocumentMeta } from '../hooks/useDocumentMeta'
 import { BrandTitle } from './BrandTitle'
-import { LanguagePicker } from './LanguagePicker'
 import { BottomNav } from './BottomNav'
 import { EmailSignInForm } from './EmailSignInForm'
+import { GuestActivitiesPage, GuestVitalsPage } from './GuestLibrary'
 import { GuestTodayPage } from './GuestTodayPage'
 
 function guestTabFromPath(pathname: string): AppTab {
@@ -19,6 +23,7 @@ function guestTabFromPath(pathname: string): AppTab {
 export function GuestAppShell() {
   const location = useLocation()
   const { t } = useLocale()
+  useGuestMedicineAlarms()
   const tab = guestTabFromPath(location.pathname)
   const label =
     tab === 'activities'
@@ -31,7 +36,7 @@ export function GuestAppShell() {
   useDocumentMeta({ title: `${label} · Resuming`, noindex: true })
 
   useEffect(() => {
-    if (tab === 'today') return
+    if (tab !== 'insights') return
     stashAuthNext(`${location.pathname}${location.search}`)
   }, [tab, location.pathname, location.search])
 
@@ -39,14 +44,61 @@ export function GuestAppShell() {
     <div className="app">
       <header className="app-header">
         <BrandTitle className="app-title" />
-        <LanguagePicker />
       </header>
       <main className="app-main">
-        {tab === 'today' ? <GuestTodayPage /> : <GuestSignInPanel tab={tab} />}
+        {tab === 'today' && <GuestTodayPage />}
+        {tab === 'activities' && <GuestActivitiesPage />}
+        {tab === 'metrics' && <GuestVitalsPage />}
+        {tab === 'insights' && <GuestSignInPanel tab={tab} />}
       </main>
       <BottomNav tab={tab} />
     </div>
   )
+}
+
+function useGuestMedicineAlarms(): void {
+  const { t } = useLocale()
+
+  useEffect(() => {
+    let cancelled = false
+    let remove = () => {}
+    void listenForMedicineNotificationActions().then((next) => {
+      if (cancelled) {
+        next()
+        return
+      }
+      remove = next
+    })
+    return () => {
+      cancelled = true
+      remove()
+    }
+  }, [])
+
+  useEffect(() => {
+    const sync = () => {
+      const draft = loadGuestDraft()
+      if (!draft) return
+      void syncMedicineNotifications(
+        guestMedicineSchedules(draft),
+        guestTakenMarks(draft),
+        new Date(),
+        (meal) => {
+          const base = t('medicines.alarm')
+          const key = mealMessageKey(meal)
+          return key ? `${base} ${t(key)}` : base
+        },
+        {
+          taken: t('medicines.taken'),
+          skipped: t('medicines.skipped'),
+          snooze: t('medicines.snooze'),
+        },
+      )
+    }
+    sync()
+    window.addEventListener(MEDICINE_REMINDER_CHANGED, sync)
+    return () => window.removeEventListener(MEDICINE_REMINDER_CHANGED, sync)
+  }, [t])
 }
 
 function GuestSignInPanel({ tab }: { tab: AppTab }) {

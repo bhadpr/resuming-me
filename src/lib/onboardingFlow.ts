@@ -487,6 +487,7 @@ export function activitySizeControl(
   if (activity.templateId === 'fasting' || activity.targetUnit === 'hours') return null
   if (activity.templateId === 'sleep_hours' || activity.targetUnit === 'hr') return null
   if (activity.templateId === 'steps' || activity.targetUnit === 'steps') return null
+  if (activity.templateId === 'relaxation') return null
   if (activity.trackingMode === 'checkbox') return null
   if (activity.trackingMode === 'timer' || activity.targetUnit === 'minutes') {
     if (activity.templateId === 'walk' || activity.templateId === 'running') {
@@ -533,11 +534,20 @@ export function smallestStep(steps: readonly number[]): number {
 }
 
 export function onboardingSummary(
-  draft: Pick<GuestDraft, 'activities' | 'logs' | 'reminderTime' | 'reminderTimes' | 'reminderDeclined'>,
+  draft: Pick<GuestDraft, 'activities' | 'logs' | 'reminderTime' | 'reminderTimes' | 'reminderDeclined'> & {
+    medicineDaily?: boolean
+    medicines?: GuestDraft['medicines']
+  },
 ): string {
   const count = draft.activities.length
+  const medicineCount = draft.medicines?.length ?? (draft.medicineDaily ? 1 : 0)
   const parts = [
-    count === 1 ? t('summary.habitOne') : t('summary.habitMany', { count }),
+    ...(count === 0 ? [] : [count === 1 ? t('summary.habitOne') : t('summary.habitMany', { count })]),
+    ...(medicineCount === 1
+      ? [t('summary.medicine')]
+      : medicineCount > 1
+        ? [t('summary.medicineMany', { count: medicineCount })]
+        : []),
   ]
   if (draft.logs.length > 0) parts.push(t('summary.resumed'))
   const times = draft.reminderTimes?.length

@@ -9,6 +9,7 @@ import { HabitMark } from './HabitMark'
 import { visibleName } from '../lib/catalogName'
 import { useLocale } from '../hooks/useLocale'
 import { MetricTrendChart } from './MetricTrendChart'
+import { Icon } from './Icon'
 
 interface MetricDetailProps {
   metric: Metric
@@ -48,7 +49,8 @@ export function MetricDetail({
   return (
     <div className="activity-detail metric-detail">
       <button type="button" className="btn btn-ghost btn-sm back-btn" onClick={onBack}>
-        ← Back
+        <Icon name="back" />
+        Back
       </button>
 
       <div className="detail-hero">

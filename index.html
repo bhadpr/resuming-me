@@ -14,7 +14,7 @@
     <link rel="canonical" href="https://resuming.me/" />
     <meta property="og:type" content="website" />
     <meta property="og:site_name" content="Resuming" />
-    <meta property="og:title" content="Resuming — Get back to your habits without the guilt" />
+    <meta property="og:title" content="Resuming — Get back to what you put off" />
     <meta
       property="og:description"
       content="A personal growth app for the habits you keep postponing. Start again when you drift."
@@ -24,70 +24,43 @@
     <meta property="og:image:width" content="1200" />
     <meta property="og:image:height" content="630" />
     <meta name="twitter:card" content="summary_large_image" />
-    <meta name="twitter:title" content="Resuming — Get back to your habits without the guilt" />
+    <meta name="twitter:title" content="Resuming — Get back to what you put off" />
     <meta
       name="twitter:description"
       content="A personal growth app for the habits you keep postponing. Start again when you drift."
     />
     <meta name="twitter:image" content="https://resuming.me/og.png" />
     <script>
+      // Keep in sync with src/lib/themes.ts and src/lib/textSize.ts.
       (() => {
         try {
+          const root = document.documentElement
           const stored = localStorage.getItem('resuming-theme')
-          const allowed = ['resuming', 'nocturne', 'slate', 'dawn', 'fresh', 'vault']
-          const retired = { modernist: 'dawn', broadsheet: 'dawn', sage: 'dawn', pulse: 'dawn' }
-          const migrated =
-            stored === 'pixloo'
-              ? 'fresh'
-              : stored && retired[stored]
-                ? retired[stored]
-                : stored
-          const theme = allowed.includes(migrated) ? migrated : 'dawn'
-          document.documentElement.setAttribute('data-theme', theme)
+          const retired = {
+            modernist: 'dawn',
+            broadsheet: 'dawn',
+            sage: 'dawn',
+            pulse: 'dawn',
+            pixloo: 'dawn',
+            fresh: 'dawn',
+            nocturne: 'slate',
+            vault: 'slate',
+          }
+          const colors = { dawn: '#fff4e8', resuming: '#faf6f0', slate: '#0f1218' }
+          let theme = stored && retired[stored] ? retired[stored] : stored
+          if (theme === 'system') {
+            const dark = window.matchMedia && window.matchMedia('(prefers-color-scheme: dark)').matches
+            theme = dark ? 'slate' : 'dawn'
+          }
+          if (!colors[theme]) theme = 'dawn'
+          root.setAttribute('data-theme', theme)
+          root.style.colorScheme = theme === 'slate' ? 'dark' : 'light'
           const meta = document.querySelector('meta[name="theme-color"]')
-          const colors = {
-            resuming: '#faf6f0',
-            nocturne: '#07070b',
-            slate: '#0f1218',
-            dawn: '#fff4e8',
-            fresh: '#eef2f9',
-            vault: '#0a0a0a',
-          }
-          if (meta) meta.setAttribute('content', colors[theme] || colors.dawn)
-          document.documentElement.style.colorScheme =
-            theme === 'nocturne' || theme === 'slate' || theme === 'vault' ? 'dark' : 'light'
+          if (meta) meta.setAttribute('content', colors[theme])
 
-          // Non-default themes: inject Google Fonts ASAP (default dawn is self-hosted).
-          if (theme !== 'dawn') {
-            const hrefs = {
-              resuming:
-                'https://fonts.googleapis.com/css2?family=Fraunces:opsz,wght@9..144,500;9..144,600;9..144,700&family=JetBrains+Mono:wght@400;600&family=Plus+Jakarta+Sans:wght@400;500;600;700;800&display=swap',
-              nocturne:
-                'https://fonts.googleapis.com/css2?family=JetBrains+Mono:wght@400;600&family=Rajdhani:wght@500;600;700&display=swap',
-              slate:
-                'https://fonts.googleapis.com/css2?family=IBM+Plex+Sans:wght@400;500;600;700&display=swap',
-              fresh:
-                'https://fonts.googleapis.com/css2?family=JetBrains+Mono:wght@400;600&family=Outfit:wght@400;500;600;700;800&family=Plus+Jakarta+Sans:wght@400;500;600;700;800&display=swap',
-              vault:
-                'https://fonts.googleapis.com/css2?family=JetBrains+Mono:wght@400;600&family=Outfit:wght@400;500;600;700;800&display=swap',
-            }
-            const pre1 = document.createElement('link')
-            pre1.rel = 'preconnect'
-            pre1.href = 'https://fonts.googleapis.com'
-            pre1.setAttribute('data-resuming-fonts-preconnect', '1')
-            document.head.appendChild(pre1)
-            const pre2 = document.createElement('link')
-            pre2.rel = 'preconnect'
-            pre2.href = 'https://fonts.gstatic.com'
-            pre2.crossOrigin = 'anonymous'
-            pre2.setAttribute('data-resuming-fonts-preconnect', '1')
-            document.head.appendChild(pre2)
-            const link = document.createElement('link')
-            link.rel = 'stylesheet'
-            link.href = hrefs[theme]
-            link.setAttribute('data-resuming-theme-fonts', theme)
-            document.head.appendChild(link)
-          }
+          const sizes = { normal: '16px', large: '18px', xlarge: '20px' }
+          const size = sizes[localStorage.getItem('resuming-text-size')]
+          if (size) root.style.setProperty('--font-size-root', size)
         } catch (_) {}
       })()
     </script>
@@ -105,7 +78,7 @@
       type="font/woff2"
       crossorigin
     />
-    <title>Resuming — Get back to your habits without the guilt</title>
+    <title>Resuming — Get back to what you put off</title>
   </head>
   <body>
     <div id="root"></div>

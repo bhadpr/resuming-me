@@ -19,6 +19,8 @@ import { DeleteAccountPage } from './components/DeleteAccountPage'
 import { StartPage } from './components/StartPage'
 import { GuestMergeBanner } from './components/GuestMergeBanner'
 import { GuestAppShell, isGuestAppPath } from './components/GuestAppShell'
+import { LanguageScreen } from './components/LanguageScreen'
+import { useLocale } from './hooks/useLocale'
 import { hideNativeSplash } from './lib/nativeChrome'
 import { loadGuestDraft } from './lib/guestDraft'
 import { markCheckinOpened } from './lib/checkinPrefs'
@@ -60,6 +62,21 @@ function CheckinOpenedPing() {
 
 function RootLayout() {
   useAndroidBackButton()
+  const { localeChosen, localeResolved } = useLocale()
+
+  useEffect(() => {
+    if (!localeResolved) return
+    void hideNativeSplash().catch(() => {})
+  }, [localeResolved])
+
+  useEffect(() => {
+    void import('./lib/marketingCapture').then((mod) => mod.captureMarketingOpen())
+  }, [])
+
+  if (!localeResolved) return <LoadingScreen />
+
+  if (!localeChosen) return <LanguageScreen />
+
   return (
     <>
       <ScrollRestoration />
@@ -237,11 +254,16 @@ export const appRouteObjects = [
               { path: '/numbers/new', element: <RouteSlot /> },
               { path: '/numbers/:id', element: <RouteSlot /> },
               { path: '/numbers/:id/edit', element: <RouteSlot /> },
+              { path: '/medicines/new', element: <RouteSlot /> },
+              { path: '/medicines/:id', element: <RouteSlot /> },
               { path: '/insights', element: <RouteSlot /> },
               { path: '/review/:weekStart', element: <RouteSlot /> },
+              { path: '/settings/themes', element: <RouteSlot /> },
               { path: '/settings', element: <RouteSlot /> },
               { path: '/admin/analytics', element: <RouteSlot /> },
               { path: '/admin/feedback', element: <RouteSlot /> },
+              { path: '/admin/groups', element: <RouteSlot /> },
+              { path: '/admin/groups/:groupId', element: <RouteSlot /> },
             ],
           },
         ],

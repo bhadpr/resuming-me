@@ -37,10 +37,19 @@ describe('parseAppPath', () => {
       screen: 'detail',
       metricId: 'm1',
     })
+    expect(parseAppPath('/medicines/new')).toEqual({ name: 'medicines' })
+    expect(parseAppPath('/medicines/med-1')).toEqual({ name: 'medicines', medicineId: 'med-1' })
     expect(parseAppPath('/insights')).toEqual({ name: 'insights' })
     expect(parseAppPath('/review/2026-09-14')).toEqual({ name: 'review', weekStart: '2026-09-14' })
     expect(parseAppPath('/settings')).toEqual({ name: 'settings' })
+    expect(parseAppPath('/settings/themes')).toEqual({ name: 'themes' })
     expect(parseAppPath('/admin/analytics')).toEqual({ name: 'admin', page: 'analytics' })
+    expect(parseAppPath('/admin/groups')).toEqual({ name: 'admin', page: 'groups' })
+    expect(parseAppPath('/admin/groups/group-1')).toEqual({
+      name: 'admin',
+      page: 'groups',
+      groupId: 'group-1',
+    })
   })
 
   it('returns null for unknown paths', () => {
@@ -53,6 +62,7 @@ describe('parseAppPath', () => {
 describe('tab helpers', () => {
   it('maps views to tabs and paths', () => {
     expect(tabFromView({ name: 'numbers', screen: 'list' })).toBe('metrics')
+    expect(tabFromView({ name: 'medicines', medicineId: 'med-1' })).toBe('metrics')
     expect(tabPath('metrics')).toBe('/numbers')
     expect(tabPath('today')).toBe('/today')
   })

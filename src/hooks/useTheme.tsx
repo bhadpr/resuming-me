@@ -8,51 +8,46 @@ import {
 } from 'react'
 import {
   applyTheme,
-  DEFAULT_THEME,
   getTheme,
-  readStoredTheme,
-  THEMES,
+  readStoredPreference,
+  resolveTheme,
   type ThemeId,
   type ThemeOption,
+  type ThemePreference,
 } from '../lib/themes'
 
 interface ThemeContextValue {
+  /** The theme on screen now. */
   themeId: ThemeId
   theme: ThemeOption
-  themes: ThemeOption[]
-  setThemeId: (id: ThemeId) => void
+  /** What the person picked, including Match phone. */
+  preference: ThemePreference
+  setPreference: (preference: ThemePreference) => void
 }
 
 const ThemeContext = createContext<ThemeContextValue | null>(null)
 
 export function ThemeProvider({ children }: { children: ReactNode }) {
-  const [themeId, setThemeIdState] = useState<ThemeId>(() => {
-    if (typeof document !== 'undefined') {
-      const attr = document.documentElement.getAttribute('data-theme')
-      if (attr && THEMES.some((t) => t.id === attr)) return attr as ThemeId
-    }
-    return DEFAULT_THEME
-  })
+  const [preference, setPreferenceState] = useState<ThemePreference>(() => readStoredPreference())
+  const [themeId, setThemeId] = useState<ThemeId>(() => resolveTheme(readStoredPreference()))
 
   useEffect(() => {
-    const stored = readStoredTheme()
-    setThemeIdState(stored)
-    applyTheme(stored)
-  }, [])
-
-  function setThemeId(id: ThemeId) {
-    setThemeIdState(id)
-    applyTheme(id)
-  }
+    setThemeId(applyTheme(preference))
+    if (preference !== 'system' || typeof window === 'undefined' || !window.matchMedia) return
+    const query = window.matchMedia('(prefers-color-scheme: dark)')
+    const onChange = () => setThemeId(applyTheme('system'))
+    query.addEventListener('change', onChange)
+    return () => query.removeEventListener('change', onChange)
+  }, [preference])
 
   const value = useMemo(
     () => ({
       themeId,
       theme: getTheme(themeId),
-      themes: THEMES,
-      setThemeId,
+      preference,
+      setPreference: setPreferenceState,
     }),
-    [themeId],
+    [themeId, preference],
   )
 
   return <ThemeContext.Provider value={value}>{children}</ThemeContext.Provider>

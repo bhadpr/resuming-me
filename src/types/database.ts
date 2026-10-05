@@ -244,6 +244,89 @@ export interface Database {
         }
         Relationships: []
       }
+      medicines: {
+        Row: {
+          id: string
+          user_id: string
+          name: string
+          photo_path: string | null
+          weekdays: number[]
+          system: string | null
+          archived: boolean
+          created_at: string
+          updated_at: string
+        }
+        Insert: {
+          id?: string
+          user_id: string
+          name: string
+          photo_path?: string | null
+          weekdays?: number[]
+          system?: string | null
+          archived?: boolean
+          created_at?: string
+          updated_at?: string
+        }
+        Update: {
+          name?: string
+          photo_path?: string | null
+          weekdays?: number[]
+          system?: string | null
+          archived?: boolean
+          updated_at?: string
+        }
+        Relationships: []
+      }
+      medicine_times: {
+        Row: {
+          id: string
+          medicine_id: string
+          user_id: string
+          hour: number
+          minute: number
+          meal: string | null
+          created_at: string
+        }
+        Insert: {
+          id?: string
+          medicine_id: string
+          user_id: string
+          hour: number
+          minute: number
+          meal?: string | null
+          created_at?: string
+        }
+        Update: {
+          hour?: number
+          minute?: number
+          meal?: string | null
+        }
+        Relationships: []
+      }
+      medicine_doses: {
+        Row: {
+          id: string
+          medicine_id: string
+          user_id: string
+          date: string
+          hour: number
+          minute: number
+          taken_at: string
+        }
+        Insert: {
+          id?: string
+          medicine_id: string
+          user_id: string
+          date: string
+          hour: number
+          minute: number
+          taken_at?: string
+        }
+        Update: {
+          taken_at?: string
+        }
+        Relationships: []
+      }
       log_entries: {
         Row: {
           id: string
@@ -433,6 +516,95 @@ export interface Database {
         }
         Relationships: []
       }
+      marketing_groups: {
+        Row: {
+          id: string
+          name: string
+          code: string
+          install_goal: number
+          install_rate_rupees: number
+          retained_rate_rupees: number
+          cap_rupees: number | null
+          min_payout_installs: number
+          created_at: string
+        }
+        Insert: {
+          id?: string
+          name: string
+          code?: string
+          install_goal?: number
+          install_rate_rupees?: number
+          retained_rate_rupees?: number
+          cap_rupees?: number | null
+          min_payout_installs?: number
+          created_at?: string
+        }
+        Update: {
+          name?: string
+          code?: string
+          install_goal?: number
+          install_rate_rupees?: number
+          retained_rate_rupees?: number
+          cap_rupees?: number | null
+          min_payout_installs?: number
+        }
+        Relationships: []
+      }
+      marketing_members: {
+        Row: {
+          id: string
+          group_id: string
+          user_id: string | null
+          email: string
+          code: string
+          removed_at: string | null
+          created_at: string
+        }
+        Insert: {
+          id?: string
+          group_id: string
+          user_id?: string | null
+          email: string
+          code?: string
+          removed_at?: string | null
+          created_at?: string
+        }
+        Update: {
+          email?: string
+          removed_at?: string | null
+        }
+        Relationships: []
+      }
+      marketing_payments: {
+        Row: {
+          id: string
+          group_id: string
+          member_id: string | null
+          paid_on: string
+          amount_rupees: number
+          note: string
+          paid: boolean
+          created_at: string
+        }
+        Insert: {
+          id?: string
+          group_id: string
+          member_id?: string | null
+          paid_on?: string
+          amount_rupees: number
+          note?: string
+          paid?: boolean
+          created_at?: string
+        }
+        Update: {
+          paid?: boolean
+          note?: string
+          amount_rupees?: number
+          paid_on?: string
+          member_id?: string | null
+        }
+        Relationships: []
+      }
       events: {
         Row: {
           id: string
@@ -498,6 +670,16 @@ export interface Database {
           checkin_token: string
         }[]
       }
+      due_birthday_emails: {
+        Args: { p_now?: string }
+        Returns: {
+          user_id: string
+          email: string
+          timezone: string
+          local_date: string
+          checkin_token: string
+        }[]
+      }
       opt_out_checkins: {
         Args: { p_token: string }
         Returns: boolean
@@ -516,6 +698,52 @@ export interface Database {
           comeback_count: number
           active_users: number
           log_events: number
+        }[]
+      }
+      marketing_record_open: {
+        Args: {
+          p_device_key: string
+          p_group_code: string
+          p_member_code: string
+          p_opened_on: string
+        }
+        Returns: undefined
+      }
+      marketing_add_member: {
+        Args: { p_group_id: string; p_email: string }
+        Returns: string
+      }
+      marketing_my_stats: {
+        Args: { p_as_of: string }
+        Returns: {
+          group_id: string
+          group_name: string
+          group_code: string
+          member_code: string
+          install_goal: number
+          install_rate_rupees: number
+          retained_rate_rupees: number
+          cap_rupees: number | null
+          min_payout_installs: number
+          group_installs: number
+          group_in_progress: number
+          group_retained: number
+          group_ended_short: number
+          my_installs: number
+          my_in_progress: number
+          my_retained: number
+          my_ended_short: number
+        }[]
+      }
+      marketing_admin_counts: {
+        Args: { p_as_of: string }
+        Returns: {
+          group_id: string
+          member_id: string | null
+          installs: number
+          in_progress: number
+          retained: number
+          ended_short: number
         }[]
       }
     }

@@ -2,6 +2,7 @@ import { useEffect, useState } from 'react'
 import { Navigate, useSearchParams } from 'react-router-dom'
 import { StartFlow } from './start/StartFlow'
 import { useAuth } from '../hooks/useAuth'
+import { DEFAULT_TITLE, useDocumentMeta } from '../hooks/useDocumentMeta'
 import { clampStep, ensureGuestDraft, setGuestStep, type GuestDraft } from '../lib/guestDraft'
 
 /** Guest onboarding at /start?step=1..8. Signed-in visitors go to Today. */
@@ -11,6 +12,7 @@ export function StartPage() {
   const [draft, setDraft] = useState<GuestDraft | null>(null)
   const stepParam = params.get('step')
   const force = params.get('force') === '1'
+  useDocumentMeta({ title: DEFAULT_TITLE, noindex: true })
 
   useEffect(() => {
     if (loading || (user && !force)) return
@@ -63,6 +65,7 @@ export function StartPage() {
           onDraft={update}
           onGoogle={signInWithGoogle}
           adding={params.get('add') === '1'}
+          addingMedicine={params.get('medicine') === '1'}
         />
       </div>
     </div>

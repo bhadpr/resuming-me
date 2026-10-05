@@ -18,10 +18,12 @@ export type AppView =
   | { name: 'numbers'; screen: 'list' }
   | { name: 'numbers'; screen: 'form'; metricId?: string }
   | { name: 'numbers'; screen: 'detail'; metricId: string }
+  | { name: 'medicines'; medicineId?: string }
   | { name: 'insights' }
   | { name: 'review'; weekStart: string }
   | { name: 'settings' }
-  | { name: 'admin'; page: 'analytics' | 'feedback' }
+  | { name: 'themes' }
+  | { name: 'admin'; page: 'analytics' | 'feedback' | 'groups'; groupId?: string }
 
 const APP_ROUTES: Array<{ pattern: string; parse: (params: Record<string, string | undefined>) => AppView }> = [
   { pattern: '/today', parse: () => ({ name: 'today' }) },
@@ -45,11 +47,22 @@ const APP_ROUTES: Array<{ pattern: string; parse: (params: Record<string, string
     parse: (p) => ({ name: 'numbers', screen: 'detail', metricId: p.id! }),
   },
   { pattern: '/numbers', parse: () => ({ name: 'numbers', screen: 'list' }) },
+  { pattern: '/medicines/new', parse: () => ({ name: 'medicines' }) },
+  {
+    pattern: '/medicines/:id',
+    parse: (p) => ({ name: 'medicines', medicineId: p.id }),
+  },
   { pattern: '/insights', parse: () => ({ name: 'insights' }) },
   { pattern: '/review/:weekStart', parse: (p) => ({ name: 'review', weekStart: p.weekStart! }) },
+  { pattern: '/settings/themes', parse: () => ({ name: 'themes' }) },
   { pattern: '/settings', parse: () => ({ name: 'settings' }) },
   { pattern: '/admin/analytics', parse: () => ({ name: 'admin', page: 'analytics' }) },
   { pattern: '/admin/feedback', parse: () => ({ name: 'admin', page: 'feedback' }) },
+  {
+    pattern: '/admin/groups/:groupId',
+    parse: (p) => ({ name: 'admin', page: 'groups', groupId: p.groupId }),
+  },
+  { pattern: '/admin/groups', parse: () => ({ name: 'admin', page: 'groups' }) },
 ]
 
 export function parseAppPath(pathname: string): AppView | null {
@@ -62,7 +75,7 @@ export function parseAppPath(pathname: string): AppView | null {
 
 export function tabFromView(view: AppView | null): AppTab {
   if (!view) return 'today'
-  if (view.name === 'numbers') return 'metrics'
+  if (view.name === 'numbers' || view.name === 'medicines') return 'metrics'
   if (view.name === 'activities') return 'activities'
   if (view.name === 'insights') return 'insights'
   return 'today'
@@ -79,6 +92,7 @@ export function showAppChrome(view: AppView | null): boolean {
     view.name === 'today' ||
     view.name === 'activities' ||
     view.name === 'numbers' ||
+    view.name === 'medicines' ||
     view.name === 'insights' ||
     view.name === 'review'
   )

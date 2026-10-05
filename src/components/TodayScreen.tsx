@@ -16,6 +16,7 @@ import {
   type SmallerChoiceMinutes,
 } from '../lib/reentry'
 import { formatMetricReading, isBloodPressure, type Metric } from '../lib/metrics'
+import { isDailyStepsMetric } from '../lib/steps'
 import { visibleName } from '../lib/catalogName'
 import { useLocale } from '../hooks/useLocale'
 import type { MetricEntry } from '../lib/metricEntries'
@@ -25,6 +26,9 @@ import { smallerChoiceProp, track } from '../lib/track'
 import { DeadlineOverduePrompt } from './DeadlineOverduePrompt'
 import { HabitMark } from './HabitMark'
 import { HabitVideoPlaceholder } from './HabitVideoPlaceholder'
+import { StepsCard } from './StepsCard'
+import { MedicineDoses } from './MedicineDoses'
+import type { DueDose } from '../lib/medicineSchedule'
 import { habitTemplateId } from '../data/habitArt'
 import { WelcomeBackCard, type WelcomeBackModel } from './WelcomeBackCard'
 import type { Moment } from '../lib/moments'
@@ -85,7 +89,6 @@ interface TodayScreenProps {
   onWelcomeStart?: (row: ActivityTodayProgress, minutes: number | null) => void
   onWelcomeDismiss?: () => void
   onFreshStart?: () => void
-  onEmptySetup?: () => void
   onAddActivity?: () => void
   moment?: Moment | null
   onMomentStart?: (activityId: string, minutes: number | null) => void
@@ -93,6 +96,10 @@ interface TodayScreenProps {
   reviewCard?: { weekStart: string; headline: string } | null
   onOpenReview?: (weekStart: string) => void
   focusActivityId?: string | null
+  medicineDoses?: DueDose[]
+  medicineBusyKey?: string | null
+  medicineError?: string | null
+  onToggleMedicineDose?: (dose: DueDose) => void
 }
 
 export function TodayScreen({
@@ -129,7 +136,6 @@ export function TodayScreen({
   onWelcomeStart,
   onWelcomeDismiss,
   onFreshStart,
-  onEmptySetup,
   onAddActivity,
   moment = null,
   onMomentStart,
@@ -137,6 +143,10 @@ export function TodayScreen({
   reviewCard = null,
   onOpenReview,
   focusActivityId = null,
+  medicineDoses = [],
+  medicineBusyKey = null,
+  medicineError = null,
+  onToggleMedicineDose,
 }: TodayScreenProps) {
   const { t, locale } = useLocale()
   const quietSuggested = quietReentry ? pickEasiestReentryRow(rows) : null
@@ -157,13 +167,42 @@ export function TodayScreen({
       ),
     [rows, activeTimer?.activityId, suggested?.activity.id, focusActivityId],
   )
-  const pendingMetrics = metrics.filter(({ entry }) => !entry)
-  const loggedMetrics = metrics.filter(({ entry }) => entry)
+  const visibleMetrics = metrics.filter(({ metric }) => !isDailyStepsMetric(metric))
+  const pendingMetrics = visibleMetrics.filter(({ entry }) => !entry)
+  const loggedMetrics = visibleMetrics.filter(({ entry }) => entry)
   const emptyKind = todayEmptyKind({
     hasActivities,
     dueCount: rows.length,
   })
   const showWelcome = (quietReentry || reentryFollowUp) && emptyKind !== 'setup'
+  const openRows = [...(hero ? [hero] : []), ...alsoDue]
+
+  function renderActivity(row: ActivityTodayProgress, heroRow = false) {
+    return (
+      <TodayActivityRow
+        key={row.activity.id}
+        row={row}
+        hero={heroRow}
+        busy={busyId === row.activity.id}
+        activeTimer={activeTimer}
+        timerElapsedSeconds={timerElapsedSeconds}
+        onCheckOff={() => onCheckOff(row)}
+        onUncheck={() => onUncheck(row)}
+        onIncrement={() => onIncrement(row)}
+        onTimerStart={() => onTimerStart(row)}
+        onTimerPause={onTimerPause}
+        onTimerResume={onTimerResume}
+        onTimerStop={onTimerStop}
+        onManualMinutes={(minutes) => onManualMinutes(row, minutes)}
+        onRescheduleDeadline={(date) => onRescheduleDeadline(row, date)}
+        onShrinkRunningTimer={onShrinkRunningTimer}
+        onSkipToday={onSkipToday ? (reason) => onSkipToday(row, reason) : undefined}
+        onTakeRestDay={onTakeRestDay}
+        isRestDay={isRestDay}
+        onPauseHabit={onPauseHabit ? (duration) => onPauseHabit(row, duration) : undefined}
+      />
+    )
+  }
 
   return (
     <div className="today-screen">
@@ -190,20 +229,6 @@ export function TodayScreen({
         <TodaySkeleton />
       ) : (
         <>
-          {emptyKind === 'setup' && (
-            <div className="today-empty">
-              <p className="today-empty-title">{t('today.waiting')}</p>
-              <p className="today-empty-copy">
-                {t('today.waitingCopy')}
-              </p>
-              {onEmptySetup && (
-                <button type="button" className="btn btn-primary" onClick={onEmptySetup}>
-                  Get started
-                </button>
-              )}
-            </div>
-          )}
-
           {welcomeBack && onWelcomeStart && onWelcomeDismiss && onFreshStart && (
             <WelcomeBackCard
               model={welcomeBack}
@@ -258,183 +283,11 @@ export function TodayScreen({
             />
           )}
 
-          {emptyKind === 'clear' && !showWelcome && (
-            <div className="today-empty">
-              <p className="today-empty-title">Nothing open today</p>
-              <p className="today-empty-copy">
-                Weekly and monthly things will show up here when they’re open.
-              </p>
-            </div>
-          )}
-
-          {emptyKind === null && (
-            <>
-              {hero && (
-                <section className="today-section">
-                  <h3 className="section-label">
-                    {suggested?.activity.id === hero.activity.id
-                      ? 'Start here'
-                      : focusActivityId === hero.activity.id
-                        ? "This week's focus"
-                        : heroKicker(hero, activeTimer)}
-                  </h3>
-                  <ul className="today-list">
-                    <TodayActivityRow
-                      row={hero}
-                      hero
-                      busy={busyId === hero.activity.id}
-                      activeTimer={activeTimer}
-                      timerElapsedSeconds={timerElapsedSeconds}
-                      onCheckOff={() => onCheckOff(hero)}
-                      onUncheck={() => onUncheck(hero)}
-                      onIncrement={() => onIncrement(hero)}
-                      onTimerStart={() => onTimerStart(hero)}
-                      onTimerPause={onTimerPause}
-                      onTimerResume={onTimerResume}
-                      onTimerStop={onTimerStop}
-                      onManualMinutes={(minutes) => onManualMinutes(hero, minutes)}
-                      onRescheduleDeadline={(date) => onRescheduleDeadline(hero, date)}
-                      onShrinkRunningTimer={onShrinkRunningTimer}
-                      onSkipToday={
-                        onSkipToday
-                          ? (reason) => onSkipToday(hero, reason)
-                          : undefined
-                      }
-                      onTakeRestDay={onTakeRestDay}
-                      isRestDay={isRestDay}
-                      onPauseHabit={
-                        onPauseHabit
-                          ? (duration) => onPauseHabit(hero, duration)
-                          : undefined
-                      }
-                    />
-                  </ul>
-                </section>
-              )}
-
-              {alsoDue.length > 0 && (
-                <section className="today-section">
-                  <h3 className="section-label">{t('today.also')}</h3>
-                  <ul className="today-list">
-                    {alsoDue.map((row) => (
-                      <TodayActivityRow
-                        key={row.activity.id}
-                        row={row}
-                        busy={busyId === row.activity.id}
-                        activeTimer={activeTimer}
-                        timerElapsedSeconds={timerElapsedSeconds}
-                        onCheckOff={() => onCheckOff(row)}
-                        onUncheck={() => onUncheck(row)}
-                        onIncrement={() => onIncrement(row)}
-                        onTimerStart={() => onTimerStart(row)}
-                        onTimerPause={onTimerPause}
-                        onTimerResume={onTimerResume}
-                        onTimerStop={onTimerStop}
-                        onManualMinutes={(minutes) => onManualMinutes(row, minutes)}
-                        onRescheduleDeadline={(date) => onRescheduleDeadline(row, date)}
-                        onShrinkRunningTimer={onShrinkRunningTimer}
-                        onSkipToday={
-                          onSkipToday ? (reason) => onSkipToday(row, reason) : undefined
-                        }
-                        onTakeRestDay={onTakeRestDay}
-                        isRestDay={isRestDay}
-                        onPauseHabit={
-                          onPauseHabit ? (duration) => onPauseHabit(row, duration) : undefined
-                        }
-                      />
-                    ))}
-                  </ul>
-                </section>
-              )}
-
-              {done.length > 0 && (
-                <details className="today-done">
-                  <summary className="section-label today-done-summary">
-                    Done today · {done.length}
-                  </summary>
-                  <ul className="today-list">
-                    {done.map((row) => (
-                      <TodayActivityRow
-                        key={row.activity.id}
-                        row={row}
-                        busy={busyId === row.activity.id}
-                        activeTimer={activeTimer}
-                        timerElapsedSeconds={timerElapsedSeconds}
-                        onCheckOff={() => onCheckOff(row)}
-                        onUncheck={() => onUncheck(row)}
-                        onIncrement={() => onIncrement(row)}
-                        onTimerStart={() => onTimerStart(row)}
-                        onTimerPause={onTimerPause}
-                        onTimerResume={onTimerResume}
-                        onTimerStop={onTimerStop}
-                        onManualMinutes={(minutes) => onManualMinutes(row, minutes)}
-                        onRescheduleDeadline={(date) => onRescheduleDeadline(row, date)}
-                        onShrinkRunningTimer={onShrinkRunningTimer}
-                        onSkipToday={
-                          onSkipToday
-                            ? (reason) => onSkipToday(row, reason)
-                            : undefined
-                        }
-                        onTakeRestDay={onTakeRestDay}
-                        isRestDay={isRestDay}
-                        onPauseHabit={
-                          onPauseHabit
-                            ? (duration) => onPauseHabit(row, duration)
-                            : undefined
-                        }
-                      />
-                    ))}
-                  </ul>
-                </details>
-              )}
-            </>
-          )}
-
-          {metrics.length > 0 && (
-            <section className="today-section today-checkin">
-              <h3 className="section-label">{t('nav.vitals')}</h3>
-              <ul className="today-list">
-                {[...pendingMetrics, ...loggedMetrics].map(({ metric, entry }) => (
-                  <li
-                    key={metric.id}
-                    className={`today-row ${isBloodPressure(metric) ? 'vital-entry' : ''} ${entry ? 'today-row-done' : ''}`}
-                  >
-                    <HabitMark name={visibleName(metric, locale)} templateId={metric.template_id} />
-                    <span className="activity-meta">
-                      <span className="activity-name">{visibleName(metric, locale)}</span>
-                      <span className="activity-desc">
-                        {entry
-                          ? `${formatMetricReading(entry.value, metric.unit, entry.secondary_value)} today`
-                          : isBloodPressure(metric)
-                            ? 'Upper and lower today'
-                            : `Today’s ${metric.unit}`}
-                      </span>
-                    </span>
-                    <MetricValueForm
-                      metric={metric}
-                      busy={busyId === metric.id}
-                      onLog={onLogMetric}
-                      initialValue={entry ? String(entry.value) : ''}
-                      initialSecondary={entry?.secondary_value == null ? '' : String(entry.secondary_value)}
-                      submitLabel={entry ? 'Update' : 'Log'}
-                    />
-                  </li>
-                ))}
-              </ul>
-            </section>
-          )}
-
-          {emptyKind !== 'setup' && onAddActivity && (
-            <button type="button" className="btn btn-secondary today-add" onClick={onAddActivity}>
-              {t('today.add')}
-            </button>
-          )}
-
           {hasActivities && onTakeRestDay && (isRestDay || rows.length === 0) && (
             <div className="today-rest-day">
-              <p className="screen-sub">Rest. The whole day is off, and it isn't a miss.</p>
+              <p className="screen-sub">{t('today.restCopy')}</p>
               {isRestDay ? (
-                <p className="today-rest-day-note">Today is a rest day.</p>
+                <p className="today-rest-day-note">{t('today.restNote')}</p>
               ) : (
                 <button
                   type="button"
@@ -447,6 +300,83 @@ export function TodayScreen({
               )}
             </div>
           )}
+
+          {(medicineError || medicineDoses.length > 0) && onToggleMedicineDose && (
+            <>
+              {medicineError && <p className="error">{medicineError}</p>}
+              <MedicineDoses
+                doses={medicineDoses}
+                busyKey={medicineBusyKey}
+                onToggle={onToggleMedicineDose}
+              />
+            </>
+          )}
+
+          {(emptyKind !== 'setup' || openRows.length > 0 || done.length > 0) && (
+          <section className="today-section">
+            <h3 className="section-label">{t('today.logActivities')}</h3>
+            {emptyKind === 'clear' && !showWelcome && !isRestDay && (
+              <div className="today-empty">
+                <p className="today-empty-title">{t('today.nothing')}</p>
+                <p className="today-empty-copy">
+                  Weekly and monthly things will show up here when they’re open.
+                </p>
+              </div>
+            )}
+            {(openRows.length > 0 || done.length > 0) && (
+              <ul className="today-list">
+                {openRows.map((row) => renderActivity(row, hero?.activity.id === row.activity.id))}
+                {done.map((row) => renderActivity(row))}
+              </ul>
+            )}
+            {emptyKind !== 'setup' && onAddActivity && (
+              <button type="button" className="btn btn-secondary today-add" onClick={onAddActivity}>
+                {t('today.add')}
+              </button>
+            )}
+          </section>
+          )}
+
+          {visibleMetrics.length > 0 && (
+          <section className="today-section today-checkin">
+            <h3 className="section-label">{t('today.logVitals')}</h3>
+            {visibleMetrics.length > 0 && (
+              <ul className="today-list">
+                {[...pendingMetrics, ...loggedMetrics].map(({ metric, entry }) => (
+                  <li
+                    key={metric.id}
+                    className={`today-row today-row-stack ${entry ? 'today-row-done' : ''}`}
+                  >
+                    <div className="today-row-head">
+                      <HabitMark name={visibleName(metric, locale)} templateId={metric.template_id} />
+                      <span className="activity-name">{visibleName(metric, locale)}</span>
+                    </div>
+                    <div className={`today-row-main ${isBloodPressure(metric) ? 'vital-entry' : ''}`}>
+                      <span className="activity-meta">
+                        <span className="activity-desc">
+                          {entry
+                            ? `${formatMetricReading(entry.value, metric.unit, entry.secondary_value)} today`
+                            : isBloodPressure(metric)
+                              ? 'Upper and lower today'
+                              : `Today’s ${metric.unit}`}
+                        </span>
+                      </span>
+                      <MetricValueForm
+                        metric={metric}
+                        busy={busyId === metric.id}
+                        onLog={onLogMetric}
+                        initialValue={entry ? String(entry.value) : ''}
+                        initialSecondary={entry?.secondary_value == null ? '' : String(entry.secondary_value)}
+                        submitLabel={entry ? 'Update' : 'Log'}
+                      />
+                    </div>
+                  </li>
+                ))}
+              </ul>
+            )}
+          </section>
+          )}
+
         </>
       )}
     </div>
@@ -642,16 +572,6 @@ function runReentryPrimary(
   else actions.onCheckOff(row)
 }
 
-function heroKicker(
-  row: ActivityTodayProgress,
-  activeTimer: ActiveTimerState | null,
-): string {
-  if (activeTimer?.activityId === row.activity.id) return 'In progress'
-  if (row.overdue) return 'Still open'
-  if (row.recentlyPostponed) return 'Resume now'
-  return 'On Today'
-}
-
 function TodayActivityRow({
   row,
   hero = false,
@@ -717,6 +637,9 @@ function TodayActivityRow({
   const [showManual, setShowManual] = useState(false)
   const [manualMinutes, setManualMinutes] = useState('')
   const [moreOpen, setMoreOpen] = useState(false)
+  const [moreChoice, setMoreChoice] = useState<
+    null | 'skip' | 'rest' | 'pause' | 'shrink' | 'pauseTimer' | 'stop'
+  >(null)
   const [videoOpen, setVideoOpen] = useState(false)
   const templateId = habitTemplateId(activity)
   const canShowVideo = showsHabitVideo(templateId)
@@ -773,15 +696,21 @@ function TodayActivityRow({
         ? 'today-row-progress'
         : ''
 
+  if (activity.template_id === 'steps') {
+    return <StepsCard goal={activity.target_value ?? 10000} />
+  }
+
   return (
     <li
       className={`today-row today-row-stack ${hero ? 'today-row-hero' : ''} ${rowStateClass} ${row.overdue ? 'today-row-overdue' : ''}`}
     >
-      <div className="today-row-main">
-        <StatusMark live={timerLive} paused={timerPaused} />
+      <div className="today-row-head">
         <HabitMark name={visibleName(activity, locale)} emoji={activity.emoji} templateId={activity.template_id} />
+        <span className="activity-name">{visibleName(activity, locale)}</span>
+        <StatusMark live={timerLive} paused={timerPaused} />
+      </div>
+      <div className="today-row-main">
         <span className="activity-meta">
-          <span className="activity-name">{visibleName(activity, locale)}</span>
           <span className="activity-desc">
             {desc}
             {partial ? ` · ${t('today.partial')}` : ''}
@@ -807,30 +736,8 @@ function TodayActivityRow({
               />
             </div>
           )}
-          {canShowVideo && (
-            <button
-              type="button"
-              className="btn btn-ghost today-video-btn"
-              aria-expanded={videoOpen}
-              onClick={() => setVideoOpen((open) => !open)}
-            >
-              {videoOpen ? 'Hide video' : 'Video'}
-            </button>
-          )}
         </span>
         <span className="today-actions">
-          {showMore && (
-            <button
-              type="button"
-              className="btn btn-ghost btn-today-more"
-              disabled={busy}
-              aria-expanded={moreOpen}
-              aria-label={`More options for ${activity.name}`}
-              onClick={() => setMoreOpen((open) => !open)}
-            >
-              ···
-            </button>
-          )}
           {actionKind === 'checkbox' && !skipped && (
             <button
               type="button"
@@ -900,141 +807,6 @@ function TodayActivityRow({
           )}
         </span>
       </div>
-
-      {moreOpen && showMore && (
-        <div className="today-skip-sheet">
-          {canSkip && onSkipToday && (
-            <>
-              <p className="today-skip-label">Skip today</p>
-              <p className="screen-sub">Skip. This day stays quiet, and it isn't a miss.</p>
-              <div className="today-skip-chips" role="group" aria-label="Skip reason">
-                {SKIP_REASONS.map((reason) => (
-                  <button
-                    key={reason}
-                    type="button"
-                    className="today-skip-chip"
-                    disabled={busy}
-                    onClick={() => {
-                      onSkipToday(reason)
-                      setMoreOpen(false)
-                    }}
-                  >
-                    {reason}
-                  </button>
-                ))}
-              </div>
-            </>
-          )}
-          {canRest && onTakeRestDay && (
-            <>
-              <p className="screen-sub">Rest. The whole day is off, and it isn't a miss.</p>
-              <button
-                type="button"
-                className="btn btn-ghost btn-sm"
-                disabled={busy}
-                onClick={() => {
-                  onTakeRestDay()
-                  setMoreOpen(false)
-                }}
-              >
-                Rest today
-              </button>
-            </>
-          )}
-          {canPauseHabit && onPauseHabit && (
-            <>
-              <p className="screen-sub">Pause. This habit stays hidden until you come back.</p>
-              <div className="today-skip-chips">
-                {(
-                  [
-                    ['1_week', '1 week'],
-                    ['2_weeks', '2 weeks'],
-                    ['until_resume', 'Until I resume'],
-                  ] as const
-                ).map(([duration, label]) => (
-                  <button
-                    key={duration}
-                    type="button"
-                    className="today-skip-chip"
-                    disabled={busy}
-                    onClick={() => {
-                      onPauseHabit(duration)
-                      setMoreOpen(false)
-                    }}
-                  >
-                    {label}
-                  </button>
-                ))}
-              </div>
-            </>
-          )}
-          {canShrinkRunning && (
-            <>
-              <p className="screen-sub">Make it smaller. Two minutes still counts.</p>
-              <div className="today-skip-chips">
-                <button
-                  type="button"
-                  className="today-skip-chip"
-                  disabled={busy}
-                  onClick={() => {
-                    onShrinkRunningTimer(1)
-                    setMoreOpen(false)
-                  }}
-                >
-                  1 minute
-                </button>
-                <button
-                  type="button"
-                  className="today-skip-chip"
-                  disabled={busy}
-                  onClick={() => {
-                    onShrinkRunningTimer(2)
-                    setMoreOpen(false)
-                  }}
-                >
-                  2 minutes
-                </button>
-              </div>
-            </>
-          )}
-          {timerLive && (
-            <>
-              <p className="screen-sub">Pause the timer. It keeps the minutes you already did.</p>
-              <button
-                type="button"
-                className="btn btn-ghost btn-sm"
-                disabled={busy}
-                onClick={() => {
-                  onTimerPause()
-                  setMoreOpen(false)
-                }}
-              >
-                Pause timer
-              </button>
-            </>
-          )}
-          {timerPaused && (
-            <>
-              <p className="screen-sub">Stop. This saves the minutes you already did.</p>
-              <button
-                type="button"
-                className="btn btn-ghost btn-sm"
-                disabled={busy}
-                onClick={() => {
-                  onTimerStop()
-                  setMoreOpen(false)
-                }}
-              >
-                Stop
-              </button>
-            </>
-          )}
-          <button type="button" className="btn btn-ghost btn-sm" onClick={() => setMoreOpen(false)}>
-            Cancel
-          </button>
-        </div>
-      )}
-
       {isThisTimer && (
         <div
           className={`today-timer-elapsed ${timerPaused ? 'today-timer-elapsed-paused' : ''}`}
@@ -1068,57 +840,259 @@ function TodayActivityRow({
           )}
         </div>
       )}
-
-      {actionKind === 'timer' && !skipped && (
-        <div className="timer-manual">
-          {!showManual ? (
+      {(canShowVideo || (actionKind === 'timer' && !skipped) || showMore) && (
+        <div className="today-extra">
+          {canShowVideo && (
             <button
               type="button"
-              className="btn btn-ghost btn-sm"
-              onClick={() => setShowManual(true)}
+              className="today-extra-btn"
+              aria-expanded={videoOpen}
+              onClick={() => setVideoOpen((open) => !open)}
             >
-              or enter minutes manually
+              {videoOpen ? 'Hide video' : 'Video'}
             </button>
-          ) : (
-            <form
-              className="metric-log-form"
-              onSubmit={(e) => {
-                e.preventDefault()
-                const minutes = Number(manualMinutes)
-                if (!minutes || minutes <= 0) return
-                onManualMinutes(minutes)
-                setManualMinutes('')
-                setShowManual(false)
+          )}
+          {actionKind === 'timer' && !skipped && (
+            <button
+              type="button"
+              className="today-extra-btn"
+              aria-expanded={showManual}
+              onClick={() => {
+                setMoreOpen(false)
+                setMoreChoice(null)
+                setShowManual((open) => !open)
               }}
             >
-              <input
-                className="field-input field-input-sm"
-                type="number"
-                min={1}
-                step={1}
-                placeholder="min"
-                value={manualMinutes}
-                onChange={(e) => setManualMinutes(e.target.value)}
-                aria-label={`Manual minutes for ${activity.name}`}
-              />
-              <button
-                type="submit"
-                className="btn btn-primary btn-today"
-                disabled={busy || !manualMinutes}
-              >
-                Add
-              </button>
-              <button
-                type="button"
-                className="btn btn-ghost btn-sm"
-                onClick={() => setShowManual(false)}
-              >
-                Cancel
-              </button>
-            </form>
+              Log minutes
+            </button>
+          )}
+          {showMore && (
+            <button
+              type="button"
+              className="today-extra-btn"
+              disabled={busy}
+              aria-expanded={moreOpen}
+              aria-label={`More options for ${activity.name}`}
+              onClick={() => {
+                setShowManual(false)
+                setMoreChoice(null)
+                setMoreOpen((open) => !open)
+              }}
+            >
+              More
+            </button>
           )}
         </div>
       )}
+      {showManual && actionKind === 'timer' && !skipped && (
+        <form
+          className="metric-log-form today-log-form"
+          onSubmit={(e) => {
+            e.preventDefault()
+            const minutes = Number(manualMinutes)
+            if (!minutes || minutes <= 0) return
+            onManualMinutes(minutes)
+            setManualMinutes('')
+            setShowManual(false)
+          }}
+        >
+          <input
+            className="field-input field-input-sm"
+            type="number"
+            min={1}
+            step={1}
+            placeholder="Minutes"
+            value={manualMinutes}
+            onChange={(e) => setManualMinutes(e.target.value)}
+            aria-label={`Minutes for ${activity.name}`}
+          />
+          <button type="submit" className="btn btn-primary btn-today" disabled={busy || !manualMinutes}>
+            Add
+          </button>
+          <button type="button" className="today-extra-btn" onClick={() => setShowManual(false)}>
+            Cancel
+          </button>
+        </form>
+      )}
+      {moreOpen && showMore && (
+        <div className="today-more">
+          {!moreChoice && (
+            <div className="today-more-menu">
+              {canSkip && (
+                <button type="button" className="today-extra-btn" onClick={() => setMoreChoice('skip')}>
+                  Skip today
+                </button>
+              )}
+              {canRest && (
+                <button type="button" className="today-extra-btn" onClick={() => setMoreChoice('rest')}>
+                  Rest today
+                </button>
+              )}
+              {canPauseHabit && (
+                <button type="button" className="today-extra-btn" onClick={() => setMoreChoice('pause')}>
+                  Pause this habit
+                </button>
+              )}
+              {canShrinkRunning && (
+                <button type="button" className="today-extra-btn" onClick={() => setMoreChoice('shrink')}>
+                  Make it smaller
+                </button>
+              )}
+              {timerLive && (
+                <button type="button" className="today-extra-btn" onClick={() => setMoreChoice('pauseTimer')}>
+                  Pause timer
+                </button>
+              )}
+              {timerPaused && (
+                <button type="button" className="today-extra-btn" onClick={() => setMoreChoice('stop')}>
+                  Stop and save
+                </button>
+              )}
+            </div>
+          )}
+          {moreChoice === 'skip' && canSkip && onSkipToday && (
+            <>
+              <p className="today-more-note">This day stays quiet, and it is not a miss.</p>
+              <div className="today-skip-chips" role="group" aria-label="Skip reason">
+                {SKIP_REASONS.map((reason) => (
+                  <button
+                    key={reason}
+                    type="button"
+                    className="today-skip-chip"
+                    disabled={busy}
+                    onClick={() => {
+                      onSkipToday(reason)
+                      setMoreOpen(false)
+                      setMoreChoice(null)
+                    }}
+                  >
+                    {reason}
+                  </button>
+                ))}
+              </div>
+            </>
+          )}
+          {moreChoice === 'rest' && canRest && onTakeRestDay && (
+            <>
+              <p className="today-more-note">The whole day is off, and it is not a miss.</p>
+              <button
+                type="button"
+                className="today-skip-chip"
+                disabled={busy}
+                onClick={() => {
+                  onTakeRestDay()
+                  setMoreOpen(false)
+                  setMoreChoice(null)
+                }}
+              >
+                Rest today
+              </button>
+            </>
+          )}
+          {moreChoice === 'pause' && canPauseHabit && onPauseHabit && (
+            <>
+              <p className="today-more-note">This habit stays hidden until you come back.</p>
+              <div className="today-skip-chips">
+                {(
+                  [
+                    ['1_week', '1 week'],
+                    ['2_weeks', '2 weeks'],
+                    ['until_resume', 'Until I resume'],
+                  ] as const
+                ).map(([duration, label]) => (
+                  <button
+                    key={duration}
+                    type="button"
+                    className="today-skip-chip"
+                    disabled={busy}
+                    onClick={() => {
+                      onPauseHabit(duration)
+                      setMoreOpen(false)
+                      setMoreChoice(null)
+                    }}
+                  >
+                    {label}
+                  </button>
+                ))}
+              </div>
+            </>
+          )}
+          {moreChoice === 'shrink' && canShrinkRunning && (
+            <>
+              <p className="today-more-note">Two minutes still counts.</p>
+              <div className="today-skip-chips">
+                <button
+                  type="button"
+                  className="today-skip-chip"
+                  disabled={busy}
+                  onClick={() => {
+                    onShrinkRunningTimer(1)
+                    setMoreOpen(false)
+                    setMoreChoice(null)
+                  }}
+                >
+                  1 minute
+                </button>
+                <button
+                  type="button"
+                  className="today-skip-chip"
+                  disabled={busy}
+                  onClick={() => {
+                    onShrinkRunningTimer(2)
+                    setMoreOpen(false)
+                    setMoreChoice(null)
+                  }}
+                >
+                  2 minutes
+                </button>
+              </div>
+            </>
+          )}
+          {moreChoice === 'pauseTimer' && timerLive && (
+            <button
+              type="button"
+              className="today-skip-chip"
+              disabled={busy}
+              onClick={() => {
+                onTimerPause()
+                setMoreOpen(false)
+                setMoreChoice(null)
+              }}
+            >
+              Pause timer
+            </button>
+          )}
+          {moreChoice === 'stop' && timerPaused && (
+            <button
+              type="button"
+              className="today-skip-chip"
+              disabled={busy}
+              onClick={() => {
+                onTimerStop()
+                setMoreOpen(false)
+                setMoreChoice(null)
+              }}
+            >
+              Stop and save
+            </button>
+          )}
+          <button
+            type="button"
+            className="today-extra-btn"
+            onClick={() => {
+              if (moreChoice) {
+                setMoreChoice(null)
+                return
+              }
+              setMoreOpen(false)
+            }}
+          >
+            {moreChoice ? 'Back' : 'Close'}
+          </button>
+        </div>
+      )}
+
+
       {canShowVideo && videoOpen && (
         <HabitVideoPlaceholder
           templateId={templateId}

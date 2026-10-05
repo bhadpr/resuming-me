@@ -6,6 +6,8 @@ const LABEL_KEY: Record<Locale, string> = {
   hi: 'language.hindi',
   te: 'language.telugu',
   gu: 'language.gujarati',
+  mr: 'language.marathi',
+  ta: 'language.tamil',
 }
 
 /** Language switch. The choice is saved on this device. */

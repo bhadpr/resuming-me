@@ -1,5 +1,6 @@
 import type { Activity } from '../lib/activities'
 import { formatReviewRange, shrinkOffer, REVIEW_WEEKDAYS, type WeeklyReview } from '../lib/weeklyReview'
+import { Icon } from './Icon'
 
 interface WeeklyReviewScreenProps {
   review: WeeklyReview
@@ -33,7 +34,8 @@ export function WeeklyReviewScreen({
   return (
     <div className="insights-screen">
       <button type="button" className="btn btn-ghost btn-sm back-btn" onClick={onBack}>
-        ← Today
+        <Icon name="back" />
+        Today
       </button>
       <div className="screen-heading">
         <div>

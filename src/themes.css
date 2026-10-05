@@ -1,33 +1,72 @@
-/* Theme tokens — Resuming is the default (:root + data-theme). */
+/* Theme tokens. Every theme shares one type family; themes change color only. */
 
-:root,
-[data-theme='resuming'] {
-  color-scheme: light;
-  --font-display: 'Fraunces', Georgia, serif;
-  --font-mono: 'JetBrains Mono', ui-monospace, monospace;
-  --font-body: 'Plus Jakarta Sans', system-ui, sans-serif;
+:root {
+  --font-indic: 'Noto Sans Devanagari Variable', 'Noto Sans Gujarati Variable',
+    'Noto Sans Telugu Variable', 'Noto Sans Tamil Variable';
+  --font-body: 'Source Sans 3', var(--font-indic), system-ui, sans-serif;
+  --font-display: 'Source Serif 4', var(--font-indic), Georgia, serif;
+  --font-mono: var(--font-body);
   --font-size-root: 16px;
+
+  /* Type: seven sizes in rem so the Text size setting scales them. */
+  --text-xs: 0.75rem;
+  --text-sm: 0.875rem;
+  --text-md: 1rem;
+  --text-lg: 1.125rem;
+  --text-xl: 1.375rem;
+  --text-2xl: 1.75rem;
+  --text-3xl: 2.125rem;
+  --text-display: 3rem;
+  --weight-regular: 400;
+  --weight-semibold: 600;
+  --weight-bold: 700;
+  --leading-tight: 1.25;
+  --leading-body: 1.5;
+  --leading-indic: 1.6;
+
+  /* Spacing: 4px steps. */
+  --space-1: 0.25rem;
+  --space-2: 0.5rem;
+  --space-3: 0.75rem;
+  --space-4: 1rem;
+  --space-5: 1.5rem;
+  --space-6: 2rem;
+  --space-7: 3rem;
+
+  --radius-sm: 8px;
+  --radius-md: 12px;
+  --radius-lg: 16px;
+  --radius: var(--radius-md);
+
+  --nav-label-size: var(--text-sm);
   --heading-transform: none;
-  --heading-weight: 600;
-  --heading-tracking: -0.03em;
+  --heading-weight: var(--weight-semibold);
+  --heading-tracking: -0.02em;
   --brand-tracking: 0.01em;
   --btn-transform: none;
   --btn-tracking: 0;
   --btn-font: var(--font-body);
-  --btn-size: 1rem;
+  --btn-size: var(--text-md);
   --label-font: var(--font-body);
-  --label-tracking: 0.035em;
-  --label-size: 0.875rem;
-  --nav-label-size: 0.875rem;
-  --nav-label-weight: 700;
-  --nav-label-weight-active: 800;
+  --label-tracking: 0.04em;
+  --label-size: var(--text-sm);
+  --nav-label-weight: var(--weight-semibold);
+  --nav-label-weight-active: var(--weight-bold);
   --tagline-transform: none;
   --tagline-tracking: -0.01em;
-  --tagline-size: 1rem;
-  --tagline-weight: 500;
+  --tagline-size: var(--text-md);
+  --tagline-weight: var(--weight-regular);
   --tagline-font: var(--font-display);
-  --tagline-color: var(--color-text-body);
   --tagline-max-width: 28ch;
+  --ease-out: cubic-bezier(0.22, 1, 0.36, 1);
+  --duration-fast: 160ms;
+  --duration-med: 240ms;
+}
+
+:root,
+[data-theme='resuming'] {
+  color-scheme: light;
+  --tagline-color: var(--color-text-body);
   --nav-active-bg: color-mix(in srgb, var(--color-primary) 12%, transparent);
   --nav-active-glow: none;
   --body-wash:
@@ -55,16 +94,17 @@
   --color-text: #1a1614;
   --color-text-body: #453c36;
   --color-text-muted: #6a5f56;
-  --color-primary: #e07a5f;
-  --color-primary-hover: #c96148;
+  --color-primary: #b4532f;
+  --color-primary-hover: #9a4426;
   --color-primary-soft: #fde8e0;
   --color-danger: #d64545;
   --color-info: #4a8fb8;
   --color-warning-bg: #fff0c8;
-  --color-warning-text: #a86a00;
-  --color-success: #2f8a6a;
+  --color-warning-text: #855300;
+  --color-success: #277a5c;
   --color-on-primary: #ffffff;
-  --color-glow-primary: color-mix(in srgb, #e07a5f 18%, transparent);
+  --color-on-status: #ffffff;
+  --color-glow-primary: color-mix(in srgb, #b4532f 18%, transparent);
 
   --shadow-btn: 0 1px 2px color-mix(in srgb, #1a1614 5%, transparent);
   --shadow-btn-hover:
@@ -72,111 +112,10 @@
     0 1px 2px color-mix(in srgb, #1a1614 6%, transparent);
   --shadow-row-hover: 0 3px 14px color-mix(in srgb, #1a1614 8%, transparent);
   --shadow-focus: 0 0 0 3px color-mix(in srgb, var(--color-primary) 30%, transparent);
-  --ease-out: cubic-bezier(0.22, 1, 0.36, 1);
-  --duration-fast: 160ms;
-  --duration-med: 240ms;
-
-  --radius: 14px;
-  --radius-sm: 10px;
-}
-
-[data-theme='nocturne'] {
-  color-scheme: dark;
-  --font-display: 'Rajdhani', system-ui, sans-serif;
-  --font-mono: 'JetBrains Mono', ui-monospace, monospace;
-  --font-body: 'Rajdhani', system-ui, sans-serif;
-  --font-size-root: 16px;
-  --heading-transform: uppercase;
-  --heading-weight: 700;
-  --heading-tracking: 0.04em;
-  --brand-tracking: 0.1em;
-  --btn-transform: uppercase;
-  --btn-tracking: 0.1em;
-  --btn-font: var(--font-mono);
-  --btn-size: 0.8125rem;
-  --label-font: var(--font-mono);
-  --label-tracking: 0.12em;
-  --label-size: 0.75rem;
-  --nav-transform: uppercase;
-  --nav-label-size: 0.78rem;
-  --nav-label-weight: 700;
-  --nav-label-weight-active: 800;
-  --nav-active-bg: color-mix(in srgb, var(--color-primary) 12%, transparent);
-  --nav-active-glow: 0 0 14px var(--color-glow-primary);
-  --tagline-transform: uppercase;
-  --tagline-tracking: 0.1em;
-  --tagline-size: 0.9rem;
-  --tagline-weight: 600;
-  --tagline-font: var(--font-mono);
-  --tagline-color: var(--color-primary);
-  --tagline-max-width: 34ch;
-  --body-wash:
-    radial-gradient(
-      ellipse 70% 45% at 12% -5%,
-      color-mix(in srgb, var(--color-primary) 10%, transparent),
-      transparent 62%
-    ),
-    radial-gradient(
-      ellipse 55% 40% at 92% 8%,
-      color-mix(in srgb, var(--color-info) 8%, transparent),
-      transparent 60%
-    );
-
-  --color-bg: #07070b;
-  --color-surface: #0e0e16;
-  --color-surface-raised: #1a1a28;
-  --color-border: #2c2c40;
-  --color-border-strong: #4a4a66;
-  --color-text: #f4f4f8;
-  --color-text-body: #c8c8d8;
-  --color-text-muted: #9a9ab0;
-  --color-primary: #fcee0a;
-  --color-primary-hover: #fff34a;
-  --color-primary-soft: #222218;
-  --color-danger: #ff003c;
-  --color-info: #00f0ff;
-  --color-warning-bg: #2a2410;
-  --color-warning-text: #ff8a00;
-  --color-success: #00ff9d;
-  --color-on-primary: #07070b;
-  --color-glow-primary: color-mix(in srgb, #fcee0a 40%, transparent);
-
-  --shadow-btn:
-    0 0 0 1px color-mix(in srgb, var(--color-primary) 55%, transparent),
-    0 0 18px color-mix(in srgb, var(--color-primary) 22%, transparent);
-  --shadow-btn-hover:
-    0 0 0 1px var(--color-primary),
-    0 0 28px color-mix(in srgb, var(--color-primary) 40%, transparent);
-  --shadow-row: 0 0 0 1px color-mix(in srgb, var(--color-border) 80%, transparent);
-  --shadow-row-hover:
-    0 0 0 1px color-mix(in srgb, var(--color-primary) 45%, transparent),
-    0 0 22px color-mix(in srgb, var(--color-primary) 12%, transparent);
-  --shadow-focus:
-    0 0 0 2px var(--color-bg),
-    0 0 0 4px color-mix(in srgb, var(--color-primary) 70%, transparent);
-  --ease-out: cubic-bezier(0.22, 1, 0.36, 1);
-  --duration-fast: 140ms;
-  --duration-med: 220ms;
-
-  --radius: 4px;
-  --radius-sm: 2px;
 }
 
 [data-theme='slate'] {
   color-scheme: dark;
-  --font-display: 'IBM Plex Sans', system-ui, sans-serif;
-  --font-mono: 'IBM Plex Sans', system-ui, sans-serif;
-  --font-body: 'IBM Plex Sans', system-ui, sans-serif;
-  --font-size-root: 16px;
-  --heading-transform: none;
-  --heading-weight: 600;
-  --heading-tracking: -0.015em;
-  --btn-transform: none;
-  --btn-tracking: 0;
-  --btn-font: var(--font-body);
-  --btn-size: 0.95rem;
-  --label-font: var(--font-body);
-  --label-tracking: 0.06em;
   --body-wash: radial-gradient(
     ellipse 60% 40% at 100% 0%,
     color-mix(in srgb, var(--color-primary) 18%, transparent),
@@ -200,26 +139,12 @@
   --color-warning-text: #e0b15a;
   --color-success: #6bcf8e;
   --color-on-primary: #0f1218;
+  --color-on-status: #0f1218;
   --color-glow-primary: color-mix(in srgb, #7c8cff 28%, transparent);
-  --radius: 10px;
-  --radius-sm: 8px;
 }
 
 [data-theme='dawn'] {
   color-scheme: light;
-  --font-display: 'Source Serif 4', Georgia, serif;
-  --font-mono: 'Source Sans 3', system-ui, sans-serif;
-  --font-body: 'Source Sans 3', system-ui, sans-serif;
-  --font-size-root: 16px;
-  --heading-transform: none;
-  --heading-weight: 600;
-  --heading-tracking: -0.02em;
-  --btn-transform: none;
-  --btn-tracking: 0;
-  --btn-font: var(--font-body);
-  --btn-size: 0.95rem;
-  --label-font: var(--font-body);
-  --label-tracking: 0.05em;
   --body-wash: radial-gradient(
       ellipse 85% 55% at 15% -8%,
       color-mix(in srgb, #ffb347 30%, transparent),
@@ -239,173 +164,16 @@
   --color-text: #1a2528;
   --color-text-body: #2f4044;
   --color-text-muted: #5a6e72;
-  --color-primary: #0f9ea0;
-  --color-primary-hover: #0b7f81;
+  --color-primary: #0a7678;
+  --color-primary-hover: #085f61;
   --color-primary-soft: #c5f2f2;
   --color-danger: #e04545;
   --color-info: #2180c4;
   --color-warning-bg: #ffe2a0;
-  --color-warning-text: #c06a00;
-  --color-success: #2a9b55;
+  --color-warning-text: #8a4b00;
+  --color-success: #1f7f45;
   --color-on-primary: #ffffff;
-  --color-glow-primary: color-mix(in srgb, #0f9ea0 38%, transparent);
-  --radius: 12px;
-  --radius-sm: 8px;
+  --color-on-status: #ffffff;
+  --color-glow-primary: color-mix(in srgb, #0a7678 38%, transparent);
 }
 
-[data-theme='fresh'] {
-  color-scheme: light;
-  --font-display: 'Outfit', system-ui, sans-serif;
-  --font-mono: 'JetBrains Mono', ui-monospace, monospace;
-  --font-body: 'Plus Jakarta Sans', system-ui, sans-serif;
-  --font-size-root: 16px;
-  --heading-transform: none;
-  --heading-weight: 700;
-  --heading-tracking: -0.035em;
-  --brand-tracking: 0.01em;
-  --btn-transform: none;
-  --btn-tracking: 0;
-  --btn-font: var(--font-body);
-  --btn-size: 1rem;
-  --label-font: var(--font-body);
-  --label-tracking: 0.03em;
-  --label-size: 0.875rem;
-  --nav-label-size: 0.875rem;
-  --nav-label-weight: 700;
-  --nav-label-weight-active: 800;
-  --nav-active-bg: color-mix(in srgb, var(--color-primary) 12%, transparent);
-  --nav-active-glow: none;
-  --tagline-transform: none;
-  --tagline-tracking: -0.02em;
-  --tagline-size: 1rem;
-  --tagline-weight: 500;
-  --tagline-font: var(--font-display);
-  --tagline-color: var(--color-text-body);
-  --tagline-max-width: 28ch;
-  --body-wash:
-    radial-gradient(
-      ellipse 95% 55% at 50% -18%,
-      color-mix(in srgb, var(--color-primary) 16%, transparent),
-      transparent 68%
-    ),
-    radial-gradient(
-      ellipse 50% 40% at 100% 8%,
-      color-mix(in srgb, #7dd3fc 12%, transparent),
-      transparent 60%
-    );
-
-  --color-bg: #eef2f9;
-  --color-surface: #ffffff;
-  --color-surface-raised: #f3f6fc;
-  --color-border: #d8e0ef;
-  --color-border-strong: #b7c6de;
-  --color-text: #15233f;
-  --color-text-body: #3a4a66;
-  --color-text-muted: #5f7190;
-  --color-primary: #3f74f0;
-  --color-primary-hover: #2f5fd6;
-  --color-primary-soft: #dce8ff;
-  --color-danger: #e5484d;
-  --color-info: #0ea5e9;
-  --color-warning-bg: #fff4e5;
-  --color-warning-text: #c87820;
-  --color-success: #12b886;
-  --color-on-primary: #ffffff;
-  --color-glow-primary: color-mix(in srgb, #3f74f0 28%, transparent);
-
-  --shadow-btn:
-    0 1px 2px color-mix(in srgb, #15233f 6%, transparent),
-    0 6px 18px color-mix(in srgb, var(--color-primary) 28%, transparent);
-  --shadow-btn-hover:
-    0 2px 4px color-mix(in srgb, #15233f 8%, transparent),
-    0 10px 28px color-mix(in srgb, var(--color-primary) 36%, transparent);
-  --shadow-row:
-    0 1px 2px color-mix(in srgb, #15233f 4%, transparent),
-    0 4px 16px color-mix(in srgb, #15233f 6%, transparent);
-  --shadow-row-hover:
-    0 2px 4px color-mix(in srgb, #15233f 6%, transparent),
-    0 10px 28px color-mix(in srgb, var(--color-primary) 16%, transparent);
-  --shadow-focus: 0 0 0 3px color-mix(in srgb, var(--color-primary) 28%, transparent);
-  --ease-out: cubic-bezier(0.22, 1, 0.36, 1);
-  --duration-fast: 160ms;
-  --duration-med: 240ms;
-
-  --radius: 16px;
-  --radius-sm: 12px;
-}
-
-[data-theme='vault'] {
-  color-scheme: dark;
-  --font-display: 'Outfit', system-ui, sans-serif;
-  --font-mono: 'JetBrains Mono', ui-monospace, monospace;
-  --font-body: 'Outfit', system-ui, sans-serif;
-  --font-size-root: 16px;
-  --heading-transform: none;
-  --heading-weight: 700;
-  --heading-tracking: -0.035em;
-  --brand-tracking: 0.02em;
-  --btn-transform: none;
-  --btn-tracking: 0;
-  --btn-font: var(--font-body);
-  --btn-size: 1rem;
-  --label-font: var(--font-body);
-  --label-tracking: 0.04em;
-  --label-size: 0.875rem;
-  --nav-label-size: 0.875rem;
-  --nav-label-weight: 700;
-  --nav-label-weight-active: 800;
-  --nav-active-bg: color-mix(in srgb, var(--color-primary) 14%, transparent);
-  --nav-active-glow: none;
-  --tagline-transform: none;
-  --tagline-tracking: -0.02em;
-  --tagline-size: 1rem;
-  --tagline-weight: 500;
-  --tagline-font: var(--font-display);
-  --tagline-color: var(--color-text-body);
-  --tagline-max-width: 28ch;
-  --body-wash:
-    radial-gradient(
-      ellipse 75% 50% at 85% -5%,
-      color-mix(in srgb, #c8f542 12%, transparent),
-      transparent 62%
-    ),
-    radial-gradient(
-      ellipse 50% 40% at 0% 100%,
-      color-mix(in srgb, #c8f542 6%, transparent),
-      transparent 55%
-    );
-
-  --color-bg: #0a0a0a;
-  --color-surface: #141414;
-  --color-surface-raised: #1f1f1f;
-  --color-border: #2a2a2a;
-  --color-border-strong: #3f3f3f;
-  --color-text: #f5f5f5;
-  --color-text-body: #d0d0d0;
-  --color-text-muted: #9a9a9a;
-  --color-primary: #c8f542;
-  --color-primary-hover: #d4ff63;
-  --color-primary-soft: #1f2710;
-  --color-danger: #ff6b6b;
-  --color-info: #7dd3fc;
-  --color-warning-bg: #2a2410;
-  --color-warning-text: #ffa07a;
-  --color-success: #c8f542;
-  --color-on-primary: #0a0a0a;
-  --color-glow-primary: color-mix(in srgb, #c8f542 32%, transparent);
-
-  --shadow-btn: 0 1px 0 color-mix(in srgb, #ffffff 6%, transparent);
-  --shadow-btn-hover:
-    0 0 0 1px color-mix(in srgb, var(--color-primary) 45%, transparent),
-    0 8px 28px color-mix(in srgb, var(--color-primary) 22%, transparent);
-  --shadow-row-hover:
-    0 0 0 1px color-mix(in srgb, var(--color-primary) 28%, transparent),
-    0 10px 28px color-mix(in srgb, #000000 55%, transparent);
-  --shadow-focus: 0 0 0 3px color-mix(in srgb, var(--color-primary) 40%, transparent);
-  --ease-out: cubic-bezier(0.22, 1, 0.36, 1);
-  --duration-fast: 160ms;
-  --duration-med: 240ms;
-
-  --radius: 22px;
-  --radius-sm: 14px;
-}

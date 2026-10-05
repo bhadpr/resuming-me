@@ -100,19 +100,87 @@ const GU_LABELS: Record<string, string> = {
   relaxation: 'આરામ',
 }
 
+/** Marathi labels for catalog habits and vitals. */
+const MR_LABELS: Record<string, string> = {
+  reading: 'वाचन',
+  walk: 'चालणे',
+  running: 'धावणे',
+  exercise: 'ताकद',
+  meditate: 'ध्यान',
+  stretching: 'व्यायाम',
+  water: 'पाणी',
+  protein: 'प्रथिने',
+  fasting: 'उपवास',
+  sleep_hours: 'झोप',
+  weight: 'वजन',
+  steps: 'पावले',
+  blood_pressure: 'रक्तदाब',
+  heart_rate: 'हृदयाची गती',
+  journaling: 'डायरी',
+  writing: 'लेखन',
+  daily_writing: 'रोज लेखन',
+  study: 'अभ्यास',
+  language: 'भाषा',
+  music: 'संगीत',
+  painting: 'चित्रकला',
+  dancing: 'नृत्य',
+  bhastrika: 'भस्त्रिका',
+  kapalabhati: 'कपालभाती',
+  anuloma_viloma: 'अनुलोम विलोम',
+  bhramari: 'भ्रामरी',
+  rejuvenation: 'साफसफाई',
+  prayer: 'प्रार्थना',
+  relaxation: 'विश्रांती',
+}
+
+/** Tamil labels for catalog habits and vitals. */
+const TA_LABELS: Record<string, string> = {
+  reading: 'வாசிப்பு',
+  walk: 'நடை',
+  running: 'ஓட்டம்',
+  exercise: 'வலிமை',
+  meditate: 'தியானம்',
+  stretching: 'உடற்பயிற்சி',
+  water: 'தண்ணீர்',
+  protein: 'புரதம்',
+  fasting: 'உபவாசம்',
+  sleep_hours: 'தூக்கம்',
+  weight: 'எடை',
+  steps: 'அடிகள்',
+  blood_pressure: 'இரத்த அழுத்தம்',
+  heart_rate: 'இதயத் துடிப்பு',
+  journaling: 'நாட்குறிப்பு',
+  writing: 'எழுத்து',
+  daily_writing: 'தினசரி எழுத்து',
+  study: 'படிப்பு',
+  language: 'மொழி',
+  music: 'இசை',
+  painting: 'ஓவியம்',
+  dancing: 'நடனம்',
+  bhastrika: 'பஸ்த்ரிகா',
+  kapalabhati: 'கபாலபாதி',
+  anuloma_viloma: 'அனுலோம விலோம',
+  bhramari: 'ப்ராமரி',
+  rejuvenation: 'சுத்தம்',
+  prayer: 'பிரார்த்தனை',
+  relaxation: 'ஓய்வு',
+}
+
 const CATALOG_LABELS: Partial<Record<Locale, Record<string, string>>> = {
   hi: HI_LABELS,
   te: TE_LABELS,
   gu: GU_LABELS,
+  mr: MR_LABELS,
+  ta: TA_LABELS,
 }
 
 /** Extra stored names that still mean a catalog item. */
 const EXTRA_LABELS: Record<string, readonly string[]> = {
-  steps: ['daily steps', 'steps', 'कदम', 'అడుగులు', 'પગલાં'],
-  sleep_hours: ['sleep', 'नींद', 'నిద్ర', 'ઊંઘ'],
-  exercise: ['strength', 'exercise', 'ताकत', 'బలం', 'તાકાત'],
-  stretching: ['exercises', 'stretch', 'व्यायाम', 'వ్యాయామం', 'કસરત'],
-  walk: ['walking', 'walk', 'चलना', 'నడక', 'ચાલવું'],
+  steps: ['daily steps', 'steps', 'कदम', 'అడుగులు', 'પગલાં', 'पावले', 'அடிகள்'],
+  sleep_hours: ['sleep', 'नींद', 'నిద్ర', 'ઊંઘ', 'झोप', 'தூக்கம்'],
+  exercise: ['strength', 'exercise', 'ताकत', 'బలం', 'તાકાત', 'ताकद', 'வலிமை'],
+  stretching: ['exercises', 'stretch', 'व्यायाम', 'వ్యాయామం', 'કસરત', 'व्यायाम', 'உடற்பயிற்சி'],
+  walk: ['walking', 'walk', 'चलना', 'నడక', 'ચાલવું', 'चालणे', 'நடை'],
   rejuvenation: ['cleaning'],
 }
 
@@ -135,6 +203,8 @@ export function isCatalogLabel(templateId: string, name: string): boolean {
     HI_LABELS[templateId],
     TE_LABELS[templateId],
     GU_LABELS[templateId],
+    MR_LABELS[templateId],
+    TA_LABELS[templateId],
     ...(EXTRA_LABELS[templateId] ?? []),
   ]
   return labels.some((label) => label?.trim().toLowerCase() === normalized)

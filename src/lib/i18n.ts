@@ -1,17 +1,21 @@
 import { en } from './messages/en'
 import { gu } from './messages/gu'
 import { hi } from './messages/hi'
+import { mr } from './messages/mr'
+import { ta } from './messages/ta'
 import { te } from './messages/te'
 
-export type Locale = 'en' | 'hi' | 'te' | 'gu'
+export type Locale = 'en' | 'hi' | 'te' | 'gu' | 'mr' | 'ta'
 
-export const LOCALES: readonly Locale[] = ['en', 'hi', 'te', 'gu']
+export const LOCALES: readonly Locale[] = ['en', 'hi', 'te', 'gu', 'mr', 'ta']
 
 const LOCALE_TAGS: Record<Locale, string> = {
   en: 'en-IN',
   hi: 'hi-IN',
   te: 'te-IN',
   gu: 'gu-IN',
+  mr: 'mr-IN',
+  ta: 'ta-IN',
 }
 
 const STORAGE_KEY = 'resuming-locale'
@@ -29,6 +33,16 @@ export function bindLocale(locale: Locale): void {
 
 export function isLocale(value: unknown): value is Locale {
   return typeof value === 'string' && (LOCALES as readonly string[]).includes(value)
+}
+
+/** True after someone has chosen a language on this device. */
+export function hasSavedLocale(): boolean {
+  if (typeof window === 'undefined') return false
+  try {
+    return isLocale(window.localStorage.getItem(STORAGE_KEY))
+  } catch {
+    return false
+  }
 }
 
 export function readInitialLocale(): Locale {
@@ -79,7 +93,7 @@ function fill(template: string, vars?: Vars): string {
   )
 }
 
-const catalogs: Record<Locale, Tree> = { en, hi, te, gu }
+const catalogs: Record<Locale, Tree> = { en, hi, te, gu, mr, ta }
 
 export function translate(locale: Locale, key: string, vars?: Vars): string {
   const raw = lookup(catalogs[locale], key) ?? lookup(catalogs.en, key) ?? key

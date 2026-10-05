@@ -50,12 +50,12 @@ export const ACTIVITY_TEMPLATES: readonly ActivityTemplate[] = [
   { id: 'bhramari', label: 'Bhramari', emoji: '🐝', type: 'daily', trackingMode: 'timer', defaultValue: 10, defaultUnit: 'minutes', defaultWeekly: null, tinyValue: 3, tinyUnit: 'minutes', tinyWeekly: null },
   { id: 'rejuvenation', label: 'Rejuvenation', emoji: '🧘', type: 'daily', trackingMode: 'timer', defaultValue: 5, defaultUnit: 'minutes', defaultWeekly: null, tinyValue: 2, tinyUnit: 'minutes', tinyWeekly: null },
   { id: 'prayer', label: 'Prayer', emoji: '🙏', type: 'daily', trackingMode: 'timer', defaultValue: 5, defaultUnit: 'minutes', defaultWeekly: null, tinyValue: 2, tinyUnit: 'minutes', tinyWeekly: null },
-  { id: 'relaxation', label: 'Relaxation', emoji: '😌', type: 'daily', trackingMode: 'timer', defaultValue: 5, defaultUnit: 'minutes', defaultWeekly: null, tinyValue: 2, tinyUnit: 'minutes', tinyWeekly: null },
+  { id: 'relaxation', label: 'Relaxation', emoji: '😌', type: 'daily', trackingMode: 'checkbox', defaultValue: null, defaultUnit: null, defaultWeekly: null, tinyValue: null, tinyUnit: null, tinyWeekly: null },
 ] as const
 
 /** First-screen groups. Something else stays outside these lists. */
 export const HABIT_GROUPS: readonly { title: string; ids: readonly string[]; icons: boolean }[] = [
-  { title: 'Fitness', ids: ['walk', 'running', 'exercise', 'stretching'], icons: true },
+  { title: 'Fitness', ids: ['walk', 'running', 'steps', 'exercise', 'stretching'], icons: true },
   { title: 'Pranayam', ids: ['bhastrika', 'kapalabhati', 'anuloma_viloma', 'bhramari'], icons: false },
   { title: 'Heartfulness', ids: ['relaxation', 'meditate', 'rejuvenation', 'prayer'], icons: true },
   { title: 'Learn', ids: ['reading', 'writing', 'language'], icons: true },

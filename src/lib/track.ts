@@ -285,39 +285,60 @@ export async function flushEvents(): Promise<void> {
   if (pending.length === 0) return
 
   flushing = true
-  memoryBuffer = []
 
   try {
     const client = createSupabaseClient()
     const { data: sessionData } = await client.auth.getSession()
     const userId = sessionData.session?.user?.id ?? null
 
-    const rows: EventInsert[] = pending.map((e) => ({
-      id: e.id,
-      created_at: e.created_at,
-      user_id: e.user_id ?? userId,
-      anon_id: e.anon_id,
-      name: e.name,
-      props: e.props as Json,
-      path: e.path,
-      app_version: e.app_version,
-      platform: e.platform,
-    }))
+    const toRows = (owner: string | null): EventInsert[] =>
+      pending.map((e) => ({
+        id: e.id,
+        created_at: e.created_at,
+        user_id: owner === null ? null : (e.user_id ?? owner),
+        anon_id: e.anon_id,
+        name: e.name,
+        props: e.props as Json,
+        path: e.path,
+        app_version: e.app_version,
+        platform: e.platform,
+      }))
 
-    const { error } = await client.from('events').insert(rows)
-    if (error) {
-      // Keep queue for retry.
-      savePersistedQueue(pending)
+    // Another tab or an earlier flush whose response was lost may already have
+    // stored some of these ids; skip them instead of failing the whole batch.
+    const send = (rows: EventInsert[]) =>
+      client.from('events').upsert(rows, { onConflict: 'id', ignoreDuplicates: true })
+
+    let { error } = await send(toRows(userId))
+    if (error?.code === FOREIGN_KEY_VIOLATION && userId) {
+      // Cached session for an account that no longer exists.
+      ;({ error } = await send(toRows(null)))
+    }
+    if (error && !isRejectedBatch(error.code)) {
       console.warn('events not recorded', error.message)
       return
     }
-    savePersistedQueue([])
+    if (error) console.warn('events dropped', error.message)
+    removeFromQueue(pending)
   } catch (err) {
-    savePersistedQueue(pending)
     console.warn('events flush failed', err)
   } finally {
     flushing = false
   }
+}
+
+const FOREIGN_KEY_VIOLATION = '23503'
+
+/** Data or constraint errors (Postgres classes 22 and 23) will fail again on retry. */
+function isRejectedBatch(code: string | undefined): boolean {
+  return !!code && (code.startsWith('22') || code.startsWith('23'))
+}
+
+/** Drop sent events but keep anything tracked while the flush was in flight. */
+function removeFromQueue(sent: QueuedEvent[]): void {
+  const sentIds = new Set(sent.map((e) => e.id))
+  savePersistedQueue(loadPersistedQueue().filter((e) => !sentIds.has(e.id)))
+  memoryBuffer = memoryBuffer.filter((e) => !sentIds.has(e.id))
 }
 
 /** Map smaller-choice minutes to a safe enum prop (no free text). */

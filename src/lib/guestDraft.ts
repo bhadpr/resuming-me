@@ -1,4 +1,13 @@
 import { templateById } from '../data/activityTemplates'
+import {
+  dosesOnDate,
+  medicineSystemOf,
+  type DoseMark,
+  type DueDose,
+  type MedicineSchedule,
+  type MedicineSystem,
+} from './medicineSchedule'
+import { clearSkip, clearSnooze, isDoseSkipped } from './medicineReminderState'
 import { getLocale, t } from './i18n'
 import { canLogPastGoal, countPortion } from './dayStatus'
 import { endOfWeekSunday, startOfWeekMonday } from './dates'
@@ -17,6 +26,7 @@ export const GUEST_STEP_MIN = 1
 export const GUEST_STEP_MAX = 8
 export const GUEST_SAVE_WARN_DAY = 5
 export const GUEST_MAX_REMINDERS = 5
+export const GUEST_MAX_MEDICINES = 8
 
 export type GuestActivity = {
   localId: string
@@ -31,6 +41,8 @@ export type GuestActivity = {
   templateId: string | null
   why: string | null
   usuallyWhen: string | null
+  /** Set once welcome already asked for length and how often. */
+  sized?: boolean
   /** How a typed name is measured. Catalog habits leave this empty. */
   measure?: HabitMeasure | null
   /** Common daily amount for a typed vital, such as 250 g of carbs. */
@@ -55,6 +67,43 @@ export type GuestReading = {
   secondaryValue: number | null
 }
 
+export type GuestMedicine = {
+  name: string
+  weekdays: number[]
+  times: { hour: number; minute: number; meal?: 'before' | 'after' | 'with' | null }[]
+  /** Homeopathic, allopathic, or Ayurvedic. */
+  system?: MedicineSystem | null
+  /** Compressed bottle photo, kept until sign-in. */
+  photo?: string | null
+}
+
+/** A dose marked taken before an account exists. */
+export type GuestDoseMark = {
+  name: string
+  date: string
+  hour: number
+  minute: number
+}
+
+export type StartPickPhase =
+  | 'ask'
+  | 'medicine'
+  | 'medicines'
+  | 'pranayam'
+  | 'pranayams'
+  | 'pranayamDetail'
+  | 'workout'
+  | 'workouts'
+  | 'workoutDetail'
+  | 'stepGoal'
+  | 'heartfulness'
+  | 'practices'
+  | 'practiceDetail'
+  | 'vitals'
+  | 'vitalPicks'
+  | 'targets'
+  | 'activities'
+
 export type GuestDraft = {
   guestId: string
   createdAt: string
@@ -75,6 +124,14 @@ export type GuestDraft = {
   logs: GuestLog[]
   /** Typed vitals, such as blood pressure and heart rate. */
   readings: GuestReading[]
+  /** They asked for a daily medicine reminder during setup. */
+  medicineDaily: boolean
+  /** Bottles collected before an account exists. Photos wait until sign-in. */
+  medicines: GuestMedicine[]
+  /** Doses marked taken on Today before sign-in. */
+  medicineMarks: GuestDoseMark[]
+  /** First-visit question, then medicines, pranayam, then the activity list. */
+  pickPhase: StartPickPhase
 }
 
 function storage(): Storage | null {
@@ -117,6 +174,10 @@ export function createGuestDraft(now = new Date(), timezone = 'UTC'): GuestDraft
     timerSkipped: false,
     logs: [],
     readings: [],
+    medicineDaily: false,
+    medicines: [],
+    medicineMarks: [],
+    pickPhase: 'ask',
   }
 }
 
@@ -235,13 +296,138 @@ function normalizeReminderTimes(times: unknown, fallback: string | null): string
   return unique.sort()
 }
 
+function normalizeGuestMedicine(value: GuestMedicine | null | undefined): GuestMedicine | null {
+  if (!value || typeof value.name !== 'string') return null
+  const name = value.name.replace(/\s+/g, ' ').trim().slice(0, 40)
+  const weekdays = [...new Set((value.weekdays ?? []).filter((day) => day >= 0 && day <= 6))].sort()
+  const times = (value.times ?? []).flatMap((time) => {
+    if (!time || time.hour < 0 || time.hour > 23 || time.minute < 0 || time.minute > 59) return []
+    const meal = time.meal === 'before' || time.meal === 'after' || time.meal === 'with' ? time.meal : null
+    return [meal ? { hour: time.hour, minute: time.minute, meal } : { hour: time.hour, minute: time.minute }]
+  })
+  if (!name || weekdays.length === 0 || times.length === 0) return null
+  const photo =
+    typeof value.photo === 'string' && value.photo.startsWith('data:image/') && value.photo.length < 1_500_000
+      ? value.photo
+      : null
+  const system = medicineSystemOf(value.system)
+  return {
+    name,
+    weekdays,
+    times,
+    ...(photo ? { photo } : {}),
+    ...(system ? { system } : {}),
+  }
+}
+
+function normalizeGuestMedicines(draft: GuestDraft & { medicine?: GuestMedicine | null }): GuestMedicine[] {
+  const listed = Array.isArray(draft.medicines) ? draft.medicines : []
+  const raw = listed.length > 0 ? listed : draft.medicine ? [draft.medicine] : []
+  const medicines: GuestMedicine[] = []
+  for (const item of raw) {
+    const next = normalizeGuestMedicine(item)
+    if (!next) continue
+    medicines.push(next)
+    if (medicines.length >= GUEST_MAX_MEDICINES) break
+  }
+  return medicines
+}
+
+function normalizeMedicineMarks(draft: GuestDraft, medicines: readonly GuestMedicine[]): GuestDoseMark[] {
+  const names = new Set(medicines.map((item) => item.name))
+  const marks: GuestDoseMark[] = []
+  for (const mark of draft.medicineMarks ?? []) {
+    if (!mark || typeof mark.name !== 'string' || !names.has(mark.name)) continue
+    if (!/^\d{4}-\d{2}-\d{2}$/.test(mark.date)) continue
+    if (!Number.isInteger(mark.hour) || mark.hour < 0 || mark.hour > 23) continue
+    if (!Number.isInteger(mark.minute) || mark.minute < 0 || mark.minute > 59) continue
+    marks.push({ name: mark.name, date: mark.date, hour: mark.hour, minute: mark.minute })
+    if (marks.length >= 64) break
+  }
+  return marks
+}
+
+export function guestMedicineKey(name: string): string {
+  return `guest:${name}`
+}
+
+export function guestMedicineSchedules(draft: GuestDraft): MedicineSchedule[] {
+  return draft.medicines.map((medicine) => ({
+    id: guestMedicineKey(medicine.name),
+    name: medicine.name,
+    photoUrl: medicine.photo ?? null,
+    weekdays: medicine.weekdays,
+    times: medicine.times,
+    system: medicine.system ?? null,
+  }))
+}
+
+export function guestTakenMarks(draft: GuestDraft): DoseMark[] {
+  return (draft.medicineMarks ?? []).flatMap((mark) => {
+    if (!draft.medicines.some((item) => item.name === mark.name)) return []
+    return [
+      {
+        medicineId: guestMedicineKey(mark.name),
+        date: mark.date,
+        hour: mark.hour,
+        minute: mark.minute,
+      },
+    ]
+  })
+}
+
+function medicineIndexForDose(draft: GuestDraft, dose: DueDose): number {
+  if (dose.medicineId.startsWith('guest:')) {
+    const name = dose.medicineId.slice('guest:'.length)
+    return draft.medicines.findIndex((item) => item.name === name)
+  }
+  if (dose.medicineId.startsWith('guest-')) {
+    const index = Number(dose.medicineId.slice('guest-'.length))
+    return Number.isInteger(index) ? index : -1
+  }
+  return -1
+}
+
+/** Today's bottles from the welcome draft, in the same shape as a signed-in Today list. */
+export function guestDosesOnDate(draft: GuestDraft, date: string): DueDose[] {
+  return dosesOnDate(guestMedicineSchedules(draft), date, guestTakenMarks(draft).filter((mark) => mark.date === date)).map(
+    (dose) => ({
+      ...dose,
+      skipped: !dose.taken && isDoseSkipped({ medicineId: dose.medicineId, date, hour: dose.hour, minute: dose.minute }),
+    }),
+  )
+}
+
+export function toggleGuestDose(draft: GuestDraft, dose: DueDose, date: string): GuestDraft {
+  const index = medicineIndexForDose(draft, dose)
+  const medicine = draft.medicines[index]
+  if (!medicine) return draft
+  const marks = draft.medicineMarks ?? []
+  const same = (mark: GuestDoseMark) =>
+    mark.name === medicine.name && mark.date === date && mark.hour === dose.hour && mark.minute === dose.minute
+  const medicineMarks = marks.some(same)
+    ? marks.filter((mark) => !same(mark))
+    : [...marks, { name: medicine.name, date, hour: dose.hour, minute: dose.minute }]
+  const next = saveGuestDraft({ ...draft, medicineMarks })
+  if (!dose.taken) {
+    const ref = { medicineId: guestMedicineKey(medicine.name), date, hour: dose.hour, minute: dose.minute }
+    clearSnooze(ref)
+    clearSkip(ref)
+  }
+  return next
+}
+
 function normalizeDraft(draft: GuestDraft): GuestDraft {
+  const stored = draft as GuestDraft & { medicine?: GuestMedicine | null }
+  const medicines = normalizeGuestMedicines(stored)
+  const { medicine: _legacyMedicine, ...withoutLegacyMedicine } = stored
+  void _legacyMedicine
   const activities = keepCurrentHabits(
     (draft.activities ?? []).slice(0, GUEST_MAX_ACTIVITIES).map(normalizeActivity).filter((a) => a.name),
   )
   const ids = new Set(activities.map((activity) => activity.localId))
   return {
-    ...draft,
+    ...withoutLegacyMedicine,
     step: clampStep(draft.step ?? 1),
     activities,
     gapAnswer: Object.fromEntries(
@@ -265,6 +451,28 @@ function normalizeDraft(draft: GuestDraft): GuestDraft {
     })(),
     reminderDeclined: draft.reminderDeclined ?? false,
     timerSkipped: draft.timerSkipped ?? false,
+    medicines,
+    medicineMarks: normalizeMedicineMarks(draft, medicines),
+    medicineDaily: medicines.length > 0,
+    pickPhase:
+      draft.pickPhase === 'medicine' ||
+      draft.pickPhase === 'medicines' ||
+      draft.pickPhase === 'pranayam' ||
+      draft.pickPhase === 'pranayams' ||
+      draft.pickPhase === 'pranayamDetail' ||
+      draft.pickPhase === 'workout' ||
+      draft.pickPhase === 'workouts' ||
+      draft.pickPhase === 'workoutDetail' ||
+      draft.pickPhase === 'stepGoal' ||
+      draft.pickPhase === 'heartfulness' ||
+      draft.pickPhase === 'practices' ||
+      draft.pickPhase === 'practiceDetail' ||
+      draft.pickPhase === 'vitals' ||
+      draft.pickPhase === 'vitalPicks' ||
+      draft.pickPhase === 'targets' ||
+      draft.pickPhase === 'activities'
+        ? draft.pickPhase
+        : 'ask',
     readings: (draft.readings ?? []).filter(
       (reading) =>
         ids.has(reading.localActivityId) &&
@@ -334,6 +542,29 @@ export function appendGuestLog(draft: GuestDraft, log: GuestLog): GuestDraft {
   const minimum = log.kind === 'count' ? 0 : 1
   if (log.kind !== 'count' && log.durationSeconds < minimum) return draft
   return saveGuestDraft({ ...draft, logs: [...draft.logs, log] })
+}
+
+/** Drop the latest session or count tap so Undo can take it back. */
+export function removeLastGuestLog(
+  draft: GuestDraft,
+  localActivityId: string,
+  kind: 'session' | 'count',
+): GuestDraft {
+  let index = -1
+  for (let i = draft.logs.length - 1; i >= 0; i--) {
+    const log = draft.logs[i]
+    if (log.localActivityId !== localActivityId) continue
+    const isCount = log.kind === 'count'
+    if (kind === 'count' ? isCount : !isCount) {
+      index = i
+      break
+    }
+  }
+  if (index < 0) return draft
+  return saveGuestDraft({
+    ...draft,
+    logs: draft.logs.filter((_, i) => i !== index),
+  })
 }
 
 export function guestCountsOnDate(draft: GuestDraft, localId: string, date: string): number {

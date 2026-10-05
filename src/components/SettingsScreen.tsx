@@ -2,7 +2,6 @@ import { useEffect, useRef, useState } from 'react'
 import { Capacitor } from '@capacitor/core'
 import { useTheme } from '../hooks/useTheme'
 import { useAuth } from '../hooks/useAuth'
-import { DEFAULT_THEME, type ThemeId } from '../lib/themes'
 import {
   digestScheduleHint,
   formatTimeInput,
@@ -24,11 +23,18 @@ import { loadCheckinOptOut, loadReminderTime, saveCheckinOptOut, saveReminderTim
 import { deleteCurrentAccount } from '../lib/deleteAccount'
 import { REVIEW_WEEKDAYS } from '../lib/weeklyReview'
 import { useLocale } from '../hooks/useLocale'
+import { localeTag } from '../lib/i18n'
+import { applyTextSize, readTextSize, TEXT_SIZES, type TextSize } from '../lib/textSize'
+import { LanguagePicker } from './LanguagePicker'
+import { fetchMyMarketingGroups, type MyMarketingGroup } from '../lib/marketingData'
+import { Icon } from './Icon'
 interface SettingsScreenProps {
   onBack: () => void
   isAdmin?: boolean
   onOpenAnalytics?: () => void
   onOpenFeedback?: () => void
+  onOpenGroups?: (groupId?: string) => void
+  onOpenThemes?: () => void
   todayItems?: DigestItem[]
   onSignOut: () => void
   onOpenPrivacy: () => void
@@ -45,11 +51,87 @@ interface SettingsScreenProps {
   onReviewsOff?: (off: boolean) => void
 }
 
+function GroupsSettingsLink({
+  isAdmin,
+  onOpen,
+}: {
+  isAdmin: boolean
+  onOpen?: (groupId?: string) => void
+}) {
+  const { t } = useLocale()
+  const [rows, setRows] = useState<MyMarketingGroup[]>([])
+
+  useEffect(() => {
+    if (isAdmin) return
+    let cancel = false
+    void fetchMyMarketingGroups()
+      .then((next) => {
+        if (!cancel) setRows(next)
+      })
+      .catch(() => {
+        if (!cancel) setRows([])
+      })
+    return () => {
+      cancel = true
+    }
+  }, [isAdmin])
+
+  if (!isAdmin && rows.length > 0) {
+    return (
+      <section className="today-section">
+        <h3 className="section-label">{t('settings.yourGroup')}</h3>
+        {rows.map((row) => (
+          <button
+            key={row.group.id}
+            type="button"
+            className="theme-option settings-nav-link"
+            onClick={() => onOpen?.(row.group.id)}
+          >
+            <span className="activity-meta">
+              <span className="activity-name">{row.group.name}</span>
+              <span className="activity-desc">
+                {t('settings.groupStats', {
+                  installs: row.counts.installs.toLocaleString('en-IN'),
+                  retained: row.counts.retained.toLocaleString('en-IN'),
+                })}
+              </span>
+            </span>
+            <span className="activity-chevron" aria-hidden>
+              <Icon name="chevron" />
+            </span>
+          </button>
+        ))}
+      </section>
+    )
+  }
+
+  return (
+    <section className="today-section">
+      <h3 className="section-label">Groups</h3>
+      <button
+        type="button"
+        className="theme-option settings-nav-link"
+        onClick={() => onOpen?.()}
+      >
+        <span className="activity-meta">
+          <span className="activity-name">Group numbers</span>
+          <span className="activity-desc">Installs and five-day returns</span>
+        </span>
+        <span className="activity-chevron" aria-hidden>
+          <Icon name="chevron" />
+        </span>
+      </button>
+    </section>
+  )
+}
+
 export function SettingsScreen({
   onBack,
   isAdmin = false,
   onOpenAnalytics,
   onOpenFeedback,
+  onOpenGroups,
+  onOpenThemes,
   todayItems = [],
   onSignOut,
   onOpenPrivacy,
@@ -66,8 +148,12 @@ export function SettingsScreen({
   onReviewsOff,
 }: SettingsScreenProps) {
   const { user } = useAuth()
-  const { t } = useLocale()
-  const { themeId, themes, setThemeId } = useTheme()
+  const { t, locale } = useLocale()
+  const { preference } = useTheme()
+  const [textSize, setTextSize] = useState<TextSize>(readTextSize)
+  const weekdayNames = REVIEW_WEEKDAYS.map((_, index) =>
+    new Date(2024, 0, 7 + index).toLocaleDateString(localeTag(locale), { weekday: 'long' }),
+  )
   const native = Capacitor.isNativePlatform()
   const [digest, setDigest] = useState<DailyDigestPrefs>(loadDailyDigestPrefs)
   const digestRef = useRef(digest)
@@ -140,9 +226,7 @@ export function SettingsScreen({
         digestRef.current = reverted
         setDigest(reverted)
         saveDailyDigestPrefs(reverted)
-        setPermissionError(
-          'Notifications are off for Resuming. You can turn them on in system settings.',
-        )
+        setPermissionError(t('settings.notifOff'))
         return
       }
       const exact = await requestExactAlarms()
@@ -153,7 +237,7 @@ export function SettingsScreen({
       setDigest(reverted)
       saveDailyDigestPrefs(reverted)
       setPermissionError(
-        err instanceof Error ? err.message : 'Could not enable notifications.',
+        err instanceof Error ? err.message : t('settings.notifFailed'),
       )
     }
   }
@@ -163,10 +247,10 @@ export function SettingsScreen({
     setTestNotice(null)
     try {
       await scheduleTestDigest()
-      setTestNotice('A reminder will arrive in a few seconds.')
+      setTestNotice(t('settings.testSent'))
     } catch (err) {
       setPermissionError(
-        err instanceof Error ? err.message : 'Could not send a test reminder.',
+        err instanceof Error ? err.message : t('settings.testFailed'),
       )
     }
   }
@@ -178,9 +262,9 @@ export function SettingsScreen({
     setExportNotice(null)
     try {
       const filename = await downloadUserDataExport(user.id)
-      setExportNotice(`Downloaded ${filename}`)
+      setExportNotice(t('settings.exported', { file: filename }))
     } catch (err) {
-      setExportError(err instanceof Error ? err.message : 'Export failed.')
+      setExportError(err instanceof Error ? err.message : t('settings.exportFailed'))
     } finally {
       setExportBusy(false)
     }
@@ -193,7 +277,7 @@ export function SettingsScreen({
     try {
       await deleteCurrentAccount()
     } catch (err) {
-      setDeleteError(err instanceof Error ? err.message : 'Could not delete account.')
+      setDeleteError(err instanceof Error ? err.message : t('settings.deleteFailed'))
       setDeleteBusy(false)
     }
   }
@@ -201,44 +285,40 @@ export function SettingsScreen({
   return (
     <div className="settings-screen">
       <button type="button" className="btn btn-ghost btn-sm back-btn" onClick={onBack}>
+        <Icon name="back" />
         {t('settings.back')}
       </button>
 
+      <GroupsSettingsLink isAdmin={Boolean(isAdmin)} onOpen={onOpenGroups} />
+
       <section className="today-section">
-        <h3 className="section-label">Reminders</h3>
+        <h3 className="section-label">{t('settings.notifications')}</h3>
         <div className="digest-card">
           <div className="digest-toggle">
             <span className="activity-meta">
-              <span className="activity-name">Daily reminders</span>
+              <span className="activity-name">{t('settings.daily')}</span>
               <span className="activity-desc">
-                A few nudges early on help you come back. Later you can keep one —
-                or none. Silent once you&apos;re done.
+                {t('settings.dailyDesc')}
+                {native ? '' : ` ${t('settings.dailyWeb')}`}
               </span>
             </span>
-            <button
-              type="button"
-              className={`digest-switch ${digest.enabled ? 'digest-switch-on' : ''}`}
-              role="switch"
-              aria-checked={digest.enabled}
-              aria-label="Daily reminder"
-              disabled={!native}
-              onClick={() => void updateDigest({ enabled: !digest.enabled })}
-            >
-              <span className="digest-switch-knob" aria-hidden />
-            </button>
+            {native ? (
+              <button
+                type="button"
+                className={`digest-switch ${digest.enabled ? 'digest-switch-on' : ''}`}
+                role="switch"
+                aria-checked={digest.enabled}
+                aria-label={t('settings.daily')}
+                onClick={() => void updateDigest({ enabled: !digest.enabled })}
+              >
+                <span className="digest-switch-knob" aria-hidden />
+              </button>
+            ) : null}
           </div>
-
-          {!native && (
-            <p className="digest-hint">
-              {reminderTime && !checkinsOff
-                ? emailReminderLine(reminderTime)
-                : 'Set a time on the day 2, 3, and 7 emails. Nothing is sent if you are done.'}
-            </p>
-          )}
 
           {native && (
             <div className="field">
-              <span className="field-label">Reminders</span>
+              <span className="field-label">{t('settings.times')}</span>
               <div className="reminder-times">
                 {(digest.times ?? [{ hour: digest.hour, minute: digest.minute }]).map(
                   (time, index) => (
@@ -247,7 +327,7 @@ export function SettingsScreen({
                         className="field-input time-input"
                         type="time"
                         value={formatTimeInput(time.hour, time.minute)}
-                        aria-label={index === 0 ? 'Reminder time' : `Reminder ${index + 1}`}
+                        aria-label={index === 0 ? t('settings.reminderTime') : t('settings.reminderN', { n: index + 1 })}
                         onChange={(event) => {
                           const parsed = parseTimeInput(event.target.value)
                           if (!parsed) return
@@ -266,7 +346,7 @@ export function SettingsScreen({
                         <button
                           type="button"
                           className="btn btn-ghost btn-sm"
-                          aria-label={`Remove reminder ${index + 1}`}
+                          aria-label={t('settings.removeN', { n: index + 1 })}
                           onClick={() => {
                             const current = digest.times ?? [
                               { hour: digest.hour, minute: digest.minute },
@@ -279,7 +359,7 @@ export function SettingsScreen({
                             })
                           }}
                         >
-                          Remove
+                          {t('settings.remove')}
                         </button>
                       )}
                     </div>
@@ -302,18 +382,17 @@ export function SettingsScreen({
                     })
                   }}
                 >
-                  Add more reminder
+                  {t('settings.addTime')}
                 </button>
               )}
               <p className="digest-hint">
-                Early on, extra nudges help. Once the habit sticks, keep fewer. We only
-                ping if something is still open.
+                {t('settings.nudgeHint')}
               </p>
               {scheduleHint && <p className="digest-hint digest-schedule">{scheduleHint}</p>}
               {exactDenied && (
                 <div className="digest-exact">
                   <p className="digest-hint">
-                    Turn on Alarms &amp; reminders so this ping can arrive on time.
+                    {t('settings.exactHint')}
                   </p>
                   <button
                     type="button"
@@ -322,7 +401,7 @@ export function SettingsScreen({
                       void requestExactAlarms().then((granted) => setExactDenied(!granted))
                     }}
                   >
-                    Allow exact alarms
+                    {t('settings.exactAllow')}
                   </button>
                 </div>
               )}
@@ -331,7 +410,7 @@ export function SettingsScreen({
                 className="btn btn-ghost btn-sm"
                 onClick={() => void sendTestPing()}
               >
-                Send a test reminder
+                {t('settings.test')}
               </button>
               {testNotice && <p className="digest-hint">{testNotice}</p>}
             </div>
@@ -339,14 +418,18 @@ export function SettingsScreen({
 
           {permissionError && <p className="error">{permissionError}</p>}
         </div>
+      </section>
+
+      <section className="today-section">
+        <h3 className="section-label">{t('settings.emails')}</h3>
         <div className="digest-card">
           <div className="digest-toggle">
             <span className="activity-meta">
-              <span className="activity-name">Day 2, 3, and 7 emails</span>
+              <span className="activity-name">{t('settings.checkins')}</span>
               <span className="activity-desc">
                 {reminderTime && !checkinsOff
                   ? emailReminderLine(reminderTime)
-                  : 'A short note on day 2, 3, and 7. Nothing if you are done.'}
+                  : t('settings.checkinsDesc')}
               </span>
             </span>
             <button
@@ -354,7 +437,7 @@ export function SettingsScreen({
               className={`digest-switch ${checkinsOff ? '' : 'digest-switch-on'}`}
               role="switch"
               aria-checked={!checkinsOff}
-              aria-label="Day 2, 3, and 7 emails"
+              aria-label={t('settings.checkins')}
               onClick={() => {
                 if (!user) return
                 const next = !checkinsOff
@@ -367,7 +450,7 @@ export function SettingsScreen({
           </div>
           {!checkinsOff && (
             <label className="field">
-              <span className="field-label">Email time</span>
+              <span className="field-label">{t('settings.emailTime')}</span>
               <input
                 className="field-input"
                 type="time"
@@ -387,121 +470,141 @@ export function SettingsScreen({
       </section>
 
       <section className="today-section">
-        <h3 className="section-label">Weekly review</h3>
+        <h3 className="section-label">{t('settings.review')}</h3>
         <div className="digest-card">
           <div className="digest-toggle">
             <span className="activity-meta">
-              <span className="activity-name">Weekly review</span>
-              <span className="activity-desc">A short look at the week. Off hides the card and the email.</span>
+              <span className="activity-name">{t('settings.review')}</span>
+              <span className="activity-desc">{t('settings.reviewDesc')}</span>
             </span>
             <button
               type="button"
               className={`digest-switch ${reviewsOff ? '' : 'digest-switch-on'}`}
               role="switch"
               aria-checked={!reviewsOff}
-              aria-label="Weekly review"
+              aria-label={t('settings.review')}
               onClick={() => onReviewsOff?.(!reviewsOff)}
             >
               <span className="digest-switch-knob" aria-hidden />
             </button>
           </div>
+          <label className="field">
+            <span className="field-label">{t('settings.reviewDay')}</span>
+            <select
+              className="field-input"
+              value={reviewWeekday}
+              onChange={(event) => onReviewSchedule?.(Number(event.target.value), reviewTime)}
+            >
+              {REVIEW_WEEKDAYS.map((name, index) => (
+                <option key={name} value={index}>
+                  {weekdayNames[index]}
+                </option>
+              ))}
+            </select>
+          </label>
+          <label className="field">
+            <span className="field-label">{t('settings.reviewTime')}</span>
+            <input
+              className="field-input"
+              type="time"
+              value={reviewTime}
+              onChange={(event) => onReviewSchedule?.(reviewWeekday, event.target.value || '18:00')}
+            />
+          </label>
         </div>
-        <label className="field">
-          <span className="field-label">Review day</span>
-          <select
-            className="field-input"
-            value={reviewWeekday}
-            onChange={(event) => onReviewSchedule?.(Number(event.target.value), reviewTime)}
-          >
-            {REVIEW_WEEKDAYS.map((name, index) => (
-              <option key={name} value={index}>
-                {name}
-              </option>
-            ))}
-          </select>
-        </label>
-        <label className="field">
-          <span className="field-label">Review time</span>
-          <input
-            className="field-input"
-            type="time"
-            value={reviewTime}
-            onChange={(event) => onReviewSchedule?.(reviewWeekday, event.target.value || '18:00')}
-          />
-        </label>
-        <label className="field">
-          <span className="field-label">Birthday, optional</span>
-          <input
-            className="field-input"
-            type="date"
-            value={birthday ?? ''}
-            onChange={(event) => onBirthday?.(event.target.value || null)}
-          />
-          <p className="digest-hint">Optional. We'll say happy birthday on Today.</p>
-        </label>
-        {birthday && (
-          <button type="button" className="btn btn-ghost" onClick={() => onBirthday?.(null)}>
-            Clear birthday
-          </button>
-        )}
       </section>
 
       <section className="today-section">
-        <h3 className="section-label">History</h3>
-        <div className="settings-row">
-          <div>
-            <span className="activity-name">Show everything</span>
-            <p className="screen-sub">Reveal days hidden by a fresh start.</p>
-          </div>
-          <button
-            type="button"
-            className={`btn ${showEverything ? 'btn-primary' : 'btn-secondary'}`}
-            onClick={() => onShowEverything?.(!showEverything)}
-          >
-            {showEverything ? 'On' : 'Off'}
-          </button>
+        <h3 className="section-label">{t('settings.birthday')}</h3>
+        <div className="digest-card">
+          <label className="field">
+            <span className="field-label">{t('settings.birthdayDate')}</span>
+            <input
+              className="field-input"
+              type="date"
+              value={birthday ?? ''}
+              onChange={(event) => onBirthday?.(event.target.value || null)}
+            />
+            <p className="digest-hint">
+              {t('settings.birthdayHint')}
+            </p>
+          </label>
+          {birthday && (
+            <button type="button" className="btn btn-ghost" onClick={() => onBirthday?.(null)}>
+              {t('settings.birthdayClear')}
+            </button>
+          )}
         </div>
-        {canUndoFreshStart && (
-          <button type="button" className="btn btn-ghost" onClick={onUndoFreshStart}>
-            Undo fresh start
-          </button>
-        )}
+      </section>
 
-        <h3 className="section-label">Theme</h3>
-        <ul className="theme-list">
-          {themes.map((theme) => {
-            const selected = theme.id === themeId
-            return (
-              <li key={theme.id}>
-                <button
-                  type="button"
-                  className={`theme-option ${selected ? 'theme-option-selected' : ''}`}
-                  onClick={() => setThemeId(theme.id as ThemeId)}
-                  aria-pressed={selected}
-                >
-                  <span className={`theme-swatch theme-swatch-${theme.id}`} aria-hidden />
-                  <span className="activity-meta">
-                    <span className="activity-name">
-                      {theme.name}
-                      {theme.id === DEFAULT_THEME ? ' · default' : ''}
-                      <span className={`theme-mode-badge theme-mode-${theme.colorScheme}`}>
-                        {theme.colorScheme}
-                      </span>
-                    </span>
-                    <span className="activity-desc">{theme.description}</span>
-                  </span>
-                  {selected ? (
-                    <span className="theme-check" aria-hidden>
-                      ✓
-                    </span>
-                  ) : (
-                    <span className="theme-check theme-check-empty" aria-hidden />
-                  )}
-                </button>
-              </li>
-            )
-          })}
-        </ul>
+      <section className="today-section">
+        <h3 className="section-label">{t('settings.history')}</h3>
+        <div className="digest-card">
+          <div className="settings-row">
+            <div>
+              <span className="activity-name">{t('settings.covered')}</span>
+              <p className="screen-sub">
+                {t('settings.coveredDesc')}
+              </p>
+            </div>
+            <button
+              type="button"
+              className={`btn ${showEverything ? 'btn-primary' : 'btn-secondary'}`}
+              onClick={() => onShowEverything?.(!showEverything)}
+            >
+              {showEverything ? t('settings.on') : t('settings.off')}
+            </button>
+          </div>
+          {canUndoFreshStart && (
+            <button type="button" className="btn btn-ghost" onClick={onUndoFreshStart}>
+              {t('settings.undoFresh')}
+            </button>
+          )}
+        </div>
+      </section>
+
+      <section className="today-section">
+        <h3 className="section-label">{t('language.label')}</h3>
+        <LanguagePicker />
+        <p className="activity-desc">{t('language.hint')}</p>
+      </section>
+
+      <section className="today-section">
+        <h3 className="section-label">{t('settings.textSize')}</h3>
+        <div className="segmented" role="group" aria-label={t('settings.textSize')}>
+          {TEXT_SIZES.map((size) => (
+            <button
+              key={size}
+              type="button"
+              className={`segmented-btn ${textSize === size ? 'segmented-btn-active' : ''}`}
+              aria-pressed={textSize === size}
+              onClick={() => {
+                setTextSize(size)
+                applyTextSize(size)
+              }}
+            >
+              {t(size === 'normal' ? 'settings.textNormal' : size === 'large' ? 'settings.textLarge' : 'settings.textXlarge')}
+            </button>
+          ))}
+        </div>
+        <p className="activity-desc">{t('settings.textSizeHint')}</p>
+      </section>
+
+      <section className="today-section">
+        <h3 className="section-label">{t('settings.appearance')}</h3>
+        <button
+          type="button"
+          className="theme-option settings-nav-link"
+          onClick={onOpenThemes}
+        >
+          <span className="activity-meta">
+            <span className="activity-name">{t('settings.themes')}</span>
+            <span className="activity-desc">{t(`themes.${preference}`)}</span>
+          </span>
+          <span className="activity-chevron" aria-hidden>
+            <Icon name="chevron" />
+          </span>
+        </button>
       </section>
 
       {(isAdmin && onOpenAnalytics) || (isAdmin && onOpenFeedback) ? (
@@ -518,7 +621,7 @@ export function SettingsScreen({
                 <span className="activity-desc">Website traffic and page views</span>
               </span>
               <span className="activity-chevron" aria-hidden>
-                ›
+                <Icon name="chevron" />
               </span>
             </button>
           )}
@@ -533,7 +636,7 @@ export function SettingsScreen({
                 <span className="activity-desc">Ratings and comments people sent</span>
               </span>
               <span className="activity-chevron" aria-hidden>
-                ›
+                <Icon name="chevron" />
               </span>
             </button>
           )}
@@ -541,18 +644,18 @@ export function SettingsScreen({
       ) : null}
 
       <section className="today-section">
-        <h3 className="section-label">Account</h3>
+        <h3 className="section-label">{t('settings.account')}</h3>
         <button
           type="button"
           className="theme-option settings-nav-link"
           onClick={onOpenPrivacy}
         >
           <span className="activity-meta">
-            <span className="activity-name">Privacy</span>
-            <span className="activity-desc">How Resuming uses your data</span>
+            <span className="activity-name">{t('settings.privacy')}</span>
+            <span className="activity-desc">{t('settings.privacyDesc')}</span>
           </span>
           <span className="activity-chevron" aria-hidden>
-            ›
+            <Icon name="chevron" />
           </span>
         </button>
 
@@ -564,14 +667,12 @@ export function SettingsScreen({
         >
           <span className="activity-meta">
             <span className="activity-name">
-              {exportBusy ? 'Exporting…' : 'Export my data'}
+              {exportBusy ? t('settings.exporting') : t('settings.export')}
             </span>
-            <span className="activity-desc">
-              Download a ZIP with your activities, logs, and metrics
-            </span>
+            <span className="activity-desc">{t('settings.exportDesc')}</span>
           </span>
           <span className="activity-chevron" aria-hidden>
-            ›
+            <Icon name="chevron" />
           </span>
         </button>
         {exportNotice && <p className="digest-hint settings-account-hint">{exportNotice}</p>}
@@ -588,33 +689,30 @@ export function SettingsScreen({
             }}
           >
             <span className="activity-meta">
-              <span className="activity-name">Delete my account</span>
-              <span className="activity-desc">Permanently erase your Resuming data</span>
+              <span className="activity-name">{t('settings.delete')}</span>
+              <span className="activity-desc">{t('settings.deleteDesc')}</span>
             </span>
             <span className="activity-chevron" aria-hidden>
-              ›
+              <Icon name="chevron" />
             </span>
           </button>
         ) : (
           <div className="confirm-delete settings-delete-confirm">
+            <p>{t('settings.deleteWarn')}</p>
             <p>
-              This permanently deletes your account, activities, metrics, log history, and
-              feedback tied to this Google sign-in. It cannot be undone.
-            </p>
-            <p>
-              Want a copy first?{' '}
+              {t('settings.deleteCopy')}{' '}
               <button
                 type="button"
                 className="btn btn-ghost btn-sm"
                 onClick={() => void handleExport()}
                 disabled={exportBusy || deleteBusy || !user}
               >
-                {exportBusy ? 'Exporting…' : 'Export my data'}
+                {exportBusy ? t('settings.exporting') : t('settings.export')}
               </button>
             </p>
             <div className="field">
               <label className="field-label" htmlFor="delete-confirm-input">
-                Type DELETE to confirm
+                {t('settings.deleteType')}
               </label>
               <input
                 id="delete-confirm-input"
@@ -638,7 +736,7 @@ export function SettingsScreen({
                 }}
                 disabled={deleteBusy}
               >
-                Cancel
+                {t('settings.cancel')}
               </button>
               <button
                 type="button"
@@ -646,14 +744,14 @@ export function SettingsScreen({
                 onClick={() => void handleDeleteAccount()}
                 disabled={deleteBusy || deleteConfirmText !== 'DELETE'}
               >
-                {deleteBusy ? 'Deleting…' : 'Delete forever'}
+                {deleteBusy ? t('settings.deleting') : t('settings.deleteForever')}
               </button>
             </div>
           </div>
         )}
 
         <button type="button" className="btn btn-primary btn-lg settings-sign-out" onClick={() => void onSignOut()}>
-          Sign out
+          {t('settings.signOut')}
         </button>
       </section>
     </div>

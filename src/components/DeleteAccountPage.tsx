@@ -1,5 +1,6 @@
 import { PRODUCT_NAME } from '../lib/site'
 import { CONTACT_EMAIL } from '../config'
+import { Icon } from './Icon'
 
 interface DeleteAccountPageProps {
   onBack: () => void
@@ -9,7 +10,8 @@ export function DeleteAccountPage({ onBack }: DeleteAccountPageProps) {
   return (
     <div className="legal-page">
       <button type="button" className="btn btn-ghost btn-sm back-btn" onClick={onBack}>
-        ← Back
+        <Icon name="back" />
+        Back
       </button>
 
       <div className="screen-heading">

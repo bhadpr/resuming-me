@@ -1,6 +1,7 @@
 import { useEffect } from 'react'
 import { Capacitor } from '@capacitor/core'
 import { useLocation, useNavigate } from 'react-router-dom'
+import { useLocale } from './useLocale'
 
 /**
  * Capacitor Android hardware back: follow router history; exit only from /today.
@@ -8,6 +9,7 @@ import { useLocation, useNavigate } from 'react-router-dom'
 export function useAndroidBackButton(): void {
   const navigate = useNavigate()
   const { pathname } = useLocation()
+  const { localeChosen } = useLocale()
 
   useEffect(() => {
     if (!Capacitor.isNativePlatform()) return
@@ -18,7 +20,7 @@ export function useAndroidBackButton(): void {
     void (async () => {
       const { App } = await import('@capacitor/app')
       const handle = await App.addListener('backButton', () => {
-        if (pathname === '/today') {
+        if (!localeChosen || pathname === '/today') {
           void App.exitApp()
           return
         }
@@ -40,5 +42,5 @@ export function useAndroidBackButton(): void {
       cancelled = true
       remove()
     }
-  }, [navigate, pathname])
+  }, [localeChosen, navigate, pathname])
 }

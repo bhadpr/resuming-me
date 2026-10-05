@@ -53,9 +53,6 @@ export type SocialLinkId =
   | 'instagram'
   | 'tiktok'
   | 'youtube'
-  | 'x'
-  | 'linkedin'
-  | 'pinterest'
 
 export const COMPANY_NAME = 'Cheerful Games, Inc.'
 export const COPYRIGHT_YEAR = 2026
@@ -67,8 +64,12 @@ export const PRODUCT_NAME = 'Resuming'
  */
 export const GOVERNING_LAW = 'the State of Washington, United States'
 
-/** Shown on Privacy / Terms / About as the policy effective date. */
+/** Shown on About. */
 export const LEGAL_LAST_UPDATED = `September 23, ${COPYRIGHT_YEAR}`
+
+/** Shown on the Privacy Policy and the Terms. */
+export const PRIVACY_LAST_UPDATED = `October 2, ${COPYRIGHT_YEAR}`
+export const TERMS_LAST_UPDATED = PRIVACY_LAST_UPDATED
 
 export interface SocialLink {
   id: SocialLinkId
@@ -82,9 +83,6 @@ export const SOCIAL_LINKS: SocialLink[] = [
   { id: 'instagram', label: 'Instagram', href: 'https://www.instagram.com/cheerfulgames/' },
   { id: 'tiktok', label: 'TikTok', href: 'https://www.tiktok.com/@cheerfulgames' },
   { id: 'youtube', label: 'YouTube', href: 'https://www.youtube.com/@cheerfulgames' },
-  { id: 'x', label: 'X', href: 'https://x.com/cheerfulgames' },
-  { id: 'linkedin', label: 'LinkedIn', href: 'https://www.linkedin.com/company/cheerfulgames' },
-  { id: 'pinterest', label: 'Pinterest', href: 'https://www.pinterest.com/cheerfulgames/' },
 ]
 
 export const FOOTER_NAV: Array<{ id: SitePageId; label: string }> = [
