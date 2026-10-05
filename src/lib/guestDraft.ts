@@ -11,6 +11,7 @@ import { clearSkip, clearSnooze, isDoseSkipped } from './medicineReminderState'
 import {
   REMINDER_DONE_KEEP_MS,
   REMINDER_OPEN_MAX,
+  announceRemindersChanged,
   cleanReminderText,
   isDay,
   openReminderCount,
@@ -456,6 +457,7 @@ function normalizeGuestReminders(list: unknown, now = Date.now()): Reminder[] {
       day: item.day,
       hour: timed ? item.hour! : null,
       minute: timed ? item.minute! : null,
+      remindBefore: item.remindBefore === true,
       doneAt,
     })
   }
@@ -471,20 +473,27 @@ export function addGuestReminder(draft: GuestDraft, input: ReminderInput): Guest
     day: input.day,
     hour: input.hour,
     minute: input.hour == null ? null : input.minute,
+    remindBefore: input.remindBefore === true,
     doneAt: null,
   }
-  return saveGuestDraft({ ...draft, reminders: [...draft.reminders, reminder] })
+  const next = saveGuestDraft({ ...draft, reminders: [...draft.reminders, reminder] })
+  announceRemindersChanged()
+  return next
 }
 
 export function updateGuestReminder(draft: GuestDraft, id: string, patch: Partial<Reminder>): GuestDraft {
-  return saveGuestDraft({
+  const next = saveGuestDraft({
     ...draft,
     reminders: draft.reminders.map((item) => (item.id === id ? { ...item, ...patch } : item)),
   })
+  announceRemindersChanged()
+  return next
 }
 
 export function removeGuestReminder(draft: GuestDraft, id: string): GuestDraft {
-  return saveGuestDraft({ ...draft, reminders: draft.reminders.filter((item) => item.id !== id) })
+  const next = saveGuestDraft({ ...draft, reminders: draft.reminders.filter((item) => item.id !== id) })
+  announceRemindersChanged()
+  return next
 }
 
 function normalizeDraft(draft: GuestDraft): GuestDraft {

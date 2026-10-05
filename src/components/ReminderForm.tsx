@@ -1,4 +1,5 @@
 import { useState, type FormEvent } from 'react'
+import { Capacitor } from '@capacitor/core'
 import { useLocale } from '../hooks/useLocale'
 import {
   REMINDER_PARTS,
@@ -55,8 +56,11 @@ export function ReminderForm({ initial, today, saving, error, onSubmit, onDelete
   const [pickedTime, setPickedTime] = useState(
     initial?.hour != null ? `${pad(initial.hour)}:${pad(initial.minute ?? 0)}` : '10:00',
   )
+  const [remindBefore, setRemindBefore] = useState(initial?.remindBefore ?? false)
   const [issue, setIssue] = useState<ReminderIssue | null>(null)
   const [confirmDelete, setConfirmDelete] = useState(false)
+  const canRemindBefore = resolvedDay() > today
+  const dayBeforeOn = canRemindBefore && remindBefore
 
   function resolvedDay(): string {
     if (dayChoice === 'today') return today
@@ -76,7 +80,7 @@ export function ReminderForm({ initial, today, saving, error, onSubmit, onDelete
 
   async function submit(event: FormEvent) {
     event.preventDefault()
-    const input: ReminderInput = { text, day: resolvedDay(), ...resolvedTime() }
+    const input: ReminderInput = { text, day: resolvedDay(), ...resolvedTime(), remindBefore: dayBeforeOn }
     const nextIssue = validateReminder(input)
     setIssue(nextIssue)
     if (nextIssue) return
@@ -182,6 +186,28 @@ export function ReminderForm({ initial, today, saving, error, onSubmit, onDelete
           aria-label={t('reminders.pickTime')}
           onChange={(event) => setPickedTime(event.target.value)}
         />
+      )}
+
+      {canRemindBefore && (
+        <label className="reminder-switch">
+          <input
+            type="checkbox"
+            checked={remindBefore}
+            onChange={(event) => setRemindBefore(event.target.checked)}
+          />
+          <span>
+            {t('reminders.dayBefore')}
+            <span className="reminder-switch-hint">
+              {t('reminders.dayBeforeHint', {
+                time: formatReminderTime(parts.evening.hour, parts.evening.minute, locale),
+              })}
+            </span>
+          </span>
+        </label>
+      )}
+
+      {!Capacitor.isNativePlatform() && (timeChoice !== 'any' || dayBeforeOn) && (
+        <p className="reminder-switch-hint">{t('reminders.alertsAppOnly')}</p>
       )}
 
       {(issueText || error) && <p className="error">{issueText || error}</p>}

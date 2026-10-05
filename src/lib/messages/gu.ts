@@ -289,6 +289,13 @@ export const gu: DeepString<typeof en> = {
     empty: 'હજી કોઈ યાદ નથી. કંઈ કરવાનું હોય ત્યારે એક ઉમેરો.',
     partTimes: 'યાદના સમય',
     partTimesHint: 'નવી યાદમાં સવાર, બપોર અને સાંજ આ સમય વાપરે છે.',
+    later: '1 કલાક પછી',
+    alertNow: 'આનો સમય થઈ ગયો.',
+    alertTomorrow: 'આવતીકાલે',
+    alertTomorrowAt: 'આવતીકાલે, {time}',
+    dayBefore: 'એક દિવસ પહેલાં પણ યાદ અપાવો',
+    dayBeforeHint: 'આગલી સાંજે {time} પર આવશે.',
+    alertsAppOnly: 'સૂચનાઓ Android ઍપ પર આવે છે.',
   },
   welcome: {
     days: 'થોડા દિવસ થયા. ફરી સ્વાગત છે.',

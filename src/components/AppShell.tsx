@@ -55,6 +55,8 @@ import { TodayScreen } from './TodayScreen'
 import { MedicineSection } from './MedicineSection'
 import { MedicineEditor } from './MedicineForm'
 import { ReminderEditor } from './ReminderForm'
+import { askForReminderAlerts } from '../lib/reminderNotifications'
+import { untimedReminderNames } from '../lib/reminderAlerts'
 import { ReminderListSection } from './ReminderSection'
 import { OnboardingScreen } from './OnboardingScreen'
 import { InstallPrompt } from './InstallPrompt'
@@ -888,6 +890,13 @@ export function AppShell() {
     [activities, mergedLogEntries, today],
   )
 
+  const medicineState = useMedicines(user?.id)
+  const reminderState = useReminders(user?.id)
+  const untimedReminders = useMemo(
+    () => untimedReminderNames(reminderState.reminders, reminderState.today),
+    [reminderState.reminders, reminderState.today],
+  )
+
   useDailyDigest(
     todayRows,
     !loadingActivities && !loadingToday,
@@ -895,10 +904,8 @@ export function AppShell() {
       navigate('/today')
     },
     quietSchedule,
+    untimedReminders,
   )
-
-  const medicineState = useMedicines(user?.id)
-  const reminderState = useReminders(user?.id)
 
   async function handleReminderDone(reminder: Reminder) {
     if (!(await reminderState.markDone(reminder))) return
@@ -1928,6 +1935,7 @@ export function AppShell() {
                         } else if ((await reminderState.add(input)) === 'full') {
                           return 'full'
                         }
+                        void askForReminderAlerts(input)
                         navigateBack(navigate, '/today')
                       } catch (err) {
                         setError(err instanceof Error ? err.message : 'Could not save that reminder')

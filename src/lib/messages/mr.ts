@@ -289,6 +289,13 @@ export const mr: DeepString<typeof en> = {
     empty: 'अजून कोणतीही आठवण नाही. काही करायचे असेल तेव्हा एक जोडा.',
     partTimes: 'आठवणींच्या वेळा',
     partTimesHint: 'नव्या आठवणींमध्ये सकाळ, दुपार आणि संध्याकाळ या वेळा वापरतात.',
+    later: '१ तासाने',
+    alertNow: 'याची वेळ झाली.',
+    alertTomorrow: 'उद्या',
+    alertTomorrowAt: 'उद्या, {time}',
+    dayBefore: 'एक दिवस आधीही आठवण करून द्या',
+    dayBeforeHint: 'आदल्या संध्याकाळी {time} ला येईल.',
+    alertsAppOnly: 'सूचना Android ॲपवर येतात.',
   },
   welcome: {
     days: 'काही दिवस झाले. परत स्वागत आहे.',

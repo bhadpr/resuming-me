@@ -2999,6 +2999,28 @@ select.field-input.language-select {
   opacity: 0.8;
 }
 
+.reminder-switch {
+  display: flex;
+  gap: var(--space-2);
+  align-items: flex-start;
+  cursor: pointer;
+}
+
+.reminder-switch input {
+  width: 1.25rem;
+  height: 1.25rem;
+  margin-top: 0.15rem;
+  flex-shrink: 0;
+  accent-color: var(--color-primary);
+}
+
+.reminder-switch-hint {
+  display: block;
+  margin: 0;
+  font-size: var(--text-sm);
+  color: var(--color-text-muted);
+}
+
 .today-add-row {
   display: flex;
   flex-wrap: wrap;

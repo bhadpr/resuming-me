@@ -19,7 +19,12 @@ import { HabitVideoPlaceholder } from './HabitVideoPlaceholder'
 import { MedicineDoses } from './MedicineDoses'
 import { ReminderSection } from './ReminderSection'
 import { StepsCard } from './StepsCard'
-import { remindersDoneToday, remindersForToday, type Reminder } from '../lib/reminderSchedule'
+import {
+  REMINDERS_CHANGED,
+  remindersDoneToday,
+  remindersForToday,
+  type Reminder,
+} from '../lib/reminderSchedule'
 import { catalogTrackId, visibleName } from '../lib/catalogName'
 import { MEDICINE_REMINDER_CHANGED, clearSkip } from '../lib/medicineReminderState'
 import { track } from '../lib/track'
@@ -91,7 +96,11 @@ export function GuestTodayPage() {
   useEffect(() => {
     const refresh = () => setDraft(loadGuestDraft())
     window.addEventListener(MEDICINE_REMINDER_CHANGED, refresh)
-    return () => window.removeEventListener(MEDICINE_REMINDER_CHANGED, refresh)
+    window.addEventListener(REMINDERS_CHANGED, refresh)
+    return () => {
+      window.removeEventListener(MEDICINE_REMINDER_CHANGED, refresh)
+      window.removeEventListener(REMINDERS_CHANGED, refresh)
+    }
   }, [])
 
   useEffect(() => {

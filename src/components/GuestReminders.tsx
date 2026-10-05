@@ -1,4 +1,4 @@
-import { useState } from 'react'
+import { useEffect, useState } from 'react'
 import { useNavigate } from 'react-router-dom'
 import { todayLocalDate } from '../lib/dates'
 import {
@@ -9,7 +9,8 @@ import {
   type GuestDraft,
 } from '../lib/guestDraft'
 import { navigateBack } from '../lib/navigation'
-import { remindersComingUp, remindersForToday } from '../lib/reminderSchedule'
+import { askForReminderAlerts } from '../lib/reminderNotifications'
+import { REMINDERS_CHANGED, remindersComingUp, remindersForToday } from '../lib/reminderSchedule'
 import { track } from '../lib/track'
 import { ReminderEditor } from './ReminderForm'
 import { ReminderListSection } from './ReminderSection'
@@ -35,8 +36,13 @@ export function GuestReminderEditor({ reminderId }: { reminderId?: string }) {
           updateGuestReminder(current, reminderId, input)
         } else {
           if (!addGuestReminder(current, input)) return 'full'
-          track('reminder_added', { has_time: input.hour != null, signed_in: false })
+          track('reminder_added', {
+            has_time: input.hour != null,
+            day_before: input.remindBefore === true,
+            signed_in: false,
+          })
         }
+        void askForReminderAlerts(input)
         navigateBack(navigate, '/today')
       }}
       onDelete={async (reminder) => {
@@ -50,7 +56,12 @@ export function GuestReminderEditor({ reminderId }: { reminderId?: string }) {
 
 export function GuestReminderList() {
   const navigate = useNavigate()
-  const [draft] = useState<GuestDraft | null>(() => loadGuestDraft())
+  const [draft, setDraft] = useState<GuestDraft | null>(() => loadGuestDraft())
+  useEffect(() => {
+    const refresh = () => setDraft(loadGuestDraft())
+    window.addEventListener(REMINDERS_CHANGED, refresh)
+    return () => window.removeEventListener(REMINDERS_CHANGED, refresh)
+  }, [])
   if (!draft) return null
   const today = todayLocalDate()
 

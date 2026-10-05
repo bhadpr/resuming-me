@@ -1,7 +1,14 @@
 import { useCallback, useEffect, useMemo, useState } from 'react'
 import { Capacitor } from '@capacitor/core'
+import { useLocale } from './useLocale'
 import { todayLocalDate } from '../lib/dates'
 import {
+  listenForReminderNotificationActions,
+  reminderAlertText,
+  syncReminderNotifications,
+} from '../lib/reminderNotifications'
+import {
+  REMINDERS_CHANGED,
   REMINDER_OPEN_MAX,
   openReminderCount,
   remindersComingUp,
@@ -22,8 +29,10 @@ import {
 import { track } from '../lib/track'
 
 export function useReminders(userId: string | undefined) {
+  const { locale } = useLocale()
   const [today, setToday] = useState(todayLocalDate)
   const [reminders, setReminders] = useState<Reminder[]>([])
+  const [loaded, setLoaded] = useState(false)
   const [loading, setLoading] = useState(false)
   const [error, setError] = useState<string | null>(null)
   const [busyId, setBusyId] = useState<string | null>(null)
@@ -32,12 +41,14 @@ export function useReminders(userId: string | undefined) {
     async (quiet = false) => {
       if (!userId) {
         setReminders([])
+        setLoaded(false)
         return
       }
       if (!quiet) setLoading(true)
       setToday(todayLocalDate())
       try {
         setReminders(await listReminders())
+        setLoaded(true)
         setError(null)
       } catch (err) {
         setError(err instanceof Error ? err.message : 'Could not load reminders')
@@ -82,6 +93,31 @@ export function useReminders(userId: string | undefined) {
     }
   }, [reload, userId])
 
+  useEffect(() => {
+    const refresh = () => void reload(true)
+    window.addEventListener(REMINDERS_CHANGED, refresh)
+    let cancelled = false
+    let removeListener = () => {}
+    void listenForReminderNotificationActions().then((remove) => {
+      if (cancelled) {
+        remove()
+        return
+      }
+      removeListener = remove
+    })
+    return () => {
+      cancelled = true
+      window.removeEventListener(REMINDERS_CHANGED, refresh)
+      removeListener()
+    }
+  }, [reload])
+
+  useEffect(() => {
+    if (!loaded) return
+    const { copy, labels } = reminderAlertText(locale)
+    void syncReminderNotifications(reminders, copy, labels).catch(() => {})
+  }, [loaded, locale, reminders])
+
   const open = useMemo(() => remindersForToday(reminders, today), [reminders, today])
   const doneToday = useMemo(() => remindersDoneToday(reminders, today), [reminders, today])
   const comingUp = useMemo(() => remindersComingUp(reminders, today), [reminders, today])
@@ -116,7 +152,11 @@ export function useReminders(userId: string | undefined) {
     try {
       const saved = await addReminder(userId, input)
       setReminders((current) => [...current, saved])
-      track('reminder_added', { has_time: input.hour != null, signed_in: true })
+      track('reminder_added', {
+        has_time: input.hour != null,
+        day_before: input.remindBefore === true,
+        signed_in: true,
+      })
       return 'ok'
     } catch (err) {
       if (err instanceof ReminderCapError) return 'full'
@@ -126,7 +166,7 @@ export function useReminders(userId: string | undefined) {
 
   async function update(id: string, input: ReminderInput): Promise<void> {
     await updateReminder(id, input)
-    patchLocal(id, input)
+    patchLocal(id, { ...input, remindBefore: input.remindBefore === true })
   }
 
   async function remove(id: string): Promise<void> {

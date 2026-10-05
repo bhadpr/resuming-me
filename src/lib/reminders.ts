@@ -24,6 +24,7 @@ function fromRow(row: ReminderRow): Reminder {
     day: row.day,
     hour: row.hour,
     minute: row.minute,
+    remindBefore: row.remind_before ?? false,
     doneAt: row.done_at,
   }
 }
@@ -58,6 +59,7 @@ export async function addReminder(
       day: input.day,
       hour: input.hour,
       minute: input.hour == null ? null : input.minute,
+      remind_before: input.remindBefore === true,
       done_at: input.doneAt ?? null,
     })
     .select('*')
@@ -78,6 +80,7 @@ export async function updateReminder(id: string, input: ReminderInput): Promise<
       day: input.day,
       hour: input.hour,
       minute: input.hour == null ? null : input.minute,
+      remind_before: input.remindBefore === true,
     })
     .eq('id', id)
   if (error) throw error

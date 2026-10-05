@@ -14,6 +14,8 @@ export interface Reminder {
   /** Both null means any time that day. */
   hour: number | null
   minute: number | null
+  /** An evening alert on the day before. */
+  remindBefore: boolean
   doneAt: string | null
 }
 
@@ -22,6 +24,7 @@ export interface ReminderInput {
   day: string
   hour: number | null
   minute: number | null
+  remindBefore?: boolean
 }
 
 export type ReminderIssue = 'text' | 'day' | 'full'
@@ -37,6 +40,12 @@ export const DEFAULT_PART_TIMES: PartTimes = {
 }
 
 export const PART_TIMES_STORAGE_KEY = 'resuming-reminder-part-times'
+/** Fired when reminders or their alerts change outside React, such as from a notification button. */
+export const REMINDERS_CHANGED = 'resuming-reminders-changed'
+
+export function announceRemindersChanged(): void {
+  if (typeof window !== 'undefined') window.dispatchEvent(new Event(REMINDERS_CHANGED))
+}
 
 export function cleanReminderText(text: string): string {
   return text.replace(/\s+/g, ' ').trim().slice(0, REMINDER_TEXT_MAX)
@@ -128,6 +137,7 @@ export function savePartTimes(times: PartTimes): void {
   } catch {
     /* ignore */
   }
+  announceRemindersChanged()
 }
 
 /** Which time chip a saved reminder belongs to. */

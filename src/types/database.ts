@@ -335,6 +335,7 @@ export interface Database {
           day: string
           hour: number | null
           minute: number | null
+          remind_before: boolean
           done_at: string | null
           created_at: string
           updated_at: string
@@ -346,6 +347,7 @@ export interface Database {
           day: string
           hour?: number | null
           minute?: number | null
+          remind_before?: boolean
           done_at?: string | null
           created_at?: string
           updated_at?: string
@@ -355,6 +357,7 @@ export interface Database {
           day?: string
           hour?: number | null
           minute?: number | null
+          remind_before?: boolean
           done_at?: string | null
         }
         Relationships: []

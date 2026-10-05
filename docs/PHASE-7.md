@@ -87,7 +87,8 @@ At the end of M2, the Android app sends a notification when a reminder is due. T
 ### P7-06 — A day before
 
 - When adding a reminder, an optional switch: **Also remind me the day before**.
-- The day-before alert comes in the evening of the previous day.
+- The day-before alert comes in the evening of the previous day, at the Evening time from Settings (18:00 unless changed).
+- The switch shows only when the reminder's day is after today.
 - Meant for doctor visits, events, and anything that needs preparing.
 
 ## Milestone 3 — Easier to add

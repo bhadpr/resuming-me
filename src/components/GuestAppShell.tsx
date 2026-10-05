@@ -7,6 +7,12 @@ import { mealMessageKey } from '../lib/medicineFormat'
 import { listenForMedicineNotificationActions, syncMedicineNotifications } from '../lib/medicineNotifications'
 import { MEDICINE_REMINDER_CHANGED } from '../lib/medicineReminderState'
 import { parseAppPath, stashAuthNext, tabFromView, type AppTab } from '../lib/navigation'
+import {
+  listenForReminderNotificationActions,
+  reminderAlertText,
+  syncReminderNotifications,
+} from '../lib/reminderNotifications'
+import { REMINDERS_CHANGED } from '../lib/reminderSchedule'
 import { track } from '../lib/track'
 import { useDocumentMeta } from '../hooks/useDocumentMeta'
 import { BrandTitle } from './BrandTitle'
@@ -25,6 +31,7 @@ export function GuestAppShell() {
   const location = useLocation()
   const { t } = useLocale()
   useGuestMedicineAlarms()
+  useGuestReminderAlerts()
   const view = parseAppPath(location.pathname)
   const tab = guestTabFromPath(location.pathname)
   const label =
@@ -105,6 +112,36 @@ function useGuestMedicineAlarms(): void {
     window.addEventListener(MEDICINE_REMINDER_CHANGED, sync)
     return () => window.removeEventListener(MEDICINE_REMINDER_CHANGED, sync)
   }, [t])
+}
+
+function useGuestReminderAlerts(): void {
+  const { locale } = useLocale()
+
+  useEffect(() => {
+    let cancelled = false
+    let remove = () => {}
+    void listenForReminderNotificationActions().then((next) => {
+      if (cancelled) {
+        next()
+        return
+      }
+      remove = next
+    })
+    return () => {
+      cancelled = true
+      remove()
+    }
+  }, [])
+
+  useEffect(() => {
+    const sync = () => {
+      const { copy, labels } = reminderAlertText(locale)
+      void syncReminderNotifications(loadGuestDraft()?.reminders ?? [], copy, labels).catch(() => {})
+    }
+    sync()
+    window.addEventListener(REMINDERS_CHANGED, sync)
+    return () => window.removeEventListener(REMINDERS_CHANGED, sync)
+  }, [locale])
 }
 
 function GuestSignInPanel({ tab }: { tab: AppTab }) {

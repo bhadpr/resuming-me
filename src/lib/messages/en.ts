@@ -285,6 +285,13 @@ export const en = {
     empty: 'Nothing to remember yet. Add one when something needs doing.',
     partTimes: 'Reminder times',
     partTimesHint: 'Morning, Afternoon, and Evening use these times on new reminders.',
+    later: 'In 1 hour',
+    alertNow: 'Time for this one.',
+    alertTomorrow: 'Tomorrow',
+    alertTomorrowAt: 'Tomorrow, {time}',
+    dayBefore: 'Also remind me the day before',
+    dayBeforeHint: 'Comes the evening before, at {time}.',
+    alertsAppOnly: 'Alerts come on the Android app.',
   },
   welcome: {
     days: "It's been a few days. Welcome back.",

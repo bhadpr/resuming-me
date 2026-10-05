@@ -438,10 +438,23 @@ describe('guest reminders', () => {
     const saved = saveGuestDraft({
       ...draft,
       reminders: [
-        { id: 'old', text: 'Old', day: '2026-10-01', hour: null, minute: null, doneAt: old },
-        { id: 'open', text: 'Open', day: '2026-10-01', hour: null, minute: null, doneAt: null },
+        { id: 'old', text: 'Old', day: '2026-10-01', hour: null, minute: null, remindBefore: false, doneAt: old },
+        { id: 'open', text: 'Open', day: '2026-10-01', hour: null, minute: null, remindBefore: false, doneAt: null },
       ],
     })
     expect(saved.reminders.map((item) => item.id)).toEqual(['open'])
+  })
+
+  it('keeps the day-before choice, and treats a missing one as off', () => {
+    memoryStorage()
+    const draft = addGuestReminder(ensureGuestDraft('UTC'), {
+      text: 'Doctor',
+      day: '2026-10-08',
+      hour: 11,
+      minute: 0,
+      remindBefore: true,
+    })!
+    addGuestReminder(draft, { text: 'Post office', day: '2026-10-08', hour: null, minute: null })
+    expect(loadGuestDraft()?.reminders.map((item) => item.remindBefore)).toEqual([true, false])
   })
 })

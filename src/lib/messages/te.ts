@@ -289,6 +289,13 @@ export const te: DeepString<typeof en> = {
     empty: 'ఇంకా గుర్తులు లేవు. ఏదైనా చేయాల్సి వచ్చినప్పుడు ఒకటి జోడించండి.',
     partTimes: 'గుర్తు సమయాలు',
     partTimesHint: 'కొత్త గుర్తులలో ఉదయం, మధ్యాహ్నం, సాయంత్రం ఈ సమయాలను వాడతాయి.',
+    later: '1 గంట తర్వాత',
+    alertNow: 'దీని సమయం అయింది.',
+    alertTomorrow: 'రేపు',
+    alertTomorrowAt: 'రేపు, {time}',
+    dayBefore: 'ఒక రోజు ముందు కూడా గుర్తు చేయి',
+    dayBeforeHint: 'ముందు రోజు సాయంత్రం {time}కి వస్తుంది.',
+    alertsAppOnly: 'హెచ్చరికలు Android యాప్‌లో వస్తాయి.',
   },
   welcome: {
     days: 'కొన్ని రోజులయ్యాయి. మళ్లీ స్వాగతం.',

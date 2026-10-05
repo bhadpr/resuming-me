@@ -8,18 +8,25 @@ import {
 } from '../lib/localNotifications'
 import type { ActivityTodayProgress } from '../lib/today'
 
+const NO_NAMES: readonly string[] = []
+
 export function useDailyDigest(
   rows: ActivityTodayProgress[],
   ready: boolean,
   onOpenToday?: () => void,
   quiet?: QuietScheduleInput | null,
+  /** Open reminders on Today with no time of their own. */
+  reminderNames: readonly string[] = NO_NAMES,
 ): void {
   const onOpenTodayRef = useRef(onOpenToday)
   onOpenTodayRef.current = onOpenToday
 
   const digestItems = useMemo(
-    () => rows.map((row) => ({ name: row.activity.name, done: row.done })),
-    [rows],
+    () => [
+      ...rows.map((row) => ({ name: row.activity.name, done: row.done })),
+      ...reminderNames.map((name) => ({ name, done: false })),
+    ],
+    [rows, reminderNames],
   )
   const digestItemsRef = useRef(digestItems)
   digestItemsRef.current = digestItems

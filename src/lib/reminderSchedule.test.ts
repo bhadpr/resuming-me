@@ -11,7 +11,7 @@ import {
 } from './reminderSchedule'
 
 function reminder(id: string, day: string, extra: Partial<Reminder> = {}): Reminder {
-  return { id, text: id, day, hour: null, minute: null, doneAt: null, ...extra }
+  return { id, text: id, day, hour: null, minute: null, remindBefore: false, doneAt: null, ...extra }
 }
 
 function localIso(day: string, hour: number): string {
