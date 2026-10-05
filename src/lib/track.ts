@@ -306,15 +306,29 @@ export async function flushEvents(): Promise<void> {
         platform: e.platform,
       }))
 
-    // Another tab or an earlier flush whose response was lost may already have
-    // stored some of these ids; skip them instead of failing the whole batch.
-    const send = (rows: EventInsert[]) =>
-      client.from('events').upsert(rows, { onConflict: 'id', ignoreDuplicates: true })
+    // Upsert is not an option: RLS checks ON CONFLICT against a select policy,
+    // and only admins can read events.
+    const send = (rows: EventInsert[]) => client.from('events').insert(rows)
 
-    let { error } = await send(toRows(userId))
-    if (error?.code === FOREIGN_KEY_VIOLATION && userId) {
+    // Another tab or an earlier flush whose response was lost may already have
+    // stored some of these ids; send one by one and skip those.
+    const sendEach = async (rows: EventInsert[]) => {
+      for (const row of rows) {
+        const { error } = await send([row])
+        if (error && error.code !== UNIQUE_VIOLATION) return { error }
+      }
+      return { error: null }
+    }
+
+    let owner = userId
+    let { error } = await send(toRows(owner))
+    if (error?.code === FOREIGN_KEY_VIOLATION && owner) {
       // Cached session for an account that no longer exists.
-      ;({ error } = await send(toRows(null)))
+      owner = null
+      ;({ error } = await send(toRows(owner)))
+    }
+    if (error?.code === UNIQUE_VIOLATION) {
+      ;({ error } = await sendEach(toRows(owner)))
     }
     if (error && !isRejectedBatch(error.code)) {
       console.warn('events not recorded', error.message)
@@ -330,6 +344,7 @@ export async function flushEvents(): Promise<void> {
 }
 
 const FOREIGN_KEY_VIOLATION = '23503'
+const UNIQUE_VIOLATION = '23505'
 
 /** Data or constraint errors (Postgres classes 22 and 23) will fail again on retry. */
 function isRejectedBatch(code: string | undefined): boolean {

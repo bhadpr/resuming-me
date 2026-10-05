@@ -1,13 +1,13 @@
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest'
 
-const upsert = vi.fn()
+const insert = vi.fn()
 vi.mock('./supabase', () => ({
   isSupabaseConfigured: () => true,
   createSupabaseClient: () => ({
     auth: {
       getSession: async () => ({ data: { session: { user: { id: 'user-1' } } } }),
     },
-    from: () => ({ upsert }),
+    from: () => ({ insert }),
   }),
 }))
 
@@ -148,7 +148,7 @@ describe('flushEvents', () => {
     installMemoryStorage()
     vi.stubGlobal('navigator', { onLine: true })
     _resetTrackStateForTests()
-    upsert.mockReset()
+    insert.mockReset()
   })
 
   afterEach(() => {
@@ -156,45 +156,56 @@ describe('flushEvents', () => {
     vi.unstubAllGlobals()
   })
 
-  it('skips ids the server already has and clears the queue', async () => {
-    upsert.mockResolvedValue({ error: null })
+  it('sends the batch with a plain insert and clears the queue', async () => {
+    insert.mockResolvedValue({ error: null })
     track('log_created')
     await flushEvents()
-    expect(upsert).toHaveBeenCalledWith(expect.any(Array), {
-      onConflict: 'id',
-      ignoreDuplicates: true,
-    })
+    expect(insert).toHaveBeenCalledTimes(1)
+    expect(insert.mock.calls[0]).toHaveLength(1)
+    expect(_peekQueueForTests()).toEqual([])
+  })
+
+  it('skips ids the server already has and still sends the rest', async () => {
+    insert
+      .mockResolvedValueOnce({ error: { code: '23505', message: 'duplicate key' } })
+      .mockResolvedValueOnce({ error: { code: '23505', message: 'duplicate key' } })
+      .mockResolvedValueOnce({ error: null })
+    track('log_created')
+    track('skip_today')
+    await flushEvents()
+    const sent = insert.mock.calls.map((call) => call[0].map((row: { name: string }) => row.name))
+    expect(sent.slice(1)).toEqual([['log_created'], ['skip_today']])
     expect(_peekQueueForTests()).toEqual([])
   })
 
   it('keeps the queue on network or server errors', async () => {
-    upsert.mockResolvedValue({ error: { code: 'PGRST301', message: 'jwt expired' } })
+    insert.mockResolvedValue({ error: { code: 'PGRST301', message: 'jwt expired' } })
     track('log_created')
     await flushEvents()
     expect(_peekQueueForTests().some((e) => e.name === 'log_created')).toBe(true)
   })
 
   it('drops a batch the database rejects so it cannot block later events', async () => {
-    upsert.mockResolvedValue({ error: { code: '23514', message: 'check violation' } })
+    insert.mockResolvedValue({ error: { code: '23514', message: 'check violation' } })
     track('log_created')
     await flushEvents()
     expect(_peekQueueForTests()).toEqual([])
   })
 
   it('resends without the user when the account no longer exists', async () => {
-    upsert
+    insert
       .mockResolvedValueOnce({ error: { code: '23503', message: 'fk violation' } })
       .mockResolvedValueOnce({ error: null })
     track('log_created')
     await flushEvents()
-    expect(upsert.mock.calls[0][0][0].user_id).toBe('user-1')
-    expect(upsert.mock.calls[1][0][0].user_id).toBeNull()
+    expect(insert.mock.calls[0][0][0].user_id).toBe('user-1')
+    expect(insert.mock.calls[1][0][0].user_id).toBeNull()
     expect(_peekQueueForTests()).toEqual([])
   })
 
   it('keeps events tracked while a flush is in flight', async () => {
     let finish: (v: { error: null }) => void = () => {}
-    upsert.mockReturnValue(new Promise((resolve) => (finish = resolve)))
+    insert.mockReturnValue(new Promise((resolve) => (finish = resolve)))
     track('log_created')
     const flushing = flushEvents()
     await Promise.resolve()
