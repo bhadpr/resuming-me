@@ -2,6 +2,7 @@ import { useEffect, useState, type FormEvent } from 'react'
 import { habitArtFor, habitTemplateId } from '../data/habitArt'
 import { isCatalogLabel, templateLabel } from '../lib/catalogName'
 import { useLocale } from '../hooks/useLocale'
+import { useThemedArt } from '../hooks/useThemedArt'
 import { HabitIcon } from './HabitIcon'
 import { StepGoalField } from './StepGoalField'
 import { DayPeriodPicker } from './DayPeriodPicker'
@@ -70,6 +71,7 @@ export function MetricForm({
   onPhaseChange?: (phase: 'pick' | 'details') => void
 }) {
   const { locale } = useLocale()
+  const themed = useThemedArt()
   const starting = initial ? fromMetric(initial) : emptyInput
   const [phase, setPhase] = useState<'pick' | 'details'>(initial ? 'details' : 'pick')
   const [selectedName, setSelectedName] = useState<string | null>(null)
@@ -155,7 +157,7 @@ export function MetricForm({
                       >
                         <span className={`habit-tile-icon${art ? ' habit-tile-icon-art' : ''}`} aria-hidden>
                           {art ? (
-                            <img className="habit-tile-art" src={art} alt="" />
+                            <img className="habit-tile-art" src={themed(art)} alt="" />
                           ) : (
                             <HabitIcon id={habitTemplateId({ name: metric.name }) ?? 'custom'} />
                           )}

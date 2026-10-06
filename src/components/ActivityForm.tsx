@@ -10,6 +10,7 @@ import { DEFAULT_STEP_GOAL, parseStepGoal } from '../lib/steps'
 import type { Activity, ActivityInput } from '../lib/activities'
 import { groupTitle, isCatalogLabel, templateLabel } from '../lib/catalogName'
 import { useLocale } from '../hooks/useLocale'
+import { useThemedArt } from '../hooks/useThemedArt'
 import type { ActivityType, TrackingMode } from '../types/database'
 
 function fromActivity(activity: Activity): ActivityInput {
@@ -86,6 +87,7 @@ export function ActivityForm({
   onPhaseChange?: (phase: 'pick' | 'details') => void
 }) {
   const { locale, t } = useLocale()
+  const themed = useThemedArt()
   const [phase, setPhase] = useState<'pick' | 'details'>(initial ? 'details' : 'pick')
   const [selectedTemplateId, setSelectedTemplateId] = useState<string | null>(
     initial?.template_id ?? null,
@@ -222,7 +224,7 @@ export function ActivityForm({
                         >
                           <span className={`habit-tile-icon${art ? ' habit-tile-icon-art' : ''}`} aria-hidden>
                             {art ? (
-                              <img className="habit-tile-art" src={art} alt="" />
+                              <img className="habit-tile-art" src={themed(art)} alt="" />
                             ) : (
                               <HabitIcon id={template.id} />
                             )}

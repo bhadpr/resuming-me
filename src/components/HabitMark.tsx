@@ -1,4 +1,5 @@
 import { habitArtFor, habitTemplateId } from '../data/habitArt'
+import { useThemedArt } from '../hooks/useThemedArt'
 import { HabitIcon } from './HabitIcon'
 
 /** Square habit picture, or a line icon when there is no picture. */
@@ -10,11 +11,12 @@ export function HabitMark({
   name?: string | null
   emoji?: string
 }) {
+  const art = useThemedArt()
   const src = habitArtFor({ templateId, name })
   if (src) {
     return (
       <span className="activity-emoji activity-emoji-art" aria-hidden>
-        <img src={src} alt="" />
+        <img src={art(src)} alt="" />
       </span>
     )
   }

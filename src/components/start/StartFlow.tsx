@@ -47,6 +47,7 @@ import { catalogTrackId, groupTitle, templateLabel, visibleName } from '../../li
 import { applyHabitPlan, classifyHabitLocally, refineHabitKind } from '../../lib/habitKind'
 import { track } from '../../lib/track'
 import { useLocale } from '../../hooks/useLocale'
+import { useThemedArt } from '../../hooks/useThemedArt'
 import { BrandTitle } from '../BrandTitle'
 import { MedicineForm } from '../MedicineForm'
 import { MedicineThumb } from '../MedicineThumb'
@@ -292,6 +293,7 @@ export function StartFlow({
 }) {
   const navigate = useNavigate()
   const { locale, t } = useLocale()
+  const themed = useThemedArt()
   const [gapIndex, setGapIndex] = useState(0)
   const [sizeIndex, setSizeIndex] = useState(0)
   const [pranayamIndex, setPranayamIndex] = useState(0)
@@ -1946,7 +1948,7 @@ export function StartFlow({
                           aria-hidden
                         >
                           {HABIT_ART[template.id] ? (
-                            <img className="habit-tile-art" src={HABIT_ART[template.id]} alt="" />
+                            <img className="habit-tile-art" src={themed(HABIT_ART[template.id])} alt="" />
                           ) : (
                             <HabitIcon id={template.id} />
                           )}
@@ -1980,7 +1982,7 @@ export function StartFlow({
                         aria-hidden
                       >
                         {HABIT_ART[vital.id] ? (
-                          <img className="habit-tile-art" src={HABIT_ART[vital.id]} alt="" />
+                          <img className="habit-tile-art" src={themed(HABIT_ART[vital.id])} alt="" />
                         ) : (
                           <HabitIcon id={vital.id} />
                         )}
@@ -2085,7 +2087,7 @@ export function StartFlow({
                 placeholder
               />
             ) : sizeArt ? (
-              <img className="habit-size-art" src={sizeArt} alt="" />
+              <img className="habit-size-art" src={themed(sizeArt)} alt="" />
             ) : null}
             {sizeActivity.templateId === 'relaxation' ? null : sizeControl ? (
               <div

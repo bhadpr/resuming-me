@@ -1,6 +1,7 @@
 import { useEffect, useState } from 'react'
 import { habitArtFor } from '../data/habitArt'
 import { useLocale } from '../hooks/useLocale'
+import { useThemedArt } from '../hooks/useThemedArt'
 import { todayLocalDate } from '../lib/dates'
 import { readPhoneSteps, requestPhoneSteps, type PhoneSteps } from '../lib/healthSteps'
 import { formatStepCount } from '../lib/steps'
@@ -16,6 +17,7 @@ export function StepsCard({
   today?: string
 }) {
   const { t, locale } = useLocale()
+  const themed = useThemedArt()
   const [phoneSteps, setPhoneSteps] = useState<number | null>(null)
   const [phoneState, setPhoneState] = useState<PhoneState>('unknown')
   const [asking, setAsking] = useState(false)
@@ -58,7 +60,7 @@ export function StepsCard({
   return (
     <li className="today-row today-row-stack today-row-compact">
       <div className="today-row-head">
-        {art ? <img className="steps-card-art" src={art} alt="" /> : null}
+        {art ? <img className="steps-card-art" src={themed(art)} alt="" /> : null}
         <span className="activity-name">{t('today.steps')}</span>
       </div>
       <div className="today-row-main">
