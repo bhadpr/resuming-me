@@ -4065,6 +4065,27 @@ select.field-input.language-select {
   border-radius: 22%;
 }
 
+.today-actions-stack {
+  flex-direction: column;
+  align-items: stretch;
+  gap: 0;
+}
+
+.today-skip-link {
+  min-height: 2.25rem;
+  padding: 0;
+  background: none;
+  border: 0;
+  color: var(--color-text-muted);
+  font-size: var(--text-sm);
+  font-weight: var(--weight-semibold);
+  cursor: pointer;
+}
+
+.today-skip-link:hover:not(:disabled) {
+  color: var(--color-text);
+}
+
 .today-watch {
   color: var(--color-primary);
 }

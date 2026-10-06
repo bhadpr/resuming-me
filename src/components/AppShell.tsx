@@ -1381,6 +1381,21 @@ export function AppShell() {
     }
   }
 
+  async function handleUnskip(row: ActivityTodayProgress) {
+    const skipIds = new Set(
+      [...postponedEntries, ...logEntries]
+        .filter((entry) => entry.activity_id === row.activity.id && entry.type === 'postponed' && entry.date === today)
+        .map((entry) => entry.id),
+    )
+    if (skipIds.size === 0) return
+    setBusyId(row.activity.id)
+    try {
+      for (const entryId of skipIds) await undoLogEntry({ entryId, activityId: row.activity.id })
+    } finally {
+      setBusyId(null)
+    }
+  }
+
   async function handleTakeRestDay() {
     if (!user) return
     setBusyId('rest-day')
@@ -1891,6 +1906,7 @@ export function AppShell() {
                     onShrinkRunningTimer={handleShrinkRunningTimer}
                     onRescheduleDeadline={handleRescheduleDeadline}
                     onSkipToday={handleSkipToday}
+                    onUnskip={(row) => void handleUnskip(row)}
                     onPauseHabit={(row, duration) => void handlePauseActivity(duration, row.activity.id)}
                     onTakeRestDay={() => void handleTakeRestDay()}
                     isRestDay={dayStatusOpts.restDates.has(today)}

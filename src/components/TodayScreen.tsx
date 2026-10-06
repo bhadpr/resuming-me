@@ -85,6 +85,7 @@ interface TodayScreenProps {
   ) => void
   onShrinkRunningTimer: (minutes: SmallerChoiceMinutes) => void
   onSkipToday?: (row: ActivityTodayProgress, reason: SkipReason) => void
+  onUnskip?: (row: ActivityTodayProgress) => void
   onTakeRestDay?: () => void
   onPauseHabit?: (row: ActivityTodayProgress, duration: PauseDuration) => void
   hasActivities?: boolean
@@ -134,6 +135,7 @@ export function TodayScreen({
   onStartSmallerSession,
   onShrinkRunningTimer,
   onSkipToday,
+  onUnskip,
   onTakeRestDay,
   onPauseHabit,
   hasActivities = false,
@@ -208,6 +210,7 @@ export function TodayScreen({
         onRescheduleDeadline={(date) => onRescheduleDeadline(row, date)}
         onShrinkRunningTimer={onShrinkRunningTimer}
         onSkipToday={onSkipToday ? (reason) => onSkipToday(row, reason) : undefined}
+        onUnskip={onUnskip ? () => onUnskip(row) : undefined}
         onTakeRestDay={onTakeRestDay}
         isRestDay={isRestDay}
         onPauseHabit={onPauseHabit ? (duration) => onPauseHabit(row, duration) : undefined}
@@ -660,6 +663,7 @@ function TodayActivityRow({
   onRescheduleDeadline,
   onShrinkRunningTimer,
   onSkipToday,
+  onUnskip,
   onTakeRestDay,
   isRestDay = false,
   onPauseHabit,
@@ -680,6 +684,7 @@ function TodayActivityRow({
   onRescheduleDeadline: (newDeadline: string) => void
   onShrinkRunningTimer: (minutes: SmallerChoiceMinutes) => void
   onSkipToday?: (reason: SkipReason) => void
+  onUnskip?: () => void
   onTakeRestDay?: () => void
   isRestDay?: boolean
   onPauseHabit?: (duration: PauseDuration) => void
@@ -744,8 +749,8 @@ function TodayActivityRow({
     activity.type !== 'deadline'
   const canPauseHabit = Boolean(onPauseHabit) && !done && activity.type !== 'deadline'
   const canRest = Boolean(onTakeRestDay) && !isRestDay && !done
-  const showMore =
-    !isNumberEntryVital({ templateId }) && (canSkip || canRest || canPauseHabit || canShrinkRunning || timerPaused)
+  const weighIn = isNumberEntryVital({ templateId })
+  const showMore = !weighIn && (canSkip || canRest || canPauseHabit || canShrinkRunning || timerPaused)
 
   if (row.activity.type === 'deadline' && row.overdue) {
     return (
@@ -784,9 +789,15 @@ function TodayActivityRow({
       <div className="today-row-main">
         <span className="activity-meta">
           <span className="activity-desc">
-            {desc}
-            {done ? ` · ${t('today.done')}` : ''}
-            {skipped ? ` · ${t('today.skipped')}` : ''}
+            {skipped && current === 0 ? (
+              t('today.skippedLine')
+            ) : (
+              <>
+                {desc}
+                {done ? ` · ${t('today.done')}` : ''}
+                {skipped ? ` · ${t('today.skipped')}` : ''}
+              </>
+            )}
           </span>
           {activity.target_unit === 'glasses' && (
             <span className="activity-desc">{WATER_GLASS_NOTE}</span>
@@ -808,7 +819,7 @@ function TodayActivityRow({
             </div>
           )}
         </span>
-        <span className="today-actions">
+        <span className={`today-actions ${weighIn ? 'today-actions-stack' : ''}`}>
           {actionKind === 'checkbox' && !skipped && (
             <button
               type="button"
@@ -817,6 +828,16 @@ function TodayActivityRow({
               onClick={() => (done ? onUncheck() : onCheckOff())}
             >
               {done ? 'Undo' : 'Done'}
+            </button>
+          )}
+          {weighIn && !done && !skipped && onSkipToday && (
+            <button type="button" className="today-skip-link" disabled={busy} onClick={() => onSkipToday('Other')}>
+              {t('today.skip')}
+            </button>
+          )}
+          {weighIn && skipped && onUnskip && (
+            <button type="button" className="btn btn-secondary btn-today" disabled={busy} onClick={onUnskip}>
+              {t('today.undoSkip')}
             </button>
           )}
           {actionKind === 'count' && !skipped && (
