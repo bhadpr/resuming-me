@@ -106,6 +106,12 @@
   --color-on-status: #ffffff;
   --color-glow-primary: color-mix(in srgb, #b4532f 18%, transparent);
 
+  /* Today row accents per item kind. Red is kept for "late", so none of these are red. */
+  --kind-medicine: #2f9a68;
+  --kind-activity: #2f86c0;
+  --kind-reminder: #d9971c;
+  --kind-vital: #8a6ac8;
+
   --shadow-btn: 0 1px 2px color-mix(in srgb, #1a1614 5%, transparent);
   --shadow-btn-hover:
     0 6px 18px color-mix(in srgb, var(--color-primary) 26%, transparent),
@@ -141,6 +147,11 @@
   --color-on-primary: #0f1218;
   --color-on-status: #0f1218;
   --color-glow-primary: color-mix(in srgb, #7c8cff 28%, transparent);
+
+  --kind-medicine: #6bcf8e;
+  --kind-activity: #6ec6ff;
+  --kind-reminder: #e0b15a;
+  --kind-vital: #b49cff;
 }
 
 [data-theme='dawn'] {

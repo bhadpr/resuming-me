@@ -275,7 +275,7 @@ export function GuestTodayPage() {
       return (
         <li
           key={activity.localId}
-          className={`today-row today-row-stack today-row-compact ${rowState}`}
+          className={`today-row today-row-stack today-row-compact today-kind-activity ${rowState}`}
         >
           <div className="today-row-head">
             <HabitMark
@@ -400,7 +400,7 @@ export function GuestTodayPage() {
     return (
       <li
         key={activity.localId}
-        className={`today-row today-row-stack today-row-compact ${progress.done ? 'today-row-done' : ''}`}
+        className={`today-row today-row-stack today-row-compact today-kind-activity ${progress.done ? 'today-row-done' : ''}`}
       >
         <div className="today-row-head">
           <HabitMark
@@ -634,7 +634,7 @@ function NumberVitalRow({
         : t('today.bpmToday', { value: reading.value })
 
   return (
-    <li className={`today-row today-row-stack today-row-compact ${paired ? 'today-row-entry' : ''} ${reading ? 'today-row-done' : ''}`}>
+    <li className={`today-row today-row-stack today-row-compact today-kind-vital ${paired ? 'today-row-entry' : ''} ${reading ? 'today-row-done' : ''}`}>
       <div className="today-row-head">
         <HabitMark templateId={activity.templateId} name={visibleName(activity, locale)} emoji={activity.emoji} />
         <span className="activity-name">{visibleName(activity, locale)}</span>

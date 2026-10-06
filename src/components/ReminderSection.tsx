@@ -41,7 +41,7 @@ export function ReminderRow({ reminder, today, busy, onDone, onMove, onEdit }: R
   const [picking, setPicking] = useState(false)
 
   return (
-    <li className="today-row today-row-stack">
+    <li className="today-row today-row-stack today-kind-reminder">
       <div className="today-row-main">
         <ReminderKindMark kind={reminder.kind} />
         <span className="activity-meta">
@@ -112,7 +112,7 @@ export function ReminderDoneRow({
 }) {
   const { t } = useLocale()
   return (
-    <li className="today-row today-row-done">
+    <li className="today-row today-row-done today-kind-reminder">
       <div className="today-row-main">
         <ReminderKindMark kind={reminder.kind} />
         <span className="activity-name reminder-text-line reminder-struck">{reminder.text}</span>

@@ -3332,6 +3332,34 @@ select.field-input.language-select {
   border-color: color-mix(in srgb, var(--color-danger) 45%, transparent);
 }
 
+.today-kind-medicine { --kind: var(--kind-medicine); }
+.today-kind-activity { --kind: var(--kind-activity); }
+.today-kind-reminder { --kind: var(--kind-reminder); }
+.today-kind-vital { --kind: var(--kind-vital); }
+
+/* Kind accent sits behind the row content and on top of whatever state background the row has. */
+.today-row[class*='today-kind-'] {
+  position: relative;
+  isolation: isolate;
+}
+
+.today-row[class*='today-kind-']::before {
+  content: '';
+  position: absolute;
+  inset: -1px auto -1px -1px;
+  width: min(45%, 12rem);
+  z-index: -1;
+  pointer-events: none;
+  border-left: 4px solid var(--kind);
+  border-radius: var(--radius) 0 0 var(--radius);
+  background: linear-gradient(90deg, color-mix(in srgb, var(--kind) 12%, transparent), transparent);
+}
+
+.today-row-done[class*='today-kind-']::before {
+  border-left-color: color-mix(in srgb, var(--kind) 45%, transparent);
+  background: none;
+}
+
 /* Not done yet and its part of the day is over (e.g. a morning walk in the afternoon). */
 .today-period-late > .today-list > .today-row:not(.today-row-live):not(.today-row-done) {
   border-color: color-mix(in srgb, var(--color-danger) 40%, var(--color-border));
