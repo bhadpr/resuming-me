@@ -523,6 +523,8 @@ export const mr: DeepString<typeof en> = {
     resumingDesc: 'मऊ कागदासारखा, मातीच्या रंगासह.',
     slate: 'गडद',
     slateDesc: 'शांत गडद रंग. रात्री डोळ्यांना सोपा.',
+    sky: 'आकाशी',
+    skyDesc: 'उजळ आकाशी निळा, उन्हासारखी पिवळी बटणे.',
   },
   count: {
     grams: '+५ ग्रॅ',

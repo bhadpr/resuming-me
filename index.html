@@ -41,12 +41,12 @@
             broadsheet: 'dawn',
             sage: 'dawn',
             pulse: 'dawn',
-            pixloo: 'dawn',
+            pixloo: 'sky',
             fresh: 'dawn',
             nocturne: 'slate',
             vault: 'slate',
           }
-          const colors = { dawn: '#fff4e8', resuming: '#faf6f0', slate: '#0f1218' }
+          const colors = { dawn: '#fff4e8', resuming: '#faf6f0', sky: '#f4fbff', slate: '#0f1218' }
           let theme = stored && retired[stored] ? retired[stored] : stored
           if (theme === 'system') {
             const dark = window.matchMedia && window.matchMedia('(prefers-color-scheme: dark)').matches

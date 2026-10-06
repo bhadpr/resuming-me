@@ -523,6 +523,8 @@ export const gu: DeepString<typeof en> = {
     resumingDesc: 'નરમ કાગળ જેવું, માટીના રંગ સાથે.',
     slate: 'ઘેરું',
     slateDesc: 'શાંત ઘેરો રંગ. રાત્રે આંખો માટે સરળ.',
+    sky: 'આકાશી',
+    skyDesc: 'તેજસ્વી આકાશી વાદળી, તડકા જેવાં પીળાં બટન.',
   },
   count: {
     grams: '+5 ગ્રામ',

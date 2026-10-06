@@ -519,6 +519,8 @@ export const en = {
     resumingDesc: 'Soft paper with a terracotta accent.',
     slate: 'Dark',
     slateDesc: 'Calm charcoal. Easier on the eyes at night.',
+    sky: 'Sky',
+    skyDesc: 'Bright sky blue with sunny yellow buttons.',
   },
   count: {
     grams: '+5 g',

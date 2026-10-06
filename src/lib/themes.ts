@@ -1,6 +1,6 @@
 import { syncNativeChrome } from './nativeChrome'
 
-export type ThemeId = 'dawn' | 'resuming' | 'slate'
+export type ThemeId = 'dawn' | 'resuming' | 'sky' | 'slate'
 
 /** What the person picked. `system` follows the phone's light or dark setting. */
 export type ThemePreference = ThemeId | 'system'
@@ -21,10 +21,11 @@ export const THEME_STORAGE_KEY = 'resuming-theme'
 export const THEMES: ThemeOption[] = [
   { id: 'dawn', themeColor: '#fff4e8', colorScheme: 'light' },
   { id: 'resuming', themeColor: '#faf6f0', colorScheme: 'light' },
+  { id: 'sky', themeColor: '#f4fbff', colorScheme: 'light' },
   { id: 'slate', themeColor: '#0f1218', colorScheme: 'dark' },
 ]
 
-export const THEME_PREFERENCES: ThemePreference[] = ['system', 'dawn', 'resuming', 'slate']
+export const THEME_PREFERENCES: ThemePreference[] = ['system', 'dawn', 'resuming', 'sky', 'slate']
 
 export function isThemeId(value: string | null | undefined): value is ThemeId {
   return THEMES.some((t) => t.id === value)
@@ -40,7 +41,7 @@ const RETIRED_THEMES: Record<string, ThemeId> = {
   broadsheet: 'dawn',
   sage: 'dawn',
   pulse: 'dawn',
-  pixloo: 'dawn',
+  pixloo: 'sky',
   fresh: 'dawn',
   nocturne: 'slate',
   vault: 'slate',
