@@ -253,6 +253,8 @@ export const en = {
     alarm: 'Time to take this.',
     skipped: 'Skipped',
     snooze: 'Snooze 30 min',
+    takenToday: 'Taken today ({count})',
+    notTaken: 'Not taken',
   },
   reminders: {
     title: 'Reminders',

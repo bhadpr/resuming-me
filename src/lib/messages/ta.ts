@@ -257,6 +257,8 @@ export const ta: DeepString<typeof en> = {
     alarm: 'இதை எடுக்கும் நேரம்.',
     skipped: 'விட்டேன்',
     snooze: '30 நிமிடம்',
+    takenToday: 'இன்று எடுத்தவை ({count})',
+    notTaken: 'எடுக்கவில்லை',
   },
   reminders: {
     title: 'நினைவூட்டல்கள்',

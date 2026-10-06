@@ -257,6 +257,8 @@ export const te: DeepString<typeof en> = {
     alarm: 'దీన్ని తీసుకునే సమయం.',
     skipped: 'వదిలేశాను',
     snooze: '30 నిమిషాలు',
+    takenToday: 'ఈరోజు తీసుకున్నవి ({count})',
+    notTaken: 'తీసుకోలేదు',
   },
   reminders: {
     title: 'గుర్తులు',

@@ -257,6 +257,8 @@ export const mr: DeepString<typeof en> = {
     alarm: 'हे घेण्याची वेळ.',
     skipped: 'सोडली',
     snooze: '30 मिनिटांनी',
+    takenToday: 'आज घेतलेली ({count})',
+    notTaken: 'घेतले नाही',
   },
   reminders: {
     title: 'आठवणी',

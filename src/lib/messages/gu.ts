@@ -257,6 +257,8 @@ export const gu: DeepString<typeof en> = {
     alarm: 'આ લેવાનો સમય.',
     skipped: 'છોડી',
     snooze: '30 મિનિટ પછી',
+    takenToday: 'આજે લીધેલી ({count})',
+    notTaken: 'નથી લીધી',
   },
   reminders: {
     title: 'યાદ',
