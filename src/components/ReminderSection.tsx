@@ -41,11 +41,13 @@ export function ReminderRow({ reminder, today, busy, onDone, onMove, onEdit }: R
   const [picking, setPicking] = useState(false)
 
   return (
-    <li className="today-row today-row-stack today-kind-reminder">
-      <div className="today-row-main">
+    <li className="today-row today-row-stack today-row-compact today-kind-reminder">
+      <div className="today-row-head">
         <ReminderKindMark kind={reminder.kind} />
+        <span className="activity-name reminder-text-line">{reminder.text}</span>
+      </div>
+      <div className="today-row-main">
         <span className="activity-meta">
-          <span className="activity-name reminder-text-line">{reminder.text}</span>
           <span className="activity-desc">{reminderWhen(reminder, today, locale, t)}</span>
         </span>
         <span className="today-actions">
@@ -110,12 +112,17 @@ export function ReminderDoneRow({
   busy: boolean
   onNotDone: () => void
 }) {
-  const { t } = useLocale()
+  const { locale, t } = useLocale()
   return (
-    <li className="today-row today-row-done today-kind-reminder">
-      <div className="today-row-main">
+    <li className="today-row today-row-stack today-row-compact today-row-done today-kind-reminder">
+      <div className="today-row-head">
         <ReminderKindMark kind={reminder.kind} />
         <span className="activity-name reminder-text-line reminder-struck">{reminder.text}</span>
+      </div>
+      <div className="today-row-main">
+        <span className="activity-meta">
+          <span className="activity-desc">{reminderWhen(reminder, reminder.day, locale, t)}</span>
+        </span>
         <span className="today-actions">
           <button type="button" className="btn btn-secondary btn-today" disabled={busy} onClick={onNotDone}>
             {t('reminders.notDone')}

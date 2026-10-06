@@ -19,11 +19,15 @@ export function MedicineDoseRow({
   const when = `${formatClock(dose, locale)}${mealKey ? ` · ${t(mealKey)}` : ''}`
 
   return (
-    <li className={`today-row today-row-stack today-kind-medicine ${finished ? 'today-row-done' : ''}`.trim()}>
-      <div className="today-row-main">
+    <li
+      className={`today-row today-row-stack today-row-compact today-kind-medicine ${finished ? 'today-row-done' : ''}`.trim()}
+    >
+      <div className="today-row-head">
         <MedicineThumb photo={dose.photoUrl} system={dose.system ?? null} className="medicine-card-photo" />
+        <span className={`activity-name ${finished ? 'reminder-struck' : ''}`.trim()}>{dose.name}</span>
+      </div>
+      <div className="today-row-main">
         <span className="activity-meta">
-          <span className={`activity-name ${finished ? 'reminder-struck' : ''}`.trim()}>{dose.name}</span>
           <span className="activity-desc">
             {when}
             {dose.skipped ? ` · ${t('medicines.skipped')}` : ''}

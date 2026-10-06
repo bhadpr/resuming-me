@@ -3762,9 +3762,8 @@ select.field-input.language-select {
 
 .today-more-menu {
   display: flex;
-  flex-direction: column;
-  align-items: flex-start;
-  gap: 0.1rem;
+  flex-wrap: wrap;
+  gap: var(--space-2);
 }
 
 .today-more-note {
@@ -4009,6 +4008,17 @@ select.field-input.language-select {
 
 .today-row-compact .today-extra-btn {
   min-height: 2.5rem;
+}
+
+/* Opened options line up with the name and the links above them, not with the picture. */
+.today-row.today-row-compact > .today-more,
+.today-row.today-row-compact > .today-log-form,
+.today-row.today-row-compact > .reminder-pick-day {
+  grid-column: 2 / -1;
+}
+
+.today-row-compact > .today-row-head > .medicine-card-photo {
+  border-radius: 22%;
 }
 
 .today-watch {

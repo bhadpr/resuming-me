@@ -989,32 +989,32 @@ function TodayActivityRow({
           {!moreChoice && (
             <div className="today-more-menu">
               {canSkip && (
-                <button type="button" className="today-extra-btn" onClick={() => setMoreChoice('skip')}>
+                <button type="button" className="today-skip-chip" onClick={() => setMoreChoice('skip')}>
                   Skip today
                 </button>
               )}
               {canRest && (
-                <button type="button" className="today-extra-btn" onClick={() => setMoreChoice('rest')}>
+                <button type="button" className="today-skip-chip" onClick={() => setMoreChoice('rest')}>
                   Rest today
                 </button>
               )}
               {canPauseHabit && (
-                <button type="button" className="today-extra-btn" onClick={() => setMoreChoice('pause')}>
+                <button type="button" className="today-skip-chip" onClick={() => setMoreChoice('pause')}>
                   Pause this habit
                 </button>
               )}
               {canShrinkRunning && (
-                <button type="button" className="today-extra-btn" onClick={() => setMoreChoice('shrink')}>
+                <button type="button" className="today-skip-chip" onClick={() => setMoreChoice('shrink')}>
                   Make it smaller
                 </button>
               )}
               {timerLive && (
-                <button type="button" className="today-extra-btn" onClick={() => setMoreChoice('pauseTimer')}>
+                <button type="button" className="today-skip-chip" onClick={() => setMoreChoice('pauseTimer')}>
                   Pause timer
                 </button>
               )}
               {timerPaused && (
-                <button type="button" className="today-extra-btn" onClick={() => setMoreChoice('stop')}>
+                <button type="button" className="today-skip-chip" onClick={() => setMoreChoice('stop')}>
                   Stop and save
                 </button>
               )}
