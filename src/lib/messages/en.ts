@@ -24,6 +24,7 @@ export const en = {
       'You can start again today. Start with one small activity, and make it a habit before you add a second.',
     getStarted: 'Get started',
     noAccount: 'No account needed to try it.',
+    getApp: 'Get the Android app',
     haveAccount: 'Already have an account? Sign in',
     signIn: 'Sign in',
     google: 'Continue with Google',

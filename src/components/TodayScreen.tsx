@@ -26,6 +26,7 @@ import { smallerChoiceProp, track } from '../lib/track'
 import { DeadlineOverduePrompt } from './DeadlineOverduePrompt'
 import { HabitMark } from './HabitMark'
 import { HabitVideoPlaceholder } from './HabitVideoPlaceholder'
+import { AppAlertsNote } from './AppAlertsNote'
 import { Icon } from './Icon'
 import { SkipLink, UndoSkipButton } from './TodaySkip'
 import { useTodaySkips } from '../hooks/useTodaySkips'
@@ -361,6 +362,9 @@ export function TodayScreen({
         <h2>{t('nav.today')}</h2>
         <p className="screen-sub">{dateLabel}</p>
       </div>
+      {timedItems.some((item) => !item.done && (item.kind === 'medicine' || item.kind === 'reminder')) && (
+        <AppAlertsNote where="today" />
+      )}
 
       {offlineNotice && (
         <div className="notice notice-warning">

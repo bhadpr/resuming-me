@@ -1,5 +1,4 @@
 import { useState, type FormEvent } from 'react'
-import { Capacitor } from '@capacitor/core'
 import { useLocale } from '../hooks/useLocale'
 import {
   REMINDER_KINDS,
@@ -17,6 +16,7 @@ import {
   type ReminderKind,
   type ReminderPart,
 } from '../lib/reminderSchedule'
+import { AppAlertsNote } from './AppAlertsNote'
 import { Icon } from './Icon'
 import { ReminderKindMark } from './ReminderKindIcon'
 
@@ -241,9 +241,7 @@ export function ReminderForm({ initial, today, saving, error, onSubmit, onDelete
         </label>
       )}
 
-      {!Capacitor.isNativePlatform() && (timeChoice !== 'any' || dayBeforeOn) && (
-        <p className="reminder-switch-hint">{t('reminders.alertsAppOnly')}</p>
-      )}
+      {(timeChoice !== 'any' || dayBeforeOn) && <AppAlertsNote where="reminder" />}
 
       {(issueText || error) && <p className="error">{issueText || error}</p>}
 

@@ -30,6 +30,7 @@ export const gu: DeepString<typeof en> = {
       'આજે ફરી શરૂ કરી શકો છો. એક નાના અભ્યાસથી શરૂ કરો, અને બીજું ઉમેરતા પહેલાં તેને ટેવ બનાવો.',
     getStarted: 'શરૂ કરો',
     noAccount: 'અજમાવવા માટે ખાતું જરૂરી નથી.',
+    getApp: 'Android ઍપ મેળવો',
     haveAccount: 'પહેલેથી ખાતું છે? સાઇન ઇન કરો',
     signIn: 'સાઇન ઇન',
     google: 'Google થી ચાલુ રાખો',

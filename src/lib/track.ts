@@ -9,6 +9,7 @@ export type TrackedEventName =
   | 'signin_clicked'
   | 'get_started_clicked'
   | 'signin_reveal_clicked'
+  | 'get_app_clicked'
   | 'intent_journey_started'
   | 'intent_step_answered'
   | 'intent_journey_completed'

@@ -1449,6 +1449,12 @@ select.field-input.language-select {
   text-align: center;
 }
 
+.landing-get-app {
+  align-self: center;
+  font-size: var(--text-sm);
+  color: var(--color-primary);
+}
+
 .landing-signin-toggle {
   align-self: center;
   font-size: var(--text-sm);
@@ -3258,6 +3264,21 @@ select.field-input.language-select {
 .today-heading .screen-sub {
   margin: 0;
   font-size: var(--text-sm);
+}
+
+.app-alerts-note {
+  margin: 0;
+  font-size: var(--text-sm);
+  color: var(--color-text-muted);
+}
+
+.app-alerts-note a {
+  font-weight: 600;
+  color: var(--color-primary);
+}
+
+.today-heading + .app-alerts-note {
+  margin: calc(-1 * var(--space-2)) 0 var(--space-3);
 }
 
 .today-week-bar {
@@ -5583,7 +5604,7 @@ select.field-input.language-select {
     bottom: calc(env(safe-area-inset-bottom, 0px) + var(--space-5));
   }
 
-  .today-list,
+  /* Today stays one column so items read in time order. */
   .activity-list {
     display: grid;
     grid-template-columns: repeat(2, minmax(0, 1fr));

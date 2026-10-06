@@ -14,6 +14,7 @@ import {
 import { compressBottlePhoto, type MedicineInput, type MedicineRecord } from '../lib/medicines'
 import { useLocale } from '../hooks/useLocale'
 import { useNavigate } from 'react-router-dom'
+import { AppAlertsNote } from './AppAlertsNote'
 import { Icon } from './Icon'
 
 interface MedicineFormProps {
@@ -405,6 +406,7 @@ export function MedicineForm({
             </div>
           ))}
           <p className="medicine-reminder">{t('medicines.reminder')}</p>
+          <AppAlertsNote where="medicine" />
         </>
       )}
 

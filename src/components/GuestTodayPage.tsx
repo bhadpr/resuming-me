@@ -11,6 +11,7 @@ import {
   stepCountLabel,
 } from '../lib/onboardingFlow'
 import { formatDuration } from '../lib/timer'
+import { AppAlertsNote } from './AppAlertsNote'
 import { HabitMark } from './HabitMark'
 import { Toast } from './Toast'
 import { useUndoToast } from '../hooks/useUndoToast'
@@ -611,6 +612,9 @@ export function GuestTodayPage() {
             <h2>{t('nav.today')}</h2>
             <p className="screen-sub">{dateLabel}</p>
           </div>
+          {timedItems.some((item) => !item.done && (item.kind === 'medicine' || item.kind === 'reminder')) && (
+            <AppAlertsNote where="today" />
+          )}
 
           {note && (
             <div className="notice">

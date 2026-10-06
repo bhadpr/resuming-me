@@ -11,6 +11,7 @@ import {
   DEFAULT_TITLE,
   useDocumentMeta,
 } from '../hooks/useDocumentMeta'
+import { PLAY_STORE_URL } from '../lib/marketing'
 import { track } from '../lib/track'
 import { templateLabel } from '../lib/catalogName'
 import { useLocale } from '../hooks/useLocale'
@@ -193,6 +194,17 @@ export function LandingPage({
             {t('landing.getStarted')}
           </button>
           <p className="landing-actions-note">{t('landing.noAccount')}</p>
+          {!native && (
+            <a
+              className="btn btn-ghost landing-get-app"
+              href={PLAY_STORE_URL}
+              target="_blank"
+              rel="noopener noreferrer"
+              onClick={() => track('get_app_clicked', { where: 'landing' })}
+            >
+              {t('landing.getApp')}
+            </a>
+          )}
         </div>
 
         {!showSignIn ? (

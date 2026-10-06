@@ -30,6 +30,7 @@ export const mr: DeepString<typeof en> = {
       'आज पुन्हा सुरू करू शकता. एका छोट्या सरावापासून सुरू करा, आणि दुसरा जोडण्यापूर्वी तो सवय करा.',
     getStarted: 'सुरू करा',
     noAccount: 'वापरून पाहण्यासाठी खाते नको.',
+    getApp: 'Android ॲप मिळवा',
     haveAccount: 'आधीच खाते आहे? साइन इन करा',
     signIn: 'साइन इन',
     google: 'Google ने पुढे जा',

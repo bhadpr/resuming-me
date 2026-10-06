@@ -4,6 +4,8 @@ export const PLAY_PACKAGE = 'com.cheerfulgames.resuming'
 export const RETENTION_DAYS = 30
 export const RETENTION_VISITS = 5
 
+export const PLAY_STORE_URL = `https://play.google.com/store/apps/details?id=${PLAY_PACKAGE}`
+
 export function marketingInstallLink(groupCode: string, memberCode: string): string {
   const referrer = `utm_source=${encodeURIComponent(groupCode)}&utm_medium=play&utm_campaign=${encodeURIComponent(memberCode)}`
   return `https://play.google.com/store/apps/details?id=${PLAY_PACKAGE}&referrer=${encodeURIComponent(referrer)}`
