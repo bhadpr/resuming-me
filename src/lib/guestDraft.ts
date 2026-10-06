@@ -102,6 +102,9 @@ export type StartPickPhase =
   | 'ask'
   | 'medicine'
   | 'medicines'
+  | 'reminderAsk'
+  | 'reminder'
+  | 'reminders'
   | 'pranayam'
   | 'pranayams'
   | 'pranayamDetail'
@@ -572,6 +575,9 @@ function normalizeDraft(draft: GuestDraft): GuestDraft {
     pickPhase:
       draft.pickPhase === 'medicine' ||
       draft.pickPhase === 'medicines' ||
+      draft.pickPhase === 'reminderAsk' ||
+      draft.pickPhase === 'reminder' ||
+      draft.pickPhase === 'reminders' ||
       draft.pickPhase === 'pranayam' ||
       draft.pickPhase === 'pranayams' ||
       draft.pickPhase === 'pranayamDetail' ||

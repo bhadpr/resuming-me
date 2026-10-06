@@ -541,16 +541,23 @@ export function onboardingSummary(
   draft: Pick<GuestDraft, 'activities' | 'logs' | 'reminderTime' | 'reminderTimes' | 'reminderDeclined'> & {
     medicineDaily?: boolean
     medicines?: GuestDraft['medicines']
+    reminders?: GuestDraft['reminders']
   },
 ): string {
   const count = draft.activities.length
   const medicineCount = draft.medicines?.length ?? (draft.medicineDaily ? 1 : 0)
+  const reminderCount = draft.reminders?.filter((reminder) => reminder.doneAt == null).length ?? 0
   const parts = [
     ...(count === 0 ? [] : [count === 1 ? t('summary.habitOne') : t('summary.habitMany', { count })]),
     ...(medicineCount === 1
       ? [t('summary.medicine')]
       : medicineCount > 1
         ? [t('summary.medicineMany', { count: medicineCount })]
+        : []),
+    ...(reminderCount === 1
+      ? [t('summary.reminderOne')]
+      : reminderCount > 1
+        ? [t('summary.reminderMany', { count: reminderCount })]
         : []),
   ]
   if (draft.logs.length > 0) parts.push(t('summary.resumed'))

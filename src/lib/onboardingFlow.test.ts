@@ -102,6 +102,15 @@ describe('onboarding flow copy', () => {
         reminderDeclined: false,
       }),
     ).toBe('3 habits · 1 resumed today · nudge at 7:00 pm')
+    expect(
+      onboardingSummary({
+        activities: [{}] as never,
+        logs: [],
+        reminderTime: null,
+        reminderDeclined: false,
+        reminders: [{ doneAt: null }, { doneAt: null }, { doneAt: '2026-10-01T10:00:00Z' }] as never,
+      }),
+    ).toBe('1 habit · 2 reminders')
   })
 
   it('sets daily, once a week, or twice a week without changing the session size', () => {

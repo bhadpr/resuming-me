@@ -14,6 +14,7 @@ import { enableDailyDigestFromOnboarding } from '../../lib/localNotifications'
 import {
   GUEST_MAX_ACTIVITIES,
   GUEST_MAX_MEDICINES,
+  addGuestReminder,
   appendGuestLog,
   removeGuestActivity,
   saveGuestDraft,
@@ -50,6 +51,15 @@ import { BrandTitle } from '../BrandTitle'
 import { MedicineForm } from '../MedicineForm'
 import { MedicineThumb } from '../MedicineThumb'
 import { Icon } from '../Icon'
+import { ReminderEditor } from '../ReminderForm'
+import { ReminderKindMark } from '../ReminderKindIcon'
+import { askForReminderAlerts } from '../../lib/reminderNotifications'
+import {
+  formatReminderDay,
+  formatShortReminderTime,
+  tomorrowOf,
+  type Reminder,
+} from '../../lib/reminderSchedule'
 
 function newLocalId(): string {
   if (typeof crypto !== 'undefined' && 'randomUUID' in crypto) return crypto.randomUUID()
@@ -59,7 +69,6 @@ function newLocalId(): string {
 const START_VITALS: { id: string; label: string; caption?: string }[] = [
   { id: 'weight', label: 'Weight' },
   { id: 'water', label: 'Water' },
-  { id: 'sleep_hours', label: 'Sleep' },
   { id: 'fasting', label: 'Fasting' },
   { id: 'protein', label: 'Protein' },
   { id: 'blood_pressure', label: 'Blood Pressure' },
@@ -82,6 +91,8 @@ const START_FEATURED: { id: string; labelKey: string }[] = [
 const FEATURED_IDS = new Set(START_FEATURED.map((item) => item.id))
 /** First visit asks for a few. Adding from Today can go past this. */
 const START_PICK_MAX = 3
+/** A handful to start. More can be added from Today. */
+const START_REMINDER_MAX = 5
 const PRACTICE_SECONDS = 120
 
 function hasTimerHabit(draft: GuestDraft): boolean {
@@ -202,32 +213,36 @@ function listedMinutes(activity: GuestActivity): GuestActivity {
   return withSize(activity, nearest)
 }
 
-/** Medicine, Pranayam, Workout, Heartfulness, Vitals, Reminder, Save. */
-const WELCOME_QUESTIONS = 7
+/** Medicine, Reminders, Pranayam, Workout, Heartfulness, Vitals, Nudge time, Save. */
+const WELCOME_QUESTIONS = 8
 
 /** One dot per welcome question. Follow-up screens stay on their question's dot. */
 function welcomeQuestion(draft: GuestDraft): number {
-  if (draft.step === 8) return 6
-  if (draft.step !== 1) return 5
+  if (draft.step === 8) return 7
+  if (draft.step !== 1) return 6
   switch (draft.pickPhase) {
+    case 'reminderAsk':
+    case 'reminder':
+    case 'reminders':
+      return 1
     case 'pranayam':
     case 'pranayams':
     case 'pranayamDetail':
-      return 1
+      return 2
     case 'workout':
     case 'workouts':
     case 'workoutDetail':
     case 'stepGoal':
-      return 2
+      return 3
     case 'heartfulness':
     case 'practices':
     case 'practiceDetail':
-      return 3
+      return 4
     case 'vitals':
     case 'vitalPicks':
     case 'targets':
     case 'activities':
-      return 4
+      return 5
     default:
       return 0
   }
@@ -1021,6 +1036,24 @@ export function StartFlow({
   const sizeCadence = sizeActivity ? weekCadenceOf(sizeActivity) : null
   const sizeArt = sizeActivity ? habitSizeArtFor(sizeActivity) : null
   const question = welcomeQuestion(draft)
+  const today = todayLocalDate()
+  const openReminders = draft.reminders
+    .filter((reminder) => reminder.doneAt == null)
+    .sort((a, b) => a.day.localeCompare(b.day) || (a.hour ?? 24) - (b.hour ?? 24))
+
+  function reminderWhen(reminder: Reminder): string {
+    const day =
+      reminder.day <= today
+        ? t('reminders.today')
+        : reminder.day === tomorrowOf(today)
+          ? t('reminders.tomorrow')
+          : formatReminderDay(reminder.day, today, locale)
+    const time =
+      reminder.hour == null
+        ? t('reminders.anyTime')
+        : formatShortReminderTime(reminder.hour, reminder.minute ?? 0, locale)
+    return `${day} · ${time}`
+  }
   const continueCount =
     (adding
       ? draft.activities.filter((item) => !keptIds.current?.has(item.localId)).length
@@ -1262,7 +1295,7 @@ export function StartFlow({
               type="button"
               className="btn btn-secondary"
               onClick={() =>
-                persist({ ...draft, pickPhase: 'pranayam', medicineDaily: false, medicines: [] })
+                persist({ ...draft, pickPhase: 'reminderAsk', medicineDaily: false, medicines: [] })
               }
             >
               {t('start.no')}
@@ -1341,7 +1374,110 @@ export function StartFlow({
           <button
             type="button"
             className="btn btn-primary"
-            onClick={() => persist({ ...draft, pickPhase: 'pranayam', medicineDaily: true })}
+            onClick={() => persist({ ...draft, pickPhase: 'reminderAsk', medicineDaily: true })}
+          >
+            {t('start.continue')}
+          </button>
+        </>
+      )}
+
+      {draft.step === 1 && !customOpen && !adding && draft.pickPhase === 'reminderAsk' && (
+        <>
+          <button
+            type="button"
+            className="btn btn-ghost start-back"
+            onClick={() =>
+              persist({ ...draft, pickPhase: draft.medicines.length > 0 ? 'medicines' : 'ask' })
+            }
+          >
+            <Icon name="back" />
+            {t('start.back')}
+          </button>
+          <h2 className="screen-heading start-medicine-title">{t('start.reminderAskBody')}</h2>
+          <div className="start-yes-no">
+            <button
+              type="button"
+              className="btn btn-primary"
+              onClick={() =>
+                persist({ ...draft, pickPhase: openReminders.length > 0 ? 'reminders' : 'reminder' })
+              }
+            >
+              {t('landing.yes')}
+            </button>
+            <button
+              type="button"
+              className="btn btn-secondary"
+              onClick={() => persist({ ...draft, pickPhase: 'pranayam' })}
+            >
+              {t('start.no')}
+            </button>
+          </div>
+        </>
+      )}
+
+      {draft.step === 1 && !customOpen && !adding && draft.pickPhase === 'reminder' && (
+        <ReminderEditor
+          reminders={draft.reminders}
+          today={today}
+          loading={false}
+          saving={false}
+          error={null}
+          onCancel={() =>
+            persist({ ...draft, pickPhase: openReminders.length > 0 ? 'reminders' : 'reminderAsk' })
+          }
+          onSubmit={async (input) => {
+            const next = addGuestReminder(draft, input)
+            if (!next) return 'full'
+            track('reminder_added', {
+              has_time: input.hour != null,
+              day_before: input.remindBefore === true,
+              kind: input.kind ?? 'other',
+              every_year: input.everyYear === true,
+              signed_in: false,
+            })
+            void askForReminderAlerts(input)
+            persist(saveGuestDraft({ ...next, pickPhase: 'reminders' }))
+          }}
+          onDelete={async () => {}}
+        />
+      )}
+
+      {draft.step === 1 && !customOpen && !adding && draft.pickPhase === 'reminders' && (
+        <>
+          <button
+            type="button"
+            className="btn btn-ghost start-back"
+            onClick={() => persist({ ...draft, pickPhase: 'reminderAsk' })}
+          >
+            <Icon name="back" />
+            {t('start.back')}
+          </button>
+          <h1 className="screen-heading">{t('start.remindersReady')}</h1>
+          <p className="screen-sub">{t('start.remindersSub')}</p>
+          <ul className="start-medicine-list">
+            {openReminders.map((reminder) => (
+              <li key={reminder.id} className="start-medicine-row">
+                <ReminderKindMark kind={reminder.kind} />
+                <span className="activity-meta">
+                  <span className="activity-name">{reminder.text}</span>
+                  <span className="activity-desc">{reminderWhen(reminder)}</span>
+                </span>
+              </li>
+            ))}
+          </ul>
+          {openReminders.length < START_REMINDER_MAX && (
+            <button
+              type="button"
+              className="btn btn-secondary"
+              onClick={() => persist({ ...draft, pickPhase: 'reminder' })}
+            >
+              {t('start.addAnotherReminder')}
+            </button>
+          )}
+          <button
+            type="button"
+            className="btn btn-primary"
+            onClick={() => persist({ ...draft, pickPhase: 'pranayam' })}
           >
             {t('start.continue')}
           </button>
@@ -1354,7 +1490,7 @@ export function StartFlow({
             type="button"
             className="btn btn-ghost start-back"
             onClick={() =>
-              persist({ ...draft, pickPhase: draft.medicines.length > 0 ? 'medicines' : 'ask' })
+              persist({ ...draft, pickPhase: openReminders.length > 0 ? 'reminders' : 'reminderAsk' })
             }
           >
             <Icon name="back" />
