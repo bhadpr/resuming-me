@@ -16,6 +16,12 @@ export function periodForHour(hour: number | null | undefined): DayPeriod {
   return 'evening'
 }
 
+/** True once that part of the day is over, e.g. Morning during the afternoon. Anytime never is. */
+export function isPeriodPast(period: DayPeriod, now: Date = new Date()): boolean {
+  if (period === 'anytime') return false
+  return DAY_PERIODS.indexOf(period) < DAY_PERIODS.indexOf(periodForHour(now.getHours()))
+}
+
 /** Reads a stored "usually when" note. Older free text like "after dinner" still maps. */
 export function parseDayPeriod(text: string | null | undefined): DayPeriod | null {
   const value = text?.trim().toLowerCase()

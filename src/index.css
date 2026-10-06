@@ -3332,6 +3332,23 @@ select.field-input.language-select {
   border-color: color-mix(in srgb, var(--color-danger) 45%, transparent);
 }
 
+/* Not done yet and its part of the day is over (e.g. a morning walk in the afternoon). */
+.today-period-late > .today-list > .today-row:not(.today-row-live):not(.today-row-done) {
+  border-color: color-mix(in srgb, var(--color-danger) 40%, var(--color-border));
+  background: color-mix(in srgb, var(--color-danger) 7%, var(--color-surface));
+}
+
+[data-theme='sky'] .today-period-late > .today-list > .today-row:not(.today-row-live):not(.today-row-done) {
+  box-shadow: 0 2px 0 0 color-mix(in srgb, var(--color-danger) 30%, var(--color-border));
+}
+
+@media (hover: hover) {
+  .today-period-late > .today-list > .today-row:not(.today-row-live):not(.today-row-done):hover {
+    background: color-mix(in srgb, var(--color-danger) 10%, var(--color-surface-raised));
+    border-color: color-mix(in srgb, var(--color-danger) 55%, var(--color-border));
+  }
+}
+
 .today-skeleton-label {
   width: 4.5rem;
   height: 0.75rem;

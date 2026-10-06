@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest'
-import { activityPeriod, defaultPeriodFor, groupByPeriod, parseDayPeriod, periodForHour } from './dayPeriod'
+import { activityPeriod, defaultPeriodFor, groupByPeriod, isPeriodPast, parseDayPeriod, periodForHour } from './dayPeriod'
 
 describe('groupByPeriod', () => {
   it('orders parts of the day, then medicines, activities, reminders, vitals', () => {
@@ -36,6 +36,22 @@ describe('periodForHour', () => {
 
   it('puts items without a time in anytime', () => {
     expect(periodForHour(null)).toBe('anytime')
+  })
+})
+
+describe('isPeriodPast', () => {
+  const at = (hour: number) => new Date(2026, 9, 6, hour, 0)
+
+  it('marks earlier parts of the day as past', () => {
+    expect(isPeriodPast('morning', at(9))).toBe(false)
+    expect(isPeriodPast('morning', at(13))).toBe(true)
+    expect(isPeriodPast('afternoon', at(13))).toBe(false)
+    expect(isPeriodPast('afternoon', at(18))).toBe(true)
+    expect(isPeriodPast('evening', at(23))).toBe(false)
+  })
+
+  it('never marks anytime as past', () => {
+    expect(isPeriodPast('anytime', at(23))).toBe(false)
   })
 })
 
