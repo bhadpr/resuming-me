@@ -26,6 +26,7 @@ import { smallerChoiceProp, track } from '../lib/track'
 import { DeadlineOverduePrompt } from './DeadlineOverduePrompt'
 import { HabitMark } from './HabitMark'
 import { HabitVideoPlaceholder } from './HabitVideoPlaceholder'
+import { Icon } from './Icon'
 import { StepsCard } from './StepsCard'
 import { MedicineDoseRow } from './MedicineDoses'
 import { TodayByTime, type TodayTimedItem } from './TodayByTime'
@@ -324,11 +325,9 @@ export function TodayScreen({
 
   return (
     <div className="today-screen">
-      <div className="screen-heading">
-        <div>
-          <h2>{t('nav.today')}</h2>
-          <p className="screen-sub">{dateLabel}</p>
-        </div>
+      <div className="screen-heading today-heading">
+        <h2>{t('nav.today')}</h2>
+        <p className="screen-sub">{dateLabel}</p>
       </div>
 
       {offlineNotice && (
@@ -380,11 +379,12 @@ export function TodayScreen({
           {reviewCard && onOpenReview && (
             <button
               type="button"
-              className="insights-summary review-card"
+              className="today-week-bar"
+              aria-label={`${reviewCard.headline} ${t('today.review')}`}
               onClick={() => onOpenReview(reviewCard.weekStart)}
             >
-              <p>{reviewCard.headline}</p>
-              <p className="screen-sub">Open this week’s review</p>
+              <span>{reviewCard.headline}</span>
+              <Icon name="chevron" />
             </button>
           )}
 

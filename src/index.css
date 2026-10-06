@@ -3241,6 +3241,54 @@ select.field-input.language-select {
   margin-bottom: var(--space-5);
 }
 
+.today-section.today-period {
+  margin-bottom: var(--space-4);
+}
+
+.today-period-title + .reminder-done-today {
+  margin-top: calc(-1 * var(--space-2));
+}
+
+.today-heading {
+  align-items: baseline;
+  flex-wrap: wrap;
+  gap: 0 var(--space-3);
+  margin-bottom: var(--space-3);
+}
+
+.today-heading h2 {
+  margin-bottom: 0;
+}
+
+.today-heading .screen-sub {
+  margin: 0;
+  font-size: var(--text-sm);
+}
+
+.today-week-bar {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: var(--space-2);
+  width: 100%;
+  min-height: var(--tap-min);
+  margin-bottom: var(--space-4);
+  padding: var(--space-2) var(--space-3);
+  border: 1px solid var(--color-border);
+  border-radius: var(--radius);
+  background: color-mix(in srgb, var(--color-primary) 6%, var(--color-surface));
+  color: var(--color-text);
+  font-size: var(--text-sm);
+  font-weight: var(--weight-semibold);
+  text-align: left;
+  cursor: pointer;
+}
+
+.today-week-bar .icon {
+  flex: none;
+  color: var(--color-text-muted);
+}
+
 .today-period-title {
   font-size: var(--text-lg);
   margin-bottom: var(--space-3);
@@ -5355,16 +5403,6 @@ select.field-input.language-select {
 }
 
 .moment-banner,
-.review-card {
-  width: 100%;
-  text-align: left;
-  margin-bottom: 0.75rem;
-}
-
-.review-card {
-  border: 0;
-  cursor: pointer;
-}
 .start-card,
 .start-flow {
   display: flex;

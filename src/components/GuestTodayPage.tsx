@@ -542,11 +542,9 @@ export function GuestTodayPage() {
             <p className="guest-save-widget-note">{t('today.stays')}</p>
           </div>
 
-          <div className="screen-heading">
-            <div>
-              <h2>{t('nav.today')}</h2>
-              <p className="screen-sub">{dateLabel}</p>
-            </div>
+          <div className="screen-heading today-heading">
+            <h2>{t('nav.today')}</h2>
+            <p className="screen-sub">{dateLabel}</p>
           </div>
 
           {note && (
