@@ -171,8 +171,13 @@ export function GuestVitalsPage() {
             <p className="screen-sub">{t('medicines.sub')}</p>
           </div>
           {medicines.length < GUEST_MAX_MEDICINES && (
-            <button type="button" className="btn btn-primary btn-compact" onClick={addMedicine}>
-              {t('medicines.add')}
+            <button
+              type="button"
+              className="btn btn-primary btn-compact"
+              aria-label={t('medicines.add')}
+              onClick={addMedicine}
+            >
+              {t('list.add')}
             </button>
           )}
         </div>

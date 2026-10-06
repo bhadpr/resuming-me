@@ -1,6 +1,6 @@
 import { useEffect, useMemo, useState, type FormEvent } from 'react'
 import { canLogPastGoal, stacksSessionMinutes } from '../lib/dayStatus'
-import { FASTING_HOURS_NOTE, SLEEP_HOURS_NOTE, WATER_GLASS_NOTE, countTapLabel, playsVideoWithTimer, showsHabitVideo } from '../lib/onboardingFlow'
+import { FASTING_HOURS_NOTE, SLEEP_HOURS_NOTE, WATER_GLASS_NOTE, countTapLabel, isNumberEntryVital, playsVideoWithTimer, showsHabitVideo } from '../lib/onboardingFlow'
 import type { ActivityTodayProgress } from '../lib/today'
 import { partitionTodayRows, todayEmptyKind } from '../lib/today'
 import {
@@ -294,7 +294,7 @@ export function TodayScreen({
                 busy={reminders.busyId === reminder.id}
                 onDone={() => reminders.onDone(reminder)}
                 onMove={(day) => reminders.onMove(reminder, day)}
-                onEdit={() => reminders.onEdit(reminder)}
+                onCancel={() => reminders.onCancel(reminder)}
               />
             ),
           })),
@@ -744,7 +744,8 @@ function TodayActivityRow({
     activity.type !== 'deadline'
   const canPauseHabit = Boolean(onPauseHabit) && !done && activity.type !== 'deadline'
   const canRest = Boolean(onTakeRestDay) && !isRestDay && !done
-  const showMore = canSkip || canRest || canPauseHabit || canShrinkRunning || timerPaused
+  const showMore =
+    !isNumberEntryVital({ templateId }) && (canSkip || canRest || canPauseHabit || canShrinkRunning || timerPaused)
 
   if (row.activity.type === 'deadline' && row.overdue) {
     return (

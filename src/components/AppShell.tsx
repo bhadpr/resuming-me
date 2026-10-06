@@ -1931,7 +1931,12 @@ export function AppShell() {
                       onDone: (reminder) => void handleReminderDone(reminder),
                       onNotDone: (reminder) => void reminderState.markNotDone(reminder),
                       onMove: (reminder, day) => void reminderState.move(reminder, day),
-                      onEdit: (reminder) => navigate(`/reminders/${reminder.id}`),
+                      onCancel: (reminder) => {
+                        setError(null)
+                        reminderState.remove(reminder.id).catch((err: unknown) => {
+                          setError(err instanceof Error ? err.message : 'Could not cancel that reminder')
+                        })
+                      },
                     }}
                     onAddReminder={() => {
                       setError(null)

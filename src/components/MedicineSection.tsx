@@ -22,8 +22,8 @@ export function MedicineSection({ medicines, loading, error, onAdd, onOpen }: Me
           <h2>{t('medicines.title')}</h2>
           <p className="screen-sub">{t('medicines.sub')}</p>
         </div>
-        <button type="button" className="btn btn-primary btn-compact" onClick={onAdd}>
-          {t('medicines.add')}
+        <button type="button" className="btn btn-primary btn-compact" aria-label={t('medicines.add')} onClick={onAdd}>
+          {t('list.add')}
         </button>
       </div>
 

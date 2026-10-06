@@ -33,12 +33,12 @@ interface ReminderRowProps {
   busy: boolean
   onDone: () => void
   onMove: (day: string) => void
-  onEdit: () => void
+  onCancel: () => void
 }
 
-export function ReminderRow({ reminder, today, busy, onDone, onMove, onEdit }: ReminderRowProps) {
+export function ReminderRow({ reminder, today, busy, onDone, onMove, onCancel }: ReminderRowProps) {
   const { locale, t } = useLocale()
-  const [picking, setPicking] = useState(false)
+  const [confirmCancel, setConfirmCancel] = useState(false)
 
   return (
     <li className="today-row today-row-stack today-row-compact item-kind-reminder">
@@ -64,29 +64,24 @@ export function ReminderRow({ reminder, today, busy, onDone, onMove, onEdit }: R
           type="button"
           className="today-extra-btn"
           disabled={busy}
-          aria-expanded={picking}
-          onClick={() => setPicking((open) => !open)}
+          aria-expanded={confirmCancel}
+          onClick={() => setConfirmCancel((open) => !open)}
         >
-          {t('reminders.pickDay')}
-        </button>
-        <button type="button" className="today-extra-btn" disabled={busy} onClick={onEdit}>
-          {t('reminders.change')}
+          {t('reminders.cancel')}
         </button>
       </div>
-      {picking && (
-        <input
-          className="field-input field-input-sm reminder-pick-day"
-          type="date"
-          min={today}
-          defaultValue={reminder.day < today ? today : reminder.day}
-          aria-label={t('reminders.pickDay')}
-          onChange={(event) => {
-            const day = event.target.value
-            if (!day || day < today) return
-            setPicking(false)
-            if (day !== reminder.day) onMove(day)
-          }}
-        />
+      {confirmCancel && (
+        <div className="today-more">
+          <p className="today-more-note">{t('reminders.cancelAsk')}</p>
+          <div className="today-skip-chips">
+            <button type="button" className="today-skip-chip" disabled={busy} onClick={onCancel}>
+              {t('reminders.cancelYes')}
+            </button>
+            <button type="button" className="today-skip-chip" onClick={() => setConfirmCancel(false)}>
+              {t('reminders.keep')}
+            </button>
+          </div>
+        </div>
       )}
     </li>
   )
@@ -100,7 +95,7 @@ export interface ReminderSectionProps {
   onDone: (reminder: Reminder) => void
   onNotDone: (reminder: Reminder) => void
   onMove: (reminder: Reminder, day: string) => void
-  onEdit: (reminder: Reminder) => void
+  onCancel: (reminder: Reminder) => void
 }
 
 export function ReminderDoneRow({
@@ -179,8 +174,8 @@ export function ReminderListSection({
           <h2>{t('reminders.title')}</h2>
           <p className="screen-sub">{t('reminders.sub')}</p>
         </div>
-        <button type="button" className="btn btn-primary btn-compact" onClick={onAdd}>
-          {t('reminders.add')}
+        <button type="button" className="btn btn-primary btn-compact" aria-label={t('reminders.add')} onClick={onAdd}>
+          {t('list.add')}
         </button>
       </div>
 

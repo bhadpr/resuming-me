@@ -3147,11 +3147,6 @@ select.field-input.language-select {
   color: var(--color-text-muted);
 }
 
-.reminder-pick-day {
-  margin-top: var(--space-2);
-  width: fit-content;
-}
-
 .reminder-done-today {
   margin-top: var(--space-2);
 }
@@ -4062,8 +4057,7 @@ select.field-input.language-select {
 
 /* Opened options line up with the name and the links above them, not with the picture. */
 .today-row.today-row-compact > .today-more,
-.today-row.today-row-compact > .today-log-form,
-.today-row.today-row-compact > .reminder-pick-day {
+.today-row.today-row-compact > .today-log-form {
   grid-column: 2 / -1;
 }
 

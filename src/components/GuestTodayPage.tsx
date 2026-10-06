@@ -1,5 +1,5 @@
 import { useEffect, useRef, useState, type FormEvent } from 'react'
-import { Link, useNavigate } from 'react-router-dom'
+import { Link } from 'react-router-dom'
 import { todayLocalDate } from '../lib/dates'
 import { canLogPastGoal, stacksSessionMinutes } from '../lib/dayStatus'
 import {
@@ -49,6 +49,7 @@ import {
   setGuestStep,
   toggleGuestDose,
   completeGuestReminder,
+  removeGuestReminder,
   reopenGuestReminder,
   updateGuestReminder,
   type GuestActivity,
@@ -74,7 +75,6 @@ function trackGuestLog(
 
 export function GuestTodayPage() {
   const { t, locale } = useLocale()
-  const navigate = useNavigate()
   const undoToast = useUndoToast()
   const [draft, setDraft] = useState<GuestDraft | null>(() => loadGuestDraft())
   const [runningId, setRunningId] = useState<string | null>(null)
@@ -176,6 +176,11 @@ export function GuestTodayPage() {
   function patchReminder(id: string, patch: Partial<Reminder>) {
     const latest = draftRef.current
     if (latest) setDraft(updateGuestReminder(latest, id, patch))
+  }
+
+  function cancelReminder(reminder: Reminder) {
+    const latest = loadGuestDraft()
+    if (latest) setDraft(removeGuestReminder(latest, reminder.id))
   }
 
   function reopenReminder(reminder: Reminder) {
@@ -514,7 +519,7 @@ export function GuestTodayPage() {
           busy={false}
           onDone={() => markReminderDone(reminder)}
           onMove={(day) => patchReminder(reminder.id, { day })}
-          onEdit={() => navigate(`/reminders/${reminder.id}`)}
+          onCancel={() => cancelReminder(reminder)}
         />
       ),
     })),
