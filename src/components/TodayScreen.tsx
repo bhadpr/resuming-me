@@ -28,6 +28,7 @@ import { HabitMark } from './HabitMark'
 import { HabitVideoPlaceholder } from './HabitVideoPlaceholder'
 import { StepsCard } from './StepsCard'
 import { MedicineDoses } from './MedicineDoses'
+import { TodayDoneFold } from './TodayDoneFold'
 import { ReminderSection, type ReminderSectionProps } from './ReminderSection'
 import type { DueDose } from '../lib/medicineSchedule'
 import { habitTemplateId } from '../data/habitArt'
@@ -183,7 +184,9 @@ export function TodayScreen({
     dueCount: rows.length,
   })
   const showWelcome = (quietReentry || reentryFollowUp) && emptyKind !== 'setup'
-  const openRows = [...(hero ? [hero] : []), ...alsoDue]
+  const timingDone = done.filter((row) => row.activity.id === activeTimer?.activityId)
+  const foldedDone = done.filter((row) => row.activity.id !== activeTimer?.activityId)
+  const openRows = [...(hero ? [hero] : []), ...alsoDue, ...timingDone]
 
   function renderActivity(row: ActivityTodayProgress, heroRow = false) {
     return (
@@ -338,11 +341,15 @@ export function TodayScreen({
                 </p>
               </div>
             )}
-            {(openRows.length > 0 || done.length > 0) && (
+            {openRows.length > 0 && (
               <ul className="today-list">
                 {openRows.map((row) => renderActivity(row, hero?.activity.id === row.activity.id))}
-                {done.map((row) => renderActivity(row))}
               </ul>
+            )}
+            {foldedDone.length > 0 && (
+              <TodayDoneFold label={t('today.doneToday', { count: foldedDone.length })}>
+                {foldedDone.map((row) => renderActivity(row))}
+              </TodayDoneFold>
             )}
             {emptyKind !== 'setup' && (onAddActivity || onAddReminder) && (
               <div className="today-add-row">

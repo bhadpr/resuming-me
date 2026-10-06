@@ -162,6 +162,7 @@ export const mr: DeepString<typeof en> = {
     pause: 'थांबा',
     resume: 'पुन्हा सुरू',
     done: 'झाले',
+    doneToday: 'आज झालेल्या ({count})',
     video: 'पहा',
     hideVideo: 'व्हिडिओ लपवा',
     partial: 'अर्धवट',

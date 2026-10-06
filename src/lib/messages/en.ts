@@ -157,6 +157,7 @@ export const en = {
     pause: 'Pause',
     resume: 'Resume',
     done: 'Done',
+    doneToday: 'Done today ({count})',
     video: 'Watch',
     hideVideo: 'Hide video',
     partial: 'partial',

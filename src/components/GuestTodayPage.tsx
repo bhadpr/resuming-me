@@ -19,6 +19,7 @@ import { HabitVideoPlaceholder } from './HabitVideoPlaceholder'
 import { MedicineDoses } from './MedicineDoses'
 import { ReminderSection } from './ReminderSection'
 import { StepsCard } from './StepsCard'
+import { TodayDoneFold } from './TodayDoneFold'
 import {
   REMINDERS_CHANGED,
   remindersDoneToday,
@@ -192,6 +193,287 @@ export function GuestTodayPage() {
 
   const warning = guestSaveWarning(draft)
 
+  const isDoneToday = (activity: GuestActivity): boolean => {
+    if (isStepsHabit(activity)) return false
+    if (isNumberEntryVital(activity)) return guestReadingOnDate(draft, activity.localId, today) != null
+    if (activity.trackingMode !== 'count') {
+      if (runningId === activity.localId) return false
+      const seconds = guestSessionSeconds(draft, activity.localId, today, activity)
+      return guestTimerProgress(activity, seconds).done
+    }
+    return guestCountProgress(activity, guestCountsOnDate(draft, activity.localId, today)).done
+  }
+
+  const openActivities = draft.activities.filter((activity) => !isDoneToday(activity))
+  const doneActivities = draft.activities.filter(isDoneToday)
+
+  const renderGuestActivity = (activity: GuestActivity) => {
+    if (isStepsHabit(activity)) {
+      return (
+        <StepsCard
+          key={activity.localId}
+          goal={activity.targetValue ?? 10000}
+          today={today}
+        />
+      )
+    }
+    if (isNumberEntryVital(activity)) {
+      return (
+        <NumberVitalRow
+          key={activity.localId}
+          activity={activity}
+          reading={guestReadingOnDate(draft, activity.localId, today)}
+          target={activity.targetValue}
+          onSave={(value, secondaryValue) =>
+            setDraft(
+              upsertGuestReading(draft, {
+                localActivityId: activity.localId,
+                date: today,
+                value,
+                secondaryValue,
+              }),
+            )
+          }
+        />
+      )
+    }
+    if (activity.trackingMode !== 'count') {
+      const stacking = stacksSessionMinutes(activity)
+      const loggedSeconds = guestSessionSeconds(
+        draft,
+        activity.localId,
+        today,
+        activity,
+      )
+      const progress = guestTimerProgress(activity, loggedSeconds)
+      const isRunning = runningId === activity.localId
+      const liveSeconds = isRunning ? loggedSeconds + elapsed : loggedSeconds
+      const liveProgress = guestTimerProgress(activity, liveSeconds)
+      const showVideo = videoId === activity.localId
+      const canShowVideo = showsHabitVideo(activity.templateId)
+      const partial = !progress.done && loggedSeconds > 0
+      const rowState = isRunning
+        ? paused
+          ? 'today-row-progress'
+          : 'today-row-live'
+        : progress.done
+          ? 'today-row-done'
+          : partial
+            ? 'today-row-progress'
+            : ''
+      return (
+        <li
+          key={activity.localId}
+          className={`today-row today-row-stack today-row-compact ${rowState}`}
+        >
+          <div className="today-row-head">
+            <HabitMark
+              templateId={activity.templateId}
+              name={visibleName(activity, locale)}
+              emoji={activity.emoji}
+            />
+            <span className="activity-name">{visibleName(activity, locale)}</span>
+            <StatusMark live={isRunning && !paused} paused={isRunning && paused} />
+          </div>
+          <div className="today-row-main">
+            <span className="activity-meta">
+              <span className="activity-desc">
+                {isRunning
+                  ? `${liveProgress.label}${paused ? ` · ${t('today.paused')}` : ` · ${t('today.running')}`}`
+                  : progress.label}
+                {progress.done && !isRunning ? ` · ${t('today.done')}` : ''}
+              </span>
+              {!isRunning && loggedSeconds > 0 && (
+                <div className="progress-bar" aria-hidden>
+                  <div
+                    className={`progress-bar-fill ${progress.done ? 'progress-bar-fill-done' : ''}`}
+                    style={{
+                      width: `${Math.min(
+                        100,
+                        (loggedSeconds / Math.max(progress.targetSeconds || 1, 1)) * 100,
+                      )}%`,
+                    }}
+                  />
+                </div>
+              )}
+            </span>
+            <span className="today-actions">
+              {isRunning ? (
+                <>
+                  <button
+                    type="button"
+                    className="btn btn-secondary btn-today"
+                    onClick={() => setPaused((value) => !value)}
+                  >
+                    {paused ? t('today.resume') : t('today.pause')}
+                  </button>
+                  <button
+                    type="button"
+                    className="btn btn-primary btn-today"
+                    onClick={() => finishTimer(elapsed)}
+                  >
+                    {t('today.done')}
+                  </button>
+                </>
+              ) : (
+                <button
+                  type="button"
+                  className={`btn btn-today ${progress.done && !stacking ? 'btn-today-done' : 'btn-primary'}`}
+                  disabled={Boolean(runningId) || (progress.done && !stacking)}
+                  onClick={() => startTimer(activity.localId)}
+                >
+                  {progress.done && !stacking ? t('today.done') : partial ? t('today.resume') : t('today.start')}
+                </button>
+              )}
+            </span>
+          </div>
+          {isRunning ? (
+            <div
+              className={`today-timer-elapsed ${paused ? 'today-timer-elapsed-paused' : ''}`}
+              aria-live="polite"
+              aria-atomic="true"
+            >
+              <span className="today-timer-elapsed-value">
+                {formatDuration(Math.floor(elapsed))}
+                {sessionGoalSeconds > 0 ? (
+                  <span className="today-timer-target-hint">
+                    {' '}
+                    / {formatDuration(sessionGoalSeconds)}
+                  </span>
+                ) : null}
+              </span>
+              {goalSeconds > 0 ? (
+                <div className="progress-bar today-timer-progress" aria-hidden>
+                  <div
+                    className={`progress-bar-fill ${liveProgress.done ? 'progress-bar-fill-done' : ''}`}
+                    style={{
+                      width: `${Math.min(100, (liveSeconds / goalSeconds) * 100)}%`,
+                    }}
+                  />
+                </div>
+              ) : null}
+            </div>
+          ) : null}
+          {canShowVideo && (
+            <div className="today-extra">
+              <button
+                type="button"
+                className="today-extra-btn today-watch"
+                aria-expanded={showVideo}
+                onClick={() =>
+                  setVideoId((current) =>
+                    current === activity.localId ? null : activity.localId,
+                  )
+                }
+              >
+                {showVideo ? t('today.hideVideo') : t('today.video')}
+              </button>
+            </div>
+          )}
+          {canShowVideo && showVideo && (
+            <HabitVideoPlaceholder
+              templateId={activity.templateId}
+              name={visibleName(activity, locale)}
+              playing={isRunning && !paused}
+              paused={isRunning && paused}
+            />
+          )}
+        </li>
+      )
+    }
+    const progress = guestCountProgress(
+      activity,
+      guestCountsOnDate(draft, activity.localId, today),
+    )
+    const openEnded = canLogPastGoal(activity.targetUnit)
+    return (
+      <li
+        key={activity.localId}
+        className={`today-row today-row-stack today-row-compact ${progress.done ? 'today-row-done' : ''}`}
+      >
+        <div className="today-row-head">
+          <HabitMark
+            templateId={activity.templateId}
+            name={visibleName(activity, locale)}
+            emoji={activity.emoji}
+          />
+          <span className="activity-name">{visibleName(activity, locale)}</span>
+        </div>
+        <div className="today-row-main">
+          <span className="activity-meta">
+            <span className="activity-desc">
+              {progress.label}
+              {progress.done ? ` · ${t('today.done')}` : ''}
+            </span>
+            {activity.targetUnit === 'glasses' && (
+              <span className="activity-desc">{t('notes.waterGlass')}</span>
+            )}
+            {activity.targetUnit === 'hours' && (
+              <span className="activity-desc">{t('notes.fasting')}</span>
+            )}
+            {activity.targetUnit === 'hr' && (
+              <span className="activity-desc">{t('notes.sleep')}</span>
+            )}
+            {progress.value > 0 && (
+              <div className="progress-bar" aria-hidden>
+                <div
+                  className={`progress-bar-fill ${progress.done ? 'progress-bar-fill-done' : ''}`}
+                  style={{
+                    width: `${Math.min(
+                      100,
+                      (progress.value / Math.max(progress.target || 1, 1)) * 100,
+                    )}%`,
+                  }}
+                />
+              </div>
+            )}
+          </span>
+          <span className="today-actions">
+            <button
+              type="button"
+              className={`btn btn-today ${progress.done && !openEnded ? 'btn-today-done' : 'btn-primary'}`}
+              disabled={progress.done && !openEnded}
+              onClick={() => {
+                setDraft(appendGuestCount(draft, activity.localId, today))
+                trackGuestLog(activity, 'count', null)
+                undoToast.show(formatCountUndoMessage(visibleName(activity, locale)), () => {
+                  const latest = draftRef.current
+                  if (!latest) return
+                  setDraft(removeLastGuestLog(latest, activity.localId, 'count'))
+                  track('log_undone', { kind: 'count', signed_in: false })
+                })
+              }}
+            >
+              {countTapLabel(activity.targetUnit, progress.done)}
+            </button>
+          </span>
+        </div>
+        {showsHabitVideo(activity.templateId) && (
+          <div className="today-extra">
+            <button
+              type="button"
+              className="today-extra-btn today-watch"
+              aria-expanded={videoId === activity.localId}
+              onClick={() =>
+                setVideoId((current) =>
+                  current === activity.localId ? null : activity.localId,
+                )
+              }
+            >
+              {videoId === activity.localId ? t('today.hideVideo') : t('today.video')}
+            </button>
+          </div>
+        )}
+        {showsHabitVideo(activity.templateId) && videoId === activity.localId && (
+          <HabitVideoPlaceholder
+            templateId={activity.templateId}
+              name={visibleName(activity, locale)}
+            />
+        )}
+      </li>
+    )
+  }
+
   return (
         <div className="today-screen">
           <div className="guest-save-widget">
@@ -253,274 +535,19 @@ export function GuestTodayPage() {
           {draft.activities.length > 0 && (
             <section className="today-section">
               <h3 className="section-label">{t('today.logActivities')}</h3>
-              <ul className="today-list today-guest-list">
-                {draft.activities.map((activity) => {
-                  if (isStepsHabit(activity)) {
-                    return (
-                      <StepsCard
-                        key={activity.localId}
-                        goal={activity.targetValue ?? 10000}
-                        today={today}
-                      />
-                    )
-                  }
-                  if (isNumberEntryVital(activity)) {
-                    return (
-                      <NumberVitalRow
-                        key={activity.localId}
-                        activity={activity}
-                        reading={guestReadingOnDate(draft, activity.localId, today)}
-                        target={activity.targetValue}
-                        onSave={(value, secondaryValue) =>
-                          setDraft(
-                            upsertGuestReading(draft, {
-                              localActivityId: activity.localId,
-                              date: today,
-                              value,
-                              secondaryValue,
-                            }),
-                          )
-                        }
-                      />
-                    )
-                  }
-                  if (activity.trackingMode !== 'count') {
-                    const stacking = stacksSessionMinutes(activity)
-                    const loggedSeconds = guestSessionSeconds(
-                      draft,
-                      activity.localId,
-                      today,
-                      activity,
-                    )
-                    const progress = guestTimerProgress(activity, loggedSeconds)
-                    const isRunning = runningId === activity.localId
-                    const liveSeconds = isRunning ? loggedSeconds + elapsed : loggedSeconds
-                    const liveProgress = guestTimerProgress(activity, liveSeconds)
-                    const showVideo = videoId === activity.localId
-                    const canShowVideo = showsHabitVideo(activity.templateId)
-                    const partial = !progress.done && loggedSeconds > 0
-                    const rowState = isRunning
-                      ? paused
-                        ? 'today-row-progress'
-                        : 'today-row-live'
-                      : progress.done
-                        ? 'today-row-done'
-                        : partial
-                          ? 'today-row-progress'
-                          : ''
-                    return (
-                      <li
-                        key={activity.localId}
-                        className={`today-row today-row-stack today-row-compact ${rowState}`}
-                      >
-                        <div className="today-row-head">
-                          <HabitMark
-                            templateId={activity.templateId}
-                            name={visibleName(activity, locale)}
-                            emoji={activity.emoji}
-                          />
-                          <span className="activity-name">{visibleName(activity, locale)}</span>
-                          <StatusMark live={isRunning && !paused} paused={isRunning && paused} />
-                        </div>
-                        <div className="today-row-main">
-                          <span className="activity-meta">
-                            <span className="activity-desc">
-                              {isRunning
-                                ? `${liveProgress.label}${paused ? ` · ${t('today.paused')}` : ` · ${t('today.running')}`}`
-                                : progress.label}
-                              {progress.done && !isRunning ? ` · ${t('today.done')}` : ''}
-                            </span>
-                            {!isRunning && loggedSeconds > 0 && (
-                              <div className="progress-bar" aria-hidden>
-                                <div
-                                  className={`progress-bar-fill ${progress.done ? 'progress-bar-fill-done' : ''}`}
-                                  style={{
-                                    width: `${Math.min(
-                                      100,
-                                      (loggedSeconds / Math.max(progress.targetSeconds || 1, 1)) * 100,
-                                    )}%`,
-                                  }}
-                                />
-                              </div>
-                            )}
-                          </span>
-                          <span className="today-actions">
-                            {isRunning ? (
-                              <>
-                                <button
-                                  type="button"
-                                  className="btn btn-secondary btn-today"
-                                  onClick={() => setPaused((value) => !value)}
-                                >
-                                  {paused ? t('today.resume') : t('today.pause')}
-                                </button>
-                                <button
-                                  type="button"
-                                  className="btn btn-primary btn-today"
-                                  onClick={() => finishTimer(elapsed)}
-                                >
-                                  {t('today.done')}
-                                </button>
-                              </>
-                            ) : (
-                              <button
-                                type="button"
-                                className={`btn btn-today ${progress.done && !stacking ? 'btn-today-done' : 'btn-primary'}`}
-                                disabled={Boolean(runningId) || (progress.done && !stacking)}
-                                onClick={() => startTimer(activity.localId)}
-                              >
-                                {progress.done && !stacking ? t('today.done') : partial ? t('today.resume') : t('today.start')}
-                              </button>
-                            )}
-                          </span>
-                        </div>
-                        {isRunning ? (
-                          <div
-                            className={`today-timer-elapsed ${paused ? 'today-timer-elapsed-paused' : ''}`}
-                            aria-live="polite"
-                            aria-atomic="true"
-                          >
-                            <span className="today-timer-elapsed-value">
-                              {formatDuration(Math.floor(elapsed))}
-                              {sessionGoalSeconds > 0 ? (
-                                <span className="today-timer-target-hint">
-                                  {' '}
-                                  / {formatDuration(sessionGoalSeconds)}
-                                </span>
-                              ) : null}
-                            </span>
-                            {goalSeconds > 0 ? (
-                              <div className="progress-bar today-timer-progress" aria-hidden>
-                                <div
-                                  className={`progress-bar-fill ${liveProgress.done ? 'progress-bar-fill-done' : ''}`}
-                                  style={{
-                                    width: `${Math.min(100, (liveSeconds / goalSeconds) * 100)}%`,
-                                  }}
-                                />
-                              </div>
-                            ) : null}
-                          </div>
-                        ) : null}
-                        {canShowVideo && (
-                          <div className="today-extra">
-                            <button
-                              type="button"
-                              className="today-extra-btn today-watch"
-                              aria-expanded={showVideo}
-                              onClick={() =>
-                                setVideoId((current) =>
-                                  current === activity.localId ? null : activity.localId,
-                                )
-                              }
-                            >
-                              {showVideo ? t('today.hideVideo') : t('today.video')}
-                            </button>
-                          </div>
-                        )}
-                        {canShowVideo && showVideo && (
-                          <HabitVideoPlaceholder
-                            templateId={activity.templateId}
-                            name={visibleName(activity, locale)}
-                            playing={isRunning && !paused}
-                            paused={isRunning && paused}
-                          />
-                        )}
-                      </li>
-                    )
-                  }
-                  const progress = guestCountProgress(
-                    activity,
-                    guestCountsOnDate(draft, activity.localId, today),
-                  )
-                  const openEnded = canLogPastGoal(activity.targetUnit)
-                  return (
-                    <li
-                      key={activity.localId}
-                      className={`today-row today-row-stack today-row-compact ${progress.done ? 'today-row-done' : ''}`}
-                    >
-                      <div className="today-row-head">
-                        <HabitMark
-                          templateId={activity.templateId}
-                          name={visibleName(activity, locale)}
-                          emoji={activity.emoji}
-                        />
-                        <span className="activity-name">{visibleName(activity, locale)}</span>
-                      </div>
-                      <div className="today-row-main">
-                        <span className="activity-meta">
-                          <span className="activity-desc">
-                            {progress.label}
-                            {progress.done ? ` · ${t('today.done')}` : ''}
-                          </span>
-                          {activity.targetUnit === 'glasses' && (
-                            <span className="activity-desc">{t('notes.waterGlass')}</span>
-                          )}
-                          {activity.targetUnit === 'hours' && (
-                            <span className="activity-desc">{t('notes.fasting')}</span>
-                          )}
-                          {activity.targetUnit === 'hr' && (
-                            <span className="activity-desc">{t('notes.sleep')}</span>
-                          )}
-                          {progress.value > 0 && (
-                            <div className="progress-bar" aria-hidden>
-                              <div
-                                className={`progress-bar-fill ${progress.done ? 'progress-bar-fill-done' : ''}`}
-                                style={{
-                                  width: `${Math.min(
-                                    100,
-                                    (progress.value / Math.max(progress.target || 1, 1)) * 100,
-                                  )}%`,
-                                }}
-                              />
-                            </div>
-                          )}
-                        </span>
-                        <span className="today-actions">
-                          <button
-                            type="button"
-                            className={`btn btn-today ${progress.done && !openEnded ? 'btn-today-done' : 'btn-primary'}`}
-                            disabled={progress.done && !openEnded}
-                            onClick={() => {
-                              setDraft(appendGuestCount(draft, activity.localId, today))
-                              trackGuestLog(activity, 'count', null)
-                              undoToast.show(formatCountUndoMessage(visibleName(activity, locale)), () => {
-                                const latest = draftRef.current
-                                if (!latest) return
-                                setDraft(removeLastGuestLog(latest, activity.localId, 'count'))
-                                track('log_undone', { kind: 'count', signed_in: false })
-                              })
-                            }}
-                          >
-                            {countTapLabel(activity.targetUnit, progress.done)}
-                          </button>
-                        </span>
-                      </div>
-                      {showsHabitVideo(activity.templateId) && (
-                        <div className="today-extra">
-                          <button
-                            type="button"
-                            className="today-extra-btn today-watch"
-                            aria-expanded={videoId === activity.localId}
-                            onClick={() =>
-                              setVideoId((current) =>
-                                current === activity.localId ? null : activity.localId,
-                              )
-                            }
-                          >
-                            {videoId === activity.localId ? t('today.hideVideo') : t('today.video')}
-                          </button>
-                        </div>
-                      )}
-                      {showsHabitVideo(activity.templateId) && videoId === activity.localId && (
-                        <HabitVideoPlaceholder
-                          templateId={activity.templateId}
-                            name={visibleName(activity, locale)}
-                          />
-                      )}
-                    </li>
-                  )
-                })}
-              </ul>
+              {openActivities.length > 0 && (
+                <ul className="today-list today-guest-list">
+                  {openActivities.map(renderGuestActivity)}
+                </ul>
+              )}
+              {doneActivities.length > 0 && (
+                <TodayDoneFold
+                  label={t('today.doneToday', { count: doneActivities.length })}
+                  listClassName="today-list today-guest-list"
+                >
+                  {doneActivities.map(renderGuestActivity)}
+                </TodayDoneFold>
+              )}
               <div className="today-add-row">
                 <Link className="btn btn-secondary today-add" to="/start?step=1&add=1">
                   {t('today.add')}

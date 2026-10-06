@@ -162,6 +162,7 @@ export const gu: DeepString<typeof en> = {
     pause: 'થોભો',
     resume: 'ચાલુ રાખો',
     done: 'થયું',
+    doneToday: 'આજે થયેલી ({count})',
     video: 'જુઓ',
     hideVideo: 'વિડિયો છુપાવો',
     partial: 'થોડું',

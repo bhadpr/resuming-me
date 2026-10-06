@@ -162,6 +162,7 @@ export const ta: DeepString<typeof en> = {
     pause: 'நிறுத்து',
     resume: 'மீண்டும் தொடங்கு',
     done: 'முடிந்தது',
+    doneToday: 'இன்று முடிந்தவை ({count})',
     video: 'பார்',
     hideVideo: 'காணொளியை மறை',
     partial: 'பாதி',

@@ -162,6 +162,7 @@ export const te: DeepString<typeof en> = {
     pause: 'ఆపు',
     resume: 'కొనసాగించు',
     done: 'అయింది',
+    doneToday: 'ఈరోజు అయినవి ({count})',
     video: 'చూడండి',
     hideVideo: 'వీడియో దాచు',
     partial: 'కొంత',
