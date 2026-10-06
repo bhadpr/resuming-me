@@ -177,48 +177,49 @@
   --color-glow-primary: color-mix(in srgb, #0a7678 38%, transparent);
 }
 
-/* Sky blue and sunny yellow from pixloo.app. Buttons use the bright sky; text accents use a deeper blue so they stay readable on white. */
+/* Sky blue and butter yellow after pixloo.app, softened for long daily use.
+   Text accents use a deeper blue so they stay readable on white. */
 [data-theme='sky'] {
   color-scheme: light;
   --radius: var(--radius-lg);
   --body-wash: radial-gradient(
       ellipse 85% 55% at 10% -8%,
-      color-mix(in srgb, #4dc6eb 26%, transparent),
+      color-mix(in srgb, #62b3d9 14%, transparent),
       transparent 60%
     ),
     radial-gradient(
       ellipse 50% 35% at 100% 2%,
-      color-mix(in srgb, #ffe22d 22%, transparent),
+      color-mix(in srgb, #f3d36b 12%, transparent),
       transparent
     );
 
-  --color-bg: #f4fbff;
+  --color-bg: #f5f9fc;
   --color-surface: #ffffff;
-  --color-surface-raised: #e3f1fb;
-  --color-border: #c7dbea;
-  --color-border-strong: #9dbcd3;
-  --color-text: #13203e;
-  --color-text-body: #2a3a55;
-  --color-text-muted: #46576c;
-  --color-primary: #0a7fab;
-  --color-primary-hover: #086a90;
-  --color-primary-soft: #d6eefa;
-  --color-danger: #d93d3a;
-  --color-info: #1681dd;
-  --color-warning-bg: #fff4bf;
-  --color-warning-text: #673f00;
-  --color-success: #1f8a4c;
+  --color-surface-raised: #e8f1f8;
+  --color-border: #cddbe7;
+  --color-border-strong: #a3b9cc;
+  --color-text: #16233d;
+  --color-text-body: #34435a;
+  --color-text-muted: #56657a;
+  --color-primary: #1f73a0;
+  --color-primary-hover: #185f85;
+  --color-primary-soft: #dcecf6;
+  --color-danger: #c8423f;
+  --color-info: #2a78b8;
+  --color-warning-bg: #fbf1cf;
+  --color-warning-text: #6b4500;
+  --color-success: #2a7f52;
   --color-on-primary: #ffffff;
   --color-on-status: #ffffff;
-  --color-glow-primary: color-mix(in srgb, #4dc6eb 35%, transparent);
+  --color-glow-primary: color-mix(in srgb, #62b3d9 30%, transparent);
 
-  --sky-button: #4dc6eb;
-  --sky-button-hover: #3dbce3;
-  --sky-button-ledge: #32a0c2;
-  --sky-button-text: #08152c;
-  --sunny-button: #ffe22d;
-  --sunny-button-hover: #ffd91a;
-  --sunny-button-ledge: #ccb524;
-  --sunny-button-text: #673f00;
+  --sky-button: #62b3d9;
+  --sky-button-hover: #55a8cf;
+  --sky-button-ledge: #3f8db3;
+  --sky-button-text: #0e2238;
+  --sunny-button: #fbefc4;
+  --sunny-button-hover: #f8e6a8;
+  --sunny-button-ledge: #e3c873;
+  --sunny-button-text: #5e4200;
 }
 

@@ -4947,8 +4947,8 @@ select.field-input.language-select {
 }
 
 .theme-swatch-sky {
-  --swatch-a: #f4fbff;
-  --swatch-b: #4dc6eb;
+  --swatch-a: #f5f9fc;
+  --swatch-b: #62b3d9;
 }
 
 .theme-swatch-system {
@@ -5118,7 +5118,7 @@ select.field-input.language-select {
 [data-theme='sky'] .guest-save-widget {
   background: radial-gradient(
     140% 120% at 30% 0%,
-    #eaf7ff 0%,
+    #eef5fa 0%,
     var(--color-surface) 70%
   );
   box-shadow: 0 2px 0 0 var(--color-border);

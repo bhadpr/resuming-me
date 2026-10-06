@@ -21,7 +21,7 @@ export const THEME_STORAGE_KEY = 'resuming-theme'
 export const THEMES: ThemeOption[] = [
   { id: 'dawn', themeColor: '#fff4e8', colorScheme: 'light' },
   { id: 'resuming', themeColor: '#faf6f0', colorScheme: 'light' },
-  { id: 'sky', themeColor: '#f4fbff', colorScheme: 'light' },
+  { id: 'sky', themeColor: '#f5f9fc', colorScheme: 'light' },
   { id: 'slate', themeColor: '#0f1218', colorScheme: 'dark' },
 ]
 
