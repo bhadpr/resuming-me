@@ -17,7 +17,6 @@ export const STARTER_METRICS: MetricInput[] = [
   { name: 'Blood Pressure', emoji: '❤️', unit: 'mmHg' },
   { name: 'Heart Rate', emoji: '💓', unit: 'bpm' },
   { name: 'Water', emoji: '💧', unit: 'glasses' },
-  { name: 'Sleep', emoji: '😴', unit: 'hours' },
   { name: 'Protein', emoji: '🍽️', unit: 'g' },
   { name: 'Fasting', emoji: '🌙', unit: 'hours' },
 ]

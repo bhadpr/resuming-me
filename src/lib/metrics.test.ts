@@ -22,14 +22,13 @@ describe('validateMetricInput', () => {
 })
 
 describe('STARTER_METRICS', () => {
-  it('offers Weight and Sleep', () => {
+  it('offers Weight and leaves Sleep out for now', () => {
     expect(STARTER_METRICS.map((m) => m.name)).toEqual([
       'Weight',
       'Daily Steps',
       'Blood Pressure',
       'Heart Rate',
       'Water',
-      'Sleep',
       'Protein',
       'Fasting',
     ])
