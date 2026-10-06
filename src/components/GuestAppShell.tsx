@@ -52,7 +52,7 @@ export function GuestAppShell() {
   return (
     <div className="app">
       <header className="app-header">
-        <BrandTitle className="app-title" />
+        <BrandTitle className="app-title" homeTo="/today" />
       </header>
       <main className="app-main">
         {view?.name === 'reminders' ? (

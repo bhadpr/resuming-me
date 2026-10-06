@@ -1,3 +1,4 @@
+import { Link } from 'react-router-dom'
 import { PRODUCT_NAME } from '../lib/site'
 
 interface BrandTitleProps {
@@ -6,6 +7,8 @@ interface BrandTitleProps {
   /** When set, replaces the product name (e.g. Settings). Logo still shows. */
   label?: string
   size?: 'sm' | 'lg'
+  /** When set, the logo and name link here (the home page). */
+  homeTo?: string
 }
 
 export function BrandTitle({
@@ -13,9 +16,10 @@ export function BrandTitle({
   className = '',
   label = PRODUCT_NAME,
   size = 'sm',
+  homeTo,
 }: BrandTitleProps) {
-  return (
-    <Tag className={`brand-title brand-title-${size} ${className}`.trim()}>
+  const mark = (
+    <>
       <img
         className="brand-mark"
         src="/logo.svg"
@@ -25,6 +29,17 @@ export function BrandTitle({
         decoding="async"
       />
       <span className="brand-title-text">{label}</span>
+    </>
+  )
+  return (
+    <Tag className={`brand-title brand-title-${size} ${className}`.trim()}>
+      {homeTo ? (
+        <Link to={homeTo} className="brand-home-link" aria-label={`${label}, home`}>
+          {mark}
+        </Link>
+      ) : (
+        mark
+      )}
     </Tag>
   )
 }

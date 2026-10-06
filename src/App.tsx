@@ -1,4 +1,4 @@
-import { useEffect, useRef } from 'react'
+import { useEffect, useRef, type ReactNode } from 'react'
 import {
   Navigate,
   Outlet,
@@ -11,6 +11,7 @@ import { Capacitor } from '@capacitor/core'
 import { useAuth } from './hooks/useAuth'
 import { useAndroidBackButton } from './hooks/useAndroidBackButton'
 import { AppShell } from './components/AppShell'
+import { BrandTitle } from './components/BrandTitle'
 import { LandingPage } from './components/LandingPage'
 import { LegalPage } from './components/LegalPage'
 import { FeedbackPage } from './components/FeedbackPage'
@@ -150,67 +151,82 @@ function publicBack(navigate: ReturnType<typeof useNavigate>) {
   navigateBack(navigate, '/')
 }
 
-function PublicLegalRoute({ page }: { page: Exclude<SitePageId, 'feedback' | 'delete-account'> }) {
-  const navigate = useNavigate()
+function PublicPageFrame({ children }: { children: ReactNode }) {
+  const { user } = useAuth()
   const native = Capacitor.isNativePlatform()
-
-  useEffect(() => {
-    trackPageView(`/${page}`, page)
-  }, [page])
+  const home = user || loadGuestDraft() ? '/today' : '/'
 
   useEffect(() => {
     void hideNativeSplash().catch(() => {})
   }, [])
 
+  if (native) {
+    return (
+      <div className="app">
+        <header className="app-header">
+          <BrandTitle className="app-title" homeTo={home} />
+        </header>
+        <main className="app-main">{children}</main>
+      </div>
+    )
+  }
+
   return (
-    <div className={native ? 'app' : 'landing landing-legal'}>
-      <div className={native ? 'app-main' : 'landing-card landing-card-legal'}>
-        <LegalPage page={page} onBack={() => publicBack(navigate)} />
+    <div className="landing landing-legal">
+      <div className="landing-card landing-card-legal">
+        <div className="brand-line">
+          <BrandTitle className="app-title" homeTo={home} />
+        </div>
+        {children}
       </div>
     </div>
   )
 }
 
+function PublicLegalRoute({ page }: { page: Exclude<SitePageId, 'feedback' | 'delete-account'> }) {
+  const navigate = useNavigate()
+
+  useEffect(() => {
+    trackPageView(`/${page}`, page)
+  }, [page])
+
+  return (
+    <PublicPageFrame>
+      <LegalPage page={page} onBack={() => publicBack(navigate)} />
+    </PublicPageFrame>
+  )
+}
+
 function PublicDeleteAccountRoute() {
   const navigate = useNavigate()
-  const native = Capacitor.isNativePlatform()
 
   useEffect(() => {
     trackPageView('/delete-account', 'delete-account')
   }, [])
 
   return (
-    <div className={native ? 'app' : 'landing landing-legal'}>
-      <div className={native ? 'app-main' : 'landing-card landing-card-legal'}>
-        <DeleteAccountPage onBack={() => publicBack(navigate)} />
-      </div>
-    </div>
+    <PublicPageFrame>
+      <DeleteAccountPage onBack={() => publicBack(navigate)} />
+    </PublicPageFrame>
   )
 }
 
 function PublicFeedbackRoute() {
   const navigate = useNavigate()
   const { user } = useAuth()
-  const native = Capacitor.isNativePlatform()
 
   useEffect(() => {
     trackPageView('/feedback', 'feedback')
   }, [])
 
-  useEffect(() => {
-    void hideNativeSplash().catch(() => {})
-  }, [])
-
   return (
-    <div className={native ? 'app' : 'landing landing-legal'}>
-      <div className={native ? 'app-main' : 'landing-card landing-card-legal'}>
-        <FeedbackPage
-          onBack={() => publicBack(navigate)}
-          defaultName={user?.user_metadata?.full_name ?? user?.user_metadata?.name ?? ''}
-          defaultEmail={user?.email ?? ''}
-        />
-      </div>
-    </div>
+    <PublicPageFrame>
+      <FeedbackPage
+        onBack={() => publicBack(navigate)}
+        defaultName={user?.user_metadata?.full_name ?? user?.user_metadata?.name ?? ''}
+        defaultEmail={user?.email ?? ''}
+      />
+    </PublicPageFrame>
   )
 }
 

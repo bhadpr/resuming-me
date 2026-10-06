@@ -1741,7 +1741,7 @@ export function AppShell() {
         ) : settingsOpen ? (
           <h1 className="app-title">{t('settings.title')}</h1>
         ) : (
-          <BrandTitle className="app-title" />
+          <BrandTitle className="app-title" homeTo="/today" />
         )}
         <div className="app-header-actions">
           <button
