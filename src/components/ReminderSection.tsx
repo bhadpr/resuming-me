@@ -41,7 +41,7 @@ export function ReminderRow({ reminder, today, busy, onDone, onMove, onEdit }: R
   const [picking, setPicking] = useState(false)
 
   return (
-    <li className="today-row today-row-stack today-row-compact today-kind-reminder">
+    <li className="today-row today-row-stack today-row-compact item-kind-reminder">
       <div className="today-row-head">
         <ReminderKindMark kind={reminder.kind} />
         <span className="activity-name reminder-text-line">{reminder.text}</span>
@@ -114,7 +114,7 @@ export function ReminderDoneRow({
 }) {
   const { locale, t } = useLocale()
   return (
-    <li className="today-row today-row-stack today-row-compact today-row-done today-kind-reminder">
+    <li className="today-row today-row-stack today-row-compact today-row-done item-kind-reminder">
       <div className="today-row-head">
         <ReminderKindMark kind={reminder.kind} />
         <span className="activity-name reminder-text-line reminder-struck">{reminder.text}</span>
@@ -197,7 +197,7 @@ export function ReminderListSection({
             <ul className="activity-list">
               {group.items.map((reminder) => (
                 <li key={reminder.id}>
-                  <button type="button" className="activity-row" onClick={() => onOpen(reminder)}>
+                  <button type="button" className="activity-row item-kind-reminder" onClick={() => onOpen(reminder)}>
                     <ReminderKindMark kind={reminder.kind} />
                     <span className="activity-meta">
                       <span className="activity-name reminder-text-line">{reminder.text}</span>

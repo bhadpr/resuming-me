@@ -64,7 +64,7 @@ export function ActivityList({
             <li key={activity.id}>
               <button
                 type="button"
-                className={`activity-row ${activity.archived ? 'activity-row-archived' : ''}`}
+                className={`activity-row item-kind-activity ${activity.archived ? 'activity-row-archived' : ''}`}
                 onClick={() => onSelect(activity)}
               >
                 <HabitMark name={visibleName(activity, locale)} templateId={activity.template_id} />

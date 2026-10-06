@@ -44,6 +44,7 @@ function ItemList({
   empty,
   emptyIcon,
   addLabel,
+  kind,
   items,
   onAdd,
 }: {
@@ -52,6 +53,7 @@ function ItemList({
   empty: string
   emptyIcon: IconName
   addLabel: string
+  kind: 'activity' | 'vital'
   items: GuestActivity[]
   onAdd: () => void
 }) {
@@ -82,7 +84,7 @@ function ItemList({
             const detail = guestDetail(activity)
             return (
               <li key={activity.localId}>
-                <div className="activity-row">
+                <div className={`activity-row item-kind-${kind}`}>
                   <HabitMark name={visibleName(activity, locale)} templateId={activity.templateId} />
                   <span className="activity-meta">
                     <span className="activity-name">{visibleName(activity, locale)}</span>
@@ -111,6 +113,7 @@ export function GuestActivitiesPage() {
         empty={t('list.activityEmpty')}
         emptyIcon="activities"
         addLabel={t('list.addHabit')}
+        kind="activity"
         items={habits}
         onAdd={() => navigate('/start?step=1&add=1')}
       />
@@ -157,6 +160,7 @@ export function GuestVitalsPage() {
         empty={t('list.vitalEmpty')}
         emptyIcon="metrics"
         addLabel={t('list.addVital')}
+        kind="vital"
         items={vitals}
         onAdd={() => navigate('/start?step=1&add=1')}
       />
@@ -178,7 +182,7 @@ export function GuestVitalsPage() {
           <ul className="activity-list">
             {medicines.map((medicine, index) => (
               <li key={`${medicine.name}-${index}`}>
-                <div className="activity-row">
+                <div className="activity-row item-kind-medicine">
                   <MedicineThumb photo={medicine.photo} system={medicine.system} />
                   <span className="activity-meta">
                     <span className="activity-name">{medicine.name}</span>

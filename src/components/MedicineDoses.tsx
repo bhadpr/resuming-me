@@ -20,7 +20,7 @@ export function MedicineDoseRow({
 
   return (
     <li
-      className={`today-row today-row-stack today-row-compact today-kind-medicine ${finished ? 'today-row-done' : ''}`.trim()}
+      className={`today-row today-row-stack today-row-compact item-kind-medicine ${finished ? 'today-row-done' : ''}`.trim()}
     >
       <div className="today-row-head">
         <MedicineThumb photo={dose.photoUrl} system={dose.system ?? null} className="medicine-card-photo" />

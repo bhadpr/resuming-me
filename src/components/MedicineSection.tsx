@@ -50,7 +50,7 @@ export function MedicineSection({ medicines, loading, error, onAdd, onOpen }: Me
               .join(', ')
             return (
               <li key={medicine.id}>
-                <button type="button" className="activity-row" onClick={() => onOpen(medicine)}>
+                <button type="button" className="activity-row item-kind-medicine" onClick={() => onOpen(medicine)}>
                   <MedicineThumb photo={medicine.photoUrl} system={medicine.system} />
                   <span className="activity-meta">
                     <span className="activity-name">{medicine.name}</span>

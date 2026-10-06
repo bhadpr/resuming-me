@@ -219,7 +219,7 @@ export function TodayScreen({
     return (
       <li
         key={metric.id}
-        className={`today-row today-row-stack today-row-compact today-kind-vital ${isBloodPressure(metric) ? 'today-row-entry' : ''} ${entry ? 'today-row-done' : ''}`}
+        className={`today-row today-row-stack today-row-compact item-kind-vital ${isBloodPressure(metric) ? 'today-row-entry' : ''} ${entry ? 'today-row-done' : ''}`}
       >
         <div className="today-row-head">
           <HabitMark name={visibleName(metric, locale)} templateId={metric.template_id} />
@@ -748,7 +748,7 @@ function TodayActivityRow({
 
   if (row.activity.type === 'deadline' && row.overdue) {
     return (
-      <li className={`today-row today-row-stack today-row-overdue today-kind-activity ${hero ? 'today-row-hero' : ''}`}>
+      <li className={`today-row today-row-stack today-row-overdue item-kind-activity ${hero ? 'today-row-hero' : ''}`}>
         <DeadlineOverduePrompt
           activity={activity}
           busy={busy}
@@ -773,7 +773,7 @@ function TodayActivityRow({
 
   return (
     <li
-      className={`today-row today-row-stack today-row-compact today-kind-activity ${hero ? 'today-row-hero' : ''} ${rowStateClass} ${row.overdue ? 'today-row-overdue' : ''}`}
+      className={`today-row today-row-stack today-row-compact item-kind-activity ${hero ? 'today-row-hero' : ''} ${rowStateClass} ${row.overdue ? 'today-row-overdue' : ''}`}
     >
       <div className="today-row-head">
         <HabitMark name={visibleName(activity, locale)} emoji={activity.emoji} templateId={activity.template_id} />

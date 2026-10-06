@@ -3380,18 +3380,20 @@ select.field-input.language-select {
   border-color: color-mix(in srgb, var(--color-danger) 45%, transparent);
 }
 
-.today-kind-medicine { --kind: var(--kind-medicine); }
-.today-kind-activity { --kind: var(--kind-activity); }
-.today-kind-reminder { --kind: var(--kind-reminder); }
-.today-kind-vital { --kind: var(--kind-vital); }
+.item-kind-medicine { --kind: var(--kind-medicine); }
+.item-kind-activity { --kind: var(--kind-activity); }
+.item-kind-reminder { --kind: var(--kind-reminder); }
+.item-kind-vital { --kind: var(--kind-vital); }
 
 /* Kind accent sits behind the row content and on top of whatever state background the row has. */
-.today-row[class*='today-kind-'] {
+.today-row[class*='item-kind-'],
+.activity-row[class*='item-kind-'] {
   position: relative;
   isolation: isolate;
 }
 
-.today-row[class*='today-kind-']::before {
+.today-row[class*='item-kind-']::before,
+.activity-row[class*='item-kind-']::before {
   content: '';
   position: absolute;
   inset: -1px auto -1px -1px;
@@ -3403,7 +3405,7 @@ select.field-input.language-select {
   background: linear-gradient(90deg, color-mix(in srgb, var(--kind) 12%, transparent), transparent);
 }
 
-.today-row-done[class*='today-kind-']::before {
+.today-row-done[class*='item-kind-']::before {
   border-left-color: color-mix(in srgb, var(--kind) 45%, transparent);
   background: none;
 }

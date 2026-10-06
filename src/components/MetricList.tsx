@@ -62,7 +62,7 @@ export function MetricList({
             <li key={metric.id}>
               <button
                 type="button"
-                className={`activity-row ${metric.archived ? 'activity-row-archived' : ''}`}
+                className={`activity-row item-kind-vital ${metric.archived ? 'activity-row-archived' : ''}`}
                 onClick={() => onSelect(metric)}
               >
                 <HabitMark name={visibleName(metric, locale)} templateId={metric.template_id} />
