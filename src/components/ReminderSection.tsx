@@ -36,7 +36,7 @@ interface ReminderRowProps {
   onEdit: () => void
 }
 
-function ReminderRow({ reminder, today, busy, onDone, onMove, onEdit }: ReminderRowProps) {
+export function ReminderRow({ reminder, today, busy, onDone, onMove, onEdit }: ReminderRowProps) {
   const { locale, t } = useLocale()
   const [picking, setPicking] = useState(false)
 
@@ -101,73 +101,28 @@ export interface ReminderSectionProps {
   onEdit: (reminder: Reminder) => void
 }
 
-/** Today's reminders, then the ones finished today folded into one line. */
-export function ReminderSection({
-  open,
-  doneToday,
-  today,
-  busyId,
-  onDone,
+export function ReminderDoneRow({
+  reminder,
+  busy,
   onNotDone,
-  onMove,
-  onEdit,
-}: ReminderSectionProps) {
+}: {
+  reminder: Reminder
+  busy: boolean
+  onNotDone: () => void
+}) {
   const { t } = useLocale()
-  const [doneOpen, setDoneOpen] = useState(false)
-  if (open.length === 0 && doneToday.length === 0) return null
-
   return (
-    <section className="today-section" aria-label={t('reminders.title')}>
-      <h3 className="section-label">{t('reminders.title')}</h3>
-      {open.length > 0 && (
-        <ul className="today-list">
-          {open.map((reminder) => (
-            <ReminderRow
-              key={reminder.id}
-              reminder={reminder}
-              today={today}
-              busy={busyId === reminder.id}
-              onDone={() => onDone(reminder)}
-              onMove={(day) => onMove(reminder, day)}
-              onEdit={() => onEdit(reminder)}
-            />
-          ))}
-        </ul>
-      )}
-      {doneToday.length > 0 && (
-        <div className="reminder-done-today">
-          <button
-            type="button"
-            className="today-extra-btn"
-            aria-expanded={doneOpen}
-            onClick={() => setDoneOpen((value) => !value)}
-          >
-            {t('reminders.doneToday', { count: doneToday.length })}
+    <li className="today-row today-row-done">
+      <div className="today-row-main">
+        <ReminderKindMark kind={reminder.kind} />
+        <span className="activity-name reminder-text-line reminder-struck">{reminder.text}</span>
+        <span className="today-actions">
+          <button type="button" className="btn btn-secondary btn-today" disabled={busy} onClick={onNotDone}>
+            {t('reminders.notDone')}
           </button>
-          {doneOpen && (
-            <ul className="today-list">
-              {doneToday.map((reminder) => (
-                <li key={reminder.id} className="today-row today-row-done">
-                  <div className="today-row-main">
-                    <span className="activity-name reminder-text-line reminder-struck">{reminder.text}</span>
-                    <span className="today-actions">
-                      <button
-                        type="button"
-                        className="btn btn-secondary btn-today"
-                        disabled={busyId === reminder.id}
-                        onClick={() => onNotDone(reminder)}
-                      >
-                        {t('reminders.notDone')}
-                      </button>
-                    </span>
-                  </div>
-                </li>
-              ))}
-            </ul>
-          )}
-        </div>
-      )}
-    </section>
+        </span>
+      </div>
+    </li>
   )
 }
 

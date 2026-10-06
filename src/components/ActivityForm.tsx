@@ -3,6 +3,8 @@ import { ACTIVITY_TEMPLATES, HABIT_GROUPS, activityInputFromTemplate, templateBy
 import { HABIT_ART } from '../data/habitArt'
 import { HabitIcon } from './HabitIcon'
 import { StepGoalField } from './StepGoalField'
+import { DayPeriodPicker } from './DayPeriodPicker'
+import { activityPeriod } from '../lib/dayPeriod'
 import { addDays, todayLocalDate } from '../lib/dates'
 import { DEFAULT_STEP_GOAL, parseStepGoal } from '../lib/steps'
 import type { Activity, ActivityInput } from '../lib/activities'
@@ -420,16 +422,10 @@ export function ActivityForm({
         />
       </label>
 
-      <label className="field">
-        <span className="field-label">Usually when?</span>
-        <input
-          className="field-input"
-          maxLength={40}
-          value={input.usuallyWhen ?? ''}
-          onChange={(e) => update('usuallyWhen', e.target.value || null)}
-          placeholder="Optional"
-        />
-      </label>
+      <DayPeriodPicker
+        value={activityPeriod({ usuallyWhen: input.usuallyWhen, templateId: input.templateId, name: input.name })}
+        onChange={(period) => update('usuallyWhen', period)}
+      />
 
       <fieldset className="field">
         <legend className="field-label">Days off</legend>

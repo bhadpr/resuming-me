@@ -27,10 +27,11 @@ import { DeadlineOverduePrompt } from './DeadlineOverduePrompt'
 import { HabitMark } from './HabitMark'
 import { HabitVideoPlaceholder } from './HabitVideoPlaceholder'
 import { StepsCard } from './StepsCard'
-import { MedicineDoses } from './MedicineDoses'
-import { TodayDoneFold } from './TodayDoneFold'
-import { ReminderSection, type ReminderSectionProps } from './ReminderSection'
-import type { DueDose } from '../lib/medicineSchedule'
+import { MedicineDoseRow } from './MedicineDoses'
+import { TodayByTime, type TodayTimedItem } from './TodayByTime'
+import { ReminderDoneRow, ReminderRow, type ReminderSectionProps } from './ReminderSection'
+import { activityPeriod, periodForHour, vitalPeriod } from '../lib/dayPeriod'
+import { isDoseFinished, type DueDose } from '../lib/medicineSchedule'
 import { habitTemplateId } from '../data/habitArt'
 import { WelcomeBackCard, type WelcomeBackModel } from './WelcomeBackCard'
 import type { Moment } from '../lib/moments'
@@ -177,8 +178,6 @@ export function TodayScreen({
   const visibleMetrics = stepsCardShown
     ? metrics.filter(({ metric }) => !isDailyStepsMetric(metric))
     : metrics
-  const pendingMetrics = visibleMetrics.filter(({ entry }) => !entry)
-  const loggedMetrics = visibleMetrics.filter(({ entry }) => entry)
   const emptyKind = todayEmptyKind({
     hasActivities,
     dueCount: rows.length,
@@ -214,6 +213,114 @@ export function TodayScreen({
       />
     )
   }
+
+  function renderVital(metric: Metric, entry: MetricEntry | null) {
+    return (
+      <li
+        key={metric.id}
+        className={`today-row today-row-stack today-row-compact ${isBloodPressure(metric) ? 'today-row-entry' : ''} ${entry ? 'today-row-done' : ''}`}
+      >
+        <div className="today-row-head">
+          <HabitMark name={visibleName(metric, locale)} templateId={metric.template_id} />
+          <span className="activity-name">{visibleName(metric, locale)}</span>
+        </div>
+        <div className={`today-row-main ${isBloodPressure(metric) ? 'vital-entry' : ''}`}>
+          <span className="activity-meta">
+            <span className="activity-desc">
+              {entry
+                ? `${formatMetricReading(entry.value, metric.unit, entry.secondary_value)} today`
+                : isBloodPressure(metric)
+                  ? 'Upper and lower today'
+                  : `Today’s ${metric.unit}`}
+            </span>
+          </span>
+          <MetricValueForm
+            metric={metric}
+            busy={busyId === metric.id}
+            onLog={onLogMetric}
+            initialValue={entry ? String(entry.value) : ''}
+            initialSecondary={entry?.secondary_value == null ? '' : String(entry.secondary_value)}
+            submitLabel={entry ? t('today.update') : t('today.log')}
+          />
+        </div>
+      </li>
+    )
+  }
+
+  const timedItems: TodayTimedItem[] = [
+    ...(onToggleMedicineDose
+      ? medicineDoses.map((dose) => ({
+          key: `dose-${dose.key}`,
+          kind: 'medicine' as const,
+          period: periodForHour(dose.hour),
+          minutes: dose.hour * 60 + dose.minute,
+          done: isDoseFinished(dose),
+          node: (
+            <MedicineDoseRow
+              dose={dose}
+              busy={medicineBusyKey === dose.key}
+              onToggle={onToggleMedicineDose}
+            />
+          ),
+        }))
+      : []),
+    ...openRows.map((row) => ({
+      key: `activity-${row.activity.id}`,
+      kind: 'activity' as const,
+      period: activityPeriod(row.activity),
+      done: false,
+      node: renderActivity(row, hero?.activity.id === row.activity.id),
+    })),
+    ...foldedDone.map((row) => ({
+      key: `activity-${row.activity.id}`,
+      kind: 'activity' as const,
+      period: activityPeriod(row.activity),
+      done: true,
+      node: renderActivity(row),
+    })),
+    ...(reminders
+      ? [
+          ...reminders.open.map((reminder) => ({
+            key: `reminder-${reminder.id}`,
+            kind: 'reminder' as const,
+            period: periodForHour(reminder.hour),
+            minutes: reminder.hour == null ? null : reminder.hour * 60 + (reminder.minute ?? 0),
+            done: false,
+            node: (
+              <ReminderRow
+                reminder={reminder}
+                today={reminders.today}
+                busy={reminders.busyId === reminder.id}
+                onDone={() => reminders.onDone(reminder)}
+                onMove={(day) => reminders.onMove(reminder, day)}
+                onEdit={() => reminders.onEdit(reminder)}
+              />
+            ),
+          })),
+          ...reminders.doneToday.map((reminder) => ({
+            key: `reminder-${reminder.id}`,
+            kind: 'reminder' as const,
+            period: periodForHour(reminder.hour),
+            minutes: reminder.hour == null ? null : reminder.hour * 60 + (reminder.minute ?? 0),
+            done: true,
+            node: (
+              <ReminderDoneRow
+                reminder={reminder}
+                busy={reminders.busyId === reminder.id}
+                onNotDone={() => reminders.onNotDone(reminder)}
+              />
+            ),
+          })),
+        ]
+      : []),
+    ...visibleMetrics.map(({ metric, entry }) => ({
+      key: `vital-${metric.id}`,
+      kind: 'vital' as const,
+      period: vitalPeriod(metric),
+      done: entry != null,
+      node: renderVital(metric, entry),
+    })),
+  ]
 
   return (
     <div className="today-screen">
@@ -312,100 +419,33 @@ export function TodayScreen({
             </div>
           )}
 
-          {(medicineError || medicineDoses.length > 0) && onToggleMedicineDose && (
-            <>
-              {medicineError && <p className="error">{medicineError}</p>}
-              <MedicineDoses
-                doses={medicineDoses}
-                busyKey={medicineBusyKey}
-                onToggle={onToggleMedicineDose}
-              />
-            </>
+          {medicineError && <p className="error">{medicineError}</p>}
+          {reminders?.error && <p className="error">{reminders.error}</p>}
+
+          {emptyKind === 'clear' && !showWelcome && !isRestDay && timedItems.length === 0 && (
+            <div className="today-empty">
+              <p className="today-empty-title">{t('today.nothing')}</p>
+              <p className="today-empty-copy">
+                Weekly and monthly things will show up here when they’re open.
+              </p>
+            </div>
           )}
 
-          {reminders && (
-            <>
-              {reminders.error && <p className="error">{reminders.error}</p>}
-              <ReminderSection {...reminders} />
-            </>
-          )}
+          <TodayByTime items={timedItems} />
 
-          {(emptyKind !== 'setup' || openRows.length > 0 || done.length > 0) && (
-          <section className="today-section">
-            <h3 className="section-label">{t('today.logActivities')}</h3>
-            {emptyKind === 'clear' && !showWelcome && !isRestDay && (
-              <div className="today-empty">
-                <p className="today-empty-title">{t('today.nothing')}</p>
-                <p className="today-empty-copy">
-                  Weekly and monthly things will show up here when they’re open.
-                </p>
-              </div>
-            )}
-            {openRows.length > 0 && (
-              <ul className="today-list">
-                {openRows.map((row) => renderActivity(row, hero?.activity.id === row.activity.id))}
-              </ul>
-            )}
-            {foldedDone.length > 0 && (
-              <TodayDoneFold label={t('today.doneToday', { count: foldedDone.length })}>
-                {foldedDone.map((row) => renderActivity(row))}
-              </TodayDoneFold>
-            )}
-            {emptyKind !== 'setup' && (onAddActivity || onAddReminder) && (
-              <div className="today-add-row">
-                {onAddActivity && (
-                  <button type="button" className="btn btn-secondary today-add" onClick={onAddActivity}>
-                    {t('today.add')}
-                  </button>
-                )}
-                {onAddReminder && (
-                  <button type="button" className="btn btn-secondary today-add" onClick={onAddReminder}>
-                    {t('reminders.add')}
-                  </button>
-                )}
-              </div>
-            )}
-          </section>
-          )}
-
-          {visibleMetrics.length > 0 && (
-          <section className="today-section today-checkin">
-            <h3 className="section-label">{t('today.logVitals')}</h3>
-            {visibleMetrics.length > 0 && (
-              <ul className="today-list">
-                {[...pendingMetrics, ...loggedMetrics].map(({ metric, entry }) => (
-                  <li
-                    key={metric.id}
-                    className={`today-row today-row-stack today-row-compact ${isBloodPressure(metric) ? 'today-row-entry' : ''} ${entry ? 'today-row-done' : ''}`}
-                  >
-                    <div className="today-row-head">
-                      <HabitMark name={visibleName(metric, locale)} templateId={metric.template_id} />
-                      <span className="activity-name">{visibleName(metric, locale)}</span>
-                    </div>
-                    <div className={`today-row-main ${isBloodPressure(metric) ? 'vital-entry' : ''}`}>
-                      <span className="activity-meta">
-                        <span className="activity-desc">
-                          {entry
-                            ? `${formatMetricReading(entry.value, metric.unit, entry.secondary_value)} today`
-                            : isBloodPressure(metric)
-                              ? 'Upper and lower today'
-                              : `Today’s ${metric.unit}`}
-                        </span>
-                      </span>
-                      <MetricValueForm
-                        metric={metric}
-                        busy={busyId === metric.id}
-                        onLog={onLogMetric}
-                        initialValue={entry ? String(entry.value) : ''}
-                        initialSecondary={entry?.secondary_value == null ? '' : String(entry.secondary_value)}
-                        submitLabel={entry ? t('today.update') : t('today.log')}
-                      />
-                    </div>
-                  </li>
-                ))}
-              </ul>
-            )}
-          </section>
+          {emptyKind !== 'setup' && (onAddActivity || onAddReminder) && (
+            <div className="today-add-row">
+              {onAddActivity && (
+                <button type="button" className="btn btn-secondary today-add" onClick={onAddActivity}>
+                  {t('today.add')}
+                </button>
+              )}
+              {onAddReminder && (
+                <button type="button" className="btn btn-secondary today-add" onClick={onAddReminder}>
+                  {t('reminders.add')}
+                </button>
+              )}
+            </div>
           )}
 
         </>

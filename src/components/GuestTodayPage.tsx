@@ -16,10 +16,12 @@ import { Toast } from './Toast'
 import { useUndoToast } from '../hooks/useUndoToast'
 import { formatCountUndoMessage, formatSessionUndoMessage } from '../lib/undoMessages'
 import { HabitVideoPlaceholder } from './HabitVideoPlaceholder'
-import { MedicineDoses } from './MedicineDoses'
-import { ReminderSection } from './ReminderSection'
+import { MedicineDoseRow } from './MedicineDoses'
+import { ReminderDoneRow, ReminderRow } from './ReminderSection'
 import { StepsCard } from './StepsCard'
-import { TodayDoneFold } from './TodayDoneFold'
+import { TodayByTime, type TodayTimedItem } from './TodayByTime'
+import { activityPeriod, periodForHour } from '../lib/dayPeriod'
+import { isDoseFinished, type DueDose } from '../lib/medicineSchedule'
 import {
   REMINDERS_CHANGED,
   remindersDoneToday,
@@ -204,8 +206,17 @@ export function GuestTodayPage() {
     return guestCountProgress(activity, guestCountsOnDate(draft, activity.localId, today)).done
   }
 
-  const openActivities = draft.activities.filter((activity) => !isDoneToday(activity))
-  const doneActivities = draft.activities.filter(isDoneToday)
+  const toggleDose = (dose: DueDose) => {
+    if (dose.skipped) {
+      clearSkip({ medicineId: dose.medicineId, date: today, hour: dose.hour, minute: dose.minute })
+      setDraft(loadGuestDraft())
+      return
+    }
+    setDraft(toggleGuestDose(draft, dose, today))
+  }
+
+  const reminderMinutes = (reminder: Reminder) =>
+    reminder.hour == null ? null : reminder.hour * 60 + (reminder.minute ?? 0)
 
   const renderGuestActivity = (activity: GuestActivity) => {
     if (isStepsHabit(activity)) {
@@ -474,6 +485,49 @@ export function GuestTodayPage() {
     )
   }
 
+  const timedItems: TodayTimedItem[] = [
+    ...guestDosesOnDate(draft, today).map((dose) => ({
+      key: `dose-${dose.key}`,
+      kind: 'medicine' as const,
+      period: periodForHour(dose.hour),
+      minutes: dose.hour * 60 + dose.minute,
+      done: isDoseFinished(dose),
+      node: <MedicineDoseRow dose={dose} busy={false} onToggle={toggleDose} />,
+    })),
+    ...draft.activities.map((activity) => ({
+      key: `activity-${activity.localId}`,
+      kind: isNumberEntryVital(activity) ? ('vital' as const) : ('activity' as const),
+      period: activityPeriod(activity),
+      done: isDoneToday(activity),
+      node: renderGuestActivity(activity),
+    })),
+    ...remindersForToday(draft.reminders, today).map((reminder) => ({
+      key: `reminder-${reminder.id}`,
+      kind: 'reminder' as const,
+      period: periodForHour(reminder.hour),
+      minutes: reminderMinutes(reminder),
+      done: false,
+      node: (
+        <ReminderRow
+          reminder={reminder}
+          today={today}
+          busy={false}
+          onDone={() => markReminderDone(reminder)}
+          onMove={(day) => patchReminder(reminder.id, { day })}
+          onEdit={() => navigate(`/reminders/${reminder.id}`)}
+        />
+      ),
+    })),
+    ...remindersDoneToday(draft.reminders, today).map((reminder) => ({
+      key: `reminder-${reminder.id}`,
+      kind: 'reminder' as const,
+      period: periodForHour(reminder.hour),
+      minutes: reminderMinutes(reminder),
+      done: true,
+      node: <ReminderDoneRow reminder={reminder} busy={false} onNotDone={() => reopenReminder(reminder)} />,
+    })),
+  ]
+
   return (
         <div className="today-screen">
           <div className="guest-save-widget">
@@ -495,69 +549,22 @@ export function GuestTodayPage() {
             </div>
           </div>
 
-          {draft.medicines.length > 0 && (
-            <MedicineDoses
-              doses={guestDosesOnDate(draft, today)}
-              busyKey={null}
-              onToggle={(dose) => {
-                if (dose.skipped) {
-                  clearSkip({
-                    medicineId: dose.medicineId,
-                    date: today,
-                    hour: dose.hour,
-                    minute: dose.minute,
-                  })
-                  setDraft(loadGuestDraft())
-                  return
-                }
-                setDraft(toggleGuestDose(draft, dose, today))
-              }}
-            />
-          )}
-
-          <ReminderSection
-            open={remindersForToday(draft.reminders, today)}
-            doneToday={remindersDoneToday(draft.reminders, today)}
-            today={today}
-            busyId={null}
-            onDone={markReminderDone}
-            onNotDone={reopenReminder}
-            onMove={(reminder, day) => patchReminder(reminder.id, { day })}
-            onEdit={(reminder) => navigate(`/reminders/${reminder.id}`)}
-          />
-
           {note && (
             <div className="notice">
               <p>{note}</p>
             </div>
           )}
 
-          {draft.activities.length > 0 && (
-            <section className="today-section">
-              <h3 className="section-label">{t('today.logActivities')}</h3>
-              {openActivities.length > 0 && (
-                <ul className="today-list today-guest-list">
-                  {openActivities.map(renderGuestActivity)}
-                </ul>
-              )}
-              {doneActivities.length > 0 && (
-                <TodayDoneFold
-                  label={t('today.doneToday', { count: doneActivities.length })}
-                  listClassName="today-list today-guest-list"
-                >
-                  {doneActivities.map(renderGuestActivity)}
-                </TodayDoneFold>
-              )}
-              <div className="today-add-row">
-                <Link className="btn btn-secondary today-add" to="/start?step=1&add=1">
-                  {t('today.add')}
-                </Link>
-                <Link className="btn btn-secondary today-add" to="/reminders/new">
-                  {t('reminders.add')}
-                </Link>
-              </div>
-            </section>
-          )}
+          <TodayByTime items={timedItems} listClassName="today-list today-guest-list" />
+
+          <div className="today-add-row">
+            <Link className="btn btn-secondary today-add" to="/start?step=1&add=1">
+              {t('today.add')}
+            </Link>
+            <Link className="btn btn-secondary today-add" to="/reminders/new">
+              {t('reminders.add')}
+            </Link>
+          </div>
           {undoToast.toast && (
             <Toast message={undoToast.toast.message} onUndo={() => void undoToast.undo()} />
           )}

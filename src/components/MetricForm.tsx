@@ -4,6 +4,8 @@ import { isCatalogLabel, templateLabel } from '../lib/catalogName'
 import { useLocale } from '../hooks/useLocale'
 import { HabitIcon } from './HabitIcon'
 import { StepGoalField } from './StepGoalField'
+import { DayPeriodPicker } from './DayPeriodPicker'
+import { setVitalPeriod, vitalPeriod, type DayPeriod } from '../lib/dayPeriod'
 import { STARTER_METRICS, type Metric, type MetricInput } from '../lib/metrics'
 import { DEFAULT_STEP_GOAL, isDailyStepsMetric, parseStepGoal } from '../lib/steps'
 
@@ -74,6 +76,7 @@ export function MetricForm({
   const [input, setInput] = useState<MetricInput>(starting)
   const [useCustomUnit, setUseCustomUnit] = useState(() => !isPresetUnit(starting.unit))
   const [stepGoalText, setStepGoalText] = useState(String(DEFAULT_STEP_GOAL))
+  const [period, setPeriod] = useState<DayPeriod>(() => (initial ? vitalPeriod(initial) : 'anytime'))
   const pickingSteps = onAddSteps != null && selectedName != null && isDailyStepsMetric(input)
   const stepGoal = parseStepGoal(stepGoalText)
 
@@ -106,6 +109,7 @@ export function MetricForm({
 
   async function handleSubmit(e: FormEvent) {
     e.preventDefault()
+    if (initial) setVitalPeriod(initial.id, period)
     await onSubmit(input)
   }
 
@@ -267,6 +271,8 @@ export function MetricForm({
           />
         )}
       </div>
+
+      {initial && <DayPeriodPicker value={period} onChange={setPeriod} />}
 
       <p className="form-hint">A number you log once a day from Today. No target.</p>
 

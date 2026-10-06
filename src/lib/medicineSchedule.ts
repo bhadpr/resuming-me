@@ -47,6 +47,10 @@ export interface DueDose {
   skipped?: boolean
 }
 
+export function isDoseFinished(dose: DueDose): boolean {
+  return dose.taken || dose.skipped === true
+}
+
 export interface MedicineAlarm {
   id: number
   medicineId: string
