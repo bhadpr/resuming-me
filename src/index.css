@@ -3186,11 +3186,6 @@ select.field-input.language-select {
   gap: var(--space-3);
 }
 
-.medicine-slot-index {
-  min-width: 1.5rem;
-  font-weight: var(--weight-semibold);
-}
-
 .medicine-slot-time {
   flex: 1;
   min-width: 0;

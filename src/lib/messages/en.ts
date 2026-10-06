@@ -232,7 +232,7 @@ export const en = {
     edit: 'Edit medicine',
     new: 'Add medicine',
     taken: 'Taken',
-    markTaken: 'Mark taken',
+    markTaken: 'Done',
     today: 'Medicines',
     needName: 'Add a name.',
     nameLong: 'Keep the name under 40 letters.',

@@ -66,12 +66,11 @@ export function MedicineDoses({ doses, busyKey, onToggle }: MedicineDosesProps) 
                 <span className="activity-name">{card.name}</span>
               </div>
               <ol className="medicine-slot-list">
-                {card.doses.map((dose, index) => (
+                {card.doses.map((dose) => (
                   <li
                     key={dose.key}
                     className={dose.taken || dose.skipped ? 'medicine-slot medicine-slot-taken' : 'medicine-slot'}
                   >
-                    <span className="medicine-slot-index">{index + 1},</span>
                     <span className="medicine-slot-time">
                       {formatClock(dose, locale)}
                       {mealMessageKey(dose.meal) ? ` · ${t(mealMessageKey(dose.meal)!)}` : ''}
