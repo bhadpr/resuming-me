@@ -2,16 +2,20 @@ import { formatClock, mealMessageKey } from '../lib/medicineFormat'
 import { useLocale } from '../hooks/useLocale'
 import { isDoseFinished, type DueDose } from '../lib/medicineSchedule'
 import { MedicineThumb } from './MedicineThumb'
+import { SkipLink, UndoSkipButton } from './TodaySkip'
 
 /** One dose of one medicine on Today. A medicine taken three times a day shows three of these. */
 export function MedicineDoseRow({
   dose,
   busy,
   onToggle,
+  onSkip,
 }: {
   dose: DueDose
   busy: boolean
+  /** Marks the dose taken, or clears a taken or skipped dose. */
   onToggle: (dose: DueDose) => void
+  onSkip: (dose: DueDose) => void
 }) {
   const { locale, t } = useLocale()
   const finished = isDoseFinished(dose)
@@ -33,15 +37,20 @@ export function MedicineDoseRow({
             {dose.skipped ? ` · ${t('medicines.skipped')}` : ''}
           </span>
         </span>
-        <span className="today-actions">
-          <button
-            type="button"
-            className={`btn btn-today ${finished ? 'btn-secondary' : 'btn-primary'}`}
-            disabled={busy}
-            onClick={() => onToggle(dose)}
-          >
-            {finished ? t('medicines.notTaken') : t('medicines.markTaken')}
-          </button>
+        <span className="today-actions today-actions-stack">
+          {dose.skipped ? (
+            <UndoSkipButton disabled={busy} onUndo={() => onToggle(dose)} />
+          ) : (
+            <button
+              type="button"
+              className={`btn btn-today ${finished ? 'btn-secondary' : 'btn-primary'}`}
+              disabled={busy}
+              onClick={() => onToggle(dose)}
+            >
+              {finished ? t('medicines.notTaken') : t('medicines.markTaken')}
+            </button>
+          )}
+          {!finished && <SkipLink disabled={busy} onSkip={() => onSkip(dose)} />}
         </span>
       </div>
     </li>

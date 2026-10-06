@@ -27,6 +27,9 @@ import { DeadlineOverduePrompt } from './DeadlineOverduePrompt'
 import { HabitMark } from './HabitMark'
 import { HabitVideoPlaceholder } from './HabitVideoPlaceholder'
 import { Icon } from './Icon'
+import { SkipLink, UndoSkipButton } from './TodaySkip'
+import { useTodaySkips } from '../hooks/useTodaySkips'
+import { todayLocalDate } from '../lib/dates'
 import { StepsCard } from './StepsCard'
 import { MedicineDoseRow } from './MedicineDoses'
 import { TodayByTime, type TodayTimedItem } from './TodayByTime'
@@ -105,6 +108,7 @@ interface TodayScreenProps {
   medicineBusyKey?: string | null
   medicineError?: string | null
   onToggleMedicineDose?: (dose: DueDose) => void
+  onSkipMedicineDose?: (dose: DueDose) => void
   reminders?: ReminderSectionProps & { error: string | null }
   onAddReminder?: () => void
 }
@@ -155,10 +159,12 @@ export function TodayScreen({
   medicineBusyKey = null,
   medicineError = null,
   onToggleMedicineDose,
+  onSkipMedicineDose,
   reminders,
   onAddReminder,
 }: TodayScreenProps) {
   const { t, locale } = useLocale()
+  const skips = useTodaySkips(todayLocalDate())
   const quietSuggested = quietReentry ? pickEasiestReentryRow(rows) : null
   const followUpSuggested = reentryFollowUp
     ? pickFollowUpReentryRow(
@@ -219,10 +225,12 @@ export function TodayScreen({
   }
 
   function renderVital(metric: Metric, entry: MetricEntry | null) {
+    const skipKey = `vital:${metric.id}`
+    const skipped = !entry && skips.isSkipped(skipKey)
     return (
       <li
         key={metric.id}
-        className={`today-row today-row-stack today-row-compact item-kind-vital ${isBloodPressure(metric) ? 'today-row-entry' : ''} ${entry ? 'today-row-done' : ''}`}
+        className={`today-row today-row-stack today-row-compact item-kind-vital ${isBloodPressure(metric) && !skipped ? 'today-row-entry' : ''} ${entry || skipped ? 'today-row-done' : ''}`}
       >
         <div className="today-row-head">
           <HabitMark name={visibleName(metric, locale)} templateId={metric.template_id} />
@@ -233,19 +241,28 @@ export function TodayScreen({
             <span className="activity-desc">
               {entry
                 ? `${formatMetricReading(entry.value, metric.unit, entry.secondary_value)} today`
-                : isBloodPressure(metric)
-                  ? 'Upper and lower today'
-                  : `Today’s ${metric.unit}`}
+                : skipped
+                  ? t('today.skippedLine')
+                  : isBloodPressure(metric)
+                    ? 'Upper and lower today'
+                    : `Today’s ${metric.unit}`}
             </span>
           </span>
-          <MetricValueForm
-            metric={metric}
-            busy={busyId === metric.id}
-            onLog={onLogMetric}
-            initialValue={entry ? String(entry.value) : ''}
-            initialSecondary={entry?.secondary_value == null ? '' : String(entry.secondary_value)}
-            submitLabel={entry ? t('today.update') : t('today.log')}
-          />
+          <span className="today-actions today-actions-stack">
+            {skipped ? (
+              <UndoSkipButton onUndo={() => skips.unskip(skipKey)} />
+            ) : (
+              <MetricValueForm
+                metric={metric}
+                busy={busyId === metric.id}
+                onLog={onLogMetric}
+                initialValue={entry ? String(entry.value) : ''}
+                initialSecondary={entry?.secondary_value == null ? '' : String(entry.secondary_value)}
+                submitLabel={entry ? t('today.update') : t('today.log')}
+              />
+            )}
+            {!entry && !skipped && <SkipLink onSkip={() => skips.skip(skipKey)} />}
+          </span>
         </div>
       </li>
     )
@@ -264,6 +281,7 @@ export function TodayScreen({
               dose={dose}
               busy={medicineBusyKey === dose.key}
               onToggle={onToggleMedicineDose}
+              onSkip={(skipped) => onSkipMedicineDose?.(skipped)}
             />
           ),
         }))
@@ -295,7 +313,14 @@ export function TodayScreen({
                 reminder={reminder}
                 today={reminders.today}
                 busy={reminders.busyId === reminder.id}
-                onDone={() => reminders.onDone(reminder)}
+                onDone={() => {
+                  skips.unskip(`reminder:${reminder.id}`)
+                  reminders.onDone(reminder)
+                }}
+                onSkip={() => {
+                  skips.skip(`reminder:${reminder.id}`)
+                  reminders.onSkip(reminder)
+                }}
                 onMove={(day) => reminders.onMove(reminder, day)}
                 onCancel={() => reminders.onCancel(reminder)}
               />
@@ -311,7 +336,11 @@ export function TodayScreen({
               <ReminderDoneRow
                 reminder={reminder}
                 busy={reminders.busyId === reminder.id}
-                onNotDone={() => reminders.onNotDone(reminder)}
+                skipped={skips.isSkipped(`reminder:${reminder.id}`)}
+                onNotDone={() => {
+                  skips.unskip(`reminder:${reminder.id}`)
+                  reminders.onNotDone(reminder)
+                }}
               />
             ),
           })),
@@ -321,7 +350,7 @@ export function TodayScreen({
       key: `vital-${metric.id}`,
       kind: 'vital' as const,
       period: vitalPeriod(metric),
-      done: entry != null,
+      done: entry != null || skips.isSkipped(`vital:${metric.id}`),
       node: renderVital(metric, entry),
     })),
   ]
@@ -714,7 +743,7 @@ function TodayActivityRow({
   const [manualMinutes, setManualMinutes] = useState('')
   const [moreOpen, setMoreOpen] = useState(false)
   const [moreChoice, setMoreChoice] = useState<
-    null | 'skip' | 'rest' | 'pause' | 'shrink' | 'pauseTimer' | 'stop'
+    null | 'rest' | 'pause' | 'shrink' | 'pauseTimer' | 'stop'
   >(null)
   const [videoOpen, setVideoOpen] = useState(false)
   const templateId = habitTemplateId(activity)
@@ -750,7 +779,7 @@ function TodayActivityRow({
   const canPauseHabit = Boolean(onPauseHabit) && !done && activity.type !== 'deadline'
   const canRest = Boolean(onTakeRestDay) && !isRestDay && !done
   const weighIn = isNumberEntryVital({ templateId })
-  const showMore = !weighIn && (canSkip || canRest || canPauseHabit || canShrinkRunning || timerPaused)
+  const showMore = !weighIn && (canRest || canPauseHabit || canShrinkRunning || timerPaused)
 
   if (row.activity.type === 'deadline' && row.overdue) {
     return (
@@ -819,7 +848,7 @@ function TodayActivityRow({
             </div>
           )}
         </span>
-        <span className={`today-actions ${weighIn ? 'today-actions-stack' : ''}`}>
+        <span className="today-actions today-actions-stack">
           {actionKind === 'checkbox' && !skipped && (
             <button
               type="button"
@@ -828,16 +857,6 @@ function TodayActivityRow({
               onClick={() => (done ? onUncheck() : onCheckOff())}
             >
               {done ? 'Undo' : 'Done'}
-            </button>
-          )}
-          {weighIn && !done && !skipped && onSkipToday && (
-            <button type="button" className="today-skip-link" disabled={busy} onClick={() => onSkipToday('Other')}>
-              {t('today.skip')}
-            </button>
-          )}
-          {weighIn && skipped && onUnskip && (
-            <button type="button" className="btn btn-secondary btn-today" disabled={busy} onClick={onUnskip}>
-              {t('today.undoSkip')}
             </button>
           )}
           {actionKind === 'count' && !skipped && (
@@ -897,6 +916,8 @@ function TodayActivityRow({
               Resume
             </button>
           )}
+          {skipped && onUnskip && <UndoSkipButton disabled={busy} onUndo={onUnskip} />}
+          {canSkip && onSkipToday && <SkipLink disabled={busy} onSkip={() => onSkipToday('Other')} />}
         </span>
       </div>
       {isThisTimer && (
@@ -1010,11 +1031,6 @@ function TodayActivityRow({
         <div className="today-more">
           {!moreChoice && (
             <div className="today-more-menu">
-              {canSkip && (
-                <button type="button" className="today-skip-chip" onClick={() => setMoreChoice('skip')}>
-                  Skip today
-                </button>
-              )}
               {canRest && (
                 <button type="button" className="today-skip-chip" onClick={() => setMoreChoice('rest')}>
                   Rest today
@@ -1041,28 +1057,6 @@ function TodayActivityRow({
                 </button>
               )}
             </div>
-          )}
-          {moreChoice === 'skip' && canSkip && onSkipToday && (
-            <>
-              <p className="today-more-note">This day stays quiet, and it is not a miss.</p>
-              <div className="today-skip-chips" role="group" aria-label="Skip reason">
-                {SKIP_REASONS.map((reason) => (
-                  <button
-                    key={reason}
-                    type="button"
-                    className="today-skip-chip"
-                    disabled={busy}
-                    onClick={() => {
-                      onSkipToday(reason)
-                      setMoreOpen(false)
-                      setMoreChoice(null)
-                    }}
-                  >
-                    {reason}
-                  </button>
-                ))}
-              </div>
-            </>
           )}
           {moreChoice === 'rest' && canRest && onTakeRestDay && (
             <>

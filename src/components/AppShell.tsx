@@ -1938,6 +1938,7 @@ export function AppShell() {
                     medicineBusyKey={medicineState.busyKey}
                     medicineError={medicineState.error}
                     onToggleMedicineDose={(dose) => void medicineState.toggleDose(dose)}
+                    onSkipMedicineDose={medicineState.skipDose}
                     reminders={{
                       open: reminderState.open,
                       doneToday: reminderState.doneToday,
@@ -1946,6 +1947,7 @@ export function AppShell() {
                       error: reminderState.error,
                       onDone: (reminder) => void handleReminderDone(reminder),
                       onNotDone: (reminder) => void reminderState.markNotDone(reminder),
+                      onSkip: (reminder) => void reminderState.markDone(reminder),
                       onMove: (reminder, day) => void reminderState.move(reminder, day),
                       onCancel: (reminder) => {
                         setError(null)

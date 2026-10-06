@@ -11,6 +11,7 @@ import {
   clearSkip,
   clearSnooze,
   isDoseSkipped,
+  rememberSkip,
 } from '../lib/medicineReminderState'
 import {
   clearDoseTaken,
@@ -159,5 +160,9 @@ export function useMedicines(userId: string | undefined) {
     }
   }
 
-  return { medicines, doses, loading, error, busyKey, reload, toggleDose }
+  function skipDose(dose: DueDose): void {
+    rememberSkip({ medicineId: dose.medicineId, date: today, hour: dose.hour, minute: dose.minute })
+  }
+
+  return { medicines, doses, loading, error, busyKey, reload, toggleDose, skipDose }
 }

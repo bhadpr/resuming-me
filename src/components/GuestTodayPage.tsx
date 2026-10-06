@@ -29,7 +29,9 @@ import {
   type Reminder,
 } from '../lib/reminderSchedule'
 import { catalogTrackId, visibleName } from '../lib/catalogName'
-import { MEDICINE_REMINDER_CHANGED, clearSkip } from '../lib/medicineReminderState'
+import { MEDICINE_REMINDER_CHANGED, clearSkip, rememberSkip } from '../lib/medicineReminderState'
+import { SkipLink, UndoSkipButton } from './TodaySkip'
+import { useTodaySkips } from '../hooks/useTodaySkips'
 import { track } from '../lib/track'
 import { useLocale } from '../hooks/useLocale'
 import { formatLongDate } from '../lib/i18n'
@@ -90,6 +92,7 @@ export function GuestTodayPage() {
 
   const running = draft?.activities.find((item) => item.localId === runningId) ?? null
   const today = todayLocalDate()
+  const skips = useTodaySkips(today)
   const alreadySeconds =
     draft && running
       ? guestSessionSeconds(draft, running.localId, today, running)
@@ -178,6 +181,13 @@ export function GuestTodayPage() {
     if (latest) setDraft(updateGuestReminder(latest, id, patch))
   }
 
+  function skipReminder(reminder: Reminder) {
+    const latest = draftRef.current
+    if (!latest) return
+    skips.skip(`reminder:${reminder.id}`)
+    setDraft(completeGuestReminder(latest, reminder.id, new Date().toISOString()))
+  }
+
   function cancelReminder(reminder: Reminder) {
     const latest = loadGuestDraft()
     if (latest) setDraft(removeGuestReminder(latest, reminder.id))
@@ -200,8 +210,11 @@ export function GuestTodayPage() {
 
   const warning = guestSaveWarning(draft)
 
+  const activitySkipKey = (activity: GuestActivity) => `guest-activity:${activity.localId}`
+
   const isDoneToday = (activity: GuestActivity): boolean => {
     if (isStepsHabit(activity)) return false
+    if (skips.isSkipped(activitySkipKey(activity))) return true
     if (isNumberEntryVital(activity)) return guestReadingOnDate(draft, activity.localId, today) != null
     if (activity.trackingMode !== 'count') {
       if (runningId === activity.localId) return false
@@ -218,6 +231,11 @@ export function GuestTodayPage() {
       return
     }
     setDraft(toggleGuestDose(draft, dose, today))
+  }
+
+  const skipDose = (dose: DueDose) => {
+    rememberSkip({ medicineId: dose.medicineId, date: today, hour: dose.hour, minute: dose.minute })
+    setDraft(loadGuestDraft())
   }
 
   const reminderMinutes = (reminder: Reminder) =>
@@ -240,6 +258,9 @@ export function GuestTodayPage() {
           activity={activity}
           reading={guestReadingOnDate(draft, activity.localId, today)}
           target={activity.targetValue}
+          skipped={skips.isSkipped(activitySkipKey(activity))}
+          onSkip={() => skips.skip(activitySkipKey(activity))}
+          onUnskip={() => skips.unskip(activitySkipKey(activity))}
           onSave={(value, secondaryValue) =>
             setDraft(
               upsertGuestReading(draft, {
@@ -263,6 +284,7 @@ export function GuestTodayPage() {
       )
       const progress = guestTimerProgress(activity, loggedSeconds)
       const isRunning = runningId === activity.localId
+      const skipped = !progress.done && !isRunning && skips.isSkipped(activitySkipKey(activity))
       const liveSeconds = isRunning ? loggedSeconds + elapsed : loggedSeconds
       const liveProgress = guestTimerProgress(activity, liveSeconds)
       const showVideo = videoId === activity.localId
@@ -272,7 +294,7 @@ export function GuestTodayPage() {
         ? paused
           ? 'today-row-progress'
           : 'today-row-live'
-        : progress.done
+        : progress.done || skipped
           ? 'today-row-done'
           : partial
             ? 'today-row-progress'
@@ -296,7 +318,9 @@ export function GuestTodayPage() {
               <span className="activity-desc">
                 {isRunning
                   ? `${liveProgress.label}${paused ? ` · ${t('today.paused')}` : ` · ${t('today.running')}`}`
-                  : progress.label}
+                  : skipped
+                    ? t('today.skippedLine')
+                    : progress.label}
                 {progress.done && !isRunning ? ` · ${t('today.done')}` : ''}
               </span>
               {!isRunning && loggedSeconds > 0 && (
@@ -313,8 +337,10 @@ export function GuestTodayPage() {
                 </div>
               )}
             </span>
-            <span className="today-actions">
-              {isRunning ? (
+            <span className="today-actions today-actions-stack">
+              {skipped ? (
+                <UndoSkipButton onUndo={() => skips.unskip(activitySkipKey(activity))} />
+              ) : isRunning ? (
                 <>
                   <button
                     type="button"
@@ -340,6 +366,12 @@ export function GuestTodayPage() {
                 >
                   {progress.done && !stacking ? t('today.done') : partial ? t('today.resume') : t('today.start')}
                 </button>
+              )}
+              {!progress.done && !isRunning && !skipped && (
+                <SkipLink
+                  disabled={Boolean(runningId)}
+                  onSkip={() => skips.skip(activitySkipKey(activity))}
+                />
               )}
             </span>
           </div>
@@ -402,10 +434,11 @@ export function GuestTodayPage() {
       guestCountsOnDate(draft, activity.localId, today),
     )
     const openEnded = canLogPastGoal(activity.targetUnit)
+    const countSkipped = !progress.done && skips.isSkipped(activitySkipKey(activity))
     return (
       <li
         key={activity.localId}
-        className={`today-row today-row-stack today-row-compact item-kind-activity ${progress.done ? 'today-row-done' : ''}`}
+        className={`today-row today-row-stack today-row-compact item-kind-activity ${progress.done || countSkipped ? 'today-row-done' : ''}`}
       >
         <div className="today-row-head">
           <HabitMark
@@ -418,8 +451,14 @@ export function GuestTodayPage() {
         <div className="today-row-main">
           <span className="activity-meta">
             <span className="activity-desc">
-              {progress.label}
-              {progress.done ? ` · ${t('today.done')}` : ''}
+              {countSkipped ? (
+                t('today.skippedLine')
+              ) : (
+                <>
+                  {progress.label}
+                  {progress.done ? ` · ${t('today.done')}` : ''}
+                </>
+              )}
             </span>
             {activity.targetUnit === 'glasses' && (
               <span className="activity-desc">{t('notes.waterGlass')}</span>
@@ -444,24 +483,31 @@ export function GuestTodayPage() {
               </div>
             )}
           </span>
-          <span className="today-actions">
-            <button
-              type="button"
-              className={`btn btn-today ${progress.done && !openEnded ? 'btn-today-done' : 'btn-primary'}`}
-              disabled={progress.done && !openEnded}
-              onClick={() => {
-                setDraft(appendGuestCount(draft, activity.localId, today))
-                trackGuestLog(activity, 'count', null)
-                undoToast.show(formatCountUndoMessage(visibleName(activity, locale)), () => {
-                  const latest = draftRef.current
-                  if (!latest) return
-                  setDraft(removeLastGuestLog(latest, activity.localId, 'count'))
-                  track('log_undone', { kind: 'count', signed_in: false })
-                })
-              }}
-            >
-              {countTapLabel(activity.targetUnit, progress.done)}
-            </button>
+          <span className="today-actions today-actions-stack">
+            {countSkipped ? (
+              <UndoSkipButton onUndo={() => skips.unskip(activitySkipKey(activity))} />
+            ) : (
+              <button
+                type="button"
+                className={`btn btn-today ${progress.done && !openEnded ? 'btn-today-done' : 'btn-primary'}`}
+                disabled={progress.done && !openEnded}
+                onClick={() => {
+                  setDraft(appendGuestCount(draft, activity.localId, today))
+                  trackGuestLog(activity, 'count', null)
+                  undoToast.show(formatCountUndoMessage(visibleName(activity, locale)), () => {
+                    const latest = draftRef.current
+                    if (!latest) return
+                    setDraft(removeLastGuestLog(latest, activity.localId, 'count'))
+                    track('log_undone', { kind: 'count', signed_in: false })
+                  })
+                }}
+              >
+                {countTapLabel(activity.targetUnit, progress.done)}
+              </button>
+            )}
+            {!progress.done && !countSkipped && (
+              <SkipLink onSkip={() => skips.skip(activitySkipKey(activity))} />
+            )}
           </span>
         </div>
         {showsHabitVideo(activity.templateId) && (
@@ -497,7 +543,7 @@ export function GuestTodayPage() {
       period: periodForHour(dose.hour),
       minutes: dose.hour * 60 + dose.minute,
       done: isDoseFinished(dose),
-      node: <MedicineDoseRow dose={dose} busy={false} onToggle={toggleDose} />,
+      node: <MedicineDoseRow dose={dose} busy={false} onToggle={toggleDose} onSkip={skipDose} />,
     })),
     ...draft.activities.map((activity) => ({
       key: `activity-${activity.localId}`,
@@ -517,7 +563,11 @@ export function GuestTodayPage() {
           reminder={reminder}
           today={today}
           busy={false}
-          onDone={() => markReminderDone(reminder)}
+          onDone={() => {
+            skips.unskip(`reminder:${reminder.id}`)
+            markReminderDone(reminder)
+          }}
+          onSkip={() => skipReminder(reminder)}
           onMove={(day) => patchReminder(reminder.id, { day })}
           onCancel={() => cancelReminder(reminder)}
         />
@@ -529,7 +579,17 @@ export function GuestTodayPage() {
       period: periodForHour(reminder.hour),
       minutes: reminderMinutes(reminder),
       done: true,
-      node: <ReminderDoneRow reminder={reminder} busy={false} onNotDone={() => reopenReminder(reminder)} />,
+      node: (
+        <ReminderDoneRow
+          reminder={reminder}
+          busy={false}
+          skipped={skips.isSkipped(`reminder:${reminder.id}`)}
+          onNotDone={() => {
+            skips.unskip(`reminder:${reminder.id}`)
+            reopenReminder(reminder)
+          }}
+        />
+      ),
     })),
   ]
 
@@ -579,12 +639,18 @@ function NumberVitalRow({
   activity,
   reading,
   target = null,
+  skipped: skippedToday,
   onSave,
+  onSkip,
+  onUnskip,
 }: {
   activity: GuestActivity
   reading: GuestReading | null
   target?: number | null
+  skipped: boolean
   onSave: (value: number, secondaryValue: number | null) => void
+  onSkip: () => void
+  onUnskip: () => void
 }) {
   const { t, locale } = useLocale()
   const paired = activity.templateId === 'blood_pressure'
@@ -636,50 +702,61 @@ function NumberVitalRow({
         ? t('today.mmHg', { value: `${reading.value}/${reading.secondaryValue}` })
         : t('today.bpmToday', { value: reading.value })
 
+  const skipped = !reading && skippedToday
+
   return (
-    <li className={`today-row today-row-stack today-row-compact item-kind-vital ${paired ? 'today-row-entry' : ''} ${reading ? 'today-row-done' : ''}`}>
+    <li
+      className={`today-row today-row-stack today-row-compact item-kind-vital ${paired && !skipped ? 'today-row-entry' : ''} ${reading || skipped ? 'today-row-done' : ''}`}
+    >
       <div className="today-row-head">
         <HabitMark templateId={activity.templateId} name={visibleName(activity, locale)} emoji={activity.emoji} />
         <span className="activity-name">{visibleName(activity, locale)}</span>
       </div>
       <form className={`today-row-main ${paired ? 'vital-entry' : ''}`} onSubmit={handleSubmit}>
         <span className="activity-meta">
-          <span className="activity-desc">{summary}</span>
+          <span className="activity-desc">{skipped ? t('today.skippedLine') : summary}</span>
         </span>
-        <span className="today-actions">
-          <input
-            className="field-input field-input-sm"
-            type="number"
-            step="any"
-            inputMode={weight ? 'decimal' : 'numeric'}
-            placeholder={
-              paired ? t('today.upper') : steps ? t('today.steps') : weight ? t('today.kg') : t('today.bpm')
-            }
-            value={value}
-            aria-label={
-              paired ? 'Upper blood pressure' : steps ? 'Steps today' : weight ? 'Weight today' : 'Heart rate'
-            }
-            onChange={(event) => setValue(event.target.value)}
-          />
-          {paired && (
-            <input
-              className="field-input field-input-sm"
-              type="number"
-              step="any"
-              inputMode="numeric"
-              placeholder={t('today.lower')}
-              value={secondary}
-              aria-label="Lower blood pressure"
-              onChange={(event) => setSecondary(event.target.value)}
-            />
+        <span className="today-actions today-actions-stack">
+          {skipped ? (
+            <UndoSkipButton onUndo={onUnskip} />
+          ) : (
+            <span className="today-actions-row">
+              <input
+                className="field-input field-input-sm"
+                type="number"
+                step="any"
+                inputMode={weight ? 'decimal' : 'numeric'}
+                placeholder={
+                  paired ? t('today.upper') : steps ? t('today.steps') : weight ? t('today.kg') : t('today.bpm')
+                }
+                value={value}
+                aria-label={
+                  paired ? 'Upper blood pressure' : steps ? 'Steps today' : weight ? 'Weight today' : 'Heart rate'
+                }
+                onChange={(event) => setValue(event.target.value)}
+              />
+              {paired && (
+                <input
+                  className="field-input field-input-sm"
+                  type="number"
+                  step="any"
+                  inputMode="numeric"
+                  placeholder={t('today.lower')}
+                  value={secondary}
+                  aria-label="Lower blood pressure"
+                  onChange={(event) => setSecondary(event.target.value)}
+                />
+              )}
+              <button
+                type="submit"
+                className="btn btn-primary btn-today"
+                disabled={value === '' || (paired && secondary === '')}
+              >
+                {reading ? t('today.update') : t('today.log')}
+              </button>
+            </span>
           )}
-          <button
-            type="submit"
-            className="btn btn-primary btn-today"
-            disabled={value === '' || (paired && secondary === '')}
-          >
-            {reading ? t('today.update') : t('today.log')}
-          </button>
+          {!reading && !skipped && <SkipLink onSkip={onSkip} />}
         </span>
       </form>
     </li>

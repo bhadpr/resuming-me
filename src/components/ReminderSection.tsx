@@ -9,6 +9,7 @@ import {
 } from '../lib/reminderSchedule'
 import { Icon } from './Icon'
 import { ReminderKindMark } from './ReminderKindIcon'
+import { SkipLink, UndoSkipButton } from './TodaySkip'
 
 /** Time, or any time, plus "From Tuesday" when an earlier day is still open. */
 function reminderWhen(
@@ -32,11 +33,12 @@ interface ReminderRowProps {
   today: string
   busy: boolean
   onDone: () => void
+  onSkip: () => void
   onMove: (day: string) => void
   onCancel: () => void
 }
 
-export function ReminderRow({ reminder, today, busy, onDone, onMove, onCancel }: ReminderRowProps) {
+export function ReminderRow({ reminder, today, busy, onDone, onSkip, onMove, onCancel }: ReminderRowProps) {
   const { locale, t } = useLocale()
   const [confirmCancel, setConfirmCancel] = useState(false)
 
@@ -50,10 +52,11 @@ export function ReminderRow({ reminder, today, busy, onDone, onMove, onCancel }:
         <span className="activity-meta">
           <span className="activity-desc">{reminderWhen(reminder, today, locale, t)}</span>
         </span>
-        <span className="today-actions">
+        <span className="today-actions today-actions-stack">
           <button type="button" className="btn btn-primary btn-today" disabled={busy} onClick={onDone}>
             {t('reminders.done')}
           </button>
+          <SkipLink disabled={busy} onSkip={onSkip} />
         </span>
       </div>
       <div className="today-extra">
@@ -94,6 +97,7 @@ export interface ReminderSectionProps {
   busyId: string | null
   onDone: (reminder: Reminder) => void
   onNotDone: (reminder: Reminder) => void
+  onSkip: (reminder: Reminder) => void
   onMove: (reminder: Reminder, day: string) => void
   onCancel: (reminder: Reminder) => void
 }
@@ -101,10 +105,12 @@ export interface ReminderSectionProps {
 export function ReminderDoneRow({
   reminder,
   busy,
+  skipped = false,
   onNotDone,
 }: {
   reminder: Reminder
   busy: boolean
+  skipped?: boolean
   onNotDone: () => void
 }) {
   const { locale, t } = useLocale()
@@ -116,12 +122,18 @@ export function ReminderDoneRow({
       </div>
       <div className="today-row-main">
         <span className="activity-meta">
-          <span className="activity-desc">{reminderWhen(reminder, reminder.day, locale, t)}</span>
+          <span className="activity-desc">
+            {skipped ? t('today.skippedLine') : reminderWhen(reminder, reminder.day, locale, t)}
+          </span>
         </span>
         <span className="today-actions">
-          <button type="button" className="btn btn-secondary btn-today" disabled={busy} onClick={onNotDone}>
-            {t('reminders.notDone')}
-          </button>
+          {skipped ? (
+            <UndoSkipButton disabled={busy} onUndo={onNotDone} />
+          ) : (
+            <button type="button" className="btn btn-secondary btn-today" disabled={busy} onClick={onNotDone}>
+              {t('reminders.notDone')}
+            </button>
+          )}
         </span>
       </div>
     </li>
