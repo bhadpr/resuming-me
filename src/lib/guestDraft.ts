@@ -22,9 +22,9 @@ import {
   type ReminderInput,
 } from './reminderSchedule'
 import { getLocale, t } from './i18n'
-import { canLogPastGoal, countPortion } from './dayStatus'
+import { canLogPastGoal, countPortion, countProgressLabel } from './dayStatus'
 import { endOfWeekSunday, startOfWeekMonday } from './dates'
-import { formatSecondsAsTargetUnit } from './timer'
+import { sessionProgressLabel } from './timer'
 import type { HabitMeasure } from './habitKind'
 import type { ActivityType, TrackingMode } from '../types/database'
 
@@ -715,11 +715,10 @@ export function guestTimerProgress(
   const repeats = activity.type === 'weekly_n' ? Math.max(1, activity.weeklyTarget ?? 1) : 1
   const amount = (activity.targetValue ?? 2) * repeats
   const targetSeconds = activity.targetUnit === 'seconds' ? amount : amount * 60
-  const unitLabel = activity.targetUnit === 'seconds' ? 'sec' : 'min'
   return {
     done: targetSeconds > 0 && seconds >= targetSeconds,
     targetSeconds,
-    label: `${formatSecondsAsTargetUnit(seconds, activity.targetUnit)} / ${amount} ${unitLabel}`,
+    label: sessionProgressLabel(seconds, targetSeconds, activity.targetUnit),
   }
 }
 
@@ -732,12 +731,11 @@ export function guestCountProgress(
     const portion = countPortion(activity.targetUnit, activity.targetValue)
     const value = completions * portion
     const target = activity.targetValue ?? portion
-    const unit = activity.targetUnit === 'g' ? 'g' : 'hours'
-    return { value, target, done: value >= target, label: `${value} ${unit} / ${target} ${unit}` }
+    return { value, target, done: value >= target, label: countProgressLabel(value, target, activity.targetUnit) }
   }
   const target = activity.targetValue ?? 1
   const value = completions
-  return { value, target, done: value >= target, label: `${value}/${target}` }
+  return { value, target, done: value >= target, label: countProgressLabel(value, target, activity.targetUnit) }
 }
 
 /** One tap toward today's count. Protein and fasting can go past the goal. */

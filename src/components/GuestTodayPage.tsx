@@ -252,6 +252,7 @@ export function GuestTodayPage() {
 
           {draft.activities.length > 0 && (
             <section className="today-section">
+              <h3 className="section-label">{t('today.logActivities')}</h3>
               <ul className="today-list today-guest-list">
                 {draft.activities.map((activity) => {
                   if (isStepsHabit(activity)) {
@@ -269,7 +270,7 @@ export function GuestTodayPage() {
                         key={activity.localId}
                         activity={activity}
                         reading={guestReadingOnDate(draft, activity.localId, today)}
-                        target={isStepsHabit(activity) ? activity.targetValue : null}
+                        target={activity.targetValue}
                         onSave={(value, secondaryValue) =>
                           setDraft(
                             upsertGuestReading(draft, {
@@ -310,7 +311,7 @@ export function GuestTodayPage() {
                     return (
                       <li
                         key={activity.localId}
-                        className={`today-row today-row-stack ${rowState}`}
+                        className={`today-row today-row-stack today-row-compact ${rowState}`}
                       >
                         <div className="today-row-head">
                           <HabitMark
@@ -327,10 +328,9 @@ export function GuestTodayPage() {
                               {isRunning
                                 ? `${liveProgress.label}${paused ? ` · ${t('today.paused')}` : ` · ${t('today.running')}`}`
                                 : progress.label}
-                              {partial && !isRunning ? ` · ${t('today.partial')}` : ''}
                               {progress.done && !isRunning ? ` · ${t('today.done')}` : ''}
                             </span>
-                            {!isRunning && (
+                            {!isRunning && loggedSeconds > 0 && (
                               <div className="progress-bar" aria-hidden>
                                 <div
                                   className={`progress-bar-fill ${progress.done ? 'progress-bar-fill-done' : ''}`}
@@ -405,7 +405,7 @@ export function GuestTodayPage() {
                           <div className="today-extra">
                             <button
                               type="button"
-                              className="today-extra-btn"
+                              className="today-extra-btn today-watch"
                               aria-expanded={showVideo}
                               onClick={() =>
                                 setVideoId((current) =>
@@ -436,7 +436,7 @@ export function GuestTodayPage() {
                   return (
                     <li
                       key={activity.localId}
-                      className={`today-row today-row-stack ${progress.done ? 'today-row-done' : ''}`}
+                      className={`today-row today-row-stack today-row-compact ${progress.done ? 'today-row-done' : ''}`}
                     >
                       <div className="today-row-head">
                         <HabitMark
@@ -461,17 +461,19 @@ export function GuestTodayPage() {
                           {activity.targetUnit === 'hr' && (
                             <span className="activity-desc">{t('notes.sleep')}</span>
                           )}
-                          <div className="progress-bar" aria-hidden>
-                            <div
-                              className={`progress-bar-fill ${progress.done ? 'progress-bar-fill-done' : ''}`}
-                              style={{
-                                width: `${Math.min(
-                                  100,
-                                  (progress.value / Math.max(progress.target || 1, 1)) * 100,
-                                )}%`,
-                              }}
-                            />
-                          </div>
+                          {progress.value > 0 && (
+                            <div className="progress-bar" aria-hidden>
+                              <div
+                                className={`progress-bar-fill ${progress.done ? 'progress-bar-fill-done' : ''}`}
+                                style={{
+                                  width: `${Math.min(
+                                    100,
+                                    (progress.value / Math.max(progress.target || 1, 1)) * 100,
+                                  )}%`,
+                                }}
+                              />
+                            </div>
+                          )}
                         </span>
                         <span className="today-actions">
                           <button
@@ -497,7 +499,7 @@ export function GuestTodayPage() {
                         <div className="today-extra">
                           <button
                             type="button"
-                            className="today-extra-btn"
+                            className="today-extra-btn today-watch"
                             aria-expanded={videoId === activity.localId}
                             onClick={() =>
                               setVideoId((current) =>
@@ -509,7 +511,7 @@ export function GuestTodayPage() {
                           </button>
                         </div>
                       )}
-                      {videoId === activity.localId && (
+                      {showsHabitVideo(activity.templateId) && videoId === activity.localId && (
                         <HabitVideoPlaceholder
                           templateId={activity.templateId}
                             name={visibleName(activity, locale)}
@@ -550,6 +552,7 @@ function NumberVitalRow({
   const { t, locale } = useLocale()
   const paired = activity.templateId === 'blood_pressure'
   const steps = activity.templateId === 'steps'
+  const weight = activity.templateId === 'weight'
   const [value, setValue] = useState(reading ? String(reading.value) : '')
   const [secondary, setSecondary] = useState(
     reading?.secondaryValue == null ? '' : String(reading.secondaryValue),
@@ -582,6 +585,12 @@ function NumberVitalRow({
           goal: stepCountLabel(target ?? 10000),
         })
       : t('today.goalSteps', { goal: stepCountLabel(target ?? 10000) })
+    : weight
+      ? reading
+        ? t('today.kgToday', { value: reading.value })
+        : target
+          ? t('today.goalKg', { goal: target })
+          : t('today.weighIn')
     : !reading
       ? paired
         ? t('today.upperLower')
@@ -591,7 +600,7 @@ function NumberVitalRow({
         : t('today.bpmToday', { value: reading.value })
 
   return (
-    <li className="today-row today-row-stack">
+    <li className={`today-row today-row-stack today-row-compact ${paired ? 'today-row-entry' : ''} ${reading ? 'today-row-done' : ''}`}>
       <div className="today-row-head">
         <HabitMark templateId={activity.templateId} name={visibleName(activity, locale)} emoji={activity.emoji} />
         <span className="activity-name">{visibleName(activity, locale)}</span>
@@ -605,10 +614,14 @@ function NumberVitalRow({
             className="field-input field-input-sm"
             type="number"
             step="any"
-            inputMode="numeric"
-            placeholder={paired ? t('today.upper') : steps ? t('today.steps') : t('today.bpm')}
+            inputMode={weight ? 'decimal' : 'numeric'}
+            placeholder={
+              paired ? t('today.upper') : steps ? t('today.steps') : weight ? t('today.kg') : t('today.bpm')
+            }
             value={value}
-            aria-label={paired ? 'Upper blood pressure' : steps ? 'Steps today' : 'Heart rate'}
+            aria-label={
+              paired ? 'Upper blood pressure' : steps ? 'Steps today' : weight ? 'Weight today' : 'Heart rate'
+            }
             onChange={(event) => setValue(event.target.value)}
           />
           {paired && (
@@ -628,7 +641,7 @@ function NumberVitalRow({
             className="btn btn-primary btn-today"
             disabled={value === '' || (paired && secondary === '')}
           >
-            {reading ? 'Update' : 'Log'}
+            {reading ? t('today.update') : t('today.log')}
           </button>
         </span>
       </form>

@@ -1,6 +1,17 @@
 import { describe, expect, it } from 'vitest'
-import { getDayStatus, showedUp, type DayStatusActivity } from './dayStatus'
+import { countProgressLabel, getDayStatus, showedUp, type DayStatusActivity } from './dayStatus'
 import type { LogEntry } from './logs'
+
+describe('countProgressLabel', () => {
+  it('says the goal first, how far along partway, and the amount once met', () => {
+    expect(countProgressLabel(0, 8, 'glasses')).toBe('8 glasses')
+    expect(countProgressLabel(0, 1, 'glasses')).toBe('1 glass')
+    expect(countProgressLabel(3, 8, 'glasses')).toBe('3 of 8 glasses')
+    expect(countProgressLabel(20, 16, 'hours')).toBe('20 hours')
+    expect(countProgressLabel(10, 50, 'g')).toBe('10 of 50 g')
+    expect(countProgressLabel(1, 3, null)).toBe('1 of 3')
+  })
+})
 
 function activity(overrides: Partial<DayStatusActivity> = {}): DayStatusActivity {
   return {

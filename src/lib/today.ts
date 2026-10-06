@@ -11,12 +11,13 @@ import {
 } from './dates'
 import {
   countQualifyingSessions,
-  formatSecondsAsTargetUnit,
+  sessionProgressLabel,
   sumSessionSeconds,
   targetToSeconds,
 } from './timer'
 import {
   countPortion,
+  countProgressLabel,
   getDayStatus,
   isOffWeekday,
   isPausedOnDate,
@@ -247,12 +248,7 @@ export function buildTodayProgress(
     let target = periodTarget(activity)
     let daysRemaining: number | null = null
     let overdue = false
-    let progressLabel =
-      activity.target_unit === 'g'
-        ? `${current} g / ${target} g`
-        : activity.target_unit === 'hours' || activity.target_unit === 'hr'
-          ? `${current} hours / ${target} hours`
-          : `${current}/${target}`
+    let progressLabel = countProgressLabel(current, target, activity.target_unit)
 
     if (actionKind === 'timer' && stacksSessionMinutes(activity)) {
       const fromDay = activity.type === 'weekly_n' ? startOfWeekMonday(today) : today
@@ -260,10 +256,7 @@ export function buildTodayProgress(
       current = sumSessionSeconds(entries, activity.id, fromDay, toDay)
       const repeats = activity.type === 'weekly_n' ? Math.max(1, activity.weekly_target ?? 1) : 1
       target = targetToSeconds(activity) * repeats
-      const shown =
-        activity.target_unit === 'seconds' ? target : Math.round((target / 60) * 10) / 10
-      const unit = activity.target_unit === 'seconds' ? 'sec' : 'min'
-      progressLabel = `${formatSecondsAsTargetUnit(current, activity.target_unit)} / ${shown} ${unit}`
+      progressLabel = sessionProgressLabel(current, target, activity.target_unit)
     } else if (actionKind === 'timer') {
       if (activity.type === 'weekly_n') {
         const minSeconds = targetToSeconds(activity)
@@ -277,7 +270,7 @@ export function buildTodayProgress(
         progressLabel = `${current}/${target} sessions this week`
       } else {
         current = sumSessionSeconds(entries, activity.id, from, to)
-        progressLabel = `${formatSecondsAsTargetUnit(current, activity.target_unit)} / ${activity.target_value ?? 0} ${activity.target_unit ?? 'minutes'}`
+        progressLabel = sessionProgressLabel(current, targetToSeconds(activity), activity.target_unit)
       }
     } else if (activity.type === 'deadline') {
       daysRemaining = activity.deadline
@@ -316,7 +309,7 @@ export function buildTodayProgress(
     })
     const done = dayStatus.status === 'done'
     if (dayStatus.status === 'partial' && actionKind === 'timer' && activity.type === 'daily') {
-      progressLabel = `${formatSecondsAsTargetUnit(current, activity.target_unit)} / ${activity.target_value ?? 0} ${activity.target_unit ?? 'minutes'}`
+      progressLabel = sessionProgressLabel(current, targetToSeconds(activity), activity.target_unit)
     }
     if (dayStatus.status === 'skipped') {
       progressLabel = 'Skipped today'

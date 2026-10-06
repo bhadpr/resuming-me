@@ -75,6 +75,32 @@ export function formatSecondsAsTargetUnit(
   return `${Math.round(minutes)} min`
 }
 
+function minutesText(minutes: number, round: (value: number) => number): string {
+  if (minutes >= 10) return String(round(minutes))
+  const tenths = round(minutes * 10) / 10
+  return Number.isInteger(tenths) ? String(tenths) : tenths.toFixed(1)
+}
+
+/** "2 min" before starting, "1.5 of 2 min" partway, and the time done once the goal is met. */
+export function sessionProgressLabel(
+  seconds: number,
+  targetSeconds: number,
+  unit: string | null,
+): string {
+  const done = Math.max(0, seconds)
+  if (unit === 'seconds') {
+    const goal = Math.round(targetSeconds)
+    if (done <= 0) return `${goal} sec`
+    if (done >= targetSeconds) return `${Math.round(done)} sec`
+    return `${Math.floor(done)} of ${goal} sec`
+  }
+  const goal = minutesText(targetSeconds / 60, Math.round)
+  if (done <= 0) return `${goal} min`
+  if (done >= targetSeconds) return `${minutesText(done / 60, Math.round)} min`
+  if (done < 60) return `${Math.floor(done)} sec of ${goal} min`
+  return `${minutesText(done / 60, Math.floor)} of ${goal} min`
+}
+
 export function computeElapsedSeconds(params: {
   status: 'running' | 'paused'
   accumulatedSeconds: number

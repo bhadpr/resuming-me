@@ -3869,6 +3869,93 @@ select.field-input.language-select {
   text-overflow: unset;
 }
 
+/* Picture on the left, name and status in the middle, the action on the right. */
+.today-row.today-row-compact {
+  display: grid;
+  grid-template-columns: auto minmax(0, 1fr) auto auto;
+  align-items: center;
+  gap: 0.1rem var(--space-3);
+  padding: var(--space-2) var(--space-3);
+}
+
+.today-row.today-row-compact > .today-row-head,
+.today-row.today-row-compact > .today-row-main {
+  display: contents;
+}
+
+.today-row.today-row-compact > .today-row-head > :first-child {
+  grid-column: 1;
+  grid-row: 1 / span 2;
+  width: 3.5rem;
+  height: 3.5rem;
+}
+
+.today-row-compact > .today-row-head > .activity-name {
+  grid-column: 2;
+  grid-row: 1;
+  align-self: end;
+}
+
+.today-row-compact > .today-row-head > .today-status {
+  grid-column: 3;
+  grid-row: 1;
+  align-self: end;
+}
+
+.today-row-compact > .today-row-main > .activity-meta {
+  grid-column: 2 / span 2;
+  grid-row: 2;
+  align-self: start;
+}
+
+.today-row-compact > .today-row-main > .today-actions,
+.today-row-compact > .today-row-main > .metric-log-form {
+  grid-column: 4;
+  grid-row: 1 / span 2;
+}
+
+.today-row-compact .btn-today {
+  min-width: 4.5rem;
+  padding-inline: 0.85rem;
+}
+
+.today-row-compact .field-input-sm {
+  width: 4.5rem;
+}
+
+.today-row-compact.today-row-entry > .today-row-main > .today-actions,
+.today-row-compact.today-row-entry > .today-row-main > .metric-log-form {
+  grid-column: 2 / -1;
+  grid-row: 3;
+  margin-top: var(--space-2);
+}
+
+.today-row-compact > :not(.today-row-head):not(.today-row-main) {
+  grid-column: 1 / -1;
+}
+
+.today-row-stack.today-row-compact > .today-extra {
+  grid-column: 2 / -1;
+  justify-content: flex-start;
+  margin-top: 0;
+  padding-top: 0;
+  border-top: 0;
+}
+
+.today-row-compact .today-extra-btn {
+  min-height: 2.5rem;
+}
+
+.today-watch {
+  color: var(--color-primary);
+}
+
+.today-watch[aria-expanded='false']::before {
+  content: '▶';
+  margin-right: 0.35em;
+  font-size: 0.7em;
+}
+
 .today-timer-elapsed {
   display: flex;
   flex-direction: column;

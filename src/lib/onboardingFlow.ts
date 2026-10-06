@@ -51,9 +51,13 @@ export function isLoggedVital(activity: {
   return activity.templateId != null && LOGGED_VITAL_IDS.has(activity.templateId)
 }
 
-/** Blood pressure and heart rate are typed in. They do not use Start. */
+/** Weight, blood pressure, and heart rate are typed in. They do not use Start. */
 export function isNumberEntryVital(activity: Pick<GuestActivity, 'templateId'>): boolean {
-  return activity.templateId === 'blood_pressure' || activity.templateId === 'heart_rate'
+  return (
+    activity.templateId === 'weight' ||
+    activity.templateId === 'blood_pressure' ||
+    activity.templateId === 'heart_rate'
+  )
 }
 
 /** Water, protein, fasting, sleep, and a typed gram goal ask for a daily amount. */
@@ -117,9 +121,9 @@ export function playsVideoWithTimer(templateId: string | null | undefined): bool
   return FOLLOW_ALONG_IDS.has(templateId) || habitVideoFor(templateId) != null
 }
 
-/** Walking and Running skip the video UI — no instructional clip. */
+/** Only habits with a real clip offer Watch on Today. */
 export function showsHabitVideo(templateId: string | null | undefined): boolean {
-  return templateId !== 'walk' && templateId !== 'running'
+  return habitVideoFor(templateId) != null
 }
 
 /** Caption under the habit video (real clip or placeholder). */

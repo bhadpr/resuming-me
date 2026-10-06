@@ -3,6 +3,7 @@ import {
   computeElapsedSeconds,
   formatDuration,
   isTimerTargetMet,
+  sessionProgressLabel,
   sumSessionSeconds,
 } from './timer'
 import type { Activity } from './activities'
@@ -80,6 +81,16 @@ describe('timer math', () => {
   it('formats durations', () => {
     expect(formatDuration(65)).toBe('1:05')
     expect(formatDuration(3661)).toBe('1:01:01')
+  })
+
+  it('says the goal before starting, how far along partway, and the time once met', () => {
+    expect(sessionProgressLabel(0, 120, 'minutes')).toBe('2 min')
+    expect(sessionProgressLabel(40, 120, 'minutes')).toBe('40 sec of 2 min')
+    expect(sessionProgressLabel(60, 120, 'minutes')).toBe('1 of 2 min')
+    expect(sessionProgressLabel(119, 120, 'minutes')).toBe('1.9 of 2 min')
+    expect(sessionProgressLabel(120, 120, 'minutes')).toBe('2 min')
+    expect(sessionProgressLabel(900, 600, 'minutes')).toBe('15 min')
+    expect(sessionProgressLabel(10, 30, 'seconds')).toBe('10 of 30 sec')
   })
 })
 

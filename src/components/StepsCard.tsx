@@ -56,7 +56,7 @@ export function StepsCard({
   const art = habitArtFor({ templateId: 'steps' })
 
   return (
-    <li className="today-row today-row-stack">
+    <li className="today-row today-row-stack today-row-compact">
       <div className="today-row-head">
         {art ? <img className="steps-card-art" src={art} alt="" /> : null}
         <span className="activity-name">{t('today.steps')}</span>
@@ -64,24 +64,28 @@ export function StepsCard({
       <div className="today-row-main">
         <span className="activity-meta">
           <span className="activity-desc">
-            {t('today.stepsToday', {
-              value: countLabel,
-              goal: formatStepCount(goal, locale),
-            })}
+            {fromPhone
+              ? t('today.stepsToday', {
+                  value: countLabel,
+                  goal: formatStepCount(goal, locale),
+                })
+              : t('today.goalSteps', { goal: formatStepCount(goal, locale) })}
           </span>
           {phoneState === 'unavailable' && (
             <span className="activity-desc">{t('today.stepsFromPhone')}</span>
           )}
         </span>
         {showPhoneButton && (
-          <button
-            type="button"
-            className="btn btn-secondary btn-today"
-            disabled={asking}
-            onClick={() => void connect()}
-          >
-            {t('today.stepsPhone')}
-          </button>
+          <span className="today-actions">
+            <button
+              type="button"
+              className="btn btn-secondary btn-today"
+              disabled={asking}
+              onClick={() => void connect()}
+            >
+              {t('today.stepsPhone')}
+            </button>
+          </span>
         )}
       </div>
     </li>

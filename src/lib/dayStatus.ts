@@ -27,6 +27,24 @@ export function countPortion(unit: string | null | undefined, target?: number | 
   return 1
 }
 
+/** "8 glasses" before the first tap, "3 of 8 glasses" partway, "8 glasses" once met. */
+export function countProgressLabel(
+  value: number,
+  target: number,
+  unit: string | null | undefined,
+): string {
+  const word = (amount: number): string => {
+    if (unit === 'g') return 'g'
+    if (unit === 'hours' || unit === 'hr') return amount === 1 ? 'hour' : 'hours'
+    if (unit === 'glasses') return amount === 1 ? 'glass' : 'glasses'
+    return ''
+  }
+  if (!word(target)) return `${value} of ${target}`
+  if (value <= 0) return `${target} ${word(target)}`
+  if (value >= target) return `${value} ${word(value)}`
+  return `${value} of ${target} ${word(target)}`
+}
+
 /** Protein and fasting can keep logging after the goal is met. */
 export function canLogPastGoal(unit: string | null | undefined): boolean {
   return unit === 'g' || unit === 'hours' || unit === 'hr'

@@ -146,14 +146,14 @@ describe('guest draft storage', () => {
     expect(guestCountProgress(
       { targetValue: 20, targetUnit: 'g' },
       1,
-    )).toMatchObject({ value: 5, done: false, label: '5 g / 20 g' })
+    )).toMatchObject({ value: 5, done: false, label: '5 of 20 g' })
     let next = loaded!
     for (let tap = 0; tap < 4; tap += 1) next = appendGuestCount(next, 'p', '2026-09-23')
     expect(loadGuestDraft()?.logs).toHaveLength(5)
     expect(guestCountProgress({ targetValue: 20, targetUnit: 'g' }, 5)).toMatchObject({
       value: 25,
       done: true,
-      label: '25 g / 20 g',
+      label: '25 g',
     })
     draft = upsertGuestActivity(loadGuestDraft()!, {
       ...activity('f', 'Fasting'),
@@ -168,7 +168,7 @@ describe('guest draft storage', () => {
     expect(guestCountProgress({ targetValue: 4, targetUnit: 'hours' }, 2)).toMatchObject({
       value: 8,
       done: true,
-      label: '8 hours / 4 hours',
+      label: '8 hours',
     })
   })
 
@@ -199,7 +199,7 @@ describe('guest draft storage', () => {
     expect(guestSessionSeconds(draft, 'b', '2026-09-22')).toBe(132)
     expect(guestTimerProgress({ targetValue: 3, targetUnit: 'minutes' }, 132)).toMatchObject({
       done: false,
-      label: '2.2 min / 3 min',
+      label: '2.2 of 3 min',
     })
 
     draft = appendGuestLog(draft, {
@@ -252,7 +252,7 @@ describe('guest draft storage', () => {
     expect(guestSessionSeconds(draft, 'w', '2026-09-23')).toBe(60)
     expect(guestTimerProgress({ targetValue: 5, targetUnit: 'minutes' }, 60)).toMatchObject({
       done: false,
-      label: '1.0 min / 5 min',
+      label: '1 of 5 min',
     })
     for (let bout = 0; bout < 4; bout += 1) {
       draft = appendGuestLog(draft, {
@@ -292,7 +292,7 @@ describe('guest draft storage', () => {
     expect(guestTimerProgress({ targetValue: 3, targetUnit: 'minutes' }, 0)).toMatchObject({
       done: false,
       targetSeconds: 180,
-      label: '0.0 min / 3 min',
+      label: '3 min',
     })
     draft = appendGuestLog(draft, {
       localActivityId: 'b',

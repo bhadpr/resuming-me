@@ -369,7 +369,7 @@ export function TodayScreen({
                 {[...pendingMetrics, ...loggedMetrics].map(({ metric, entry }) => (
                   <li
                     key={metric.id}
-                    className={`today-row today-row-stack ${entry ? 'today-row-done' : ''}`}
+                    className={`today-row today-row-stack today-row-compact ${isBloodPressure(metric) ? 'today-row-entry' : ''} ${entry ? 'today-row-done' : ''}`}
                   >
                     <div className="today-row-head">
                       <HabitMark name={visibleName(metric, locale)} templateId={metric.template_id} />
@@ -391,7 +391,7 @@ export function TodayScreen({
                         onLog={onLogMetric}
                         initialValue={entry ? String(entry.value) : ''}
                         initialSecondary={entry?.secondary_value == null ? '' : String(entry.secondary_value)}
-                        submitLabel={entry ? 'Update' : 'Log'}
+                        submitLabel={entry ? t('today.update') : t('today.log')}
                       />
                     </div>
                   </li>
@@ -726,7 +726,7 @@ function TodayActivityRow({
 
   return (
     <li
-      className={`today-row today-row-stack ${hero ? 'today-row-hero' : ''} ${rowStateClass} ${row.overdue ? 'today-row-overdue' : ''}`}
+      className={`today-row today-row-stack today-row-compact ${hero ? 'today-row-hero' : ''} ${rowStateClass} ${row.overdue ? 'today-row-overdue' : ''}`}
     >
       <div className="today-row-head">
         <HabitMark name={visibleName(activity, locale)} emoji={activity.emoji} templateId={activity.template_id} />
@@ -737,7 +737,6 @@ function TodayActivityRow({
         <span className="activity-meta">
           <span className="activity-desc">
             {desc}
-            {partial ? ` · ${t('today.partial')}` : ''}
             {done ? ` · ${t('today.done')}` : ''}
             {skipped ? ` · ${t('today.skipped')}` : ''}
           </span>
@@ -750,7 +749,7 @@ function TodayActivityRow({
           {activity.target_unit === 'hr' && (
             <span className="activity-desc">{SLEEP_HOURS_NOTE}</span>
           )}
-          {actionKind !== 'deadline' && !isThisTimer && !skipped && (
+          {actionKind !== 'deadline' && !isThisTimer && !skipped && current > 0 && (
             <div className="progress-bar" aria-hidden>
               <div
                 className={`progress-bar-fill ${done ? 'progress-bar-fill-done' : ''}`}
@@ -869,11 +868,11 @@ function TodayActivityRow({
           {canShowVideo && (
             <button
               type="button"
-              className="today-extra-btn"
+              className="today-extra-btn today-watch"
               aria-expanded={videoOpen}
               onClick={() => setVideoOpen((open) => !open)}
             >
-              {videoOpen ? 'Hide video' : 'Video'}
+              {videoOpen ? t('today.hideVideo') : t('today.video')}
             </button>
           )}
           {actionKind === 'timer' && !skipped && (
