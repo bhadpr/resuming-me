@@ -5078,36 +5078,36 @@ select.field-input.language-select {
   box-shadow: 0 -8px 28px color-mix(in srgb, #1a1614 4%, transparent);
 }
 
-/* Sky theme — chunky buttons that press down onto a ledge */
+/* Sky theme — flat sky-blue and butter buttons */
 [data-theme='sky'] .btn-primary:not(:disabled) {
   background: var(--sky-button);
   color: var(--sky-button-text);
   font-weight: var(--weight-bold);
-  box-shadow: 0 4px 0 0 var(--sky-button-ledge);
+  box-shadow: none;
 }
 
 [data-theme='sky'] .btn-primary:hover:not(:disabled) {
   background: var(--sky-button-hover);
-  box-shadow: 0 4px 0 0 var(--sky-button-ledge);
+  box-shadow: none;
 }
 
 [data-theme='sky'] .btn-secondary:not(:disabled) {
   background: var(--sunny-button);
   color: var(--sunny-button-text);
   font-weight: var(--weight-bold);
-  border-color: var(--sunny-button-ledge);
-  box-shadow: 0 4px 0 0 var(--sunny-button-ledge);
+  border-color: var(--sunny-button-edge);
 }
 
 [data-theme='sky'] .btn-secondary:hover:not(:disabled) {
   background: var(--sunny-button-hover);
-  border-color: var(--sunny-button-ledge);
+  border-color: var(--sunny-button-edge);
 }
 
 [data-theme='sky'] .btn-primary:active:not(:disabled),
 [data-theme='sky'] .btn-secondary:active:not(:disabled) {
-  transform: translateY(4px);
-  box-shadow: inset 0 0 30px color-mix(in srgb, #000 10%, transparent);
+  transform: none;
+  box-shadow: none;
+  filter: brightness(0.96);
 }
 
 [data-theme='sky'] .today-row,
