@@ -762,37 +762,54 @@ select.field-input.language-select {
   gap: var(--space-3);
 }
 
+/* One cream scene, not a row of tiles. The colours match the clay pictures' own background. */
 .start-preview {
-  display: grid;
-  grid-template-columns: 1fr 1fr;
-  gap: var(--space-4) var(--space-3);
-  margin: var(--space-2) 0 var(--space-3);
-  padding: 0;
-  list-style: none;
-}
-
-.start-preview.is-three {
-  grid-template-columns: repeat(3, minmax(0, 1fr));
-}
-
-.start-preview li {
+  --preview-scene: #f7e8d5;
+  --preview-caption: #6f5f4e;
   display: flex;
   flex-direction: column;
   align-items: center;
   gap: var(--space-2);
-  min-width: 0;
-  font-weight: var(--weight-semibold);
-  line-height: 1.2;
-  text-align: center;
-  overflow-wrap: anywhere;
+  margin: var(--space-2) 0 var(--space-3);
+  padding: var(--space-3) var(--space-3) var(--space-4);
+  border-radius: var(--radius);
+  background: var(--preview-scene);
 }
 
-.start-preview li .activity-emoji-art,
-.start-preview li .habit-mark,
-.start-preview li .start-preview-img {
+[data-theme='sky'] .start-preview {
+  --preview-scene: #eff9ff;
+  --preview-caption: #4d6577;
+}
+
+.start-preview-pics {
+  display: flex;
+  flex-wrap: wrap;
+  justify-content: center;
+}
+
+.start-preview-pics > span {
+  display: flex;
   width: 5rem;
   height: 5rem;
-  border-radius: 22%;
+  margin-inline: -0.45rem;
+  overflow: hidden;
+  -webkit-mask-image: radial-gradient(circle, #000 58%, transparent 72%);
+  mask-image: radial-gradient(circle, #000 58%, transparent 72%);
+}
+
+.start-preview .start-preview-pics .activity-emoji-art,
+.start-preview .start-preview-pics .habit-mark,
+.start-preview .start-preview-pics .start-preview-img {
+  width: 100%;
+  height: 100%;
+  border-radius: 0;
+  box-shadow: none;
+  transform: scale(1.12);
+}
+
+.start-preview .start-preview-pics .habit-mark {
+  background: none;
+  transform: none;
 }
 
 .start-preview-img {
@@ -800,29 +817,21 @@ select.field-input.language-select {
   object-fit: cover;
 }
 
+.start-preview figcaption {
+  color: var(--preview-caption);
+  font-size: var(--text-sm);
+  line-height: var(--leading-body);
+  text-align: center;
+}
+
 .start-preview.is-compact {
-  grid-template-columns: repeat(4, minmax(0, 1fr));
-  gap: var(--space-3) var(--space-2);
   margin: 0 0 var(--space-2);
 }
 
-.start-preview.is-compact li {
-  gap: var(--space-1);
-  font-size: var(--text-xs);
-}
-
-.start-preview.is-compact li span {
-  display: -webkit-box;
-  -webkit-box-orient: vertical;
-  -webkit-line-clamp: 2;
-  overflow: hidden;
-}
-
-.start-preview.is-compact li .activity-emoji-art,
-.start-preview.is-compact li .habit-mark,
-.start-preview.is-compact li .start-preview-img {
-  width: 3.5rem;
-  height: 3.5rem;
+.start-preview.is-compact .start-preview-pics > span {
+  width: 4rem;
+  height: 4rem;
+  margin-inline: -0.35rem;
 }
 
 .start-medicine-list {

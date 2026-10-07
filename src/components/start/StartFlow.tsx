@@ -1,7 +1,7 @@
 import { useEffect, useRef, useState, type ReactNode } from 'react'
 import { useNavigate } from 'react-router-dom'
 import { ACTIVITY_TEMPLATES, HABIT_GROUPS, activityInputFromTemplate, templateById } from '../../data/activityTemplates'
-import { HABIT_ART, habitSizeArtFor } from '../../data/habitArt'
+import { HABIT_ART, habitArtFor, habitSizeArtFor } from '../../data/habitArt'
 import { HabitIcon } from '../HabitIcon'
 import { HabitMark } from '../HabitMark'
 import { HabitVideoPlaceholder } from '../HabitVideoPlaceholder'
@@ -97,16 +97,21 @@ function StartPreview({
   items: { id: string; mark: ReactNode; label: ReactNode }[]
   compact?: boolean
 }) {
-  const layout = compact ? ' is-compact' : items.length === 3 ? ' is-three' : ''
+  if (items.length === 0) return null
   return (
-    <ul className={`start-preview${layout}`}>
-      {items.map((item) => (
-        <li key={item.id}>
-          {item.mark}
-          <span>{item.label}</span>
-        </li>
-      ))}
-    </ul>
+    <figure className={`start-preview${compact ? ' is-compact' : ''}`}>
+      <div className="start-preview-pics" aria-hidden>
+        {items.map((item) => (item.mark ? <span key={item.id}>{item.mark}</span> : null))}
+      </div>
+      <figcaption>
+        {items.map((item, index) => (
+          <span key={item.id}>
+            {index > 0 && ' · '}
+            {item.label}
+          </span>
+        ))}
+      </figcaption>
+    </figure>
   )
 }
 
@@ -2372,7 +2377,9 @@ export function StartFlow({
             items={[
               ...draft.activities.map((activity) => ({
                 id: `a-${activity.localId}`,
-                mark: <HabitMark templateId={activity.templateId} name={activity.name} />,
+                mark: habitArtFor(activity) ? (
+                  <HabitMark templateId={activity.templateId} name={activity.name} />
+                ) : null,
                 label: visibleName(activity, locale),
               })),
               ...draft.medicines.map((medicine, index) => ({
