@@ -129,6 +129,8 @@ function PrivacyContent() {
           step count from Health Connect on your phone and shows it on Today. We do
           not write steps to Health Connect, and we do not send that count to our
           servers. A number you type, and your daily step goal, stay on this device.
+          Our use of information received from Health Connect follows the Health
+          Connect Permissions policy, including its Limited Use requirements.
         </li>
         <li>
           <strong>Feedback.</strong> If you submit feedback, we store your rating,

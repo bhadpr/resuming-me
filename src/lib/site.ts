@@ -68,8 +68,8 @@ export const GOVERNING_LAW = 'the State of Washington, United States'
 export const LEGAL_LAST_UPDATED = `September 23, ${COPYRIGHT_YEAR}`
 
 /** Shown on the Privacy Policy and the Terms. */
-export const PRIVACY_LAST_UPDATED = `October 5, ${COPYRIGHT_YEAR}`
-export const TERMS_LAST_UPDATED = PRIVACY_LAST_UPDATED
+export const PRIVACY_LAST_UPDATED = `October 7, ${COPYRIGHT_YEAR}`
+export const TERMS_LAST_UPDATED = `October 5, ${COPYRIGHT_YEAR}`
 
 export interface SocialLink {
   id: SocialLinkId
