@@ -1,4 +1,4 @@
-import { useEffect, useRef, useState, type ReactNode } from 'react'
+import { useEffect, useRef, useState, type CSSProperties, type ReactNode } from 'react'
 import { useNavigate } from 'react-router-dom'
 import { ACTIVITY_TEMPLATES, HABIT_GROUPS, activityInputFromTemplate, templateById } from '../../data/activityTemplates'
 import { HABIT_ART, habitArtFor, habitSizeArtFor } from '../../data/habitArt'
@@ -98,11 +98,17 @@ function StartPreview({
   compact?: boolean
 }) {
   if (items.length === 0) return null
+  const pictures = items.filter((item) => item.mark)
+  const columns = { '--preview-cols': Math.min(pictures.length, 4) } as CSSProperties
   return (
     <figure className={`start-preview${compact ? ' is-compact' : ''}`}>
-      <div className="start-preview-pics" aria-hidden>
-        {items.map((item) => (item.mark ? <span key={item.id}>{item.mark}</span> : null))}
-      </div>
+      {pictures.length > 0 && (
+        <div className="start-preview-pics" style={columns} aria-hidden>
+          {pictures.map((item) => (
+            <span key={item.id}>{item.mark}</span>
+          ))}
+        </div>
+      )}
       <figcaption>
         {items.map((item, index) => (
           <span key={item.id}>

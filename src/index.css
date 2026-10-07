@@ -781,17 +781,19 @@ select.field-input.language-select {
   --preview-caption: #4d6577;
 }
 
+/* Columns shrink and the gap grows with the screen, so pictures never touch. */
 .start-preview-pics {
-  display: flex;
-  flex-wrap: wrap;
+  --preview-cols: 4;
+  display: grid;
+  grid-template-columns: repeat(var(--preview-cols), minmax(0, 5rem));
   justify-content: center;
+  gap: clamp(0.5rem, 3vw, 1.75rem);
+  width: 100%;
 }
 
 .start-preview-pics > span {
   display: flex;
-  width: 5rem;
-  height: 5rem;
-  margin-inline: -0.45rem;
+  aspect-ratio: 1;
   overflow: hidden;
   -webkit-mask-image: radial-gradient(circle, #000 58%, transparent 72%);
   mask-image: radial-gradient(circle, #000 58%, transparent 72%);
@@ -828,10 +830,9 @@ select.field-input.language-select {
   margin: 0 0 var(--space-2);
 }
 
-.start-preview.is-compact .start-preview-pics > span {
-  width: 4rem;
-  height: 4rem;
-  margin-inline: -0.35rem;
+.start-preview.is-compact .start-preview-pics {
+  grid-template-columns: repeat(var(--preview-cols), minmax(0, 4rem));
+  gap: clamp(0.25rem, 2vw, 1rem) clamp(0.5rem, 3vw, 1.25rem);
 }
 
 .start-medicine-list {
