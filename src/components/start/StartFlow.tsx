@@ -81,7 +81,7 @@ const START_VITALS: { id: string; label: string; caption?: string }[] = [
 const PRANAYAM_IDS = ['anuloma_viloma', 'kapalabhati', 'bhastrika', 'bhramari'] as const
 const WORKOUT_IDS = ['walk', 'running', 'steps', 'exercise', 'stretching'] as const
 const HEART_IDS = ['relaxation', 'meditate', 'rejuvenation', 'prayer'] as const
-const VITAL_IDS = ['weight', 'blood_pressure', 'steps'] as const
+const VITAL_IDS = ['blood_pressure', 'weight', 'heart_rate', 'steps'] as const
 
 const START_FEATURED: { id: string; labelKey: string }[] = [
   { id: 'walk', labelKey: 'start.featuredWalk' },
@@ -305,12 +305,15 @@ export function StartFlow({
   onDraft,
   onGoogle,
   adding = false,
+  addingVitals = false,
   addingMedicine = false,
 }: {
   draft: GuestDraft
   onDraft: (draft: GuestDraft) => void
   onGoogle: () => Promise<void>
   adding?: boolean
+  /** Add mode from the Vitals tab: only vitals, then back to that tab. */
+  addingVitals?: boolean
   /** One more bottle from the Vitals tab, then back to that tab. */
   addingMedicine?: boolean
 }) {
@@ -654,7 +657,13 @@ export function StartFlow({
 
   function declineVitals() {
     const next = draft.activities.reduce((current, activity) => {
-      if (activity.templateId !== 'weight' && activity.templateId !== 'blood_pressure') return current
+      if (
+        activity.templateId !== 'weight' &&
+        activity.templateId !== 'blood_pressure' &&
+        activity.templateId !== 'heart_rate'
+      ) {
+        return current
+      }
       return removeGuestActivity(current, activity.localId)
     }, draft)
     finishVitals(next)
@@ -812,7 +821,7 @@ export function StartFlow({
       const added = next.activities.some((item) => !keptIds.current?.has(item.localId))
       if (!added) return
       finishStep(1, choiceCode(next.activities.map((item) => item.templateId ?? 'custom')), next)
-      navigate('/today')
+      navigate(addingVitals ? '/numbers' : '/today')
       return
     }
     finishStep(
@@ -1727,6 +1736,14 @@ export function StartFlow({
           </button>
           <h2 className="screen-heading start-medicine-title">{t('start.vitalsBody')}</h2>
           <p className="screen-sub">{t('start.vitalsLike')}</p>
+          <ul className="start-vital-preview">
+            {VITAL_IDS.map((id) => (
+              <li key={id}>
+                <HabitMark templateId={id} />
+                <span>{templateLabel(id, locale)}</span>
+              </li>
+            ))}
+          </ul>
           <div className="start-yes-no">
             <button type="button" className="btn btn-primary" onClick={acceptVitals}>
               {t('landing.yes')}
@@ -1809,7 +1826,50 @@ export function StartFlow({
         )
       })()}
 
-      {draft.step === 1 && !trackName && (adding || draft.pickPhase === 'activities') && (
+      {draft.step === 1 && !trackName && adding && addingVitals && (() => {
+        const options = VITAL_IDS.filter((id) => {
+          const existing = draft.activities.find((activity) => activity.templateId === id)
+          return !(existing && keptIds.current?.has(existing.localId))
+        })
+        return (
+          <>
+            <h1 className="screen-heading">{t('list.addVital')}</h1>
+            <p className="screen-sub">
+              {options.length > 0 ? t('start.vitalsSub') : t('start.vitalsAllAdded')}
+            </p>
+            <div className="start-featured">
+              {options.map((id) => {
+                const selected = draft.activities.some((activity) => activity.templateId === id)
+                return (
+                  <button
+                    key={id}
+                    type="button"
+                    className={`start-featured-option${selected ? ' is-selected' : ''}`}
+                    disabled={selectionFull(id, selected)}
+                    aria-pressed={selected}
+                    onClick={() => toggleTemplate(id)}
+                  >
+                    <HabitMark templateId={id} />
+                    <span>{templateLabel(id, locale)}</span>
+                  </button>
+                )
+              })}
+            </div>
+            <div className="start-flow-footer">
+              <button
+                type="button"
+                className="btn btn-primary"
+                disabled={continueCount === 0}
+                onClick={continueFromPick}
+              >
+                {continueCount === 0 ? t('start.pickOne') : continueLabel(continueCount)}
+              </button>
+            </div>
+          </>
+        )
+      })()}
+
+      {draft.step === 1 && !trackName && (adding ? !addingVitals : draft.pickPhase === 'activities') && (
         <>
           {!adding && (
             <button

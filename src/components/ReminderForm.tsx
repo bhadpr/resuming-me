@@ -139,12 +139,12 @@ export function ReminderForm({ initial, today, saving, error, onSubmit, onDelete
           <button
             key={choice}
             type="button"
-            className={`${choiceClass(kind === choice)} reminder-kind`}
+            className={`reminder-kind${kind === choice ? ' is-selected' : ''}`}
             aria-pressed={kind === choice}
             onClick={() => setKind((current) => (current === choice ? null : choice))}
           >
             <ReminderKindMark kind={choice} />
-            {t(`reminders.kinds.${choice}`)}
+            <span className="reminder-kind-label">{t(`reminders.kinds.${choice}`)}</span>
           </button>
         ))}
       </div>

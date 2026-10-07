@@ -65,6 +65,7 @@ export function StartPage() {
           onDraft={update}
           onGoogle={signInWithGoogle}
           adding={params.get('add') === '1'}
+          addingVitals={params.get('add') === '1' && params.get('vital') === '1'}
           addingMedicine={params.get('medicine') === '1'}
         />
       </div>

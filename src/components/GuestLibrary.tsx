@@ -162,7 +162,7 @@ export function GuestVitalsPage() {
         addLabel={t('list.addVital')}
         kind="vital"
         items={vitals}
-        onAdd={() => navigate('/start?step=1&add=1')}
+        onAdd={() => navigate('/start?step=1&add=1&vital=1')}
       />
       <section className="medicine-section">
         <div className="screen-heading">
