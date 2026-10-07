@@ -210,7 +210,7 @@ export const en = {
   },
   medicines: {
     title: 'Medicines',
-    sub: 'A reminder for the bottle, on the days you take it.',
+    sub: 'What you take, and when to take it.',
     add: 'Add medicine',
     empty: 'None yet. Add one when you want a reminder.',
     loading: 'Loading…',
@@ -304,7 +304,7 @@ export const en = {
     from: 'From {day}',
     doneToday: 'Done today ({count})',
     doneToast: 'Done: {text}',
-    sub: 'One-off things to do on a day.',
+    sub: 'One-time things, like a call or a visit.',
     empty: 'Nothing to remember yet. Add one when something needs doing.',
     partTimes: 'Reminder times',
     partTimesHint: 'Morning, Afternoon, and Evening use these times on new reminders.',
@@ -391,8 +391,8 @@ export const en = {
   },
   list: {
     add: 'Add',
-    activitySub: 'What you want to pick back up.',
-    vitalSub: 'Numbers you check in on.',
+    activitySub: 'Daily habits, like walking or yoga.',
+    vitalSub: 'Numbers you track, like weight or blood pressure.',
     empty: 'Nothing here yet',
     activityEmpty: 'Not chores to clear. A walk, a weekly practice, or a due date you keep moving.',
     vitalEmpty: 'Weight, steps, blood pressure, or another number you want to keep.',
