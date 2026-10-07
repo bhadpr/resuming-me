@@ -65,7 +65,7 @@ export const gu: DeepString<typeof en> = {
     pranayamReady: 'અનુલોમ વિલોમથી શરૂ કરીશું.',
     pranayamSub: 'થોડી મિનિટ પૂરતી છે. જોઈએ તો બીજું ઉમેરો.',
     workoutBody: 'નિયમિત કસરત શરૂ કરવા માંગો છો?',
-    workoutLike: 'જેમ કે ચાલવું, દોડ, તાકાત, યોગ, અને આવી આદતો.',
+    workoutLike: 'નાનાથી શરૂ કરો. દસ મિનિટ પણ પૂરતી છે.',
     workoutReady: 'કઈ કસરત જોઈએ?',
     workoutSub: 'થોડી પૂરતી છે. જોઈએ તો બીજું ઉમેરો.',
     heartfulnessBody: 'હાર્ટફુલનેસ ધ્યાનની પ્રેક્ટિસ શરૂ કરવા માંગો છો?',

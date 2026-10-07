@@ -65,7 +65,7 @@ export const mr: DeepString<typeof en> = {
     pranayamReady: 'अनुलोम विलोमने सुरुवात करू.',
     pranayamSub: 'काही मिनिटे पुरे आहेत. हवे तर आणखी एक जोडा.',
     workoutBody: 'नियमित व्यायाम सुरू करायचा आहे का?',
-    workoutLike: 'चालणे, धावणे, ताकद, योग, आणि असेच.',
+    workoutLike: 'लहान सुरुवात करा. दहा मिनिटेही पुरेशी आहेत.',
     workoutReady: 'कोणते व्यायाम हवे आहेत?',
     workoutSub: 'थोडे पुरे आहे. हवे तर आणखी एक जोडा.',
     heartfulnessBody: 'हार्टफुलनेस ध्यान सुरू करायचा आहे का?',

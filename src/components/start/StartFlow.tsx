@@ -1,4 +1,4 @@
-import { useEffect, useRef, useState } from 'react'
+import { useEffect, useRef, useState, type ReactNode } from 'react'
 import { useNavigate } from 'react-router-dom'
 import { ACTIVITY_TEMPLATES, HABIT_GROUPS, activityInputFromTemplate, templateById } from '../../data/activityTemplates'
 import { HABIT_ART, habitSizeArtFor } from '../../data/habitArt'
@@ -82,6 +82,33 @@ const PRANAYAM_IDS = ['anuloma_viloma', 'kapalabhati', 'bhastrika', 'bhramari'] 
 const WORKOUT_IDS = ['walk', 'running', 'steps', 'exercise', 'stretching'] as const
 const HEART_IDS = ['relaxation', 'meditate', 'rejuvenation', 'prayer'] as const
 const VITAL_IDS = ['blood_pressure', 'weight', 'heart_rate', 'steps'] as const
+
+/** Pictures under each yes/no question, so people see what they would get. */
+const MEDICINE_PREVIEW = ['allopathic', 'ayurvedic', 'homeopathic'] as const
+const REMINDER_PREVIEW = ['bill', 'doctor', 'errand', 'event'] as const
+const WORKOUT_PREVIEW = ['walk', 'running', 'exercise', 'stretching'] as const
+/** Rejuvenation shares the meditate picture, so it stays out of the preview. */
+const HEART_PREVIEW = ['relaxation', 'meditate', 'prayer'] as const
+
+function StartPreview({
+  items,
+  compact = false,
+}: {
+  items: { id: string; mark: ReactNode; label: ReactNode }[]
+  compact?: boolean
+}) {
+  const layout = compact ? ' is-compact' : items.length === 3 ? ' is-three' : ''
+  return (
+    <ul className={`start-preview${layout}`}>
+      {items.map((item) => (
+        <li key={item.id}>
+          {item.mark}
+          <span>{item.label}</span>
+        </li>
+      ))}
+    </ul>
+  )
+}
 
 const START_FEATURED: { id: string; labelKey: string }[] = [
   { id: 'walk', labelKey: 'start.featuredWalk' },
@@ -320,6 +347,10 @@ export function StartFlow({
   const navigate = useNavigate()
   const { locale, t } = useLocale()
   const themed = useThemedArt()
+
+  function habitPreview(ids: readonly string[]) {
+    return ids.map((id) => ({ id, mark: <HabitMark templateId={id} />, label: templateLabel(id, locale) }))
+  }
   const [gapIndex, setGapIndex] = useState(0)
   const [sizeIndex, setSizeIndex] = useState(0)
   const [pranayamIndex, setPranayamIndex] = useState(0)
@@ -1284,6 +1315,13 @@ export function StartFlow({
           <h1 className="screen-heading">{t('start.pick')}</h1>
           <p className="screen-sub">{t('start.pickSub')}</p>
           <h2 className="screen-heading start-medicine-title">{t('start.medicineBody')}</h2>
+          <StartPreview
+            items={MEDICINE_PREVIEW.map((system) => ({
+              id: system,
+              mark: <MedicineThumb system={system} className="start-preview-img" />,
+              label: t(`medicines.${system}`),
+            }))}
+          />
           <div className="start-yes-no">
             <button
               type="button"
@@ -1401,6 +1439,13 @@ export function StartFlow({
             {t('start.back')}
           </button>
           <h2 className="screen-heading start-medicine-title">{t('start.reminderAskBody')}</h2>
+          <StartPreview
+            items={REMINDER_PREVIEW.map((kind) => ({
+              id: kind,
+              mark: <ReminderKindMark kind={kind} />,
+              label: t(`reminders.kinds.${kind}`),
+            }))}
+          />
           <div className="start-yes-no">
             <button
               type="button"
@@ -1504,6 +1549,7 @@ export function StartFlow({
             {t('start.back')}
           </button>
           <h2 className="screen-heading start-medicine-title">{t('start.pranayamBody')}</h2>
+          <StartPreview items={habitPreview(PRANAYAM_IDS)} />
           <div className="start-yes-no">
             <button type="button" className="btn btn-primary" onClick={acceptPranayam}>
               {t('landing.yes')}
@@ -1573,6 +1619,7 @@ export function StartFlow({
           </button>
           <h2 className="screen-heading start-medicine-title">{t('start.workoutBody')}</h2>
           <p className="screen-sub">{t('start.workoutLike')}</p>
+          <StartPreview items={habitPreview(WORKOUT_PREVIEW)} />
           <div className="start-yes-no">
             <button type="button" className="btn btn-primary" onClick={acceptWorkout}>
               {t('landing.yes')}
@@ -1671,6 +1718,7 @@ export function StartFlow({
             {t('start.back')}
           </button>
           <h2 className="screen-heading start-medicine-title">{t('start.heartfulnessBody')}</h2>
+          <StartPreview items={habitPreview(HEART_PREVIEW)} />
           <div className="start-yes-no">
             <button type="button" className="btn btn-primary" onClick={acceptHeartfulness}>
               {t('landing.yes')}
@@ -1736,14 +1784,7 @@ export function StartFlow({
           </button>
           <h2 className="screen-heading start-medicine-title">{t('start.vitalsBody')}</h2>
           <p className="screen-sub">{t('start.vitalsLike')}</p>
-          <ul className="start-vital-preview">
-            {VITAL_IDS.map((id) => (
-              <li key={id}>
-                <HabitMark templateId={id} />
-                <span>{templateLabel(id, locale)}</span>
-              </li>
-            ))}
-          </ul>
+          <StartPreview items={habitPreview(VITAL_IDS)} />
           <div className="start-yes-no">
             <button type="button" className="btn btn-primary" onClick={acceptVitals}>
               {t('landing.yes')}
@@ -2326,6 +2367,32 @@ export function StartFlow({
         <>
           <h1 className="screen-heading">{t('start.saveTitle')}</h1>
           <p className="screen-sub">{onboardingSummary(draft)}</p>
+          <StartPreview
+            compact
+            items={[
+              ...draft.activities.map((activity) => ({
+                id: `a-${activity.localId}`,
+                mark: <HabitMark templateId={activity.templateId} name={activity.name} />,
+                label: visibleName(activity, locale),
+              })),
+              ...draft.medicines.map((medicine, index) => ({
+                id: `m-${index}`,
+                mark: (
+                  <MedicineThumb
+                    photo={medicine.photo}
+                    system={medicine.system}
+                    className="start-preview-img"
+                  />
+                ),
+                label: medicine.name,
+              })),
+              ...openReminders.map((reminder) => ({
+                id: `r-${reminder.id}`,
+                mark: <ReminderKindMark kind={reminder.kind} />,
+                label: reminder.text,
+              })),
+            ].slice(0, 8)}
+          />
           <button
             type="button"
             className="btn btn-primary"

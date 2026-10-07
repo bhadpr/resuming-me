@@ -60,7 +60,7 @@ export const en = {
     pranayamReady: 'We’ll start with Anuloma Viloma.',
     pranayamSub: 'A few minutes is enough. Add another if you like.',
     workoutBody: 'Do you want to start a regular workout?',
-    workoutLike: 'Like walking, running, strength, yoga, and so on.',
+    workoutLike: 'Start small. Even ten minutes counts.',
     workoutReady: 'Which workouts do you want?',
     workoutSub: 'A short one is enough. Add another if you like.',
     heartfulnessBody: 'Do you want to start Heartfulness meditation practices?',

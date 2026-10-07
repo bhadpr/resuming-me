@@ -762,7 +762,7 @@ select.field-input.language-select {
   gap: var(--space-3);
 }
 
-.start-vital-preview {
+.start-preview {
   display: grid;
   grid-template-columns: 1fr 1fr;
   gap: var(--space-4) var(--space-3);
@@ -771,19 +771,58 @@ select.field-input.language-select {
   list-style: none;
 }
 
-.start-vital-preview li {
+.start-preview.is-three {
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+}
+
+.start-preview li {
   display: flex;
   flex-direction: column;
   align-items: center;
   gap: var(--space-2);
+  min-width: 0;
   font-weight: var(--weight-semibold);
+  line-height: 1.2;
   text-align: center;
+  overflow-wrap: anywhere;
 }
 
-.start-vital-preview .activity-emoji-art,
-.start-vital-preview .habit-mark {
+.start-preview li .activity-emoji-art,
+.start-preview li .habit-mark,
+.start-preview li .start-preview-img {
   width: 5rem;
   height: 5rem;
+  border-radius: 22%;
+}
+
+.start-preview-img {
+  display: block;
+  object-fit: cover;
+}
+
+.start-preview.is-compact {
+  grid-template-columns: repeat(4, minmax(0, 1fr));
+  gap: var(--space-3) var(--space-2);
+  margin: 0 0 var(--space-2);
+}
+
+.start-preview.is-compact li {
+  gap: var(--space-1);
+  font-size: var(--text-xs);
+}
+
+.start-preview.is-compact li span {
+  display: -webkit-box;
+  -webkit-box-orient: vertical;
+  -webkit-line-clamp: 2;
+  overflow: hidden;
+}
+
+.start-preview.is-compact li .activity-emoji-art,
+.start-preview.is-compact li .habit-mark,
+.start-preview.is-compact li .start-preview-img {
+  width: 3.5rem;
+  height: 3.5rem;
 }
 
 .start-medicine-list {
