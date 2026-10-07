@@ -750,10 +750,6 @@ select.field-input.language-select {
   padding: 0 var(--space-4);
 }
 
-.start-type-error {
-  margin: calc(var(--space-1) * -1) 0 var(--space-3);
-}
-
 .start-medicine-title {
   margin-top: var(--space-5);
   font-size: var(--text-xl);

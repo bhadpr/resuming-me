@@ -15,7 +15,7 @@ import { AppAlertsNote } from './AppAlertsNote'
 import { HabitMark } from './HabitMark'
 import { Toast } from './Toast'
 import { useUndoToast } from '../hooks/useUndoToast'
-import { formatCountUndoMessage, formatSessionUndoMessage } from '../lib/undoMessages'
+import { formatCompletedUndoMessage, formatCountUndoMessage, formatSessionUndoMessage } from '../lib/undoMessages'
 import { HabitVideoPlaceholder } from './HabitVideoPlaceholder'
 import { MedicineDoseRow } from './MedicineDoses'
 import { ReminderDoneRow, ReminderRow } from './ReminderSection'
@@ -47,6 +47,7 @@ import {
   guestDosesOnDate,
   guestSaveWarning,
   guestSessionSeconds,
+  guestTapsDone,
   guestTimerProgress,
   loadGuestDraft,
   setGuestStep,
@@ -217,7 +218,7 @@ export function GuestTodayPage() {
     if (isStepsHabit(activity)) return false
     if (skips.isSkipped(activitySkipKey(activity))) return true
     if (isNumberEntryVital(activity)) return guestReadingOnDate(draft, activity.localId, today) != null
-    if (activity.trackingMode !== 'count') {
+    if (activity.trackingMode !== 'count' && !guestTapsDone(activity)) {
       if (runningId === activity.localId) return false
       const seconds = guestSessionSeconds(draft, activity.localId, today, activity)
       return guestTimerProgress(activity, seconds).done
@@ -275,7 +276,7 @@ export function GuestTodayPage() {
         />
       )
     }
-    if (activity.trackingMode !== 'count') {
+    if (activity.trackingMode !== 'count' && !guestTapsDone(activity)) {
       const stacking = stacksSessionMinutes(activity)
       const loggedSeconds = guestSessionSeconds(
         draft,
@@ -435,6 +436,7 @@ export function GuestTodayPage() {
       guestCountsOnDate(draft, activity.localId, today),
     )
     const openEnded = canLogPastGoal(activity.targetUnit)
+    const tick = guestTapsDone(activity)
     const countSkipped = !progress.done && skips.isSkipped(activitySkipKey(activity))
     return (
       <li
@@ -451,16 +453,18 @@ export function GuestTodayPage() {
         </div>
         <div className="today-row-main">
           <span className="activity-meta">
-            <span className="activity-desc">
-              {countSkipped ? (
-                t('today.skippedLine')
-              ) : (
-                <>
-                  {progress.label}
-                  {progress.done ? ` · ${t('today.done')}` : ''}
-                </>
-              )}
-            </span>
+            {(countSkipped || !tick) && (
+              <span className="activity-desc">
+                {countSkipped ? (
+                  t('today.skippedLine')
+                ) : (
+                  <>
+                    {progress.label}
+                    {progress.done ? ` · ${t('today.done')}` : ''}
+                  </>
+                )}
+              </span>
+            )}
             {activity.targetUnit === 'glasses' && (
               <span className="activity-desc">{t('notes.waterGlass')}</span>
             )}
@@ -470,7 +474,7 @@ export function GuestTodayPage() {
             {activity.targetUnit === 'hr' && (
               <span className="activity-desc">{t('notes.sleep')}</span>
             )}
-            {progress.value > 0 && (
+            {progress.value > 0 && !tick && (
               <div className="progress-bar" aria-hidden>
                 <div
                   className={`progress-bar-fill ${progress.done ? 'progress-bar-fill-done' : ''}`}
@@ -495,7 +499,8 @@ export function GuestTodayPage() {
                 onClick={() => {
                   setDraft(appendGuestCount(draft, activity.localId, today))
                   trackGuestLog(activity, 'count', null)
-                  undoToast.show(formatCountUndoMessage(visibleName(activity, locale)), () => {
+                  const name = visibleName(activity, locale)
+                  undoToast.show(tick ? formatCompletedUndoMessage(name) : formatCountUndoMessage(name), () => {
                     const latest = draftRef.current
                     if (!latest) return
                     setDraft(removeLastGuestLog(latest, activity.localId, 'count'))
@@ -503,7 +508,7 @@ export function GuestTodayPage() {
                   })
                 }}
               >
-                {countTapLabel(activity.targetUnit, progress.done)}
+                {tick ? t('today.done') : countTapLabel(activity.targetUnit, progress.done)}
               </button>
             )}
             {!progress.done && !countSkipped && (

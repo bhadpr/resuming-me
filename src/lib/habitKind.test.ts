@@ -32,6 +32,16 @@ describe('classifyHabitLocally', () => {
     expect(classifyHabitLocally('Weight').measure).toBe('log')
     expect(classifyHabitLocally('Weight').trackingMode).toBe('checkbox')
   })
+
+  it('logs blood sugar as a reading, not sugar eaten in grams', () => {
+    for (const name of ['Blood sugar', 'Check sugar level', 'Glucose']) {
+      const plan = classifyHabitLocally(name)
+      expect(plan.kind).toBe('vital')
+      expect(plan.measure).toBe('log')
+      expect(plan.targetUnit).toBeNull()
+    }
+    expect(classifyHabitLocally('Less sugar').measure).toBe('grams')
+  })
 })
 
 describe('parseHabitKindPayload', () => {

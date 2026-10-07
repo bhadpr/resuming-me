@@ -100,6 +100,10 @@ function microStepsApiUrl(): string | null {
   return url || null
 }
 
+export function microStepsAvailable(): boolean {
+  return microStepsApiUrl() != null
+}
+
 /**
  * Request micro-steps from the configured API (v2).
  * When unset or the response is bad, returns a user-safe error — never throws.

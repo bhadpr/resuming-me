@@ -33,7 +33,7 @@ import {
 import { DeadlineOverduePrompt } from './DeadlineOverduePrompt'
 import { MicroStepsSection } from './MicroStepsSection'
 import { ActivityInsightChart } from './ActivityInsightChart'
-import type { MicroStep } from '../lib/microSteps'
+import { microStepsAvailable, type MicroStep } from '../lib/microSteps'
 import { Icon } from './Icon'
 
 const PAUSE_OPTIONS: { duration: PauseDuration; label: string }[] = [
@@ -312,7 +312,7 @@ export function ActivityDetail({
         />
       )}
 
-      {activity.type === 'deadline' && onBreakDown && (
+      {activity.type === 'deadline' && onBreakDown && microStepsAvailable() && (
         <MicroStepsSection activity={activity} busy={busy} onBreakDown={onBreakDown} />
       )}
 

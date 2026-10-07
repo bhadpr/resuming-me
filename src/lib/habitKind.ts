@@ -16,7 +16,7 @@ export type HabitKindPlan = {
   /** Something you do, or a number you log. */
   kind: 'activity' | 'vital'
   measure: HabitMeasure
-  /** A local rule matched. Unknown names still get a plan, then the AI can replace it. */
+  /** A local rule matched. Unknown names still get a timed plan; the start flow asks how to track them. */
   confident: boolean
   trackingMode: TrackingMode
   targetUnit: string | null
@@ -92,7 +92,7 @@ function plan(input: {
 /**
  * Decide activity vs vital from the words alone.
  * Carbs, protein, and the other gram measures get a common daily amount.
- * Anything unrecognized is a short timed activity until the AI answers.
+ * Anything unrecognized is a short timed activity.
  */
 export function classifyHabitLocally(name: string): HabitKindPlan {
   const text = name.trim().toLowerCase()
@@ -135,6 +135,9 @@ export function classifyHabitLocally(name: string): HabitKindPlan {
       goalSteps: [15, 20, 25, 30, 35],
       emoji: '🥦',
     })
+  }
+  if (includesWord(text, /\bblood sugar\b|\bsugar levels?\b|\bglucose\b/)) {
+    return plan({ kind: 'vital', measure: 'log', confident: true, emoji: '🩸' })
   }
   if (includesWord(text, /\bsugars?\b/)) {
     return plan({

@@ -172,6 +172,29 @@ describe('guest draft storage', () => {
     })
   })
 
+  it('checks off a typed tick habit once a day, but not catalog Relaxation', () => {
+    memoryStorage()
+    let draft = ensureGuestDraft('UTC')
+    draft = upsertGuestActivity(draft, {
+      ...activity('t', 'Go to temple'),
+      trackingMode: 'checkbox',
+      targetValue: null,
+      targetUnit: null,
+    })
+    draft = upsertGuestActivity(draft, {
+      ...activity('r', 'Relaxation'),
+      trackingMode: 'checkbox',
+      targetValue: null,
+      targetUnit: null,
+      templateId: 'relaxation',
+    })
+    draft = appendGuestCount(draft, 't', '2026-09-23')
+    appendGuestCount(draft, 'r', '2026-09-23')
+    const logs = loadGuestDraft()?.logs ?? []
+    expect(logs.filter((log) => log.localActivityId === 't')).toMatchObject([{ kind: 'count' }])
+    expect(logs.filter((log) => log.localActivityId === 'r')).toHaveLength(0)
+  })
+
   it('keeps timer sessions of at least one second and adds later bouts the same day', () => {
     memoryStorage()
     let draft = ensureGuestDraft('UTC')

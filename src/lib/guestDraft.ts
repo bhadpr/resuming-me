@@ -744,6 +744,11 @@ export function guestCountProgress(
   return { value, target, done: value >= target, label: countProgressLabel(value, target, activity.targetUnit) }
 }
 
+/** A typed tick habit is done with one tap. Catalog Relaxation keeps its timer and video. */
+export function guestTapsDone(activity: Pick<GuestActivity, 'trackingMode' | 'templateId'>): boolean {
+  return activity.trackingMode === 'checkbox' && activity.templateId == null
+}
+
 /** One tap toward today's count. Protein and fasting can go past the goal. */
 export function appendGuestCount(
   draft: GuestDraft,
@@ -752,7 +757,7 @@ export function appendGuestCount(
   now = new Date(),
 ): GuestDraft {
   const activity = draft.activities.find((item) => item.localId === localId)
-  if (!activity || activity.trackingMode !== 'count') return draft
+  if (!activity || (activity.trackingMode !== 'count' && !guestTapsDone(activity))) return draft
   const soFar = guestCountProgress(activity, guestCountsOnDate(draft, localId, date))
   if (soFar.done && !canLogPastGoal(activity.targetUnit)) return draft
   return appendGuestLog(draft, {
