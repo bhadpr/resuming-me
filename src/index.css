@@ -771,7 +771,7 @@ select.field-input.language-select {
   align-items: center;
   gap: var(--space-2);
   margin: var(--space-2) 0 var(--space-3);
-  padding: var(--space-3) var(--space-3) var(--space-4);
+  padding: var(--space-3) var(--space-2) var(--space-4);
   border-radius: var(--radius);
   background: var(--preview-scene);
 }
@@ -781,27 +781,45 @@ select.field-input.language-select {
   --preview-caption: #4d6577;
 }
 
-/* Columns shrink and the gap grows with the screen, so pictures never touch. */
-.start-preview-pics {
+/* Columns share the panel width; each picture takes part of its column, so the space scales with the screen. */
+.start-preview-items {
   --preview-cols: 4;
-  display: grid;
-  grid-template-columns: repeat(var(--preview-cols), minmax(0, 5rem));
+  --preview-col-max: 6.5rem;
+  --preview-gap: clamp(0.125rem, 1.5vw, 1rem);
+  display: flex;
+  flex-wrap: wrap;
   justify-content: center;
-  gap: clamp(0.5rem, 3vw, 1.75rem);
+  gap: var(--space-3) var(--preview-gap);
   width: 100%;
+  margin: 0;
+  padding: 0;
+  list-style: none;
 }
 
-.start-preview-pics > span {
+.start-preview-items li {
+  flex: 0 0
+    min(
+      var(--preview-col-max),
+      calc((100% - (var(--preview-cols) - 1) * var(--preview-gap)) / var(--preview-cols))
+    );
   display: flex;
+  flex-direction: column;
+  align-items: center;
+  min-width: 0;
+}
+
+.start-preview-pic {
+  display: flex;
+  width: min(84%, 5rem);
   aspect-ratio: 1;
   overflow: hidden;
   -webkit-mask-image: radial-gradient(circle, #000 58%, transparent 72%);
   mask-image: radial-gradient(circle, #000 58%, transparent 72%);
 }
 
-.start-preview .start-preview-pics .activity-emoji-art,
-.start-preview .start-preview-pics .habit-mark,
-.start-preview .start-preview-pics .start-preview-img {
+.start-preview .start-preview-pic .activity-emoji-art,
+.start-preview .start-preview-pic .habit-mark,
+.start-preview .start-preview-pic .start-preview-img {
   width: 100%;
   height: 100%;
   border-radius: 0;
@@ -809,7 +827,7 @@ select.field-input.language-select {
   transform: scale(1.12);
 }
 
-.start-preview .start-preview-pics .habit-mark {
+.start-preview .start-preview-pic .habit-mark {
   background: none;
   transform: none;
 }
@@ -819,9 +837,21 @@ select.field-input.language-select {
   object-fit: cover;
 }
 
+.start-preview-label {
+  display: -webkit-box;
+  -webkit-box-orient: vertical;
+  -webkit-line-clamp: 2;
+  overflow: hidden;
+  max-width: 100%;
+  color: var(--preview-caption);
+  font-size: clamp(0.66rem, 3vw, 0.875rem);
+  line-height: 1.25;
+  text-align: center;
+}
+
 .start-preview figcaption {
   color: var(--preview-caption);
-  font-size: var(--text-sm);
+  font-size: var(--text-xs);
   line-height: var(--leading-body);
   text-align: center;
 }
@@ -830,9 +860,12 @@ select.field-input.language-select {
   margin: 0 0 var(--space-2);
 }
 
-.start-preview.is-compact .start-preview-pics {
-  grid-template-columns: repeat(var(--preview-cols), minmax(0, 4rem));
-  gap: clamp(0.25rem, 2vw, 1rem) clamp(0.5rem, 3vw, 1.25rem);
+.start-preview.is-compact .start-preview-items {
+  --preview-col-max: 5.5rem;
+}
+
+.start-preview.is-compact .start-preview-pic {
+  width: min(80%, 4rem);
 }
 
 .start-medicine-list {

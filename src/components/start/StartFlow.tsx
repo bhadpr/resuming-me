@@ -98,25 +98,33 @@ function StartPreview({
   compact?: boolean
 }) {
   if (items.length === 0) return null
-  const pictures = items.filter((item) => item.mark)
-  const columns = { '--preview-cols': Math.min(pictures.length, 4) } as CSSProperties
+  const pictured = items.filter((item) => item.mark)
+  const unpictured = items.filter((item) => !item.mark)
+  const columns = { '--preview-cols': Math.min(pictured.length, 4) } as CSSProperties
   return (
     <figure className={`start-preview${compact ? ' is-compact' : ''}`}>
-      {pictures.length > 0 && (
-        <div className="start-preview-pics" style={columns} aria-hidden>
-          {pictures.map((item) => (
-            <span key={item.id}>{item.mark}</span>
+      {pictured.length > 0 && (
+        <ul className="start-preview-items" style={columns}>
+          {pictured.map((item) => (
+            <li key={item.id}>
+              <span className="start-preview-pic" aria-hidden>
+                {item.mark}
+              </span>
+              <span className="start-preview-label">{item.label}</span>
+            </li>
           ))}
-        </div>
+        </ul>
       )}
-      <figcaption>
-        {items.map((item, index) => (
-          <span key={item.id}>
-            {index > 0 && ' · '}
-            {item.label}
-          </span>
-        ))}
-      </figcaption>
+      {unpictured.length > 0 && (
+        <figcaption>
+          {unpictured.map((item, index) => (
+            <span key={item.id}>
+              {index > 0 && ' · '}
+              {item.label}
+            </span>
+          ))}
+        </figcaption>
+      )}
     </figure>
   )
 }
