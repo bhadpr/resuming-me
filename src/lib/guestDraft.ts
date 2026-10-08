@@ -823,5 +823,11 @@ export function guestDraftToPayload(draft: GuestDraft) {
       date: log.date,
       kind: log.kind ?? 'session',
     })),
+    readings: normalized.readings.map((reading) => ({
+      localActivityId: reading.localActivityId,
+      date: reading.date,
+      value: reading.value,
+      secondaryValue: reading.secondaryValue,
+    })),
   }
 }

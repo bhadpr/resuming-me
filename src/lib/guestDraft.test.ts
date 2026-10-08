@@ -25,6 +25,7 @@ import {
   removeGuestReminder,
   reopenGuestReminder,
   updateGuestReminder,
+  upsertGuestReading,
   type GuestDraft,
 } from './guestDraft'
 
@@ -424,6 +425,27 @@ describe('guest draft storage', () => {
     expect(payload.logs[0]?.startedAt).toBe('2026-09-22T18:00:00.000Z')
     expect(payload).not.toHaveProperty('email')
     expect(JSON.stringify(payload)).not.toContain('note')
+  })
+
+  it('merge payload carries typed vital readings', () => {
+    memoryStorage()
+    let draft = ensureGuestDraft('UTC')
+    draft = upsertGuestActivity(draft, {
+      ...activity('bp', 'Blood Pressure'),
+      templateId: 'blood_pressure',
+      trackingMode: 'checkbox',
+    })
+    draft = upsertGuestReading(draft, {
+      localActivityId: 'bp',
+      date: '2026-10-07',
+      value: 128,
+      secondaryValue: 84,
+    })
+    const payload = guestDraftToPayload(draft)
+    expect(payload.activities[0]?.templateId).toBe('blood_pressure')
+    expect(payload.readings).toEqual([
+      { localActivityId: 'bp', date: '2026-10-07', value: 128, secondaryValue: 84 },
+    ])
   })
 })
 
