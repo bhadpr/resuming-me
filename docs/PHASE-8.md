@@ -16,7 +16,10 @@ Five milestones, in order. Each one is usable on its own. Inside a milestone, on
 - The organizer needs an account. The person receiving does not.
 - The organizer sees a count of people who added the event, never names or phone numbers.
 - Anyone with the link can see the event text. The share screen says so before the link is made.
+- Links are open on purpose. A WhatsApp link can always be forwarded, so the app does not try to limit who receives it. The organizer controls it by closing or resetting the link instead.
+- The event page and confirm screen never show the organizer's name, email, or phone number. Only the optional From line.
 - Event text cannot contain web links. This blocks "click here to claim a prize" messages.
+- Once the link is made, the event's text, From line, days, and time never change. To fix a mistake, the organizer cancels it and shares a new one.
 - A day range is capped at 31 days. Longer, open-ended repeats are habits.
 - A shared event is never a streak or an Insight, the same as any reminder.
 - Bottom nav stays four tabs.
@@ -32,11 +35,12 @@ Five milestones, in order. Each one is usable on its own. Inside a milestone, on
 | M3 Open in the app | P8-05 Link opens the app | M |
 | | P8-06 Install, then add | M |
 | | P8-07 The confirm screen | S |
-| M4 Changes and counts | P8-08 Copies follow changes | M |
+| M4 Cancel and counts | P8-08 Locked once shared | S |
 | | P8-09 Cancel | S |
 | | P8-10 How many added it | S |
-| M5 Safety | P8-11 Report and switch off | S |
-| | P8-12 Data, privacy, and Play | S |
+| | P8-11 Close or reset the link | S |
+| M5 Safety | P8-12 Report and switch off | S |
+| | P8-13 Data, privacy, and Play | S |
 
 ## Milestone 1 — Day ranges
 
@@ -57,10 +61,10 @@ At the end of M2, an organizer can share a link, and anyone can open the event p
 
 ### P8-02 — Shared event records
 
-- A `shared_events` table: short code, owner, text, optional "From" line (such as a mandal name), first day, last day, time, time zone, optional kind, status (active, cancelled, switched off), created and updated times.
-- A follower record links one account or one guest device to one event. It exists for the count and for updates. It has no name or phone number.
+- A `shared_events` table: short code, owner, text, optional "From" line (such as a mandal name), first day, last day, time, time zone, optional kind, status (active, cancelled, switched off), whether it takes new adds, created and updated times. A reset replaces the short code; old codes are kept only so their links can say "no longer available".
+- A follower record links one account or one guest device to one event. It exists for the count and so copies can learn the event was cancelled or switched off. It has no name or phone number.
 - A person's copy of a shared event is their own reminder with a link back to the event.
-- Row-level security: the owner can edit their event. Anyone can read an active event by its code. Only the owner and the admin see the count.
+- Row-level security: the owner can change only the status, whether it takes new adds, and the short code (on reset). Text, From line, days, time, and time zone are fixed when the row is created. Anyone can read an active event by its code. Only the owner and the admin see the count.
 
 ### P8-03 — Share on WhatsApp
 
@@ -78,7 +82,7 @@ At the end of M2, an organizer can share a link, and anyone can open the event p
 - The page is served with its own preview details, so WhatsApp shows the title and dates in the link preview, not a generic Resuming card.
 - **Add on this website** puts it on the website's Today, signed in or not. The website cannot alert.
 - **Get it on Play** goes to the Play listing with the event code in the install link.
-- A cancelled event says so. A switched-off event says it is no longer available.
+- A cancelled event says so. A switched-off event, or an old code after a reset, says it is no longer available. An event closed to new adds, or past its last day, shows the details but no add button.
 
 ## Milestone 3 — Open in the app
 
@@ -93,7 +97,7 @@ At the end of M3, tapping the link on an Android phone opens Resuming straight t
 
 - The Play link from the event page carries the event code in the install referrer, the same way as the Phase 6 marketing links. Both codes can travel together.
 - On the first open, after the language screen, the app shows the confirm screen for that event.
-- If the event was cancelled or switched off meanwhile, the app says so and adds nothing.
+- If the event was cancelled, switched off, reset, or closed to new adds meanwhile, the app says so and adds nothing.
 
 ### P8-07 — The confirm screen
 
@@ -103,18 +107,21 @@ At the end of M3, tapping the link on an Android phone opens Resuming straight t
 - If they already have it: "This is already on your Today."
 - After adding, open Today.
 
-## Milestone 4 — Changes and counts
+## Milestone 4 — Cancel and counts
 
-### P8-08 — Copies follow changes
+### P8-08 — Locked once shared
 
-- When the organizer changes the text, days, or time, every copy updates the next time that phone or browser syncs.
-- The changed reminder shows one quiet line, such as "Time changed to 7:30 pm." Alerts move to the new time.
+Alerts are scheduled on each phone, and a phone only syncs when Resuming is opened. A change could leave people with the old time, so a shared event does not change.
+
+- Before the first share, the organizer's reminder is private and can be edited like any other.
+- After the link is made, the organizer's reminder shows its details but no edit. A short line explains: "Shared events can't be changed. Cancel and share a new one."
 - A follower cannot edit a shared copy. They can mark days done, remove it, or turn off its alerts. Removing it ends their follow.
 
 ### P8-09 — Cancel
 
-- The organizer can cancel. Copies show "Cancelled by the organizer" and their alerts stop.
+- The organizer can cancel. Copies show "Cancelled by the organizer" and their alerts stop when that phone or browser next syncs.
 - A cancelled event leaves Today and Coming up after its last day.
+- **Cancel and make a new one** opens a new reminder filled in with the old details, ready to fix and share. It is a new event with a new link and a count starting at zero.
 
 ### P8-10 — How many added it
 
@@ -122,15 +129,24 @@ At the end of M3, tapping the link on an Android phone opens Resuming straight t
 - One account or one guest device counts once. Removing it lowers the count.
 - No names, numbers, or list of followers.
 
+### P8-11 — Close or reset the link
+
+The link is open, so the organizer needs a way to stop it spreading without hurting people who already added it.
+
+- **Stop new adds:** the link stays readable, but the event page and confirm screen say "This event is not taking new reminders." People who already added it keep it.
+- **Reset link:** makes a new short code. The old link says it is no longer available and adds nothing. Existing followers are not affected. Counts against the daily link limit.
+- After the last day, the link closes by itself and shows "This event has ended."
+- The organizer can turn new adds back on. After a reset, only the newest code works.
+
 ## Milestone 5 — Safety
 
-### P8-11 — Report and switch off
+### P8-12 — Report and switch off
 
 - The Report link offers a few reasons: spam, wrong or harmful, other.
 - The admin area lists reported events with the report count.
 - The admin can switch an event off. Its page and the confirm screen say it is no longer available, and copies stop alerting.
 
-### P8-12 — Data, privacy, and Play
+### P8-13 — Data, privacy, and Play
 
 - Privacy policy and Terms say shared event text can be seen by anyone with the link, and that followers stay anonymous to the organizer.
 - Play Data safety form updated for shared event text.
@@ -139,6 +155,7 @@ At the end of M3, tapping the link on an Android phone opens Resuming straight t
 ## Out of this phase
 
 - RSVPs, comments, or chat on an event.
+- Changing an event after it is shared, and push notifications to deliver changes.
 - The organizer seeing who added it.
 - Photos or posters on the event.
 - More than one time per day.
