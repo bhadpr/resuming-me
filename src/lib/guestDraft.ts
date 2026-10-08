@@ -27,6 +27,7 @@ import { endOfWeekSunday, startOfWeekMonday } from './dates'
 import { sessionProgressLabel } from './timer'
 import type { HabitMeasure } from './habitKind'
 import type { ActivityType, TrackingMode } from '../types/database'
+import { MEDICINES_ENABLED } from '../config'
 
 export const GUEST_DRAFT_KEY = 'resuming-guest-draft'
 /** How many habits a guest draft can hold. The first screen still starts with three. */
@@ -112,13 +113,43 @@ export type StartPickPhase =
   | 'workouts'
   | 'workoutDetail'
   | 'stepGoal'
-  | 'heartfulness'
-  | 'practices'
-  | 'practiceDetail'
   | 'vitals'
   | 'vitalPicks'
   | 'targets'
   | 'activities'
+
+const PICK_PHASES: readonly StartPickPhase[] = [
+  'ask',
+  'medicine',
+  'medicines',
+  'reminderAsk',
+  'reminder',
+  'reminders',
+  'pranayam',
+  'pranayams',
+  'pranayamDetail',
+  'workout',
+  'workouts',
+  'workoutDetail',
+  'stepGoal',
+  'vitals',
+  'vitalPicks',
+  'targets',
+  'activities',
+]
+
+/** Setup opens on the workout question. */
+export const FIRST_PICK_PHASE: StartPickPhase = 'workout'
+
+/** Older drafts may sit on a removed question. Move them to the one that follows it. */
+function normalizePickPhase(stored: string | undefined): StartPickPhase {
+  if (stored === 'heartfulness' || stored === 'practices' || stored === 'practiceDetail') return 'vitals'
+  const phase = PICK_PHASES.find((item) => item === stored) ?? FIRST_PICK_PHASE
+  if (!MEDICINES_ENABLED && (phase === 'ask' || phase === 'medicine' || phase === 'medicines')) {
+    return 'reminderAsk'
+  }
+  return phase
+}
 
 export type GuestDraft = {
   guestId: string
@@ -148,7 +179,7 @@ export type GuestDraft = {
   medicineMarks: GuestDoseMark[]
   /** One-off things to do on a day. Not the daily nudge times above. */
   reminders: Reminder[]
-  /** First-visit question, then medicines, pranayam, then the activity list. */
+  /** Which setup question is open: workout, pranayam, medicine, reminders, then vitals. */
   pickPhase: StartPickPhase
 }
 
@@ -196,7 +227,7 @@ export function createGuestDraft(now = new Date(), timezone = 'UTC'): GuestDraft
     medicines: [],
     medicineMarks: [],
     reminders: [],
-    pickPhase: 'ask',
+    pickPhase: FIRST_PICK_PHASE,
   }
 }
 
@@ -572,28 +603,7 @@ function normalizeDraft(draft: GuestDraft): GuestDraft {
     medicineMarks: normalizeMedicineMarks(draft, medicines),
     medicineDaily: medicines.length > 0,
     reminders: normalizeGuestReminders(draft.reminders),
-    pickPhase:
-      draft.pickPhase === 'medicine' ||
-      draft.pickPhase === 'medicines' ||
-      draft.pickPhase === 'reminderAsk' ||
-      draft.pickPhase === 'reminder' ||
-      draft.pickPhase === 'reminders' ||
-      draft.pickPhase === 'pranayam' ||
-      draft.pickPhase === 'pranayams' ||
-      draft.pickPhase === 'pranayamDetail' ||
-      draft.pickPhase === 'workout' ||
-      draft.pickPhase === 'workouts' ||
-      draft.pickPhase === 'workoutDetail' ||
-      draft.pickPhase === 'stepGoal' ||
-      draft.pickPhase === 'heartfulness' ||
-      draft.pickPhase === 'practices' ||
-      draft.pickPhase === 'practiceDetail' ||
-      draft.pickPhase === 'vitals' ||
-      draft.pickPhase === 'vitalPicks' ||
-      draft.pickPhase === 'targets' ||
-      draft.pickPhase === 'activities'
-        ? draft.pickPhase
-        : 'ask',
+    pickPhase: normalizePickPhase(draft.pickPhase),
     readings: (draft.readings ?? []).filter(
       (reading) =>
         ids.has(reading.localActivityId) &&

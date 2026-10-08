@@ -7,6 +7,7 @@ import { HabitMark } from '../HabitMark'
 import { HabitVideoPlaceholder } from '../HabitVideoPlaceholder'
 import { EmailSignInForm } from '../EmailSignInForm'
 import { AUTH_PROVIDERS } from '../../lib/authProviders'
+import { MEDICINES_ENABLED } from '../../config'
 import { formatReminderClock } from '../../lib/checkinPrefs'
 import { addDays, todayLocalDate } from '../../lib/dates'
 import { parseTimeInput } from '../../lib/dailyDigest'
@@ -22,6 +23,7 @@ import {
   upsertGuestActivity,
   type GuestActivity,
   type GuestDraft,
+  type StartPickPhase,
 } from '../../lib/guestDraft'
 import {
   COUNT_STEPS,
@@ -80,15 +82,12 @@ const START_VITALS: { id: string; label: string; caption?: string }[] = [
 /** Short first question. Explore more opens the rest of the catalog. */
 const PRANAYAM_IDS = ['anuloma_viloma', 'kapalabhati', 'bhastrika', 'bhramari'] as const
 const WORKOUT_IDS = ['walk', 'running', 'steps', 'exercise', 'stretching'] as const
-const HEART_IDS = ['relaxation', 'meditate', 'rejuvenation', 'prayer'] as const
 const VITAL_IDS = ['blood_pressure', 'weight', 'heart_rate', 'steps'] as const
 
 /** Pictures under each yes/no question, so people see what they would get. */
 const MEDICINE_PREVIEW = ['allopathic', 'ayurvedic', 'homeopathic'] as const
 const REMINDER_PREVIEW = ['bill', 'doctor', 'errand', 'event'] as const
 const WORKOUT_PREVIEW = ['walk', 'running', 'exercise', 'stretching'] as const
-/** Rejuvenation shares the meditate picture, so it stays out of the preview. */
-const HEART_PREVIEW = ['relaxation', 'meditate', 'prayer'] as const
 
 function StartPreview({
   items,
@@ -155,10 +154,6 @@ function isWorkoutTemplate(id: string | null | undefined): boolean {
   return id != null && (WORKOUT_IDS as readonly string[]).includes(id)
 }
 
-function isHeartTemplate(id: string | null | undefined): boolean {
-  return id != null && (HEART_IDS as readonly string[]).includes(id)
-}
-
 function isVitalTemplate(id: string | null | undefined): boolean {
   return id != null && (VITAL_IDS as readonly string[]).includes(id)
 }
@@ -176,10 +171,6 @@ function selectedPranayams(activities: GuestActivity[]): GuestActivity[] {
 
 function selectedWorkouts(activities: GuestActivity[]): GuestActivity[] {
   return selectedByIds(activities, WORKOUT_IDS)
-}
-
-function selectedHearts(activities: GuestActivity[]): GuestActivity[] {
-  return selectedByIds(activities, HEART_IDS)
 }
 
 function selectedVitals(activities: GuestActivity[]): GuestActivity[] {
@@ -217,7 +208,6 @@ function nonPranayamCount(activities: GuestActivity[]): number {
     (item) =>
       !isPranayamTemplate(item.templateId) &&
       !isWorkoutTemplate(item.templateId) &&
-      !isHeartTemplate(item.templateId) &&
       !isVitalTemplate(item.templateId),
   ).length
 }
@@ -228,10 +218,6 @@ function pranayamCount(activities: GuestActivity[]): number {
 
 function workoutCount(activities: GuestActivity[]): number {
   return activities.filter((item) => isWorkoutTemplate(item.templateId)).length
-}
-
-function heartCount(activities: GuestActivity[]): number {
-  return activities.filter((item) => isHeartTemplate(item.templateId)).length
 }
 
 function vitalCount(activities: GuestActivity[]): number {
@@ -261,39 +247,28 @@ function listedMinutes(activity: GuestActivity): GuestActivity {
   return withSize(activity, nearest)
 }
 
-/** Medicine, Reminders, Pranayam, Workout, Heartfulness, Vitals, Nudge time, Save. */
-const WELCOME_QUESTIONS = 8
+/** Welcome questions in order, each with its follow-up screens. Nudge time and Save come after. */
+const WELCOME_PHASES: readonly (readonly StartPickPhase[])[] = [
+  ['workout', 'workouts', 'stepGoal', 'workoutDetail'],
+  ['pranayam', 'pranayams', 'pranayamDetail'],
+  ...(MEDICINES_ENABLED ? [['ask', 'medicine', 'medicines'] as const] : []),
+  ['reminderAsk', 'reminder', 'reminders'],
+  ['vitals', 'vitalPicks', 'targets', 'activities'],
+]
+const WELCOME_QUESTIONS = WELCOME_PHASES.length + 2
+
+/** The question after pranayam: medicine where it is offered, otherwise reminders. */
+const AFTER_PRANAYAM: StartPickPhase = MEDICINES_ENABLED ? 'ask' : 'reminderAsk'
 
 /** One dot per welcome question. Follow-up screens stay on their question's dot. */
 function welcomeQuestion(draft: GuestDraft): number {
-  if (draft.step === 8) return 7
-  if (draft.step !== 1) return 6
-  switch (draft.pickPhase) {
-    case 'reminderAsk':
-    case 'reminder':
-    case 'reminders':
-      return 1
-    case 'pranayam':
-    case 'pranayams':
-    case 'pranayamDetail':
-      return 2
-    case 'workout':
-    case 'workouts':
-    case 'workoutDetail':
-    case 'stepGoal':
-      return 3
-    case 'heartfulness':
-    case 'practices':
-    case 'practiceDetail':
-      return 4
-    case 'vitals':
-    case 'vitalPicks':
-    case 'targets':
-    case 'activities':
-      return 5
-    default:
-      return 0
-  }
+  if (draft.step === 8) return WELCOME_QUESTIONS - 1
+  if (draft.step !== 1) return WELCOME_QUESTIONS - 2
+  return Math.max(0, WELCOME_PHASES.findIndex((phases) => phases.includes(draft.pickPhase)))
+}
+
+function pranayamPhase(draft: GuestDraft): StartPickPhase {
+  return draft.activities.some((item) => isPranayamTemplate(item.templateId)) ? 'pranayams' : 'pranayam'
 }
 
 function currentSize(activity: GuestActivity): number {
@@ -374,7 +349,6 @@ export function StartFlow({
   const [sizeIndex, setSizeIndex] = useState(0)
   const [pranayamIndex, setPranayamIndex] = useState(0)
   const [workoutIndex, setWorkoutIndex] = useState(0)
-  const [heartIndex, setHeartIndex] = useState(0)
   const [targetIndex, setTargetIndex] = useState(0)
   const [targetText, setTargetText] = useState('')
   const [customName, setCustomName] = useState('')
@@ -407,7 +381,7 @@ export function StartFlow({
     window.scrollTo(0, 0)
     document.querySelector('.landing')?.scrollTo?.(0, 0)
     document.querySelector('.start-flow')?.scrollIntoView?.({ block: 'start' })
-  }, [draft.step, draft.pickPhase, pranayamIndex, workoutIndex, heartIndex, targetIndex, adding, trackName])
+  }, [draft.step, draft.pickPhase, pranayamIndex, workoutIndex, targetIndex, adding, trackName])
 
   useEffect(() => {
     const key = `resuming-onboarding-started-${draft.guestId}`
@@ -453,8 +427,6 @@ export function StartFlow({
       if (pranayamCount(draft.activities) >= PRANAYAM_IDS.length) return
     } else if (isWorkoutTemplate(id)) {
       if (workoutCount(draft.activities) >= WORKOUT_IDS.length) return
-    } else if (isHeartTemplate(id)) {
-      if (heartCount(draft.activities) >= HEART_IDS.length) return
     } else if (isVitalTemplate(id)) {
       if (vitalCount(draft.activities) >= VITAL_IDS.length) return
     } else if (nonPranayamCount(draft.activities) >= START_PICK_MAX) return
@@ -526,13 +498,13 @@ export function StartFlow({
       }
       return removeGuestActivity(current, activity.localId)
     }, draft)
-    persist({ ...next, pickPhase: 'workout' })
+    persist({ ...next, pickPhase: AFTER_PRANAYAM })
   }
 
   function continuePranayams() {
     const list = selectedPranayams(draft.activities)
     if (list.length === 0) {
-      persist({ ...draft, pickPhase: 'workout' })
+      persist({ ...draft, pickPhase: AFTER_PRANAYAM })
       return
     }
     const snapped = list.reduce(
@@ -552,7 +524,7 @@ export function StartFlow({
       persist({ ...nextDraft, pickPhase: 'pranayamDetail' })
       return
     }
-    persist({ ...nextDraft, pickPhase: 'workout' })
+    persist({ ...nextDraft, pickPhase: AFTER_PRANAYAM })
   }
 
   function backPranayamDetail() {
@@ -574,13 +546,13 @@ export function StartFlow({
       }
       return removeGuestActivity(current, activity.localId)
     }, draft)
-    persist({ ...next, pickPhase: 'heartfulness' })
+    persist({ ...next, pickPhase: 'pranayam' })
   }
 
   function openWorkoutDetails(base: GuestDraft) {
     const list = workoutDetailList(base.activities)
     if (list.length === 0) {
-      persist({ ...base, pickPhase: 'heartfulness' })
+      persist({ ...base, pickPhase: 'pranayam' })
       return
     }
     const snapped = list.reduce(
@@ -594,7 +566,7 @@ export function StartFlow({
   function continueWorkouts() {
     const chosen = selectedWorkouts(draft.activities)
     if (chosen.length === 0) {
-      persist({ ...draft, pickPhase: 'heartfulness' })
+      persist({ ...draft, pickPhase: 'pranayam' })
       return
     }
     const steps = chosen.find((item) => item.templateId === 'steps')
@@ -623,7 +595,7 @@ export function StartFlow({
       persist({ ...nextDraft, pickPhase: 'workoutDetail' })
       return
     }
-    persist({ ...nextDraft, pickPhase: 'heartfulness' })
+    persist({ ...nextDraft, pickPhase: 'pranayam' })
   }
 
   function backWorkoutDetail() {
@@ -638,56 +610,6 @@ export function StartFlow({
       return
     }
     persist({ ...draft, pickPhase: 'workouts' })
-  }
-
-  function acceptHeartfulness() {
-    persist({ ...draft, pickPhase: 'practices' })
-  }
-
-  function declineHeartfulness() {
-    const next = draft.activities.reduce((current, activity) => {
-      if (!activity.templateId || !HEART_IDS.includes(activity.templateId as (typeof HEART_IDS)[number])) {
-        return current
-      }
-      return removeGuestActivity(current, activity.localId)
-    }, draft)
-    persist({ ...next, pickPhase: 'vitals' })
-  }
-
-  function continuePractices() {
-    const list = selectedHearts(draft.activities)
-    if (list.length === 0) {
-      persist({ ...draft, pickPhase: 'vitals' })
-      return
-    }
-    const snapped = list.reduce(
-      (current, activity) => upsertGuestActivity(current, listedMinutes(activity)),
-      draft,
-    )
-    setHeartIndex(0)
-    persist({ ...snapped, pickPhase: 'practiceDetail' })
-  }
-
-  function advancePracticeDetail() {
-    const list = selectedHearts(draft.activities)
-    const current = list[heartIndex]
-    const nextDraft = current
-      ? upsertGuestActivity(draft, { ...withoutRelaxationTiming(current), sized: true })
-      : draft
-    if (heartIndex + 1 < list.length) {
-      setHeartIndex(heartIndex + 1)
-      persist({ ...nextDraft, pickPhase: 'practiceDetail' })
-      return
-    }
-    persist({ ...nextDraft, pickPhase: 'vitals' })
-  }
-
-  function backPracticeDetail() {
-    if (heartIndex > 0) {
-      setHeartIndex(heartIndex - 1)
-      return
-    }
-    persist({ ...draft, pickPhase: 'practices' })
   }
 
   function acceptVitals() {
@@ -773,7 +695,6 @@ export function StartFlow({
     if (adding) return draft.activities.length >= GUEST_MAX_ACTIVITIES
     if (isPranayamTemplate(templateId)) return pranayamCount(draft.activities) >= PRANAYAM_IDS.length
     if (isWorkoutTemplate(templateId)) return workoutCount(draft.activities) >= WORKOUT_IDS.length
-    if (isHeartTemplate(templateId)) return heartCount(draft.activities) >= HEART_IDS.length
     if (isVitalTemplate(templateId)) return vitalCount(draft.activities) >= VITAL_IDS.length
     return nonPranayamCount(draft.activities) >= START_PICK_MAX
   }
@@ -863,7 +784,7 @@ export function StartFlow({
 
   function continueWith(next: GuestDraft) {
     if (next.activities.length === 0) {
-      if (adding || !next.medicineDaily) return
+      if (adding || !MEDICINES_ENABLED || !next.medicineDaily) return
       finishStep(1, 'medicine', draftAfterPick(next))
       return
     }
@@ -1034,7 +955,7 @@ export function StartFlow({
     if (draft.pickPhase !== 'pranayamDetail' || adding) return
     const list = selectedPranayams(draft.activities)
     if (list.length === 0) {
-      persist({ ...draft, pickPhase: 'workout' })
+      persist({ ...draft, pickPhase: AFTER_PRANAYAM })
       return
     }
     if (pranayamIndex >= list.length) setPranayamIndex(list.length - 1)
@@ -1044,21 +965,11 @@ export function StartFlow({
     if (draft.pickPhase !== 'workoutDetail' || adding) return
     const list = workoutDetailList(draft.activities)
     if (list.length === 0) {
-      persist({ ...draft, pickPhase: 'heartfulness' })
+      persist({ ...draft, pickPhase: 'pranayam' })
       return
     }
     if (workoutIndex >= list.length) setWorkoutIndex(list.length - 1)
   }, [draft.pickPhase, draft.activities, workoutIndex, adding])
-
-  useEffect(() => {
-    if (draft.pickPhase !== 'practiceDetail' || adding) return
-    const list = selectedHearts(draft.activities)
-    if (list.length === 0) {
-      persist({ ...draft, pickPhase: 'vitals' })
-      return
-    }
-    if (heartIndex >= list.length) setHeartIndex(list.length - 1)
-  }, [draft.pickPhase, draft.activities, heartIndex, adding])
 
   useEffect(() => {
     if (draft.pickPhase !== 'targets' || adding) return
@@ -1085,21 +996,16 @@ export function StartFlow({
   const sizeActivities = pendingSizeActivities(draft.activities)
   const pranayamQueue = selectedPranayams(draft.activities)
   const workoutQueue = selectedWorkouts(draft.activities)
-  const heartQueue = selectedHearts(draft.activities)
   const detailingPranayam =
     draft.step === 1 && !trackName && !adding && draft.pickPhase === 'pranayamDetail'
   const detailingWorkout =
     draft.step === 1 && !trackName && !adding && draft.pickPhase === 'workoutDetail'
-  const detailingHeart =
-    draft.step === 1 && !trackName && !adding && draft.pickPhase === 'practiceDetail'
-  const detailing = detailingPranayam || detailingWorkout || detailingHeart
+  const detailing = detailingPranayam || detailingWorkout
   const detailActivity = detailingPranayam
     ? (pranayamQueue[pranayamIndex] ?? null)
     : detailingWorkout
       ? (workoutQueue[workoutIndex] ?? null)
-      : detailingHeart
-        ? (heartQueue[heartIndex] ?? null)
-        : null
+      : null
   const sizeActivity = detailActivity ?? (draft.step === 3 ? (sizeActivities[sizeIndex] ?? null) : null)
   const sizeControl = sizeActivity ? activitySizeControl(sizeActivity) : null
   const sizeValue = sizeActivity && sizeControl ? currentSize(sizeActivity) : null
@@ -1129,7 +1035,7 @@ export function StartFlow({
       ? draft.activities.filter((item) => !keptIds.current?.has(item.localId)).length
       : draft.activities.length) +
     (typedNameCounts ? 1 : 0) +
-    (!adding && draft.medicineDaily ? 1 : 0)
+    (!adding && MEDICINES_ENABLED && draft.medicineDaily ? 1 : 0)
   const practiceActivity = draft.activities.find((item) => item.trackingMode === 'timer') ?? null
   const resumedToday = practiceActivity
     ? draft.logs.some((log) => log.kind !== 'count' && log.localActivityId === practiceActivity.localId)
@@ -1197,7 +1103,7 @@ export function StartFlow({
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [draft.step, draft.activities])
 
-  if (addingMedicine) {
+  if (addingMedicine && MEDICINES_ENABLED) {
     return (
       <div className="start-flow">
         <div className="brand-line">
@@ -1331,8 +1237,14 @@ export function StartFlow({
 
       {draft.step === 1 && !trackName && !adding && draft.pickPhase === 'ask' && (
         <>
-          <h1 className="screen-heading">{t('start.pick')}</h1>
-          <p className="screen-sub">{t('start.pickSub')}</p>
+          <button
+            type="button"
+            className="btn btn-ghost start-back"
+            onClick={() => persist({ ...draft, pickPhase: pranayamPhase(draft) })}
+          >
+            <Icon name="back" />
+            {t('start.back')}
+          </button>
           <h2 className="screen-heading start-medicine-title">{t('start.medicineBody')}</h2>
           <StartPreview
             items={MEDICINE_PREVIEW.map((system) => ({
@@ -1451,7 +1363,14 @@ export function StartFlow({
             type="button"
             className="btn btn-ghost start-back"
             onClick={() =>
-              persist({ ...draft, pickPhase: draft.medicines.length > 0 ? 'medicines' : 'ask' })
+              persist({
+                ...draft,
+                pickPhase: !MEDICINES_ENABLED
+                  ? pranayamPhase(draft)
+                  : draft.medicines.length > 0
+                    ? 'medicines'
+                    : 'ask',
+              })
             }
           >
             <Icon name="back" />
@@ -1478,7 +1397,7 @@ export function StartFlow({
             <button
               type="button"
               className="btn btn-secondary"
-              onClick={() => persist({ ...draft, pickPhase: 'pranayam' })}
+              onClick={() => persist({ ...draft, pickPhase: 'vitals' })}
             >
               {t('start.no')}
             </button>
@@ -1548,7 +1467,7 @@ export function StartFlow({
           <button
             type="button"
             className="btn btn-primary"
-            onClick={() => persist({ ...draft, pickPhase: 'pranayam' })}
+            onClick={() => persist({ ...draft, pickPhase: 'vitals' })}
           >
             {t('start.continue')}
           </button>
@@ -1561,7 +1480,12 @@ export function StartFlow({
             type="button"
             className="btn btn-ghost start-back"
             onClick={() =>
-              persist({ ...draft, pickPhase: openReminders.length > 0 ? 'reminders' : 'reminderAsk' })
+              persist({
+                ...draft,
+                pickPhase: draft.activities.some((item) => isWorkoutTemplate(item.templateId))
+                  ? 'workouts'
+                  : 'workout',
+              })
             }
           >
             <Icon name="back" />
@@ -1621,21 +1545,8 @@ export function StartFlow({
 
       {draft.step === 1 && !trackName && !adding && draft.pickPhase === 'workout' && (
         <>
-          <button
-            type="button"
-            className="btn btn-ghost start-back"
-            onClick={() =>
-              persist({
-                ...draft,
-                pickPhase: draft.activities.some((item) => isPranayamTemplate(item.templateId))
-                  ? 'pranayams'
-                  : 'pranayam',
-              })
-            }
-          >
-            <Icon name="back" />
-            {t('start.back')}
-          </button>
+          <h1 className="screen-heading">{t('start.pick')}</h1>
+          <p className="screen-sub">{t('start.pickSub')}</p>
           <h2 className="screen-heading start-medicine-title">{t('start.workoutBody')}</h2>
           <p className="screen-sub">{t('start.workoutLike')}</p>
           <StartPreview items={habitPreview(WORKOUT_PREVIEW)} />
@@ -1719,83 +1630,13 @@ export function StartFlow({
         </>
       )}
 
-      {draft.step === 1 && !trackName && !adding && draft.pickPhase === 'heartfulness' && (
-        <>
-          <button
-            type="button"
-            className="btn btn-ghost start-back"
-            onClick={() =>
-              persist({
-                ...draft,
-                pickPhase: draft.activities.some((item) => isWorkoutTemplate(item.templateId))
-                  ? 'workouts'
-                  : 'workout',
-              })
-            }
-          >
-            <Icon name="back" />
-            {t('start.back')}
-          </button>
-          <h2 className="screen-heading start-medicine-title">{t('start.heartfulnessBody')}</h2>
-          <StartPreview items={habitPreview(HEART_PREVIEW)} />
-          <div className="start-yes-no">
-            <button type="button" className="btn btn-primary" onClick={acceptHeartfulness}>
-              {t('landing.yes')}
-            </button>
-            <button type="button" className="btn btn-secondary" onClick={declineHeartfulness}>
-              {t('start.no')}
-            </button>
-          </div>
-        </>
-      )}
-
-      {draft.step === 1 && !trackName && !adding && draft.pickPhase === 'practices' && (
-        <>
-          <button
-            type="button"
-            className="btn btn-ghost start-back"
-            onClick={() => persist({ ...draft, pickPhase: 'heartfulness' })}
-          >
-            <Icon name="back" />
-            {t('start.back')}
-          </button>
-          <h1 className="screen-heading">{t('start.heartfulnessReady')}</h1>
-          <p className="screen-sub">{t('start.heartfulnessSub')}</p>
-          <div className="start-featured">
-            {HEART_IDS.map((id) => {
-              const selected = draft.activities.some((item) => item.templateId === id)
-              return (
-                <button
-                  key={id}
-                  type="button"
-                  className={`start-featured-option${selected ? ' is-selected' : ''}`}
-                  aria-pressed={selected}
-                  onClick={() => toggleTemplate(id)}
-                >
-                  <HabitMark templateId={id} />
-                  <span>{templateLabel(id, locale)}</span>
-                </button>
-              )
-            })}
-          </div>
-          <button type="button" className="btn btn-primary" onClick={continuePractices}>
-            {t('start.continue')}
-          </button>
-        </>
-      )}
-
       {draft.step === 1 && !trackName && !adding && draft.pickPhase === 'vitals' && (
         <>
           <button
             type="button"
             className="btn btn-ghost start-back"
             onClick={() =>
-              persist({
-                ...draft,
-                pickPhase: draft.activities.some((item) => isHeartTemplate(item.templateId))
-                  ? 'practices'
-                  : 'heartfulness',
-              })
+              persist({ ...draft, pickPhase: openReminders.length > 0 ? 'reminders' : 'reminderAsk' })
             }
           >
             <Icon name="back" />
@@ -2167,9 +2008,7 @@ export function StartFlow({
             <button
               type="button"
               className="btn btn-ghost start-back"
-              onClick={
-                detailingHeart ? backPracticeDetail : detailingWorkout ? backWorkoutDetail : backPranayamDetail
-              }
+              onClick={detailingWorkout ? backWorkoutDetail : backPranayamDetail}
             >
               <Icon name="back" />
               {t('start.back')}
@@ -2261,9 +2100,7 @@ export function StartFlow({
                 ? advancePranayamDetail
                 : detailingWorkout
                   ? advanceWorkoutDetail
-                  : detailingHeart
-                    ? advancePracticeDetail
-                    : advanceSizeStep
+                  : advanceSizeStep
             }
           >
             {t('start.continue')}
@@ -2327,7 +2164,7 @@ export function StartFlow({
       {draft.step === 4 && (
         <>
           <h1 className="screen-heading">{t('start.reminderTitle')}</h1>
-          {(draft.medicines.length > 0 || draft.medicineDaily) && (
+          {MEDICINES_ENABLED && (draft.medicines.length > 0 || draft.medicineDaily) && (
             <p className="screen-sub">{t('start.reminderMedicine')}</p>
           )}
           <p className="screen-sub">{t('start.reminderSub')}</p>
@@ -2396,7 +2233,7 @@ export function StartFlow({
                 ) : null,
                 label: visibleName(activity, locale),
               })),
-              ...draft.medicines.map((medicine, index) => ({
+              ...(MEDICINES_ENABLED ? draft.medicines : []).map((medicine, index) => ({
                 id: `m-${index}`,
                 mark: (
                   <MedicineThumb

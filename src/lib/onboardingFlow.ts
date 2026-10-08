@@ -3,6 +3,7 @@ import { habitVideoFor } from '../data/habitVideos'
 import { t } from './i18n'
 import { formatReminderClock } from './checkinPrefs'
 import { FASTING_HOURS_PER_TAP, PROTEIN_GRAMS_PER_PORTION } from './dayStatus'
+import { MEDICINES_ENABLED } from '../config'
 
 export const GAP_OPTIONS = [
   { id: 'few_days', label: 'A few days', reassurance: 'Easy to pick back up.' },
@@ -545,7 +546,9 @@ export function onboardingSummary(
   },
 ): string {
   const count = draft.activities.length
-  const medicineCount = draft.medicines?.length ?? (draft.medicineDaily ? 1 : 0)
+  const medicineCount = MEDICINES_ENABLED
+    ? (draft.medicines?.length ?? (draft.medicineDaily ? 1 : 0))
+    : 0
   const reminderCount = draft.reminders?.filter((reminder) => reminder.doneAt == null).length ?? 0
   const parts = [
     ...(count === 0 ? [] : [count === 1 ? t('summary.habitOne') : t('summary.habitMany', { count })]),

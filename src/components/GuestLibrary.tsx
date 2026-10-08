@@ -2,6 +2,7 @@ import { useEffect, useState } from 'react'
 import { useNavigate } from 'react-router-dom'
 import { HabitMark } from './HabitMark'
 import { MedicineThumb } from './MedicineThumb'
+import { MEDICINES_ENABLED } from '../config'
 import { useLocale } from '../hooks/useLocale'
 import { visibleName } from '../lib/catalogName'
 import { formatClock, mealMessageKey, systemMessageKey, weekdayShort } from '../lib/medicineFormat'
@@ -164,41 +165,43 @@ export function GuestVitalsPage() {
         items={vitals}
         onAdd={() => navigate('/start?step=1&add=1&vital=1')}
       />
-      <section className="medicine-section">
-        <div className="screen-heading">
-          <div>
-            <h2>{t('medicines.title')}</h2>
-            <p className="screen-sub">{t('medicines.sub')}</p>
+      {MEDICINES_ENABLED && (
+        <section className="medicine-section">
+          <div className="screen-heading">
+            <div>
+              <h2>{t('medicines.title')}</h2>
+              <p className="screen-sub">{t('medicines.sub')}</p>
+            </div>
+            {medicines.length < GUEST_MAX_MEDICINES && (
+              <button
+                type="button"
+                className="btn btn-primary btn-compact"
+                aria-label={t('medicines.add')}
+                onClick={addMedicine}
+              >
+                {t('list.add')}
+              </button>
+            )}
           </div>
-          {medicines.length < GUEST_MAX_MEDICINES && (
-            <button
-              type="button"
-              className="btn btn-primary btn-compact"
-              aria-label={t('medicines.add')}
-              onClick={addMedicine}
-            >
-              {t('list.add')}
-            </button>
+          {medicines.length === 0 ? (
+            <p className="medicine-empty">{t('medicines.empty')}</p>
+          ) : (
+            <ul className="activity-list">
+              {medicines.map((medicine, index) => (
+                <li key={`${medicine.name}-${index}`}>
+                  <div className="activity-row item-kind-medicine">
+                    <MedicineThumb photo={medicine.photo} system={medicine.system} />
+                    <span className="activity-meta">
+                      <span className="activity-name">{medicine.name}</span>
+                      <span className="activity-desc">{medicineLine(medicine, locale, t)}</span>
+                    </span>
+                  </div>
+                </li>
+              ))}
+            </ul>
           )}
-        </div>
-        {medicines.length === 0 ? (
-          <p className="medicine-empty">{t('medicines.empty')}</p>
-        ) : (
-          <ul className="activity-list">
-            {medicines.map((medicine, index) => (
-              <li key={`${medicine.name}-${index}`}>
-                <div className="activity-row item-kind-medicine">
-                  <MedicineThumb photo={medicine.photo} system={medicine.system} />
-                  <span className="activity-meta">
-                    <span className="activity-name">{medicine.name}</span>
-                    <span className="activity-desc">{medicineLine(medicine, locale, t)}</span>
-                  </span>
-                </div>
-              </li>
-            ))}
-          </ul>
-        )}
-      </section>
+        </section>
+      )}
     </>
   )
 }

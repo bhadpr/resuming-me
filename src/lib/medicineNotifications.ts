@@ -20,6 +20,7 @@ import {
   type MedicineSchedule,
 } from './medicineSchedule'
 import { createSupabaseClient } from './supabase'
+import { MEDICINES_ENABLED } from '../config'
 
 const CHANNEL_ID = 'medicine'
 const ACTION_TYPE = 'medicine-dose'
@@ -106,6 +107,10 @@ export async function syncMedicineNotifications(
   labels: MedicineActionLabels = ENGLISH_ACTIONS,
 ): Promise<void> {
   if (!nativePluginAvailable()) return
+  if (!MEDICINES_ENABLED) {
+    await cancelMedicineNotifications()
+    return
+  }
   await registerMedicineActions(labels)
   await cancelMedicineNotifications()
   const alarms = applyMedicineSnoozes(

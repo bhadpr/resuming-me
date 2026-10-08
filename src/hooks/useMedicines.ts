@@ -2,6 +2,7 @@ import { useCallback, useEffect, useMemo, useState } from 'react'
 import { Capacitor } from '@capacitor/core'
 import { useLocale } from './useLocale'
 import { translate } from '../lib/i18n'
+import { MEDICINES_ENABLED } from '../config'
 import { todayLocalDate } from '../lib/dates'
 import { mealMessageKey } from '../lib/medicineFormat'
 import { dosesOnDate, type DoseMark, type DueDose } from '../lib/medicineSchedule'
@@ -32,7 +33,10 @@ export function useMedicines(userId: string | undefined) {
 
   const reload = useCallback(
     async (quiet = false) => {
-      if (!userId) {
+      if (!MEDICINES_ENABLED) {
+        void syncMedicineNotifications([], []).catch(() => {})
+      }
+      if (!userId || !MEDICINES_ENABLED) {
         setMedicines([])
         setMarks([])
         return

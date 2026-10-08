@@ -31,6 +31,7 @@ import {
 } from '../lib/reminderSchedule'
 import { catalogTrackId, visibleName } from '../lib/catalogName'
 import { MEDICINE_REMINDER_CHANGED, clearSkip, rememberSkip } from '../lib/medicineReminderState'
+import { MEDICINES_ENABLED } from '../config'
 import { SkipLink, UndoSkipButton } from './TodaySkip'
 import { useTodaySkips } from '../hooks/useTodaySkips'
 import { track } from '../lib/track'
@@ -543,7 +544,7 @@ export function GuestTodayPage() {
   }
 
   const timedItems: TodayTimedItem[] = [
-    ...guestDosesOnDate(draft, today).map((dose) => ({
+    ...(MEDICINES_ENABLED ? guestDosesOnDate(draft, today) : []).map((dose) => ({
       key: `dose-${dose.key}`,
       kind: 'medicine' as const,
       period: periodForHour(dose.hour),

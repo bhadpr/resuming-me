@@ -42,6 +42,7 @@ import {
 } from '../lib/freshStarts'
 import { useDailyDigest } from '../hooks/useDailyDigest'
 import { useMedicines } from '../hooks/useMedicines'
+import { MEDICINES_ENABLED } from '../config'
 import { deleteMedicine, saveMedicine } from '../lib/medicines'
 import { useReminders } from '../hooks/useReminders'
 import type { Reminder } from '../lib/reminderSchedule'
@@ -975,6 +976,10 @@ export function AppShell() {
   useEffect(() => {
     if (!isAdmin && adminPage && adminPage !== 'groups') navigate('/today', { replace: true })
   }, [isAdmin, adminPage, navigate])
+
+  useEffect(() => {
+    if (!MEDICINES_ENABLED && view?.name === 'medicines') navigate('/numbers', { replace: true })
+  }, [view?.name, navigate])
 
   const appTitle = adminPage
     ? adminPage === 'analytics'
@@ -2274,19 +2279,21 @@ export function AppShell() {
                     navigate('/numbers/new')
                   }}
                 />
-                <MedicineSection
-                  medicines={medicineState.medicines}
-                  loading={medicineState.loading}
-                  error={medicineState.error}
-                  onAdd={() => {
-                    setError(null)
-                    navigate('/medicines/new')
-                  }}
-                  onOpen={(medicine) => {
-                    setError(null)
-                    navigate(`/medicines/${medicine.id}`)
-                  }}
-                />
+                {MEDICINES_ENABLED && (
+                  <MedicineSection
+                    medicines={medicineState.medicines}
+                    loading={medicineState.loading}
+                    error={medicineState.error}
+                    onAdd={() => {
+                      setError(null)
+                      navigate('/medicines/new')
+                    }}
+                    onOpen={(medicine) => {
+                      setError(null)
+                      navigate(`/medicines/${medicine.id}`)
+                    }}
+                  />
+                )}
               </>
             )}
 
@@ -2404,7 +2411,7 @@ export function AppShell() {
           </>
         )}
 
-        {view?.name === 'medicines' && (
+        {MEDICINES_ENABLED && view?.name === 'medicines' && (
           <MedicineEditor
             medicineId={view.medicineId}
             medicines={medicineState.medicines}
