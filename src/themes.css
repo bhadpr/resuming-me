@@ -188,48 +188,56 @@
   --color-glow-primary: color-mix(in srgb, #0a7678 38%, transparent);
 }
 
-/* Sky blue and butter yellow after pixloo.app, softened for long daily use.
-   Text accents use a deeper blue so they stay readable on white. */
+/* Sky: a clear morning. Airy blue backdrop, sunlit gold for actions, deep navy ink.
+   Blue stays in accents and links; buttons are warm so they read as "tap me". */
 [data-theme='sky'] {
   color-scheme: light;
   --radius: var(--radius-lg);
-  --body-wash: radial-gradient(
-      ellipse 85% 55% at 10% -8%,
-      color-mix(in srgb, #62b3d9 14%, transparent),
-      transparent 60%
+  --body-wash:
+    radial-gradient(
+      ellipse 120% 55% at 50% -16%,
+      color-mix(in srgb, #7cc4ea 24%, transparent),
+      transparent 70%
     ),
     radial-gradient(
-      ellipse 50% 35% at 100% 2%,
-      color-mix(in srgb, #f3d36b 12%, transparent),
-      transparent
+      ellipse 45% 28% at 100% 0%,
+      color-mix(in srgb, #ffd66e 20%, transparent),
+      transparent 70%
     );
+  --nav-active-bg: color-mix(in srgb, #7cc4ea 18%, transparent);
 
-  --color-bg: #f5f9fc;
+  --color-bg: #f3f8fc;
   --color-surface: #ffffff;
-  --color-surface-raised: #e8f1f8;
-  --color-border: #cddbe7;
-  --color-border-strong: #a3b9cc;
-  --color-text: #16233d;
-  --color-text-body: #34435a;
-  --color-text-muted: #56657a;
-  --color-primary: #1f73a0;
-  --color-primary-hover: #185f85;
-  --color-primary-soft: #dcecf6;
+  --color-surface-raised: #edf4fa;
+  --color-border: #dae6f0;
+  --color-border-strong: #a9c0d4;
+  --color-text: #0f1f3a;
+  --color-text-body: #33445e;
+  --color-text-muted: #5a6a80;
+  --color-primary: #1d5b94;
+  --color-primary-hover: #174a79;
+  --color-primary-soft: #e2eef9;
   --color-danger: #c8423f;
   --color-info: #2a78b8;
-  --color-warning-bg: #fbf1cf;
+  --color-warning-bg: #fff3cf;
   --color-warning-text: #6b4500;
   --color-success: #2a7f52;
   --color-on-primary: #ffffff;
   --color-on-status: #ffffff;
-  --color-glow-primary: color-mix(in srgb, #62b3d9 30%, transparent);
+  --color-glow-primary: color-mix(in srgb, #f6b92b 30%, transparent);
+  --shadow-focus: 0 0 0 3px color-mix(in srgb, #2a78b8 28%, transparent);
 
-  --sky-button: #62b3d9;
-  --sky-button-hover: #55a8cf;
-  --sky-button-text: #0e2238;
-  --sunny-button: #fbefc4;
-  --sunny-button-hover: #f8e6a8;
-  --sunny-button-edge: #ecd88f;
-  --sunny-button-text: #5e4200;
+  --sun-top: #ffd765;
+  --sun-bottom: #f5b82a;
+  --sun-hover-top: #ffdd7a;
+  --sun-hover-bottom: #f7c03e;
+  --sun-edge: #e2a516;
+  --sun-ink: #1b2640;
+  --sun-shadow: color-mix(in srgb, #c98a00 24%, transparent);
+  --sky-card-shadow:
+    0 1px 2px color-mix(in srgb, #0f1f3a 4%, transparent),
+    0 6px 18px color-mix(in srgb, #1d4f8c 6%, transparent);
+  --sky-card-shadow-hover:
+    0 2px 4px color-mix(in srgb, #0f1f3a 5%, transparent),
+    0 10px 26px color-mix(in srgb, #1d4f8c 10%, transparent);
 }
-

@@ -5,6 +5,7 @@ import { HABIT_ART, habitArtFor, habitSizeArtFor } from '../../data/habitArt'
 import { HabitIcon } from '../HabitIcon'
 import { HabitMark } from '../HabitMark'
 import { HabitVideoPlaceholder } from '../HabitVideoPlaceholder'
+import { GoalTargetPicker, StandardVitalTarget, WeightTargetField } from '../GoalTargetPicker'
 import { EmailSignInForm } from '../EmailSignInForm'
 import { AUTH_PROVIDERS } from '../../lib/authProviders'
 import { MEDICINES_ENABLED } from '../../config'
@@ -36,6 +37,8 @@ import {
   isDailyGoalHabit,
   isWaterHabit,
   needsSizeStep,
+  isGuestVital,
+  standardVitalTarget,
   sizeStepActivities,
   continueLabel,
   gapHeading,
@@ -45,6 +48,7 @@ import {
   onboardingSummary,
   weekCadenceOf,
   type WeekCadence,
+  type WeightUnit,
 } from '../../lib/onboardingFlow'
 import { catalogTrackId, groupTitle, templateLabel, visibleName } from '../../lib/catalogName'
 import { applyHabitPlan, classifyHabitLocally } from '../../lib/habitKind'
@@ -81,7 +85,7 @@ const START_VITALS: { id: string; label: string; caption?: string }[] = [
 
 /** Short first question. Explore more opens the rest of the catalog. */
 const PRANAYAM_IDS = ['anuloma_viloma', 'kapalabhati', 'bhastrika', 'bhramari'] as const
-const WORKOUT_IDS = ['walk', 'running', 'steps', 'exercise', 'stretching'] as const
+const WORKOUT_IDS = ['walk', 'running', 'exercise', 'stretching'] as const
 const VITAL_IDS = ['blood_pressure', 'weight', 'heart_rate', 'steps'] as const
 
 /** Pictures under each yes/no question, so people see what they would get. */
@@ -192,6 +196,26 @@ function initialTargetText(activity: GuestActivity): string {
   return ''
 }
 
+function activityFromTemplate(id: string): GuestActivity | null {
+  const template = ACTIVITY_TEMPLATES.find((item) => item.id === id)
+  if (!template) return null
+  const input = activityInputFromTemplate(template, 'tiny')
+  return {
+    localId: newLocalId(),
+    name: input.name,
+    emoji: input.emoji,
+    type: input.type,
+    trackingMode: input.trackingMode,
+    targetValue: input.targetValue,
+    targetUnit: input.targetUnit,
+    weeklyTarget: input.weeklyTarget,
+    deadline: template.type === 'deadline' ? addDays(todayLocalDate(), 14) : null,
+    templateId: template.id,
+    why: null,
+    usuallyWhen: null,
+  }
+}
+
 function parseTarget(templateId: string | null, raw: string): number | null {
   const value = Number(raw.replace(/,/g, '').trim())
   if (!Number.isFinite(value) || value <= 0) return null
@@ -249,7 +273,7 @@ function listedMinutes(activity: GuestActivity): GuestActivity {
 
 /** Welcome questions in order, each with its follow-up screens. Nudge time and Save come after. */
 const WELCOME_PHASES: readonly (readonly StartPickPhase[])[] = [
-  ['workout', 'workouts', 'stepGoal', 'workoutDetail'],
+  ['workout', 'workouts', 'workoutDetail'],
   ['pranayam', 'pranayams', 'pranayamDetail'],
   ...(MEDICINES_ENABLED ? [['ask', 'medicine', 'medicines'] as const] : []),
   ['reminderAsk', 'reminder', 'reminders'],
@@ -351,6 +375,8 @@ export function StartFlow({
   const [workoutIndex, setWorkoutIndex] = useState(0)
   const [targetIndex, setTargetIndex] = useState(0)
   const [targetText, setTargetText] = useState('')
+  const [pending, setPending] = useState<GuestActivity | null>(null)
+  const [weightUnit, setWeightUnit] = useState<WeightUnit>('kg')
   const [customName, setCustomName] = useState('')
   const [trackName, setTrackName] = useState<string | null>(null)
   const [trackChoice, setTrackChoice] = useState<TypedTracking>('checkbox')
@@ -430,34 +456,66 @@ export function StartFlow({
     } else if (isVitalTemplate(id)) {
       if (vitalCount(draft.activities) >= VITAL_IDS.length) return
     } else if (nonPranayamCount(draft.activities) >= START_PICK_MAX) return
-    const template = ACTIVITY_TEMPLATES.find((item) => item.id === id)
-    if (!template) return
-    const input = activityInputFromTemplate(template, 'tiny')
-    const deadline = template.type === 'deadline' ? addDays(todayLocalDate(), 14) : null
+    const activity = activityFromTemplate(id)
+    if (!activity) return
     // Goal habits ask for an amount next — leave blank until they choose.
-    const goalHabit = isDailyGoalHabit({ templateId: template.id })
-    persist(
-      upsertGuestActivity(draft, {
-        localId: newLocalId(),
-        name: input.name,
-        emoji: input.emoji,
-        type: input.type,
-        trackingMode: input.trackingMode,
-        targetValue: goalHabit ? null : input.targetValue,
-        targetUnit: input.targetUnit,
-        weeklyTarget: input.weeklyTarget,
-        deadline,
-        templateId: template.id,
-        why: null,
-        usuallyWhen: null,
-      }),
-    )
+    const goalHabit = isDailyGoalHabit(activity)
+    persist(upsertGuestActivity(draft, goalHabit ? { ...activity, targetValue: null } : activity))
+    trackCreated(activity)
+  }
+
+  function trackCreated(activity: GuestActivity) {
     track('activity_created', {
-      template_id: catalogTrackId(template.id),
-      type: template.type,
-      tracking: template.trackingMode,
+      template_id: activity.templateId ? catalogTrackId(activity.templateId) : 'custom',
+      type: activity.type,
+      tracking: activity.trackingMode,
       signed_in: false,
     })
+  }
+
+  /** Add mode: one tap opens that item's own setup screen. Nothing is saved until Save. */
+  function openAddDetail(id: string) {
+    if (draft.activities.length >= GUEST_MAX_ACTIVITIES) return
+    const activity = activityFromTemplate(id)
+    if (!activity) return
+    setTargetText('')
+    setPending(activity)
+  }
+
+  function cancelAdd() {
+    setTargetText('')
+    setPending(null)
+  }
+
+  function pendingWithTarget(activity: GuestActivity): GuestActivity | null {
+    const typed = parseTarget(activity.templateId, targetText)
+    if (activity.templateId === 'weight') {
+      return typed == null ? null : { ...activity, targetValue: typed, targetUnit: weightUnit }
+    }
+    if (!isDailyGoalHabit(activity)) return activity
+    if (typed != null) return { ...activity, targetValue: typed }
+    return activity.targetValue != null && activity.targetValue > 0 ? activity : null
+  }
+
+  function saveAdd() {
+    if (!pending) return
+    const ready = pendingWithTarget(pending)
+    if (!ready) return
+    const next = upsertGuestActivity(draft, ready)
+    if (next === draft) return
+    trackCreated(ready)
+    finishStep(1, choiceCode([ready.templateId ?? 'custom']), next)
+    setPending(null)
+    setTargetText('')
+    const historyIndex = (window.history.state as { idx?: number } | null)?.idx ?? 0
+    if (historyIndex > 0) navigate(-1)
+    else navigate(isGuestVital(ready) ? '/numbers' : '/activities')
+  }
+
+  function pickAddGoal(value: number) {
+    if (!pending) return
+    setTargetText('')
+    setPending({ ...pending, targetValue: value })
   }
 
   function acceptPranayam() {
@@ -569,21 +627,7 @@ export function StartFlow({
       persist({ ...draft, pickPhase: 'pranayam' })
       return
     }
-    const steps = chosen.find((item) => item.templateId === 'steps')
-    if (steps) {
-      setTargetText(initialTargetText(steps))
-      persist({ ...draft, pickPhase: 'stepGoal' })
-      return
-    }
     openWorkoutDetails(draft)
-  }
-
-  function continueStepGoal() {
-    const steps = draft.activities.find((item) => item.templateId === 'steps')
-    const value = parseTarget('steps', targetText)
-    if (!steps || value == null) return
-    const next = upsertGuestActivity(draft, { ...steps, targetValue: value, targetUnit: 'steps' })
-    openWorkoutDetails(next)
   }
 
   function advanceWorkoutDetail() {
@@ -601,12 +645,6 @@ export function StartFlow({
   function backWorkoutDetail() {
     if (workoutIndex > 0) {
       setWorkoutIndex(workoutIndex - 1)
-      return
-    }
-    const steps = draft.activities.find((item) => item.templateId === 'steps')
-    if (steps) {
-      setTargetText(initialTargetText(steps))
-      persist({ ...draft, pickPhase: 'stepGoal' })
       return
     }
     persist({ ...draft, pickPhase: 'workouts' })
@@ -651,7 +689,7 @@ export function StartFlow({
     if (!current) return base
     const value = parseTarget(current.templateId, targetText)
     if (value == null) return base
-    const targetUnit = current.templateId === 'weight' ? 'kg' : current.templateId === 'steps' ? 'steps' : current.targetUnit
+    const targetUnit = current.templateId === 'weight' ? weightUnit : current.templateId === 'steps' ? 'steps' : current.targetUnit
     return upsertGuestActivity(base, { ...current, targetValue: value, targetUnit })
   }
 
@@ -704,11 +742,14 @@ export function StartFlow({
     const counted = adding ? base.activities.length : nonPranayamCount(base.activities)
     const pickMax = adding ? GUEST_MAX_ACTIVITIES : START_PICK_MAX
     if (counted >= pickMax) return base
-    const localId = newLocalId()
+    return upsertGuestActivity(base, typedHabitActivity(name, tracking))
+  }
+
+  function typedHabitActivity(name: string, tracking: TypedTracking | null): GuestActivity {
     const habitPlan = classifyHabitLocally(name)
     const activity = applyHabitPlan(
       {
-        localId,
+        localId: newLocalId(),
         name,
         emoji: habitPlan.emoji,
         type: 'daily',
@@ -723,7 +764,7 @@ export function StartFlow({
       },
       habitPlan,
     )
-    return upsertGuestActivity(base, tracking ? withTracking(activity, tracking) : activity)
+    return tracking ? withTracking(activity, tracking) : activity
   }
 
   function trackTypedHabit(name: string, tracking: TypedTracking | null) {
@@ -748,6 +789,12 @@ export function StartFlow({
       askTracking(name, 'stay')
       return
     }
+    if (adding) {
+      setCustomName('')
+      setTargetText('')
+      setPending(typedHabitActivity(name, null))
+      return
+    }
     const next = draftWithTypedHabit(draft, name, null)
     if (next === draft) return
     setCustomName('')
@@ -757,6 +804,13 @@ export function StartFlow({
 
   function saveTrackChoice() {
     if (trackName == null) return
+    if (adding) {
+      setCustomName('')
+      setTargetText('')
+      setPending(typedHabitActivity(trackName, trackChoice))
+      setTrackName(null)
+      return
+    }
     const next = draftWithTypedHabit(draft, trackName, trackChoice)
     setTrackName(null)
     if (next === draft) return
@@ -888,12 +942,20 @@ export function StartFlow({
   }
 
   function setActivitySize(localId: string, value: number) {
+    if (pending?.localId === localId) {
+      setPending(withSize(pending, value))
+      return
+    }
     const current = draft.activities.find((item) => item.localId === localId)
     if (!current) return
     persist(upsertGuestActivity(draft, withSize(current, value)))
   }
 
   function setWeekCadence(localId: string, cadence: WeekCadence) {
+    if (pending?.localId === localId) {
+      setPending(applyWeekCadence(pending, cadence))
+      return
+    }
     const current = draft.activities.find((item) => item.localId === localId)
     if (!current) return
     persist(upsertGuestActivity(draft, applyWeekCadence(current, cadence)))
@@ -1006,7 +1068,11 @@ export function StartFlow({
     : detailingWorkout
       ? (workoutQueue[workoutIndex] ?? null)
       : null
-  const sizeActivity = detailActivity ?? (draft.step === 3 ? (sizeActivities[sizeIndex] ?? null) : null)
+  const addDetail = adding && !trackName && pending != null
+  const addSizing = addDetail && pending != null && needsSizeStep(pending)
+  const sizeActivity = addSizing
+    ? pending
+    : (detailActivity ?? (draft.step === 3 ? (sizeActivities[sizeIndex] ?? null) : null))
   const sizeControl = sizeActivity ? activitySizeControl(sizeActivity) : null
   const sizeValue = sizeActivity && sizeControl ? currentSize(sizeActivity) : null
   const sizeCadence = sizeActivity ? weekCadenceOf(sizeActivity) : null
@@ -1596,40 +1662,6 @@ export function StartFlow({
         </>
       )}
 
-      {draft.step === 1 && !trackName && !adding && draft.pickPhase === 'stepGoal' && (
-        <>
-          <button
-            type="button"
-            className="btn btn-ghost start-back"
-            onClick={() => persist({ ...draft, pickPhase: 'workouts' })}
-          >
-            <Icon name="back" />
-            {t('start.back')}
-          </button>
-          <h1 className="screen-heading">{t('start.targetSteps')}</h1>
-          <label className="field">
-            <span className="field-label">{t('start.target')}</span>
-            <input
-              className="field-input"
-              inputMode="numeric"
-              value={targetText}
-              onChange={(event) => setTargetText(event.target.value)}
-              placeholder="10000"
-              autoFocus
-            />
-          </label>
-          <p className="screen-sub">{t('notes.steps')}</p>
-          <button
-            type="button"
-            className="btn btn-primary"
-            disabled={parseTarget('steps', targetText) == null}
-            onClick={continueStepGoal}
-          >
-            {t('start.continue')}
-          </button>
-        </>
-      )}
-
       {draft.step === 1 && !trackName && !adding && draft.pickPhase === 'vitals' && (
         <>
           <button
@@ -1703,18 +1735,29 @@ export function StartFlow({
               {t('start.back')}
             </button>
             <h1 className="screen-heading">{weight ? t('start.targetWeight') : t('start.targetSteps')}</h1>
-            <label className="field">
-              <span className="field-label">{t('start.target')}</span>
-              <input
-                className="field-input"
-                inputMode={weight ? 'decimal' : 'numeric'}
-                value={targetText}
-                onChange={(event) => setTargetText(event.target.value)}
-                placeholder={weight ? '70' : '10000'}
-                autoFocus
+            {weight ? (
+              <WeightTargetField
+                text={targetText}
+                unit={weightUnit}
+                onText={setTargetText}
+                onUnit={setWeightUnit}
               />
-            </label>
-            <p className="screen-sub">{weight ? 'kg' : t('notes.steps')}</p>
+            ) : (
+              <>
+                <label className="field">
+                  <span className="field-label">{t('start.target')}</span>
+                  <input
+                    className="field-input"
+                    inputMode="numeric"
+                    value={targetText}
+                    onChange={(event) => setTargetText(event.target.value)}
+                    placeholder="10000"
+                    autoFocus
+                  />
+                </label>
+                <p className="screen-sub">{t('notes.steps')}</p>
+              </>
+            )}
             <button
               type="button"
               className="btn btn-primary"
@@ -1727,7 +1770,7 @@ export function StartFlow({
         )
       })()}
 
-      {draft.step === 1 && !trackName && adding && addingVitals && (() => {
+      {draft.step === 1 && !trackName && adding && addingVitals && !pending && (() => {
         const options = VITAL_IDS.filter((id) => {
           const existing = draft.activities.find((activity) => activity.templateId === id)
           return !(existing && keptIds.current?.has(existing.localId))
@@ -1736,41 +1779,27 @@ export function StartFlow({
           <>
             <h1 className="screen-heading">{t('list.addVital')}</h1>
             <p className="screen-sub">
-              {options.length > 0 ? t('start.vitalsSub') : t('start.vitalsAllAdded')}
+              {options.length > 0 ? t('start.addOneSub') : t('start.vitalsAllAdded')}
             </p>
             <div className="start-featured">
-              {options.map((id) => {
-                const selected = draft.activities.some((activity) => activity.templateId === id)
-                return (
-                  <button
-                    key={id}
-                    type="button"
-                    className={`start-featured-option${selected ? ' is-selected' : ''}`}
-                    disabled={selectionFull(id, selected)}
-                    aria-pressed={selected}
-                    onClick={() => toggleTemplate(id)}
-                  >
-                    <HabitMark templateId={id} />
-                    <span>{templateLabel(id, locale)}</span>
-                  </button>
-                )
-              })}
-            </div>
-            <div className="start-flow-footer">
-              <button
-                type="button"
-                className="btn btn-primary"
-                disabled={continueCount === 0}
-                onClick={continueFromPick}
-              >
-                {continueCount === 0 ? t('start.pickOne') : continueLabel(continueCount)}
-              </button>
+              {options.map((id) => (
+                <button
+                  key={id}
+                  type="button"
+                  className="start-featured-option"
+                  disabled={selectionFull(id, false)}
+                  onClick={() => openAddDetail(id)}
+                >
+                  <HabitMark templateId={id} />
+                  <span>{templateLabel(id, locale)}</span>
+                </button>
+              ))}
             </div>
           </>
         )
       })()}
 
-      {draft.step === 1 && !trackName && (adding ? !addingVitals : draft.pickPhase === 'activities') && (
+      {draft.step === 1 && !trackName && (adding ? !addingVitals && !pending : draft.pickPhase === 'activities') && (
         <>
           {!adding && (
             <button
@@ -1792,7 +1821,7 @@ export function StartFlow({
           <h1 className="screen-heading">
             {adding ? t('start.add') : t('start.activitiesIntro')}
           </h1>
-          {adding && <p className="screen-sub">{t('start.addSub')}</p>}
+          {adding && <p className="screen-sub">{t('start.addOneSub')}</p>}
           {draft.activities.some((item) => item.templateId == null && !(adding && keptIds.current?.has(item.localId))) && (
             <div className="start-featured">
               {draft.activities
@@ -1822,8 +1851,8 @@ export function StartFlow({
                   type="button"
                   className={`start-featured-option${selected ? ' is-selected' : ''}`}
                   disabled={full}
-                  aria-pressed={selected}
-                  onClick={() => toggleTemplate(item.id)}
+                  aria-pressed={adding ? undefined : selected}
+                  onClick={() => (adding ? openAddDetail(item.id) : toggleTemplate(item.id))}
                 >
                   <HabitMark templateId={item.id} />
                   <span>{t(item.labelKey)}</span>
@@ -1889,7 +1918,7 @@ export function StartFlow({
                         type="button"
                         className={`onboarding-chip habit-tile ${selected ? 'onboarding-chip-selected' : ''}`}
                         disabled={full || kept}
-                        onClick={() => toggleTemplate(template.id)}
+                        onClick={() => (adding ? openAddDetail(template.id) : toggleTemplate(template.id))}
                       >
                         <span
                           className={`habit-tile-icon${HABIT_ART[template.id] ? ' habit-tile-icon-art' : ''}`}
@@ -1923,7 +1952,7 @@ export function StartFlow({
                       type="button"
                       className={`onboarding-chip habit-tile ${selected ? 'onboarding-chip-selected' : ''}`}
                       disabled={full || kept}
-                      onClick={() => toggleTemplate(vital.id)}
+                      onClick={() => (adding ? openAddDetail(vital.id) : toggleTemplate(vital.id))}
                     >
                       <span
                         className={`habit-tile-icon${HABIT_ART[vital.id] ? ' habit-tile-icon-art' : ''}`}
@@ -1946,18 +1975,66 @@ export function StartFlow({
             </section>
           </div>
           )}
-          <div className="start-flow-footer">
-            <button
-              type="button"
-              className="btn btn-primary"
-              disabled={continueCount === 0}
-              onClick={continueFromPick}
-            >
-              {continueCount === 0 ? t('start.pickOne') : continueLabel(continueCount)}
-            </button>
-          </div>
+          {!adding && (
+            <div className="start-flow-footer">
+              <button
+                type="button"
+                className="btn btn-primary"
+                disabled={continueCount === 0}
+                onClick={continueFromPick}
+              >
+                {continueCount === 0 ? t('start.pickOne') : continueLabel(continueCount)}
+              </button>
+            </div>
+          )}
         </>
       )}
+
+      {addDetail && pending && !addSizing && (() => {
+        const weight = pending.templateId === 'weight'
+        const goal = isDailyGoalHabit(pending)
+        const standard = standardVitalTarget(pending.templateId)
+        const ready = pendingWithTarget(pending)
+        const name = visibleName(pending, locale)
+        return (
+          <>
+            <button type="button" className="btn btn-ghost start-back" onClick={cancelAdd}>
+              <Icon name="back" />
+              {t('start.back')}
+            </button>
+            <h1 className="screen-heading">
+              {weight ? t('start.targetWeight') : goal ? gapHeading(pending) : name}
+            </h1>
+            {(weight || goal) && (
+              <p className="screen-sub start-detail-name">
+                <HabitMark templateId={pending.templateId} name={name} emoji={pending.emoji} />
+                {name}
+              </p>
+            )}
+            {standard && <StandardVitalTarget messageKey={standard} />}
+            {goal && (
+              <GoalTargetPicker
+                habit={pending}
+                value={pending.targetValue}
+                text={targetText}
+                onPick={pickAddGoal}
+                onText={setTargetText}
+              />
+            )}
+            {weight && (
+              <WeightTargetField
+                text={targetText}
+                unit={weightUnit}
+                onText={setTargetText}
+                onUnit={setWeightUnit}
+              />
+            )}
+            <button type="button" className="btn btn-primary" disabled={ready == null} onClick={saveAdd}>
+              {t('start.save')}
+            </button>
+          </>
+        )
+      })()}
 
       {draft.step === 2 && gapActivity && isDailyGoalHabit(gapActivity) && (
         <>
@@ -2002,13 +2079,13 @@ export function StartFlow({
         </>
       )}
 
-      {(draft.step === 3 || detailing) && sizeActivity && (
+      {(draft.step === 3 || detailing || addSizing) && sizeActivity && (
         <>
-          {detailing && (
+          {(detailing || addSizing) && (
             <button
               type="button"
               className="btn btn-ghost start-back"
-              onClick={detailingWorkout ? backWorkoutDetail : backPranayamDetail}
+              onClick={addSizing ? cancelAdd : detailingWorkout ? backWorkoutDetail : backPranayamDetail}
             >
               <Icon name="back" />
               {t('start.back')}
@@ -2096,14 +2173,16 @@ export function StartFlow({
             type="button"
             className="btn btn-primary"
             onClick={
-              detailingPranayam
-                ? advancePranayamDetail
-                : detailingWorkout
-                  ? advanceWorkoutDetail
-                  : advanceSizeStep
+              addSizing
+                ? saveAdd
+                : detailingPranayam
+                  ? advancePranayamDetail
+                  : detailingWorkout
+                    ? advanceWorkoutDetail
+                    : advanceSizeStep
             }
           >
-            {t('start.continue')}
+            {addSizing ? t('start.save') : t('start.continue')}
           </button>
         </>
       )}

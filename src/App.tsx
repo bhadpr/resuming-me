@@ -277,6 +277,7 @@ export const appRouteObjects = [
               { path: '/insights', element: <RouteSlot /> },
               { path: '/review/:weekStart', element: <RouteSlot /> },
               { path: '/settings/themes', element: <RouteSlot /> },
+              { path: '/settings/reminders', element: <RouteSlot /> },
               { path: '/settings', element: <RouteSlot /> },
               { path: '/admin/analytics', element: <RouteSlot /> },
               { path: '/admin/feedback', element: <RouteSlot /> },

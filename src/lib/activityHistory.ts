@@ -1,7 +1,7 @@
 import type { Activity } from './activities'
 import type { LogEntry } from './logs'
 import { addDays, daysBetween, parseLocalDate, todayLocalDate } from './dates'
-import { getDayStatus, isAutoPostponed, type ActivityPause } from './dayStatus'
+import { countPortion, countProgressLabel, getDayStatus, isAutoPostponed, type ActivityPause } from './dayStatus'
 import { freshStartCovering, type FreshStartRange } from './comeback'
 
 export type ActivityHistoryRow =
@@ -15,6 +15,8 @@ export type ActivityHistoryRow =
       days: number
     }
   | { kind: 'entry'; entry: LogEntry }
+  /** Count habits (water, protein…): one row per day with the day's total. */
+  | { kind: 'count'; id: string; date: string; label: string }
 
 export type ActivityHistoryGroup = {
   monthKey: string
@@ -188,6 +190,21 @@ export function buildActivityHistory(
     const dayEntries = visibleEntriesForDay(
       entriesForDate(mine, activity.id, date),
     )
+    if (activity.tracking_mode === 'count') {
+      const taps = dayEntries.filter((entry) => entry.type === 'completed').length
+      if (taps > 0) {
+        const target = activity.target_value ?? 1
+        const value = taps * countPortion(activity.target_unit, target)
+        flat.push({
+          sortDate: date,
+          row: { kind: 'count', id: `count-${date}`, date, label: countProgressLabel(value, target, activity.target_unit) },
+        })
+      }
+      for (const entry of dayEntries) {
+        if (entry.type !== 'completed') flat.push({ sortDate: entry.date, row: { kind: 'entry', entry } })
+      }
+      continue
+    }
     for (const entry of dayEntries) {
       flat.push({ sortDate: entry.date, row: { kind: 'entry', entry } })
     }

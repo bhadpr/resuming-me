@@ -10,7 +10,7 @@ import {
   translate,
   type Locale,
 } from '../lib/i18n'
-import { createSupabaseClient, isSupabaseConfigured } from '../lib/supabase'
+import { createSupabaseClient, isSupabaseConfigured, sendQuery } from '../lib/supabase'
 
 type LocaleContextValue = {
   locale: Locale
@@ -105,7 +105,7 @@ export function LocaleProvider({ children }: { children: ReactNode }) {
         setLocaleChosen(true)
         setLocaleResolved(true)
         if (!user || !isSupabaseConfigured()) return
-        void createSupabaseClient().from('profiles').update({ locale: next }).eq('id', user.id)
+        sendQuery(createSupabaseClient().from('profiles').update({ locale: next }).eq('id', user.id), 'Save language')
       },
       t: (key, vars) => translate(locale, key, vars),
     }),

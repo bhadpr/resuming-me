@@ -5,6 +5,7 @@ import { useThemedArt } from '../hooks/useThemedArt'
 import { todayLocalDate } from '../lib/dates'
 import { readPhoneSteps, requestPhoneSteps, type PhoneSteps } from '../lib/healthSteps'
 import { formatStepCount } from '../lib/steps'
+import { StepsWeek } from './StepsWeek'
 
 type PhoneState = PhoneSteps['status'] | 'unknown'
 
@@ -21,6 +22,7 @@ export function StepsCard({
   const [phoneSteps, setPhoneSteps] = useState<number | null>(null)
   const [phoneState, setPhoneState] = useState<PhoneState>('unknown')
   const [asking, setAsking] = useState(false)
+  const [weekOpen, setWeekOpen] = useState(false)
 
   useEffect(() => {
     let cancelled = false
@@ -90,6 +92,19 @@ export function StepsCard({
           </span>
         )}
       </div>
+      {fromPhone && (
+        <div className="today-extra">
+          <button
+            type="button"
+            className="today-extra-btn"
+            aria-expanded={weekOpen}
+            onClick={() => setWeekOpen((open) => !open)}
+          >
+            {t('today.stepsWeek')}
+          </button>
+        </div>
+      )}
+      {fromPhone && weekOpen && <StepsWeek goal={goal} heading={false} />}
     </li>
   )
 }

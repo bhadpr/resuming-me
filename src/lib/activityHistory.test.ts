@@ -51,6 +51,21 @@ function autoPostponed(date: string): LogEntry {
   }
 }
 
+describe('buildActivityHistory count habits', () => {
+  it('shows one row per day with the total, not one per glass', () => {
+    const water = activity({
+      name: 'Water',
+      tracking_mode: 'count',
+      target_value: 6,
+      target_unit: 'glasses',
+      created_at: '2026-10-08T00:00:00Z',
+    })
+    const entries = [completed('2026-10-08'), { ...completed('2026-10-08'), id: 'second' }]
+    const rows = buildActivityHistory(water, entries, '2026-10-08').flatMap((group) => group.rows)
+    expect(rows).toEqual([{ kind: 'count', id: 'count-2026-10-08', date: '2026-10-08', label: '2 of 6 glasses' }])
+  })
+})
+
 describe('formatQuietRange', () => {
   it('formats a single day and a span', () => {
     expect(formatQuietRange('2026-08-23', '2026-08-23')).toBe('Aug 23 · quiet')

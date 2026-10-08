@@ -52,6 +52,19 @@ export function createSupabaseClient(): SupabaseClient<Database> {
   return client
 }
 
+/**
+ * Sends a query without waiting for it. Supabase queries only run once awaited
+ * or `.then()`-ed, so `void query` alone never reaches the server.
+ */
+export function sendQuery(query: PromiseLike<{ error: unknown }>, label: string): void {
+  Promise.resolve(query).then(
+    ({ error }) => {
+      if (error) console.warn(`${label} failed`, error)
+    },
+    (error: unknown) => console.warn(`${label} failed`, error),
+  )
+}
+
 /** Test-only helper to clear the singleton between tests if needed. */
 export function __resetSupabaseClientForTests(): void {
   client = null

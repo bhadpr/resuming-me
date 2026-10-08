@@ -1,5 +1,8 @@
 import { describeActivity, type Activity } from '../lib/activities'
-import { visibleName } from '../lib/catalogName'
+import { findActivePause, type ActivityPauseRow } from '../lib/activityPauses'
+import { groupTitle, visibleName } from '../lib/catalogName'
+import { groupByHabitGroup } from '../data/activityTemplates'
+import { habitTemplateId } from '../data/habitArt'
 import { useLocale } from '../hooks/useLocale'
 import { ArchivedFilter } from './ArchivedFilter'
 import { HabitMark } from './HabitMark'
@@ -7,6 +10,7 @@ import { Icon } from './Icon'
 
 interface ActivityListProps {
   activities: Activity[]
+  pauses?: ActivityPauseRow[]
   loading: boolean
   showArchived: boolean
   onToggleArchived: () => void
@@ -16,6 +20,7 @@ interface ActivityListProps {
 
 export function ActivityList({
   activities,
+  pauses = [],
   loading,
   showArchived,
   onToggleArchived,
@@ -59,29 +64,40 @@ export function ActivityList({
           </button>
         </section>
       ) : (
-        <ul className="activity-list">
-          {visible.map((activity) => (
-            <li key={activity.id}>
-              <button
-                type="button"
-                className={`activity-row item-kind-activity ${activity.archived ? 'activity-row-archived' : ''}`}
-                onClick={() => onSelect(activity)}
-              >
-                <HabitMark name={visibleName(activity, locale)} templateId={activity.template_id} />
-                <span className="activity-meta">
-                  <span className="activity-name">
-                    {visibleName(activity, locale)}
-                    {activity.archived && <span className="badge">{t('list.archived')}</span>}
-                  </span>
-                  <span className="activity-desc">{describeActivity(activity)}</span>
-                </span>
-                <span className="activity-chevron" aria-hidden>
-                  <Icon name="chevron" />
-                </span>
-              </button>
-            </li>
+        <div className="activity-groups">
+          {groupByHabitGroup(visible, (activity) => habitTemplateId(activity)).map((group) => (
+            <section key={group.title} className="activity-group">
+              <h3 className="today-period-title">{groupTitle(group.title, locale)}</h3>
+              <ul className="activity-list">
+                {group.items.map((activity) => (
+                  <li key={activity.id}>
+                    <button
+                      type="button"
+                      className={`activity-row item-kind-activity ${activity.archived ? 'activity-row-archived' : ''}`}
+                      onClick={() => onSelect(activity)}
+                    >
+                      <HabitMark name={visibleName(activity, locale)} templateId={activity.template_id} />
+                      <span className="activity-meta">
+                        <span className="activity-name">
+                          {visibleName(activity, locale)}
+                          {activity.archived ? (
+                            <span className="badge">{t('list.archived')}</span>
+                          ) : findActivePause(pauses, activity.id) && (
+                            <span className="badge badge-paused">{t('list.paused')}</span>
+                          )}
+                        </span>
+                        <span className="activity-desc">{describeActivity(activity)}</span>
+                      </span>
+                      <span className="activity-chevron" aria-hidden>
+                        <Icon name="chevron" />
+                      </span>
+                    </button>
+                  </li>
+                ))}
+              </ul>
+            </section>
           ))}
-        </ul>
+        </div>
       )}
     </div>
   )

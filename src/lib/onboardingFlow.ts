@@ -61,6 +61,42 @@ export function isNumberEntryVital(activity: Pick<GuestActivity, 'templateId'>):
   )
 }
 
+/** Typed goal amount: whole steps, everything else to one decimal. */
+export function parseGoalText(templateId: string | null | undefined, raw: string): number | null {
+  const value = Number(raw.replace(/,/g, '').trim())
+  if (!Number.isFinite(value) || value <= 0) return null
+  if (templateId === 'steps') return Math.round(value)
+  return Math.round(value * 10) / 10
+}
+
+export const WEIGHT_UNITS = ['kg', 'lb'] as const
+export type WeightUnit = (typeof WEIGHT_UNITS)[number]
+const LB_PER_KG = 2.20462
+
+/** Older vitals were saved as "lbs". */
+export function weightUnitOf(unit: string | null | undefined): WeightUnit {
+  const value = unit?.trim().toLowerCase()
+  return value === 'lb' || value === 'lbs' ? 'lb' : 'kg'
+}
+
+export function convertWeight(value: number, from: WeightUnit, to: WeightUnit): number {
+  if (from === to) return value
+  const converted = from === 'kg' ? value * LB_PER_KG : value / LB_PER_KG
+  return Math.round(converted * 10) / 10
+}
+
+/** Daily-goal habits that are also listed on the Vitals tab. */
+export const VITAL_GOAL_IDS: ReadonlySet<string> = new Set(['water', 'protein', 'fasting', 'steps'])
+
+/** Lives on the Vitals tab rather than Activity. */
+export function isGuestVital(activity: { templateId?: string | null; measure?: string | null }): boolean {
+  return (
+    isNumberEntryVital({ templateId: activity.templateId ?? null }) ||
+    isLoggedVital(activity) ||
+    isStepsHabit(activity)
+  )
+}
+
 /** Water, protein, fasting, sleep, and a typed gram goal ask for a daily amount. */
 export function isDailyGoalHabit(activity: {
   templateId?: string | null
@@ -192,7 +228,7 @@ export const WATER_GOAL_NOTE =
 export const PROTEIN_GRAM_STEPS = [20, 30, 40, 50, 60, 70] as const
 export const PROTEIN_GOAL_HEADING = 'How much protein is your goal?'
 export const PROTEIN_GOAL_NOTE = `A common daily amount is about 50 g. One portion is ${PROTEIN_GRAMS_PER_PORTION} g.`
-export const FASTING_HOUR_STEPS = [4, 8, 12, 16, 20] as const
+export const FASTING_HOUR_STEPS = [8, 12, 16, 20] as const
 export const FASTING_HOURS_NOTE = `Each tap adds ${FASTING_HOURS_PER_TAP} hours.`
 export const FASTING_GOAL_HEADING = 'How many hours is your fast?'
 export const SLEEP_HOUR_STEPS = [6, 7, 8, 9] as const
@@ -201,6 +237,22 @@ export const SLEEP_GOAL_HEADING = 'How many hours of sleep?'
 export const STEP_COUNT_TARGETS = [6000, 8000, 10000, 12000, 15000] as const
 export const STEPS_GOAL_HEADING = 'How many steps is your goal?'
 export const STEPS_GOAL_NOTE = 'A common day is about 10,000 steps.'
+
+/**
+ * Vitals with a fixed healthy range: we show it instead of asking.
+ * Blood pressure: below 120/80 mmHg. Resting heart rate: 60–100 bpm.
+ */
+export function standardVitalTarget(templateId: string | null | undefined): string | null {
+  if (templateId === 'blood_pressure') return 'start.bpTarget'
+  if (templateId === 'heart_rate') return 'start.hrTarget'
+  return null
+}
+
+/** Vitals whose edit screen only changes the target, never the name. */
+export function isFixedVital(templateId: string | null | undefined): boolean {
+  if (!templateId) return false
+  return templateId === 'weight' || standardVitalTarget(templateId) != null || isDailyGoalHabit({ templateId })
+}
 
 export function glassLabel(count: number): string {
   return count === 1 ? '1 glass' : `${count} glasses`
@@ -299,7 +351,7 @@ export function gapNote(activity: GoalAsk): string | null {
   if (activity.measure === 'grams' && activity.recommended) {
     return t('notes.grams', { amount: String(activity.recommended) })
   }
-  if (isFastingHabit(activity) || activity.measure === 'hours') return t('notes.fasting')
+  if (isFastingHabit(activity) || activity.measure === 'hours') return t('notes.fastingGoal')
   if (isSleepHabit(activity) || activity.measure === 'sleep') return t('notes.sleep')
   if (isStepsHabit(activity) || activity.measure === 'steps') return t('notes.steps')
   return null

@@ -37,7 +37,6 @@ describe('onboarding flow copy', () => {
     expect(gapHeading({ templateId: 'protein' })).toBe('How much protein is your goal?')
     expect(gapHeading({ templateId: 'fasting' })).toBe('How many hours is your fast?')
     expect(gapOptionsFor({ templateId: 'fasting' }).map((option) => option.label)).toEqual([
-      '4 hours',
       '8 hours',
       '12 hours',
       '16 hours',

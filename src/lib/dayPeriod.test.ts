@@ -77,8 +77,9 @@ describe('activityPeriod', () => {
     expect(activityPeriod({ templateId: 'walk', usuallyWhen: 'evening' })).toBe('evening')
   })
 
-  it('matches vitals by name when there is no template', () => {
-    expect(defaultPeriodFor({ name: 'Weight' })).toBe('morning')
-    expect(defaultPeriodFor({ name: 'Protein' })).toBe('anytime')
+  it('puts vitals at anytime', () => {
+    expect(defaultPeriodFor({ name: 'Weight' })).toBe('anytime')
+    expect(defaultPeriodFor({ templateId: 'heart_rate' })).toBe('anytime')
+    expect(defaultPeriodFor({ name: 'Blood Pressure' })).toBe('anytime')
   })
 })

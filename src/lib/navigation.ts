@@ -22,7 +22,7 @@ export type AppView =
   | { name: 'reminders'; reminderId?: string }
   | { name: 'insights' }
   | { name: 'review'; weekStart: string }
-  | { name: 'settings' }
+  | { name: 'settings'; page?: 'reminders' }
   | { name: 'themes' }
   | { name: 'admin'; page: 'analytics' | 'feedback' | 'groups'; groupId?: string }
 
@@ -61,6 +61,7 @@ const APP_ROUTES: Array<{ pattern: string; parse: (params: Record<string, string
   { pattern: '/insights', parse: () => ({ name: 'insights' }) },
   { pattern: '/review/:weekStart', parse: (p) => ({ name: 'review', weekStart: p.weekStart! }) },
   { pattern: '/settings/themes', parse: () => ({ name: 'themes' }) },
+  { pattern: '/settings/reminders', parse: () => ({ name: 'settings', page: 'reminders' }) },
   { pattern: '/settings', parse: () => ({ name: 'settings' }) },
   { pattern: '/admin/analytics', parse: () => ({ name: 'admin', page: 'analytics' }) },
   { pattern: '/admin/feedback', parse: () => ({ name: 'admin', page: 'feedback' }) },

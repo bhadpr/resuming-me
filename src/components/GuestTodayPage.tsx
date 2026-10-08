@@ -9,9 +9,11 @@ import {
   playsVideoWithTimer,
   showsHabitVideo,
   stepCountLabel,
+  weightUnitOf,
 } from '../lib/onboardingFlow'
 import { formatDuration } from '../lib/timer'
 import { AppAlertsNote } from './AppAlertsNote'
+import { GuestSaveWidget } from './GuestSaveWidget'
 import { HabitMark } from './HabitMark'
 import { Toast } from './Toast'
 import { useUndoToast } from '../hooks/useUndoToast'
@@ -46,12 +48,10 @@ import {
   guestCountProgress,
   guestCountsOnDate,
   guestDosesOnDate,
-  guestSaveWarning,
   guestSessionSeconds,
   guestTapsDone,
   guestTimerProgress,
   loadGuestDraft,
-  setGuestStep,
   toggleGuestDose,
   completeGuestReminder,
   removeGuestReminder,
@@ -210,8 +210,6 @@ export function GuestTodayPage() {
   }
 
   if (!draft) return null
-
-  const warning = guestSaveWarning(draft)
 
   const activitySkipKey = (activity: GuestActivity) => `guest-activity:${activity.localId}`
 
@@ -555,7 +553,7 @@ export function GuestTodayPage() {
     ...draft.activities.map((activity) => ({
       key: `activity-${activity.localId}`,
       kind: isNumberEntryVital(activity) ? ('vital' as const) : ('activity' as const),
-      period: activityPeriod(activity),
+      period: isNumberEntryVital(activity) ? ('anytime' as const) : activityPeriod(activity),
       done: isDoneToday(activity),
       node: renderGuestActivity(activity),
     })),
@@ -602,17 +600,7 @@ export function GuestTodayPage() {
 
   return (
         <div className="today-screen">
-          <div className="guest-save-widget">
-            {warning ? <p className="guest-save-widget-warning">{warning}</p> : null}
-            <Link
-              className="btn btn-primary"
-              to="/start?step=8"
-              onClick={() => setGuestStep(draft, 8)}
-            >
-              {t('today.save')}
-            </Link>
-            <p className="guest-save-widget-note">{t('today.stays')}</p>
-          </div>
+          <GuestSaveWidget draft={draft} />
 
           <div className="screen-heading today-heading">
             <h2>{t('nav.today')}</h2>
@@ -666,6 +654,7 @@ function NumberVitalRow({
   const paired = activity.templateId === 'blood_pressure'
   const steps = activity.templateId === 'steps'
   const weight = activity.templateId === 'weight'
+  const inPounds = weight && weightUnitOf(activity.targetUnit) === 'lb'
   const [value, setValue] = useState(reading ? String(reading.value) : '')
   const [secondary, setSecondary] = useState(
     reading?.secondaryValue == null ? '' : String(reading.secondaryValue),
@@ -700,9 +689,9 @@ function NumberVitalRow({
       : t('today.goalSteps', { goal: stepCountLabel(target ?? 10000) })
     : weight
       ? reading
-        ? t('today.kgToday', { value: reading.value })
+        ? t(inPounds ? 'today.lbToday' : 'today.kgToday', { value: reading.value })
         : target
-          ? t('today.goalKg', { goal: target })
+          ? t(inPounds ? 'today.goalLb' : 'today.goalKg', { goal: target })
           : t('today.weighIn')
     : !reading
       ? paired
@@ -737,7 +726,13 @@ function NumberVitalRow({
                 step="any"
                 inputMode={weight ? 'decimal' : 'numeric'}
                 placeholder={
-                  paired ? t('today.upper') : steps ? t('today.steps') : weight ? t('today.kg') : t('today.bpm')
+                  paired
+                    ? t('today.upper')
+                    : steps
+                      ? t('today.steps')
+                      : weight
+                        ? t(inPounds ? 'today.lb' : 'today.kg')
+                        : t('today.bpm')
                 }
                 value={value}
                 aria-label={

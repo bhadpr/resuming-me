@@ -1,5 +1,11 @@
 import { describe, expect, it } from 'vitest'
-import { ACTIVITY_TEMPLATES, HABIT_GROUPS, activityInputFromTemplate, templateById } from './activityTemplates'
+import {
+  ACTIVITY_TEMPLATES,
+  HABIT_GROUPS,
+  activityInputFromTemplate,
+  groupByHabitGroup,
+  templateById,
+} from './activityTemplates'
 
 describe('activity templates', () => {
   it('groups the first-screen habits and starts Reading at the tiny size', () => {
@@ -13,7 +19,6 @@ describe('activity templates', () => {
     expect(HABIT_GROUPS.flatMap((group) => group.ids).map((id) => templateById(id)?.label)).toEqual([
       'Walking',
       'Running',
-      'Steps',
       'Strength',
       'Exercises',
       'Bhastrika',
@@ -56,5 +61,18 @@ describe('activity templates', () => {
     expect(ACTIVITY_TEMPLATES.some((template) => template.id === 'taxes' || template.id === 'tidy')).toBe(
       false,
     )
+  })
+})
+
+describe('groupByHabitGroup', () => {
+  it('follows the catalog order and puts unknown habits last', () => {
+    const items = [{ id: 'own' }, { id: 'prayer' }, { id: 'walk' }, { id: 'bhastrika' }, { id: 'running' }]
+    const groups = groupByHabitGroup(items, (item) => (item.id === 'own' ? null : item.id))
+    expect(groups.map((group) => [group.title, group.items.map((item) => item.id)])).toEqual([
+      ['Fitness', ['walk', 'running']],
+      ['Pranayam', ['bhastrika']],
+      ['Heartfulness', ['prayer']],
+      ['Other', ['own']],
+    ])
   })
 })

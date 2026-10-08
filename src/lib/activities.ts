@@ -293,6 +293,8 @@ export function describeActivity(activity: Activity): string {
   if (activity.tracking_mode === 'count') {
     if (activity.target_unit === 'g') return `${activity.target_value ?? 50} g / day`
     if (activity.target_unit === 'hours' || activity.target_unit === 'hr') return `${activity.target_value ?? 16} hours / day`
+    if (activity.target_unit === 'glasses') return `${activity.target_value ?? 8} glasses / day`
+    if (activity.target_unit === 'steps') return `${(activity.target_value ?? 10000).toLocaleString('en-US')} steps / day`
     return `${activity.target_value ?? 1} / day`
   }
   return `${activity.target_value ?? 0} ${activity.target_unit ?? 'min'} / day`

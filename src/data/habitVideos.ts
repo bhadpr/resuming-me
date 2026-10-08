@@ -13,9 +13,9 @@ export const HABIT_VIDEOS: Record<string, HabitVideo> = {
   bhastrika: { youtubeId: 'TsYT02UnkMA' },
   bhramari: { youtubeId: '2B5RM0dphyA', startSeconds: 2 },
   relaxation: { youtubeId: 'PrYt0Iew8WM', startSeconds: 178 },
-  rejuvenation: { youtubeId: 'NiorIbEuNCQ' },
+  rejuvenation: { youtubeId: 'NiorIbEuNCQ', startSeconds: 18 },
   prayer: { youtubeId: '6KrbdvLYCL8' },
-  meditate: { youtubeId: 'gDClb-yjNdQ' },
+  meditate: { youtubeId: 'gDClb-yjNdQ', startSeconds: 65 },
 }
 
 export function habitVideoFor(templateId: string | null | undefined): HabitVideo | null {

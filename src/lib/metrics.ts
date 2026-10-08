@@ -1,5 +1,9 @@
 import { createSupabaseClient } from './supabase'
 import type { Database } from '../types/database'
+import { habitTemplateId } from '../data/habitArt'
+import { t } from './i18n'
+import { standardVitalTarget } from './onboardingFlow'
+import { vitalTarget } from './vitalTargets'
 
 export type Metric = Database['public']['Tables']['metrics']['Row']
 
@@ -127,6 +131,10 @@ export function formatMetricReading(
 }
 
 export function describeMetric(metric: Metric): string {
+  const standard = standardVitalTarget(metric.template_id ?? habitTemplateId({ name: metric.name }))
+  if (standard) return t(standard)
+  const target = vitalTarget(metric.id)
+  if (target != null) return t('start.targetValue', { value: String(target), unit: metric.unit })
   if (isBloodPressure(metric)) return 'Upper and lower, in mmHg'
   return `Logged in ${metric.unit}`
 }

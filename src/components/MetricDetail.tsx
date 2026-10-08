@@ -7,6 +7,8 @@ import {
 } from '../lib/stats'
 import { HabitMark } from './HabitMark'
 import { visibleName } from '../lib/catalogName'
+import { habitTemplateId } from '../data/habitArt'
+import { standardVitalTarget } from '../lib/onboardingFlow'
 import { useLocale } from '../hooks/useLocale'
 import { MetricTrendChart } from './MetricTrendChart'
 import { Icon } from './Icon'
@@ -19,7 +21,6 @@ interface MetricDetailProps {
   error?: string | null
   onEdit: () => void
   onBack: () => void
-  onArchive: () => Promise<void>
   onUnarchive: () => Promise<void>
   onDelete: () => Promise<void>
 }
@@ -32,7 +33,6 @@ export function MetricDetail({
   error = null,
   onEdit,
   onBack,
-  onArchive,
   onUnarchive,
   onDelete,
 }: MetricDetailProps) {
@@ -53,12 +53,22 @@ export function MetricDetail({
         Back
       </button>
 
-      <div className="detail-hero">
+      <div className="detail-hero detail-hero-row">
         <HabitMark name={name} templateId={metric.template_id} />
-        <h2>{name}</h2>
-        <p className="screen-sub">{describeMetric(metric)}</p>
-        {metric.archived && <span className="badge">Archived</span>}
+        <div className="detail-hero-text">
+          <h2>{name}</h2>
+          <p className="screen-sub">{describeMetric(metric)}</p>
+          {metric.archived && <span className="badge">Archived</span>}
+        </div>
       </div>
+
+      {!standardVitalTarget(habitTemplateId(metric)) && (
+        <div className="detail-top-actions">
+          <button type="button" className="btn btn-primary" onClick={onEdit} disabled={busy}>
+            Edit
+          </button>
+        </div>
+      )}
 
       <div className="segmented window-toggle">
         {([7, 30, 90] as const).map((days) => (
@@ -116,11 +126,7 @@ export function MetricDetail({
       {error && <p className="error">{error}</p>}
 
       <div className="detail-actions">
-        <button type="button" className="btn btn-primary" onClick={onEdit} disabled={busy}>
-          Edit number
-        </button>
-
-        {metric.archived ? (
+        {metric.archived && (
           <div className="detail-archive">
             <button
               type="button"
@@ -131,20 +137,6 @@ export function MetricDetail({
               {t('metricDetail.showAgain')}
             </button>
             <p className="activity-desc">{t('metricDetail.hidden')}</p>
-          </div>
-        ) : (
-          <div className="detail-archive">
-            <button
-              type="button"
-              className="btn btn-secondary"
-              onClick={() => onArchive()}
-              disabled={busy}
-            >
-              {t('metricDetail.hide')}
-            </button>
-            <p className="activity-desc">
-              Hide from the list. Logged values stay. Delete is what removes them.
-            </p>
           </div>
         )}
 

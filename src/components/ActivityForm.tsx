@@ -2,11 +2,11 @@ import { useEffect, useState, type FormEvent } from 'react'
 import { ACTIVITY_TEMPLATES, HABIT_GROUPS, activityInputFromTemplate, templateById, tinyHint } from '../data/activityTemplates'
 import { HABIT_ART } from '../data/habitArt'
 import { HabitIcon } from './HabitIcon'
-import { StepGoalField } from './StepGoalField'
 import { DayPeriodPicker } from './DayPeriodPicker'
+import { GoalTargetPicker } from './GoalTargetPicker'
 import { activityPeriod } from '../lib/dayPeriod'
+import { VITAL_GOAL_IDS, gapHeading, isDailyGoalHabit, parseGoalText } from '../lib/onboardingFlow'
 import { addDays, todayLocalDate } from '../lib/dates'
-import { DEFAULT_STEP_GOAL, parseStepGoal } from '../lib/steps'
 import type { Activity, ActivityInput } from '../lib/activities'
 import { groupTitle, isCatalogLabel, templateLabel } from '../lib/catalogName'
 import { useLocale } from '../hooks/useLocale'
@@ -95,9 +95,9 @@ export function ActivityForm({
   const [input, setInput] = useState<ActivityInput>(
     initial ? fromActivity(initial) : emptyInput,
   )
-  const [stepGoalText, setStepGoalText] = useState(String(DEFAULT_STEP_GOAL))
-  const pickingSteps = selectedTemplateId === 'steps'
-  const stepGoal = parseStepGoal(stepGoalText)
+  const [goalText, setGoalText] = useState('')
+  const goalTemplateId = selectedTemplateId ?? input.templateId ?? null
+  const goalHabit = isDailyGoalHabit({ templateId: goalTemplateId })
 
   useEffect(() => {
     onPhaseChange?.(phase)
@@ -167,21 +167,14 @@ export function ActivityForm({
     if (next.trackingMode === 'timer') next.targetUnit = 'minutes'
     setSelectedTemplateId(template.id)
     setInput(next)
+    setGoalText('')
+    goPhase('details')
   }
 
   async function handleSubmit(e: FormEvent) {
     e.preventDefault()
+    if (goalHabit && input.targetValue == null) return
     await onSubmit(withCatalog(input, selectedTemplateId ?? input.templateId ?? null))
-  }
-
-  async function continueWithTemplate() {
-    if (!selectedTemplateId || !input.name.trim()) return
-    if (pickingSteps) {
-      if (stepGoal == null) return
-      await onSubmit(withCatalog({ ...input, targetValue: stepGoal, targetUnit: 'steps' }, selectedTemplateId))
-      return
-    }
-    await onSubmit(withCatalog(input, selectedTemplateId))
   }
 
   const showTarget =
@@ -209,17 +202,15 @@ export function ActivityForm({
                   <div className="onboarding-chips">
                     {group.ids.map((id) => {
                       const template = templateById(id)
-                      if (!template) return null
-                      const chosen = selectedTemplateId === template.id
+                      if (!template || VITAL_GOAL_IDS.has(id)) return null
                       const taken = templateAlreadyAdded(template.id, template.label, existingNames)
                       const art = HABIT_ART[template.id]
                       return (
                         <button
                           key={template.id}
                           type="button"
-                          className={`onboarding-chip habit-tile ${chosen ? 'onboarding-chip-selected' : ''}`}
+                          className="onboarding-chip habit-tile"
                           disabled={taken}
-                          aria-pressed={chosen}
                           onClick={() => pickTemplate(template.id)}
                         >
                           <span className={`habit-tile-icon${art ? ' habit-tile-icon-art' : ''}`} aria-hidden>
@@ -237,11 +228,6 @@ export function ActivityForm({
                 </section>
               ))}
             </div>
-            {pickingSteps ? (
-              <StepGoalField value={stepGoalText} onChange={setStepGoalText} />
-            ) : selectedHint ? (
-              <p className="screen-sub">{selectedHint}</p>
-            ) : null}
           </div>
 
           <button
@@ -262,14 +248,6 @@ export function ActivityForm({
         <div className="activity-pick-footer form-actions">
           <button type="button" className="btn btn-ghost" onClick={onCancel} disabled={saving}>
             Cancel
-          </button>
-          <button
-            type="button"
-            className="btn btn-primary"
-            disabled={saving || !selectedTemplateId || (pickingSteps && stepGoal == null)}
-            onClick={() => void continueWithTemplate()}
-          >
-            {saving ? 'Saving…' : 'Continue'}
           </button>
         </div>
       </div>
@@ -292,18 +270,42 @@ export function ActivityForm({
         </button>
       )}
 
-      <label className="field">
-        <span className="field-label">Name</span>
-        <input
-          className="field-input"
-          value={input.name}
-          onChange={(e) => update('name', e.target.value)}
-          placeholder="e.g. Read book"
-          autoFocus
-          required
-        />
-      </label>
+      {!(initial && goalHabit) && (
+        <label className="field">
+          <span className="field-label">Name</span>
+          <input
+            className="field-input"
+            value={input.name}
+            onChange={(e) => update('name', e.target.value)}
+            placeholder="e.g. Read book"
+            autoFocus
+            required
+          />
+        </label>
+      )}
 
+      {goalHabit && (
+        <div className="field">
+          <span className="field-label">{gapHeading({ templateId: goalTemplateId })}</span>
+          <GoalTargetPicker
+            habit={{ templateId: goalTemplateId }}
+            value={input.targetValue}
+            text={goalText}
+            onPick={(value) => {
+              setGoalText('')
+              update('targetValue', value)
+            }}
+            onText={(text) => {
+              setGoalText(text)
+              const typed = parseGoalText(goalTemplateId, text)
+              if (typed != null) update('targetValue', typed)
+            }}
+          />
+          {selectedHint && !initial ? <p className="screen-sub">{selectedHint}</p> : null}
+        </div>
+      )}
+
+      {!goalHabit && (
       <fieldset className="field">
         <legend className="field-label">Type</legend>
         <div className="segmented">
@@ -326,8 +328,9 @@ export function ActivityForm({
           ))}
         </div>
       </fieldset>
+      )}
 
-      {input.type !== 'deadline' && input.type !== 'monthly' && (
+      {!goalHabit && input.type !== 'deadline' && input.type !== 'monthly' && (
         <fieldset className="field">
           <legend className="field-label">Tracking</legend>
           <div className="segmented">
@@ -351,7 +354,7 @@ export function ActivityForm({
         </fieldset>
       )}
 
-      {showTarget && (
+      {showTarget && !goalHabit && (
         <div className="field-row">
           <label className="field field-grow">
             <span className="field-label">
@@ -413,22 +416,27 @@ export function ActivityForm({
         </label>
       )}
 
-      <label className="field">
-        <span className="field-label">Why this matters</span>
-        <input
-          className="field-input"
-          maxLength={80}
-          value={input.whyMatters ?? ''}
-          onChange={(e) => update('whyMatters', e.target.value || null)}
-          placeholder="Optional"
+      {!goalHabit && (
+        <label className="field">
+          <span className="field-label">Why this matters</span>
+          <input
+            className="field-input"
+            maxLength={80}
+            value={input.whyMatters ?? ''}
+            onChange={(e) => update('whyMatters', e.target.value || null)}
+            placeholder="Optional"
+          />
+        </label>
+      )}
+
+      {!goalHabit && (
+        <DayPeriodPicker
+          value={activityPeriod({ usuallyWhen: input.usuallyWhen, templateId: input.templateId, name: input.name })}
+          onChange={(period) => update('usuallyWhen', period)}
         />
-      </label>
+      )}
 
-      <DayPeriodPicker
-        value={activityPeriod({ usuallyWhen: input.usuallyWhen, templateId: input.templateId, name: input.name })}
-        onChange={(period) => update('usuallyWhen', period)}
-      />
-
+      {!goalHabit && (
       <fieldset className="field">
         <legend className="field-label">Days off</legend>
         <p className="screen-sub">We won&apos;t ask on these days.</p>
@@ -453,6 +461,7 @@ export function ActivityForm({
           })}
         </div>
       </fieldset>
+      )}
 
       {initial && (
         <p className="form-hint">
@@ -467,7 +476,7 @@ export function ActivityForm({
         <button type="button" className="btn btn-ghost" onClick={onCancel} disabled={saving}>
           Cancel
         </button>
-        <button type="submit" className="btn btn-primary" disabled={saving}>
+        <button type="submit" className="btn btn-primary" disabled={saving || (goalHabit && input.targetValue == null)}>
           {saving ? 'Saving…' : initial ? 'Save changes' : 'Create habit'}
         </button>
       </div>

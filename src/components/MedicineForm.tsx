@@ -428,12 +428,12 @@ export function MedicineForm({
         </button>
       )}
 
-      {screen === 3 && onDelete && !confirmDelete && (
+      {onDelete && !confirmDelete && (
         <button type="button" className="btn btn-ghost" onClick={() => setConfirmDelete(true)}>
           {t('medicines.delete')}
         </button>
       )}
-      {screen === 3 && onDelete && confirmDelete && (
+      {onDelete && confirmDelete && (
         <div className="medicine-delete">
           <button type="button" className="btn btn-secondary" disabled={saving} onClick={() => setConfirmDelete(false)}>
             {t('medicines.keep')}

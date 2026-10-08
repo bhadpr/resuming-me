@@ -55,12 +55,32 @@ export const ACTIVITY_TEMPLATES: readonly ActivityTemplate[] = [
 
 /** First-screen groups. Something else stays outside these lists. */
 export const HABIT_GROUPS: readonly { title: string; ids: readonly string[]; icons: boolean }[] = [
-  { title: 'Fitness', ids: ['walk', 'running', 'steps', 'exercise', 'stretching'], icons: true },
+  { title: 'Fitness', ids: ['walk', 'running', 'exercise', 'stretching'], icons: true },
   { title: 'Pranayam', ids: ['bhastrika', 'kapalabhati', 'anuloma_viloma', 'bhramari'], icons: false },
   { title: 'Heartfulness', ids: ['relaxation', 'meditate', 'rejuvenation', 'prayer'], icons: true },
   { title: 'Learn', ids: ['reading', 'writing', 'language'], icons: true },
   { title: 'Creativity', ids: ['music', 'painting', 'dancing'], icons: true },
 ]
+
+/** Habits not in any catalog group, such as ones people name themselves. */
+export const OTHER_GROUP = 'Other'
+
+/** Splits a list into the catalog groups, in catalog order, with Other last. Empty groups are left out. */
+export function groupByHabitGroup<T>(
+  items: readonly T[],
+  templateIdOf: (item: T) => string | null,
+): { title: string; items: T[] }[] {
+  const groups = [...HABIT_GROUPS.map((group) => group.title), OTHER_GROUP].map((title) => ({
+    title,
+    items: [] as T[],
+  }))
+  for (const item of items) {
+    const id = templateIdOf(item)
+    const index = id ? HABIT_GROUPS.findIndex((group) => group.ids.includes(id)) : -1
+    groups[index === -1 ? groups.length - 1 : index].items.push(item)
+  }
+  return groups.filter((group) => group.items.length > 0)
+}
 
 export function templateById(id: string): ActivityTemplate | undefined {
   return ACTIVITY_TEMPLATES.find((t) => t.id === id)

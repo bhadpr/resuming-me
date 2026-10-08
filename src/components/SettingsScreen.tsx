@@ -47,8 +47,8 @@ interface SettingsScreenProps {
   todayItems?: DigestItem[]
   onSignOut: () => void
   onOpenPrivacy: () => void
-  showEverything?: boolean
-  onShowEverything?: (on: boolean) => void
+  page?: 'main' | 'reminders'
+  onOpenReminders?: () => void
   canUndoFreshStart?: boolean
   onUndoFreshStart?: () => void
   birthday?: string | null
@@ -144,8 +144,8 @@ export function SettingsScreen({
   todayItems = [],
   onSignOut,
   onOpenPrivacy,
-  showEverything = false,
-  onShowEverything,
+  page = 'main',
+  onOpenReminders,
   canUndoFreshStart = false,
   onUndoFreshStart,
   birthday = null,
@@ -298,25 +298,22 @@ export function SettingsScreen({
     }
   }
 
-  return (
-    <div className="settings-screen">
-      <button type="button" className="btn btn-ghost btn-sm back-btn" onClick={onBack}>
-        <Icon name="back" />
-        {t('settings.back')}
-      </button>
+  if (page === 'reminders') {
+    return (
+      <div className="settings-screen">
+        <button type="button" className="btn btn-ghost btn-sm back-btn" onClick={onBack}>
+          <Icon name="back" />
+          {t('settings.back')}
+        </button>
 
-      <GroupsSettingsLink isAdmin={Boolean(isAdmin)} onOpen={onOpenGroups} />
-
+      {native && (
       <section className="today-section">
         <h3 className="section-label">{t('settings.notifications')}</h3>
         <div className="digest-card">
           <div className="digest-toggle">
             <span className="activity-meta">
               <span className="activity-name">{t('settings.daily')}</span>
-              <span className="activity-desc">
-                {t('settings.dailyDesc')}
-                {native ? '' : ` ${t('settings.dailyWeb')}`}
-              </span>
+              <span className="activity-desc">{t('settings.dailyDesc')}</span>
             </span>
             {native ? (
               <button
@@ -435,6 +432,7 @@ export function SettingsScreen({
           {permissionError && <p className="error">{permissionError}</p>}
         </div>
       </section>
+      )}
 
       <section className="today-section">
         <h3 className="section-label">{t('settings.emails')}</h3>
@@ -600,37 +598,16 @@ export function SettingsScreen({
         </div>
       </section>
 
-      <section className="today-section">
-        <h3 className="section-label">{t('settings.history')}</h3>
-        <div className="digest-card">
-          <div className="settings-row">
-            <div>
-              <span className="activity-name">{t('settings.covered')}</span>
-              <p className="screen-sub">
-                {t('settings.coveredDesc')}
-              </p>
-            </div>
-            <button
-              type="button"
-              className={`btn ${showEverything ? 'btn-primary' : 'btn-secondary'}`}
-              onClick={() => onShowEverything?.(!showEverything)}
-            >
-              {showEverything ? t('settings.on') : t('settings.off')}
-            </button>
-          </div>
-          {canUndoFreshStart && (
-            <button type="button" className="btn btn-ghost" onClick={onUndoFreshStart}>
-              {t('settings.undoFresh')}
-            </button>
-          )}
-        </div>
-      </section>
+      </div>
+    )
+  }
 
-      <section className="today-section">
-        <h3 className="section-label">{t('language.label')}</h3>
-        <LanguagePicker />
-        <p className="activity-desc">{t('language.hint')}</p>
-      </section>
+  return (
+    <div className="settings-screen">
+      <button type="button" className="btn btn-ghost btn-sm back-btn" onClick={onBack}>
+        <Icon name="back" />
+        {t('settings.back')}
+      </button>
 
       <section className="today-section">
         <h3 className="section-label">{t('settings.textSize')}</h3>
@@ -646,7 +623,7 @@ export function SettingsScreen({
                 applyTextSize(size)
               }}
             >
-              {t(size === 'normal' ? 'settings.textNormal' : size === 'large' ? 'settings.textLarge' : 'settings.textXlarge')}
+              {t(size === 'normal' ? 'settings.textNormal' : 'settings.textLarge')}
             </button>
           ))}
         </div>
@@ -669,6 +646,38 @@ export function SettingsScreen({
           </span>
         </button>
       </section>
+
+      <section className="today-section">
+        <h3 className="section-label">{t('settings.notifications')}</h3>
+        <button
+          type="button"
+          className="theme-option settings-nav-link"
+          onClick={onOpenReminders}
+        >
+          <span className="activity-meta">
+            <span className="activity-name">{t('settings.remindersPage')}</span>
+            <span className="activity-desc">{t('settings.remindersPageDesc')}</span>
+          </span>
+          <span className="activity-chevron" aria-hidden>
+            <Icon name="chevron" />
+          </span>
+        </button>
+      </section>
+
+      <section className="today-section">
+        <h3 className="section-label">{t('language.label')}</h3>
+        <LanguagePicker />
+        <p className="activity-desc">{t('language.hint')}</p>
+      </section>
+
+      {canUndoFreshStart && (
+        <section className="today-section">
+          <h3 className="section-label">{t('settings.history')}</h3>
+          <button type="button" className="btn btn-ghost" onClick={onUndoFreshStart}>
+            {t('settings.undoFresh')}
+          </button>
+        </section>
+      )}
 
       {(isAdmin && onOpenAnalytics) || (isAdmin && onOpenFeedback) ? (
         <section className="today-section">
@@ -705,6 +714,8 @@ export function SettingsScreen({
           )}
         </section>
       ) : null}
+
+      <GroupsSettingsLink isAdmin={Boolean(isAdmin)} onOpen={onOpenGroups} />
 
       <section className="today-section">
         <h3 className="section-label">{t('settings.account')}</h3>

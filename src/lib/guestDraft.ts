@@ -112,7 +112,6 @@ export type StartPickPhase =
   | 'workout'
   | 'workouts'
   | 'workoutDetail'
-  | 'stepGoal'
   | 'vitals'
   | 'vitalPicks'
   | 'targets'
@@ -131,7 +130,6 @@ const PICK_PHASES: readonly StartPickPhase[] = [
   'workout',
   'workouts',
   'workoutDetail',
-  'stepGoal',
   'vitals',
   'vitalPicks',
   'targets',
@@ -144,6 +142,7 @@ export const FIRST_PICK_PHASE: StartPickPhase = 'workout'
 /** Older drafts may sit on a removed question. Move them to the one that follows it. */
 function normalizePickPhase(stored: string | undefined): StartPickPhase {
   if (stored === 'heartfulness' || stored === 'practices' || stored === 'practiceDetail') return 'vitals'
+  if (stored === 'stepGoal') return 'workouts'
   const phase = PICK_PHASES.find((item) => item === stored) ?? FIRST_PICK_PHASE
   if (!MEDICINES_ENABLED && (phase === 'ask' || phase === 'medicine' || phase === 'medicines')) {
     return 'reminderAsk'
@@ -395,6 +394,17 @@ function normalizeMedicineMarks(draft: GuestDraft, medicines: readonly GuestMedi
     if (marks.length >= 64) break
   }
   return marks
+}
+
+/** Drops one bottle and the doses marked for it. */
+export function removeGuestMedicine(draft: GuestDraft, index: number): GuestDraft {
+  const medicine = draft.medicines[index]
+  if (!medicine) return draft
+  return {
+    ...draft,
+    medicines: draft.medicines.filter((_, i) => i !== index),
+    medicineMarks: (draft.medicineMarks ?? []).filter((mark) => mark.name !== medicine.name),
+  }
 }
 
 export function guestMedicineKey(name: string): string {

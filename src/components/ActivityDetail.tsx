@@ -35,6 +35,12 @@ import { MicroStepsSection } from './MicroStepsSection'
 import { ActivityInsightChart } from './ActivityInsightChart'
 import { microStepsAvailable, type MicroStep } from '../lib/microSteps'
 import { Icon } from './Icon'
+import { isDailyGoalHabit } from '../lib/onboardingFlow'
+import { habitTemplateId } from '../data/habitArt'
+import { tracksDistance } from '../lib/healthDistance'
+import { SessionDistanceLine, SessionDistanceSuffix } from './SessionDistance'
+import { StepsWeek } from './StepsWeek'
+import { DEFAULT_STEP_GOAL } from '../lib/steps'
 
 const PAUSE_OPTIONS: { duration: PauseDuration; label: string }[] = [
   { duration: '1_week', label: '1 week' },
@@ -106,7 +112,7 @@ export function ActivityDetail({
   onResume,
   onShrink,
 }: ActivityDetailProps) {
-  const { locale } = useLocale()
+  const { locale, t } = useLocale()
   const name = visibleName(activity, locale)
   const [confirmDelete, setConfirmDelete] = useState(false)
   const [editingId, setEditingId] = useState<string | null>(null)
@@ -181,12 +187,14 @@ export function ActivityDetail({
     }
     return days
   }, [activity, entries, today, dayStatusOpts])
-  const shrink = shrinkOffer(activity)
+  const shrink = isDailyGoalHabit({ templateId: activity.template_id }) ? null : shrinkOffer(activity)
 
   const overdue = isDeadlineOverdue(activity, entries, today)
-  const showChart = activity.type !== 'deadline'
+  const showChart = activity.type !== 'deadline' && habitTemplateId(activity) !== 'steps'
   const canPause = Boolean(onPause) && !activity.archived && activity.type !== 'deadline'
   const canResume = Boolean(onResume) && Boolean(activePause)
+  const showsDistance = tracksDistance(habitTemplateId(activity))
+  const stepsHabit = habitTemplateId(activity) === 'steps'
 
   return (
     <div className="activity-detail">
@@ -195,17 +203,71 @@ export function ActivityDetail({
         Back
       </button>
 
-      <div className="detail-hero">
+      <div className="detail-hero detail-hero-row">
         <HabitMark name={name} templateId={activity.template_id} />
-        <h2>{name}</h2>
-        <p className="screen-sub">{describeActivity(activity)}</p>
-        {activity.archived && <span className="badge">Archived</span>}
-        {activePause && <span className="badge">Paused</span>}
+        <div className="detail-hero-text">
+          <h2>{name}</h2>
+          <p className="screen-sub">{describeActivity(activity)}</p>
+          {activity.archived && <span className="badge">Archived</span>}
+          {activePause && <span className="badge badge-paused">{t('list.paused')}</span>}
+        </div>
       </div>
 
-      {heatDays.length > 0 && (
+      <div className="detail-top-actions">
+        {canResume ? (
+          <button
+            type="button"
+            className="btn btn-secondary"
+            disabled={busy}
+            onClick={() => void onResume?.()}
+          >
+            Resume habit
+          </button>
+        ) : canPause ? (
+          <button
+            type="button"
+            className="btn btn-secondary"
+            disabled={busy}
+            aria-expanded={pauseOpen}
+            onClick={() => setPauseOpen((open) => !open)}
+          >
+            Pause
+          </button>
+        ) : null}
+        <button type="button" className="btn btn-primary" onClick={onEdit} disabled={busy}>
+          Edit
+        </button>
+      </div>
+
+      {canPause && !canResume && pauseOpen && (
+        <div className="detail-pause-sheet">
+          <p className="activity-desc">Pause for — it stays hidden from Today until you come back.</p>
+          <div className="detail-pause-options">
+            {PAUSE_OPTIONS.map(({ duration, label }) => (
+              <button
+                key={duration}
+                type="button"
+                className="btn btn-secondary"
+                disabled={busy}
+                onClick={() => {
+                  void onPause?.(duration)
+                  setPauseOpen(false)
+                }}
+              >
+                {label}
+              </button>
+            ))}
+          </div>
+        </div>
+      )}
+      {activePause?.paused_until && (
+        <p className="activity-desc">Paused until {activePause.paused_until}.</p>
+      )}
+
+      {stepsHabit && <StepsWeek goal={activity.target_value ?? DEFAULT_STEP_GOAL} />}
+
+      {heatDays.length >= 7 && !stepsHabit && (
         <section className="heat-section">
-          <h3 className="section-label">Last 90 days</h3>
           <div className="heat-scroll">
             <div className="heat-row" role="list">
               {heatDays.map((day) => (
@@ -231,76 +293,7 @@ export function ActivityDetail({
                 : ' · nothing logged'}
             </p>
           )}
-          <div className="heat-legend">
-            <span className="heat-legend-item">
-              <span className="heat-cell heat-showed" aria-hidden />
-              Showed up
-            </span>
-            <span className="heat-legend-item">
-              <span className="heat-cell heat-missed" aria-hidden />
-              Quiet
-            </span>
-            <span className="heat-legend-item">
-              <span className="heat-cell heat-outline" aria-hidden />
-              Not scheduled
-            </span>
-          </div>
         </section>
-      )}
-
-      {(canPause || canResume) && (
-        <div className="detail-pause">
-          {canResume ? (
-            <button
-              type="button"
-              className="btn btn-secondary"
-              disabled={busy}
-              onClick={() => void onResume?.()}
-            >
-              Resume habit
-            </button>
-          ) : pauseOpen ? (
-            <div className="detail-pause-sheet">
-              <p className="activity-desc">Pause for</p>
-              <div className="detail-pause-options">
-                {PAUSE_OPTIONS.map(({ duration, label }) => (
-                  <button
-                    key={duration}
-                    type="button"
-                    className="btn btn-secondary"
-                    disabled={busy}
-                    onClick={() => {
-                      void onPause?.(duration)
-                      setPauseOpen(false)
-                    }}
-                  >
-                    {label}
-                  </button>
-                ))}
-              </div>
-              <button
-                type="button"
-                className="btn btn-ghost btn-sm"
-                onClick={() => setPauseOpen(false)}
-              >
-                Cancel
-              </button>
-            </div>
-          ) : (
-            <button
-              type="button"
-              className="btn btn-secondary"
-              disabled={busy}
-              onClick={() => setPauseOpen(true)}
-            >
-              Pause
-            </button>
-          )}
-          <p className="activity-desc">Pause. This habit stays hidden until you come back.</p>
-          {activePause?.paused_until && (
-            <p className="activity-desc">Until {activePause.paused_until}.</p>
-          )}
-        </div>
       )}
 
       {overdue && onMarkDeadlineComplete && onRescheduleDeadline && (
@@ -361,7 +354,7 @@ export function ActivityDetail({
                   <dd>{seriesStats.skipped}</dd>
                 </div>
                 <div>
-                  <dt>Open</dt>
+                  <dt>Nothing logged</dt>
                   <dd>{seriesStats.open}</dd>
                 </div>
                 {seriesStats.min != null && (
@@ -386,162 +379,179 @@ export function ActivityDetail({
         </>
       )}
 
-      <dl className="detail-facts">
-        {activity.type !== 'deadline' && (
-          <>
+      {!stepsHabit && (
+        <dl className="detail-facts">
+          {activity.type !== 'deadline' && (
+            <>
+              <div>
+                <dt>Comebacks (30d)</dt>
+                <dd>{comebackHits.length}</dd>
+              </div>
+              <div>
+                <dt>Longest gap returned from</dt>
+                <dd>{longestGap == null ? '—' : `${longestGap} days`}</dd>
+              </div>
+              <div>
+                <dt>Times shown up (30d)</dt>
+                <dd>{showedUp30}</dd>
+              </div>
+            </>
+          )}
+          {activity.tracking_mode === 'timer' && (
             <div>
-              <dt>Comebacks (30d)</dt>
-              <dd>{comebackHits.length}</dd>
+              <dt>Avg session</dt>
+              <dd>{formatAvgSession(stats.averageSessionSeconds)}</dd>
             </div>
+          )}
+          <div>
+            <dt>Type</dt>
+            <dd>{activity.type.replace('_', ' ')}</dd>
+          </div>
+          <div>
+            <dt>Tracking</dt>
+            <dd>{activity.tracking_mode}</dd>
+          </div>
+          {activity.target_value != null && (
             <div>
-              <dt>Longest gap returned from</dt>
-              <dd>{longestGap == null ? '—' : `${longestGap} days`}</dd>
+              <dt>Target</dt>
+              <dd>
+                {activity.target_value}
+                {activity.target_unit ? ` ${activity.target_unit}` : ''}
+              </dd>
             </div>
+          )}
+          {activity.weekly_target != null && (
             <div>
-              <dt>Times shown up (30d)</dt>
-              <dd>{showedUp30}</dd>
+              <dt>Weekly</dt>
+              <dd>{activity.weekly_target}×</dd>
             </div>
-          </>
-        )}
-        {activity.tracking_mode === 'timer' && (
-          <div>
-            <dt>Avg session</dt>
-            <dd>{formatAvgSession(stats.averageSessionSeconds)}</dd>
-          </div>
-        )}
-        <div>
-          <dt>Type</dt>
-          <dd>{activity.type.replace('_', ' ')}</dd>
-        </div>
-        <div>
-          <dt>Tracking</dt>
-          <dd>{activity.tracking_mode}</dd>
-        </div>
-        {activity.target_value != null && (
-          <div>
-            <dt>Target</dt>
-            <dd>
-              {activity.target_value}
-              {activity.target_unit ? ` ${activity.target_unit}` : ''}
-            </dd>
-          </div>
-        )}
-        {activity.weekly_target != null && (
-          <div>
-            <dt>Weekly</dt>
-            <dd>{activity.weekly_target}×</dd>
-          </div>
-        )}
-        {activity.deadline && (
-          <div>
-            <dt>Deadline</dt>
-            <dd>{activity.deadline}</dd>
-          </div>
-        )}
-      </dl>
+          )}
+          {activity.deadline && (
+            <div>
+              <dt>Deadline</dt>
+              <dd>{activity.deadline}</dd>
+            </div>
+          )}
+        </dl>
+      )}
 
-      <section className="history-section">
-        <h3 className="section-label">History</h3>
-        {loadingEntries ? (
-          <p className="muted-center">Loading history…</p>
-        ) : historyGroups.length === 0 ? (
-          <p className="muted-center">No log entries yet.</p>
-        ) : (
-          <div className="history-groups">
-            {historyGroups.map((group) => (
-              <section key={group.monthKey} className="history-month">
-                <h4 className="history-month-header">{group.monthLabel}</h4>
-                <ul className="history-list">
-                  {group.rows.map((row) =>
-                    row.kind === 'quiet' ? (
-                      <li key={row.id} className="history-item history-item-quiet">
-                        <span className="history-row history-row-quiet">
-                          <span className="history-date">
-                            {formatQuietRange(row.from, row.to)}
+      {!stepsHabit && (
+        <section className="history-section">
+          <h3 className="section-label">History</h3>
+          {showsDistance && (
+            <SessionDistanceLine
+              entries={entries.filter((entry) => entry.activity_id === activity.id)}
+              showTotal={false}
+            />
+          )}
+          {loadingEntries ? (
+            <p className="muted-center">Loading history…</p>
+          ) : historyGroups.length === 0 ? (
+            <p className="muted-center">No log entries yet.</p>
+          ) : (
+            <div className="history-groups">
+              {historyGroups.map((group) => (
+                <section key={group.monthKey} className="history-month">
+                  <h4 className="history-month-header">{group.monthLabel}</h4>
+                  <ul className="history-list">
+                    {group.rows.map((row) =>
+                      row.kind === 'quiet' ? (
+                        <li key={row.id} className="history-item history-item-quiet">
+                          <span className="history-row history-row-quiet">
+                            <span className="history-date">
+                              {formatQuietRange(row.from, row.to)}
+                            </span>
                           </span>
-                        </span>
-                      </li>
-                    ) : row.kind === 'fresh' ? (
-                      <li key={row.id} className="history-item history-item-quiet">
-                        <button
-                          type="button"
-                          className="btn btn-ghost"
-                          onClick={() =>
-                            setExpandedFresh((current) => (current === row.id ? null : row.id))
-                          }
-                        >
-                          Fresh start · {formatMonthDay(row.startedOn)} · Before your fresh start · {row.days} days · tap to {expandedFresh === row.id ? 'hide' : 'show'}
-                        </button>
-                        {expandedFresh === row.id && (
-                          <ul className="history-list">
-                            {entries
-                              .filter(
-                                (entry) =>
-                                  entry.activity_id === activity.id &&
-                                  entry.date >= row.coversFrom &&
-                                  entry.date <= row.coversTo,
-                              )
-                              .map((entry) => (
-                                <li key={entry.id} className="history-item">
-                                  <span className="history-date">{formatHistoryDay(entry.date)}</span>
-                                  <span>{describeLogEntry(entry)}</span>
-                                </li>
-                              ))}
-                          </ul>
-                        )}
-                      </li>
-                    ) : editingId === row.entry.id ? (
-                      <li key={row.entry.id} className="history-item">
-                        <LogEntryEditor
-                          entry={row.entry}
-                          busy={busy}
-                          onCancel={() => setEditingId(null)}
-                          onSave={async (updates) => {
-                            await onUpdateEntry(row.entry.id, updates)
-                            setEditingId(null)
-                          }}
-                          onDelete={async () => {
-                            await onDeleteEntry(row.entry.id)
-                            setEditingId(null)
-                          }}
-                        />
-                      </li>
-                    ) : (
-                      <li key={row.entry.id} className="history-item">
-                        <button
-                          type="button"
-                          className="history-row"
-                          onClick={() => setEditingId(row.entry.id)}
-                        >
-                          <span className="history-date">
-                            {formatHistoryDay(row.entry.date)}
+                        </li>
+                      ) : row.kind === 'count' ? (
+                        <li key={row.id} className="history-item">
+                          <span className="history-row">
+                            <span className="history-date">{formatHistoryDay(row.date)}</span>
+                            <span className="history-desc">{row.label}</span>
                           </span>
-                          <span className="history-desc">
-                            {describeLogEntry(row.entry)}
-                            {row.entry.updated_at && (
-                              <span className="badge">edited</span>
-                            )}
-                          </span>
-                          <span className="activity-chevron" aria-hidden>
-                            <Icon name="chevron" />
-                          </span>
-                        </button>
-                      </li>
-                    ),
-                  )}
-                </ul>
-              </section>
-            ))}
-          </div>
-        )}
-      </section>
+                        </li>
+                      ) : row.kind === 'fresh' ? (
+                        <li key={row.id} className="history-item history-item-quiet">
+                          <button
+                            type="button"
+                            className="btn btn-ghost"
+                            onClick={() =>
+                              setExpandedFresh((current) => (current === row.id ? null : row.id))
+                            }
+                          >
+                            Fresh start · {formatMonthDay(row.startedOn)} · Before your fresh start · {row.days} days · tap to {expandedFresh === row.id ? 'hide' : 'show'}
+                          </button>
+                          {expandedFresh === row.id && (
+                            <ul className="history-list">
+                              {entries
+                                .filter(
+                                  (entry) =>
+                                    entry.activity_id === activity.id &&
+                                    entry.date >= row.coversFrom &&
+                                    entry.date <= row.coversTo,
+                                )
+                                .map((entry) => (
+                                  <li key={entry.id} className="history-item">
+                                    <span className="history-date">{formatHistoryDay(entry.date)}</span>
+                                    <span>{describeLogEntry(entry)}</span>
+                                  </li>
+                                ))}
+                            </ul>
+                          )}
+                        </li>
+                      ) : editingId === row.entry.id ? (
+                        <li key={row.entry.id} className="history-item">
+                          <LogEntryEditor
+                            entry={row.entry}
+                            busy={busy}
+                            onCancel={() => setEditingId(null)}
+                            onSave={async (updates) => {
+                              await onUpdateEntry(row.entry.id, updates)
+                              setEditingId(null)
+                            }}
+                            onDelete={async () => {
+                              await onDeleteEntry(row.entry.id)
+                              setEditingId(null)
+                            }}
+                          />
+                        </li>
+                      ) : (
+                        <li key={row.entry.id} className="history-item">
+                          <button
+                            type="button"
+                            className="history-row"
+                            onClick={() => setEditingId(row.entry.id)}
+                          >
+                            <span className="history-date">
+                              {formatHistoryDay(row.entry.date)}
+                            </span>
+                            <span className="history-desc">
+                              {describeLogEntry(row.entry)}
+                              {showsDistance && (
+                                <SessionDistanceSuffix entry={row.entry} />
+                              )}
+                              {row.entry.updated_at && (
+                                <span className="badge">edited</span>
+                              )}
+                            </span>
+                            <span className="activity-chevron" aria-hidden>
+                              <Icon name="chevron" />
+                            </span>
+                          </button>
+                        </li>
+                      ),
+                    )}
+                  </ul>
+                </section>
+              ))}
+            </div>
+          )}
+        </section>
+      )}
 
       {error && <p className="error">{error}</p>}
 
       <div className="detail-actions">
-        <button type="button" className="btn btn-primary" onClick={onEdit} disabled={busy}>
-          Edit habit
-        </button>
         {shrink && onShrink && (
           <button
             type="button"

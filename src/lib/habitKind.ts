@@ -155,7 +155,7 @@ export function classifyHabitLocally(name: string): HabitKindPlan {
       measure: 'hours',
       confident: true,
       recommended: 16,
-      goalSteps: [4, 8, 12, 16, 20],
+      goalSteps: [8, 12, 16, 20],
       emoji: '🌙',
     })
   }

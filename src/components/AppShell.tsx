@@ -2,7 +2,7 @@ import { lazy, Suspense, useCallback, useEffect, useMemo, useRef, useState } fro
 import { Capacitor } from '@capacitor/core'
 import { Navigate, useLocation, useNavigate, useSearchParams } from 'react-router-dom'
 import { useAuth, useProfileSync } from '../hooks/useAuth'
-import { createSupabaseClient } from '../lib/supabase'
+import { createSupabaseClient, sendQuery } from '../lib/supabase'
 import {
   accountGap,
   freshStartBlock,
@@ -35,9 +35,7 @@ import {
   deleteFreshStart,
   insertFreshStart,
   listFreshStarts,
-  loadShowEverything,
   loadWelcomeBackState,
-  saveShowEverything,
   saveWelcomeBackState,
 } from '../lib/freshStarts'
 import { useDailyDigest } from '../hooks/useDailyDigest'
@@ -124,8 +122,10 @@ import {
   type ActivityInput,
 } from '../lib/activities'
 import { activityInputFromTemplate, templateById } from '../data/activityTemplates'
+import { setVitalTarget } from '../lib/vitalTargets'
+import { isDailyGoalHabit, isFixedVital, VITAL_GOAL_IDS } from '../lib/onboardingFlow'
+import { habitTemplateId } from '../data/habitArt'
 import {
-  archiveMetric,
   createMetric,
   deleteMetric,
   listMetrics,
@@ -265,6 +265,10 @@ function sessionWasPartial(
   return durationSeconds > 0 && durationSeconds < target
 }
 
+function activityHome(activity: { template_id?: string | null }): string {
+  return VITAL_GOAL_IDS.has(activity.template_id ?? '') ? '/numbers' : '/activities'
+}
+
 export function AppShell() {
   const { user, signOut, isAdmin } = useAuth()
   const { locale } = useLocale()
@@ -286,6 +290,7 @@ export function AppShell() {
   const view = parseAppPath(location.pathname)
   const tab = tabFromView(view)
   const settingsOpen = view?.name === 'settings'
+  const settingsPage = view?.name === 'settings' && view.page === 'reminders' ? 'reminders' : 'main'
   const themesOpen = view?.name === 'themes'
   const adminPage = view?.name === 'admin' ? view.page : null
   const activityScreen =
@@ -332,7 +337,7 @@ export function AppShell() {
   const [loadingToday, setLoadingToday] = useState(!hadCache)
   const [saving, setSaving] = useState(false)
   const [habitFormPhase, setHabitFormPhase] = useState<'pick' | 'details'>('pick')
-  const [vitalFormPhase, setVitalFormPhase] = useState<'pick' | 'details'>('pick')
+  const [vitalFormPhase, setVitalFormPhase] = useState<'pick' | 'setup' | 'details'>('pick')
   const [busyId, setBusyId] = useState<string | null>(null)
   const [error, setError] = useState<string | null>(null)
   const [offlineNotice, setOfflineNotice] = useState<string | null>(null)
@@ -347,7 +352,7 @@ export function AppShell() {
   const [welcomeState, setWelcomeState] = useState<WelcomeBackState>(loadWelcomeBackState)
   const [visibleGapStart, setVisibleGapStart] = useState<string | null>(null)
   const [freshStarts, setFreshStarts] = useState<FreshStartRange[]>([])
-  const [showEverything, setShowEverything] = useState(loadShowEverything)
+  const showEverything = false
   const [reviewSchedule, setReviewSchedule] = useState(loadReviewSchedule)
   const [reviewsOff, setReviewsOff] = useState(loadReviewsOff)
   const [birthday, setBirthday] = useState<string | null>(loadBirthday)
@@ -707,13 +712,16 @@ export function AppShell() {
     setWelcomeState(next)
     track('welcome_back_shown', { gap_days: welcomeBack.gapDays })
     if (user) {
-      void createSupabaseClient()
-        .from('profiles')
-        .update({
-          last_gap_started_at: welcomeBack.gapStart,
-          last_welcome_back_shown_at: new Date().toISOString(),
-        })
-        .eq('id', user.id)
+      sendQuery(
+        createSupabaseClient()
+          .from('profiles')
+          .update({
+            last_gap_started_at: welcomeBack.gapStart,
+            last_welcome_back_shown_at: new Date().toISOString(),
+          })
+          .eq('id', user.id),
+        'Save welcome back',
+      )
     }
   }, [welcomeBack, visibleGapStart, welcomeState, user])
 
@@ -733,10 +741,13 @@ export function AppShell() {
     setWelcomeState(next)
     setVisibleGapStart(null)
     if (user) {
-      void createSupabaseClient()
-        .from('profiles')
-        .update({ welcome_back_dismissed_until: until, last_gap_started_at: welcomeBack.gapStart })
-        .eq('id', user.id)
+      sendQuery(
+        createSupabaseClient()
+          .from('profiles')
+          .update({ welcome_back_dismissed_until: until, last_gap_started_at: welcomeBack.gapStart })
+          .eq('id', user.id),
+        'Save welcome back',
+      )
     }
   }
 
@@ -837,14 +848,17 @@ export function AppShell() {
     setBirthday(value)
     saveBirthday(value)
     if (!user) return
-    void createSupabaseClient().from('profiles').update({ birthday: value }).eq('id', user.id)
+    sendQuery(createSupabaseClient().from('profiles').update({ birthday: value }).eq('id', user.id), 'Save birthday')
   }
 
   function changeReviewsOff(off: boolean) {
     setReviewsOff(off)
     saveReviewsOff(off)
     if (!user) return
-    void createSupabaseClient().from('profiles').update({ reviews_opt_out: off }).eq('id', user.id)
+    sendQuery(
+      createSupabaseClient().from('profiles').update({ reviews_opt_out: off }).eq('id', user.id),
+      'Save weekly review',
+    )
   }
 
   function changeReviewSchedule(weekday: number, time: string) {
@@ -857,14 +871,17 @@ export function AppShell() {
     setReviewSchedule(next)
     saveReviewSchedule(next)
     if (!user) return
-    void createSupabaseClient()
-      .from('profiles')
-      .update({
-        review_weekday: next.weekday,
-        review_hour: next.hour,
-        review_minute: next.minute,
-      })
-      .eq('id', user.id)
+    sendQuery(
+      createSupabaseClient()
+        .from('profiles')
+        .update({
+          review_weekday: next.weekday,
+          review_hour: next.hour,
+          review_minute: next.minute,
+        })
+        .eq('id', user.id),
+      'Save review schedule',
+    )
   }
 
   async function setWeekFocus(activityId: string) {
@@ -946,7 +963,8 @@ export function AppShell() {
       return
     }
     if (settingsOpen) {
-      trackPageView('/settings', 'Settings')
+      if (settingsPage === 'reminders') trackPageView('/settings/reminders', 'Reminders and emails')
+      else trackPageView('/settings', 'Settings')
       return
     }
     if (reviewWeekStart) {
@@ -971,7 +989,7 @@ export function AppShell() {
       trackPageView('/insights', 'Insights')
       track('insights_viewed', { range: insightsWindow })
     }
-  }, [tab, settingsOpen, themesOpen, adminPage, location.pathname, insightsWindow, reviewWeekStart])
+  }, [tab, settingsOpen, settingsPage, themesOpen, adminPage, location.pathname, insightsWindow, reviewWeekStart])
 
   useEffect(() => {
     if (!isAdmin && adminPage && adminPage !== 'groups') navigate('/today', { replace: true })
@@ -1156,20 +1174,22 @@ export function AppShell() {
     }
   }
 
-  async function handleMetricSave(input: MetricInput) {
+  async function handleMetricSave(input: MetricInput, target?: number | null) {
     if (!user) return
     setSaving(true)
     setError(null)
     try {
       if (metricScreen.name === 'form' && selectedMetric) {
         const updated = await updateMetric(selectedMetric, input)
+        if (target !== undefined) setVitalTarget(updated.id, target)
         setMetrics((prev) => prev.map((m) => (m.id === updated.id ? updated : m)))
         navigate(`/numbers/${updated.id}`)
       } else {
         const created = await createMetric(user.id, input)
+        if (target != null) setVitalTarget(created.id, target)
         trackMetricCreated(created)
         setMetrics((prev) => [created, ...prev])
-        navigate(`/numbers/${created.id}`)
+        navigate('/numbers')
       }
     } catch (err) {
       setError(err instanceof Error ? err.message : 'Save failed')
@@ -1178,9 +1198,9 @@ export function AppShell() {
     }
   }
 
-  async function handleAddStepsHabit(goal: number) {
+  async function handleAddGoalHabit(templateId: string, goal: number) {
     if (!user) return
-    const template = templateById('steps')
+    const template = templateById(templateId)
     if (!template) return
     setSaving(true)
     setError(null)
@@ -1193,7 +1213,7 @@ export function AppShell() {
       })
       trackActivityCreated(created)
       setActivities((prev) => [created, ...prev])
-      navigate(`/activities/${created.id}`)
+      navigate('/numbers')
       await refreshTodayData(await listActivities(true))
     } catch (err) {
       setError(err instanceof Error ? err.message : 'Save failed')
@@ -1759,7 +1779,9 @@ export function AppShell() {
         ) : themesOpen ? (
           <h1 className="app-title">{t('settings.themes')}</h1>
         ) : settingsOpen ? (
-          <h1 className="app-title">{t('settings.title')}</h1>
+          <h1 className="app-title">
+            {settingsPage === 'reminders' ? t('settings.remindersPage') : t('settings.title')}
+          </h1>
         ) : (
           <BrandTitle className="app-title" homeTo="/today" />
         )}
@@ -1803,7 +1825,7 @@ export function AppShell() {
           <>
             {themesOpen ? (
               <Suspense fallback={<ScreenChunkFallback />}>
-                <ThemesScreen onBack={() => navigate('/settings')} />
+                <ThemesScreen onBack={() => navigateBack(navigate, '/settings')} />
               </Suspense>
             ) : settingsOpen ? (
               <Suspense fallback={<ScreenChunkFallback />}>
@@ -1813,7 +1835,11 @@ export function AppShell() {
                     name: visibleName(row.activity, locale),
                     done: row.done,
                   }))}
-                  onBack={() => navigateBack(navigate, '/today')}
+                  page={settingsPage}
+                  onBack={() =>
+                    navigateBack(navigate, settingsPage === 'reminders' ? '/settings' : '/today')
+                  }
+                  onOpenReminders={() => navigate('/settings/reminders')}
                   onOpenAnalytics={() => {
                     if (!isAdmin) return
                     navigate('/admin/analytics')
@@ -1828,11 +1854,6 @@ export function AppShell() {
                   onOpenThemes={() => navigate('/settings/themes')}
                   onOpenPrivacy={() => navigate('/privacy')}
                   onSignOut={() => void signOut()}
-                  showEverything={showEverything}
-                  onShowEverything={(on) => {
-                    saveShowEverything(on)
-                    setShowEverything(on)
-                  }}
                   canUndoFreshStart={freshStarts.length > 0}
                   onUndoFreshStart={() => {
                     const latest = freshStarts[0]
@@ -2017,7 +2038,8 @@ export function AppShell() {
               <>
                 {error && <p className="error">{error}</p>}
                 <ActivityList
-                  activities={activities}
+                  activities={activities.filter((item) => !VITAL_GOAL_IDS.has(item.template_id ?? ''))}
+                  pauses={activityPauses}
                   loading={loadingActivities}
                   showArchived={showArchivedActivities}
                   onToggleArchived={() => setShowArchivedActivities((v) => !v)}
@@ -2064,7 +2086,9 @@ export function AppShell() {
                 </button>
                 <h2 className="form-title">
                   {selectedActivity
-                    ? 'Edit habit'
+                    ? isDailyGoalHabit({ templateId: selectedActivity.template_id })
+                      ? visibleName(selectedActivity, locale)
+                      : 'Edit habit'
                     : habitFormPhase === 'details'
                       ? 'Create habit'
                       : 'Add habit'}
@@ -2100,7 +2124,7 @@ export function AppShell() {
                 loadingEntries={loadingDetailEntries}
                 busy={saving}
                 error={error}
-                onBack={() => navigate('/activities')}
+                onBack={() => navigate(activityHome(selectedActivity))}
                 onEdit={() => {
                   setError(null)
                   navigate(`/activities/${selectedActivity.id}/edit`)
@@ -2210,7 +2234,7 @@ export function AppShell() {
                     await archiveActivity(selectedActivity.id)
                     await refreshActivities()
                     await refreshTodayData(await listActivities(true))
-                    navigate('/activities')
+                    navigate(activityHome(selectedActivity))
                   } catch (err) {
                     setError(err instanceof Error ? err.message : 'Archive failed')
                   } finally {
@@ -2238,7 +2262,7 @@ export function AppShell() {
                     const next = activities.filter((a) => a.id !== selectedActivity.id)
                     setActivities(next)
                     await refreshTodayData(next)
-                    navigate('/activities')
+                    navigate(activityHome(selectedActivity))
                   } catch (err) {
                     setError(err instanceof Error ? err.message : 'Delete failed')
                   } finally {
@@ -2270,10 +2294,14 @@ export function AppShell() {
                 {error && <p className="error">{error}</p>}
                 <MetricList
                   metrics={metrics}
+                  goals={activities.filter(
+                    (item) => !item.archived && VITAL_GOAL_IDS.has(item.template_id ?? ''),
+                  )}
                   loading={loadingMetrics}
                   showArchived={showArchivedMetrics}
                   onToggleArchived={() => setShowArchivedMetrics((v) => !v)}
                   onSelect={(metric) => navigate(`/numbers/${metric.id}`)}
+                  onSelectGoal={(activity) => navigate(`/activities/${activity.id}`)}
                   onAdd={() => {
                     setError(null)
                     navigate('/numbers/new')
@@ -2299,28 +2327,34 @@ export function AppShell() {
 
             {metricScreen.name === 'form' && (
               <>
-                <button
-                  type="button"
-                  className="btn btn-ghost btn-sm back-btn"
-                  onClick={() =>
-                    navigateBack(
-                      navigate,
-                      metricScreen.metricId
-                        ? `/numbers/${metricScreen.metricId}`
-                        : '/numbers',
-                    )
-                  }
-                >
-                  <Icon name="back" />
-                  Back
-                </button>
-                <h2 className="form-title">
-                  {selectedMetric
-                    ? 'Edit vital'
-                    : vitalFormPhase === 'details'
-                      ? 'Create vital'
-                      : 'Add vital'}
-                </h2>
+                {(selectedMetric || vitalFormPhase !== 'setup') && (
+                  <>
+                    <button
+                      type="button"
+                      className="btn btn-ghost btn-sm back-btn"
+                      onClick={() =>
+                        navigateBack(
+                          navigate,
+                          metricScreen.metricId
+                            ? `/numbers/${metricScreen.metricId}`
+                            : '/numbers',
+                        )
+                      }
+                    >
+                      <Icon name="back" />
+                      Back
+                    </button>
+                    <h2 className="form-title">
+                      {selectedMetric
+                        ? isFixedVital(habitTemplateId(selectedMetric))
+                          ? visibleName(selectedMetric, locale)
+                          : 'Edit vital'
+                        : vitalFormPhase === 'details'
+                          ? 'Create vital'
+                          : 'Add vital'}
+                    </h2>
+                  </>
+                )}
                 <MetricForm
                   initial={selectedMetric ?? null}
                   existingNames={metrics
@@ -2329,11 +2363,11 @@ export function AppShell() {
                   saving={saving}
                   error={error}
                   onPhaseChange={setVitalFormPhase}
-                  hasStepsHabit={activities.some(
-                    (item) => !item.archived && item.template_id === 'steps',
-                  )}
+                  goalHabitIds={activities
+                    .filter((item) => !item.archived && item.template_id)
+                    .map((item) => item.template_id as string)}
                   onSubmit={handleMetricSave}
-                  onAddSteps={handleAddStepsHabit}
+                  onAddGoal={handleAddGoalHabit}
                   onCancel={() =>
                     navigate(
                       selectedMetric ? `/numbers/${selectedMetric.id}` : '/numbers',
@@ -2354,19 +2388,6 @@ export function AppShell() {
                 onEdit={() => {
                   setError(null)
                   navigate(`/numbers/${selectedMetric.id}/edit`)
-                }}
-                onArchive={async () => {
-                  setSaving(true)
-                  setError(null)
-                  try {
-                    await archiveMetric(selectedMetric.id)
-                    await refreshMetrics()
-                    navigate('/numbers')
-                  } catch (err) {
-                    setError(err instanceof Error ? err.message : 'Archive failed')
-                  } finally {
-                    setSaving(false)
-                  }
                 }}
                 onUnarchive={async () => {
                   setSaving(true)

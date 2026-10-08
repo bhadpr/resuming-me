@@ -32,10 +32,12 @@ import { SkipLink, UndoSkipButton } from './TodaySkip'
 import { useTodaySkips } from '../hooks/useTodaySkips'
 import { todayLocalDate } from '../lib/dates'
 import { StepsCard } from './StepsCard'
+import { SessionDistanceLine } from './SessionDistance'
+import { tracksDistance } from '../lib/healthDistance'
 import { MedicineDoseRow } from './MedicineDoses'
 import { TodayByTime, type TodayTimedItem } from './TodayByTime'
 import { ReminderDoneRow, ReminderRow, type ReminderSectionProps } from './ReminderSection'
-import { activityPeriod, periodForHour, vitalPeriod } from '../lib/dayPeriod'
+import { activityPeriod, periodForHour } from '../lib/dayPeriod'
 import { isDoseFinished, type DueDose } from '../lib/medicineSchedule'
 import { habitTemplateId } from '../data/habitArt'
 import { WelcomeBackCard, type WelcomeBackModel } from './WelcomeBackCard'
@@ -350,7 +352,7 @@ export function TodayScreen({
     ...visibleMetrics.map(({ metric, entry }) => ({
       key: `vital-${metric.id}`,
       kind: 'vital' as const,
-      period: vitalPeriod(metric),
+      period: 'anytime' as const,
       done: entry != null || skips.isSkipped(`vital:${metric.id}`),
       node: renderVital(metric, entry),
     })),
@@ -832,6 +834,11 @@ function TodayActivityRow({
               </>
             )}
           </span>
+          {tracksDistance(templateId) && !isThisTimer && (
+            <SessionDistanceLine
+              entries={row.periodCompletedEntries.filter((entry) => entry.date === todayLocalDate())}
+            />
+          )}
           {activity.target_unit === 'glasses' && (
             <span className="activity-desc">{WATER_GLASS_NOTE}</span>
           )}

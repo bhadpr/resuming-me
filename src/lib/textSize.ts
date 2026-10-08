@@ -1,14 +1,14 @@
 /** In-app text size. Scales every rem-based size from the root. */
-export type TextSize = 'normal' | 'large' | 'xlarge'
+export type TextSize = 'normal' | 'large'
 
-export const TEXT_SIZES: TextSize[] = ['normal', 'large', 'xlarge']
+export const TEXT_SIZES: TextSize[] = ['normal', 'large']
 
 export const TEXT_SIZE_STORAGE_KEY = 'resuming-text-size'
 
-const ROOT_PX: Record<TextSize, number> = { normal: 16, large: 18, xlarge: 20 }
+const ROOT_PX: Record<TextSize, number> = { normal: 16, large: 18 }
 
 export function isTextSize(value: string | null | undefined): value is TextSize {
-  return value === 'normal' || value === 'large' || value === 'xlarge'
+  return value === 'normal' || value === 'large'
 }
 
 export function textSizeRootPx(size: TextSize): number {
@@ -18,6 +18,7 @@ export function textSizeRootPx(size: TextSize): number {
 export function readTextSize(): TextSize {
   try {
     const raw = localStorage.getItem(TEXT_SIZE_STORAGE_KEY)
+    if (raw === 'xlarge') return 'large'
     return isTextSize(raw) ? raw : 'normal'
   } catch {
     return 'normal'
