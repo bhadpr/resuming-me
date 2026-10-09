@@ -20,6 +20,26 @@ export interface Reminder {
   /** Done makes next year's copy. */
   everyYear: boolean
   doneAt: string | null
+  /** Set on the organizer's reminder and on every copy of a shared event. Such a reminder is not edited. */
+  sharedEventId?: string | null
+  /** The person turned this reminder's alerts off. It still shows on Today. */
+  alertOff?: boolean
+  /** The shared event's status, learned on load. Missing means active or not known yet. */
+  sharedStatus?: SharedReminderStatus
+  /** This account made the shared event, so it can share it again. Copies from others are false. */
+  sharedByMe?: boolean
+}
+
+export type SharedReminderStatus = 'active' | 'cancelled' | 'switched_off'
+
+/** A copy whose event the organizer cancelled or the admin switched off. */
+export function isSharedEventGone(reminder: Pick<Reminder, 'sharedStatus'>): boolean {
+  return reminder.sharedStatus === 'cancelled' || reminder.sharedStatus === 'switched_off'
+}
+
+/** Whether the reminder may still alert. Done, silenced and cancelled reminders do not. */
+export function reminderAlerts(reminder: Reminder): boolean {
+  return !reminder.doneAt && !reminder.alertOff && !isSharedEventGone(reminder)
 }
 
 export interface ReminderInput {
@@ -30,6 +50,8 @@ export interface ReminderInput {
   remindBefore?: boolean
   kind?: ReminderKind
   everyYear?: boolean
+  sharedEventId?: string | null
+  alertOff?: boolean
 }
 
 /** Only changes the icon. A reminder with no kind chosen is Other. */
@@ -99,6 +121,26 @@ export function isDay(value: unknown): value is string {
   return typeof value === 'string' && /^\d{4}-\d{2}-\d{2}$/.test(value)
 }
 
+/** Values passed in router state as { reminderPrefill }, as Cancel and make a new one does. */
+export function reminderPrefillFrom(state: unknown): ReminderInput | undefined {
+  const value = (state as { reminderPrefill?: unknown } | null)?.reminderPrefill as Partial<ReminderInput> | undefined
+  if (!value || typeof value.text !== 'string' || !isDay(value.day)) return undefined
+  const timed = Number.isInteger(value.hour) && Number.isInteger(value.minute)
+  return {
+    text: value.text,
+    day: value.day,
+    hour: timed ? value.hour! : null,
+    minute: timed ? value.minute! : null,
+    remindBefore: value.remindBefore === true,
+    kind: reminderKindOf(value.kind),
+  }
+}
+
+/** Router state { reminderShare: true }: the list's Share opens the reminder at its share section. */
+export function reminderShareRequested(state: unknown): boolean {
+  return (state as { reminderShare?: unknown } | null)?.reminderShare === true
+}
+
 export function validateReminder(input: ReminderInput): ReminderIssue | null {
   if (!cleanReminderText(input.text)) return 'text'
   if (!isDay(input.day)) return 'day'
@@ -120,9 +162,11 @@ function byDayThenTime(a: Reminder, b: Reminder): number {
   return a.hour - b.hour || (a.minute ?? 0) - (b.minute ?? 0)
 }
 
-/** Open reminders for today, including earlier days that are still open. */
+/** Open reminders for today, including earlier days that are still open. A cancelled event leaves after its day. */
 export function remindersForToday(list: readonly Reminder[], today: string): Reminder[] {
-  return list.filter((item) => !item.doneAt && item.day <= today).sort(byDayThenTime)
+  return list
+    .filter((item) => !item.doneAt && item.day <= today && !(item.day < today && isSharedEventGone(item)))
+    .sort(byDayThenTime)
 }
 
 /** Reminders marked done today, newest first. */

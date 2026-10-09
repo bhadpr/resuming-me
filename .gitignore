@@ -2,6 +2,10 @@ node_modules
 dist
 dist-ssr
 dev-dist
+.wrangler
+.tmp-shots
+.tmp-*.py
+__pycache__
 *.local
 .env
 .env.local

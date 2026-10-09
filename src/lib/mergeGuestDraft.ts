@@ -3,6 +3,7 @@ import { clearGuestDraft, guestDraftToPayload, type GuestDraft } from './guestDr
 import { listMedicines, markDoseTaken, saveMedicine } from './medicines'
 import { addReminder, listReminders, ReminderCapError } from './reminders'
 import type { Reminder } from './reminderSchedule'
+import { followSharedEvent } from './sharedEvents'
 
 export const MERGE_RETRY_MESSAGE = "We couldn't save that just yet — tap to retry."
 
@@ -50,16 +51,27 @@ async function mergeMedicines(userId: string, draft: GuestDraft): Promise<void> 
   }
 }
 
+function isDuplicate(err: unknown): boolean {
+  return typeof err === 'object' && err != null && (err as { code?: string }).code === '23505'
+}
+
 /** A retry after a partial failure skips reminders already copied. */
 async function mergeReminders(userId: string, draft: GuestDraft): Promise<void> {
   const existing = new Set((await listReminders()).map(reminderKey))
   for (const reminder of draft.reminders) {
+    if (reminder.sharedEventId) {
+      try {
+        await followSharedEvent(reminder.sharedEventId)
+      } catch {
+        /* the copy still moves; only the count misses it */
+      }
+    }
     if (existing.has(reminderKey(reminder))) continue
     try {
       await addReminder(userId, reminder)
     } catch (err) {
       if (err instanceof ReminderCapError) return
-      throw err
+      if (!isDuplicate(err)) throw err
     }
     existing.add(reminderKey(reminder))
   }

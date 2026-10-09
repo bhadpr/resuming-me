@@ -114,6 +114,22 @@ describe('planReminderAlerts', () => {
     expect(alerts.map((alert) => [alert.reminderId, alert.kind, alert.at])).toEqual([['post', 'snooze', until]])
   })
 
+  it('stays quiet for silenced, cancelled and switched-off shared reminders', () => {
+    const alerts = planReminderAlerts(
+      [
+        reminder('on', '2026-10-08', { hour: 9, minute: 0, sharedEventId: 'e1', sharedStatus: 'active' }),
+        reminder('off', '2026-10-08', { hour: 9, minute: 0, sharedEventId: 'e2', alertOff: true }),
+        reminder('cancelled', '2026-10-08', { hour: 9, minute: 0, sharedEventId: 'e3', sharedStatus: 'cancelled' }),
+        reminder('gone', '2026-10-08', { remindBefore: true, sharedEventId: 'e4', sharedStatus: 'switched_off' }),
+      ],
+      [{ reminderId: 'off', until: new Date(2026, 9, 6, 11, 0) }],
+      now,
+      evening,
+      copy,
+    )
+    expect(alerts.map((alert) => alert.reminderId)).toEqual(['on'])
+  })
+
   it('arms only the soonest alerts when there are many', () => {
     const many = Array.from({ length: REMINDER_NOTIFICATION_SLOTS + 10 }, (_, index) =>
       reminder(`r${index}`, '2026-10-20', { hour: Math.floor(index / 60), minute: index % 60 }),
@@ -138,6 +154,18 @@ describe('untimedReminderNames', () => {
       '2026-10-06',
     )
     expect(names).toEqual(['From before', 'Post office'])
+  })
+
+  it('leaves out silenced and cancelled shared reminders', () => {
+    const names = untimedReminderNames(
+      [
+        reminder('Satsang', '2026-10-06', { sharedEventId: 'e1' }),
+        reminder('Quiet', '2026-10-06', { sharedEventId: 'e2', alertOff: true }),
+        reminder('Called off', '2026-10-06', { sharedEventId: 'e3', sharedStatus: 'cancelled' }),
+      ],
+      '2026-10-06',
+    )
+    expect(names).toEqual(['Satsang'])
   })
 })
 

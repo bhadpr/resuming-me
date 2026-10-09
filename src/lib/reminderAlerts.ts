@@ -1,5 +1,5 @@
 import { addDays, parseLocalDate } from './dates'
-import { announceRemindersChanged, remindersForToday, type Reminder } from './reminderSchedule'
+import { announceRemindersChanged, reminderAlerts, remindersForToday, type Reminder } from './reminderSchedule'
 
 export const REMINDER_NOTIFICATION_ID_BASE = 9000
 /** Only the soonest alerts are armed. The rest are armed on a later app open. */
@@ -45,7 +45,7 @@ export function planReminderAlerts(
   evening: { hour: number; minute: number },
   copy: ReminderAlertCopy,
 ): ReminderAlert[] {
-  const open = reminders.filter((item) => !item.doneAt)
+  const open = reminders.filter(reminderAlerts)
   const byId = new Map(open.map((item) => [item.id, item]))
   const alerts: Array<Omit<ReminderAlert, 'id'>> = []
 
@@ -89,7 +89,7 @@ export function reminderNotificationIds(): number[] {
 /** Names for the daily notification: open reminders on Today that have no time of their own. */
 export function untimedReminderNames(reminders: readonly Reminder[], today: string): string[] {
   return remindersForToday(reminders, today)
-    .filter((item) => item.hour == null)
+    .filter((item) => item.hour == null && reminderAlerts(item))
     .map((item) => item.text)
 }
 

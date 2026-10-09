@@ -78,6 +78,7 @@ describe('isKnownPath', () => {
     expect(isKnownPath('/review/2026-09-14')).toBe(true)
     expect(isKnownPath('/start')).toBe(true)
     expect(isKnownPath('/activities/abc')).toBe(true)
+    expect(isKnownPath('/reminders')).toBe(true)
   })
 
   it('rejects unknown paths', () => {

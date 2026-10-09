@@ -14,7 +14,7 @@ Four milestones. Each one is usable on its own. Finish a milestone before starti
 
 - A reminder is not a habit. No streak, no Insight, no "you moved this three times."
 - An unfinished reminder is not marked late or red. It stays on Today until it is done or removed.
-- Bottom nav stays four tabs. Reminders live on Today, and all open ones are listed on Activities.
+- Bottom nav stays four tabs. Reminders live on Today, and all open ones are listed on Activities. Later moved to their own Reminders tab, see P7-04.
 - No calendar grid. Days are chips: Today, Tomorrow, Pick a date.
 - A time is optional. A reminder with no time is for "any time that day."
 - No contacts, calendar, or location permission. No sharing with other people.
@@ -69,9 +69,10 @@ One screen, reached from **Add reminder** on Today, next to Add habit.
 ### P7-04 — Reminders on Activities
 
 - The Activities tab gets a **Reminders** section below the habits, with its own **Add reminder** button, like Medicines on Vitals.
-- It lists every open reminder by day: Today first (with earlier open days), then Tomorrow and later dates.
+- It lists open reminders by day: Today first, then Tomorrow and later dates. A reminder from an earlier day that is still open is not listed here; it stays on Today until it is done or cancelled.
 - Tap a reminder to edit it, change its day, or delete it.
 - Done reminders are not listed. Only today's show, under Done today on Today. No history screen in this phase.
+- Update, October 2026: the list moved to its own **Reminders** tab at `/reminders`. The bottom nav is now Today, Activities, Reminders, Health (Vitals renamed). Insights opens from a chart icon in the header, next to Settings, and from a "See your progress" link at the bottom of Today.
 
 ## Milestone 2 — Phone alerts
 

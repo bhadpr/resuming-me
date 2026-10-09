@@ -21,6 +21,8 @@ const APP_PATH_PREFIXES = [
   '/today',
   '/activities',
   '/numbers',
+  '/medicines',
+  '/reminders',
   '/insights',
   '/review',
   '/settings',
@@ -34,6 +36,7 @@ export function isKnownPath(pathname: string): boolean {
   const path = pathname.replace(/\/+$/, '') || '/'
   if (path === '/') return true
   if (path === '/start') return true
+  if (/^\/e\/[a-z0-9]+$/i.test(path)) return true
   if (sitePageFromPath(path)) return true
   return APP_PATH_PREFIXES.some(
     (prefix) => path === prefix || path.startsWith(`${prefix}/`),
@@ -65,7 +68,7 @@ export const PRODUCT_NAME = 'Resuming'
 export const GOVERNING_LAW = 'the State of Washington, United States'
 
 /** Shown on About. */
-export const LEGAL_LAST_UPDATED = `September 23, ${COPYRIGHT_YEAR}`
+export const LEGAL_LAST_UPDATED = `October 8, ${COPYRIGHT_YEAR}`
 
 /** Shown on the Privacy Policy and the Terms. */
 export const PRIVACY_LAST_UPDATED = `October 7, ${COPYRIGHT_YEAR}`
@@ -77,13 +80,18 @@ export interface SocialLink {
   href: string
 }
 
-/** Placeholder social destinations — replace with real handles when ready. */
-export const SOCIAL_LINKS: SocialLink[] = [
+/** Placeholder social destinations — replace with real handles when ready (Phase 11, P11-06). */
+const PLACEHOLDER_SOCIAL_LINKS: SocialLink[] = [
   { id: 'facebook', label: 'Facebook', href: 'https://www.facebook.com/cheerfulgames' },
   { id: 'instagram', label: 'Instagram', href: 'https://www.instagram.com/cheerfulgames/' },
   { id: 'tiktok', label: 'TikTok', href: 'https://www.tiktok.com/@cheerfulgames' },
   { id: 'youtube', label: 'YouTube', href: 'https://www.youtube.com/@cheerfulgames' },
 ]
+
+/** The footer hides the social row until the Resuming accounts exist. */
+export const SOCIAL_LINKS_LIVE = false
+
+export const SOCIAL_LINKS: SocialLink[] = SOCIAL_LINKS_LIVE ? PLACEHOLDER_SOCIAL_LINKS : []
 
 export const FOOTER_NAV: Array<{ id: SitePageId; label: string }> = [
   { id: 'about', label: 'About' },

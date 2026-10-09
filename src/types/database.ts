@@ -342,6 +342,8 @@ export interface Database {
           kind: string
           every_year: boolean
           done_at: string | null
+          shared_event_id: string | null
+          alert_off: boolean
           created_at: string
           updated_at: string
         }
@@ -356,6 +358,8 @@ export interface Database {
           kind?: string
           every_year?: boolean
           done_at?: string | null
+          shared_event_id?: string | null
+          alert_off?: boolean
           created_at?: string
           updated_at?: string
         }
@@ -368,6 +372,48 @@ export interface Database {
           kind?: string
           every_year?: boolean
           done_at?: string | null
+          shared_event_id?: string | null
+          alert_off?: boolean
+        }
+        Relationships: []
+      }
+      shared_events: {
+        Row: {
+          id: string
+          code: string
+          owner_id: string
+          text: string
+          from_line: string | null
+          day: string
+          hour: number | null
+          minute: number | null
+          time_zone: string
+          kind: string
+          status: string
+          taking_adds: boolean
+          created_at: string
+          updated_at: string
+        }
+        Insert: {
+          id?: string
+          code?: string
+          owner_id: string
+          text: string
+          from_line?: string | null
+          day: string
+          hour?: number | null
+          minute?: number | null
+          time_zone: string
+          kind?: string
+          status?: string
+          taking_adds?: boolean
+          created_at?: string
+          updated_at?: string
+        }
+        Update: {
+          code?: string
+          status?: string
+          taking_adds?: boolean
         }
         Relationships: []
       }
@@ -788,6 +834,71 @@ export interface Database {
           in_progress: number
           retained: number
           ended_short: number
+        }[]
+      }
+      get_shared_event: {
+        Args: { p_code: string }
+        Returns: {
+          id: string
+          code: string
+          text: string | null
+          from_line: string | null
+          day: string
+          hour: number | null
+          minute: number | null
+          time_zone: string
+          kind: string
+          status: string
+          taking_adds: boolean
+        }[]
+      }
+      follow_shared_event: {
+        Args: { p_event_id: string; p_device_id?: string | null }
+        Returns: undefined
+      }
+      unfollow_shared_event: {
+        Args: { p_event_id: string; p_device_id?: string | null }
+        Returns: undefined
+      }
+      shared_event_statuses: {
+        Args: { p_ids: string[] }
+        Returns: { id: string; status: string }[]
+      }
+      my_shared_event: {
+        Args: { p_event_id: string }
+        Returns: {
+          id: string
+          code: string
+          from_line: string
+          status: string
+          taking_adds: boolean
+          followers: number
+        }[]
+      }
+      reset_shared_event_code: {
+        Args: { p_event_id: string }
+        Returns: string
+      }
+      report_shared_event: {
+        Args: { p_event_id: string; p_reason: string; p_device_id?: string | null }
+        Returns: undefined
+      }
+      admin_shared_events: {
+        Args: Record<string, never>
+        Returns: {
+          id: string
+          code: string
+          text: string
+          from_line: string
+          day: string
+          status: string
+          taking_adds: boolean
+          created_at: string
+          followers: number
+          reports: number
+          spam: number
+          harmful: number
+          other: number
         }[]
       }
     }

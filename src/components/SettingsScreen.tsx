@@ -42,6 +42,7 @@ interface SettingsScreenProps {
   isAdmin?: boolean
   onOpenAnalytics?: () => void
   onOpenFeedback?: () => void
+  onOpenSharedEvents?: () => void
   onOpenGroups?: (groupId?: string) => void
   onOpenThemes?: () => void
   todayItems?: DigestItem[]
@@ -139,6 +140,7 @@ export function SettingsScreen({
   isAdmin = false,
   onOpenAnalytics,
   onOpenFeedback,
+  onOpenSharedEvents,
   onOpenGroups,
   onOpenThemes,
   todayItems = [],
@@ -706,6 +708,21 @@ export function SettingsScreen({
               <span className="activity-meta">
                 <span className="activity-name">Feedback</span>
                 <span className="activity-desc">Ratings and comments people sent</span>
+              </span>
+              <span className="activity-chevron" aria-hidden>
+                <Icon name="chevron" />
+              </span>
+            </button>
+          )}
+          {onOpenSharedEvents && (
+            <button
+              type="button"
+              className="theme-option settings-nav-link"
+              onClick={onOpenSharedEvents}
+            >
+              <span className="activity-meta">
+                <span className="activity-name">Shared events</span>
+                <span className="activity-desc">Reports, and switching an event off</span>
               </span>
               <span className="activity-chevron" aria-hidden>
                 <Icon name="chevron" />

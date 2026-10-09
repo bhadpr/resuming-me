@@ -4,10 +4,17 @@
 name = "resuming-me"
 compatibility_date = "2026-08-12"
 
+# Runs only for /e/* (see run_worker_first). Everything else is served straight from ./dist.
+main = "worker/index.ts"
+# SUPABASE_URL and SUPABASE_ANON_KEY are set in the Cloudflare dashboard; keep them on deploy.
+keep_vars = true
+
 [assets]
 directory = "./dist"
+binding = "ASSETS"
 not_found_handling = "single-page-application"
 html_handling = "drop-trailing-slash"
+run_worker_first = ["/e/*"]
 
 # Apex domain — Chrome flags resuming-me.pages.dev as a lookalike of resuming.me.
 [[routes]]

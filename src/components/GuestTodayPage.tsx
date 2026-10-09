@@ -31,6 +31,7 @@ import {
   remindersForToday,
   type Reminder,
 } from '../lib/reminderSchedule'
+import { forgetSharedReminder } from '../lib/sharedEvents'
 import { catalogTrackId, visibleName } from '../lib/catalogName'
 import { MEDICINE_REMINDER_CHANGED, clearSkip, rememberSkip } from '../lib/medicineReminderState'
 import { MEDICINES_ENABLED } from '../config'
@@ -194,6 +195,7 @@ export function GuestTodayPage() {
   function cancelReminder(reminder: Reminder) {
     const latest = loadGuestDraft()
     if (latest) setDraft(removeGuestReminder(latest, reminder.id))
+    forgetSharedReminder(reminder)
   }
 
   function reopenReminder(reminder: Reminder) {

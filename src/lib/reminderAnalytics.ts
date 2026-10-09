@@ -2,7 +2,16 @@ import { ANALYTICS_WINDOW_DAYS, type AnalyticsWindow } from './analytics'
 import { REMINDER_KINDS } from './reminderSchedule'
 import { createSupabaseClient } from './supabase'
 
-export const REMINDER_EVENT_NAMES = ['reminder_added', 'reminder_done'] as const
+export const REMINDER_EVENT_NAMES = [
+  'reminder_added',
+  'reminder_done',
+  'shared_event_created',
+  'shared_event_viewed',
+  'shared_event_added',
+  'shared_event_installed',
+  'shared_event_cancelled',
+  'shared_event_reported',
+] as const
 
 export interface ReminderEventRow {
   name: string
@@ -21,6 +30,25 @@ export interface ReminderSummary {
   signedIn: number
   doneFromNotification: number
   kinds: Array<{ kind: string; count: number }>
+  shared: {
+    created: number
+    /** Event pages opened, on the website or in the app. */
+    opened: number
+    added: number
+    /** App installs that came with an event code. */
+    installs: number
+    cancelled: number
+    reported: number
+  }
+}
+
+const SHARED_COUNTS: Record<string, keyof ReminderSummary['shared']> = {
+  shared_event_created: 'created',
+  shared_event_viewed: 'opened',
+  shared_event_added: 'added',
+  shared_event_installed: 'installs',
+  shared_event_cancelled: 'cancelled',
+  shared_event_reported: 'reported',
 }
 
 function propsOf(row: ReminderEventRow): Record<string, unknown> {
@@ -41,8 +69,14 @@ export function summarizeReminderEvents(rows: readonly ReminderEventRow[]): Remi
     signedIn: 0,
     doneFromNotification: 0,
     kinds: [],
+    shared: { created: 0, opened: 0, added: 0, installs: 0, cancelled: 0, reported: 0 },
   }
   for (const row of rows) {
+    const sharedKey = SHARED_COUNTS[row.name]
+    if (sharedKey) {
+      summary.shared[sharedKey] += 1
+      continue
+    }
     const props = propsOf(row)
     const who = row.user_id ?? row.anon_id
     if (who) people.add(who)

@@ -24,6 +24,7 @@ import {
   completeGuestReminder,
   removeGuestReminder,
   reopenGuestReminder,
+  saveGuestSharedStatuses,
   updateGuestReminder,
   upsertGuestReading,
   type GuestDraft,
@@ -537,6 +538,22 @@ describe('guest reminders', () => {
     draft = completeGuestReminder(draft, draft.reminders[0].id, new Date().toISOString())
     expect(draft.reminders).toHaveLength(1)
     expect(draft.reminders[0].kind).toBe('other')
+  })
+
+  it('keeps a shared copy quiet and remembers its event status', () => {
+    memoryStorage()
+    let draft = addGuestReminder(ensureGuestDraft('UTC'), {
+      text: 'Satsang',
+      day: '2026-10-08',
+      hour: 19,
+      minute: 0,
+      sharedEventId: 'e1',
+    })!
+    const id = draft.reminders[0].id
+    draft = updateGuestReminder(draft, id, { alertOff: true })
+    draft = saveGuestSharedStatuses(draft, [{ ...draft.reminders[0], sharedStatus: 'cancelled' }])
+    expect(loadGuestDraft()!.reminders[0]).toMatchObject({ sharedEventId: 'e1', alertOff: true, sharedStatus: 'cancelled' })
+    expect(saveGuestSharedStatuses(draft, [{ ...draft.reminders[0], sharedStatus: 'cancelled' }])).toBe(draft)
   })
 })
 

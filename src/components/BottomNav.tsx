@@ -10,8 +10,8 @@ interface BottomNavProps {
 const TABS: Array<{ id: AppTab; labelKey: string }> = [
   { id: 'today', labelKey: 'nav.today' },
   { id: 'activities', labelKey: 'nav.abhyas' },
+  { id: 'reminders', labelKey: 'nav.reminders' },
   { id: 'metrics', labelKey: 'nav.vitals' },
-  { id: 'insights', labelKey: 'nav.insights' },
 ]
 
 export function BottomNav({ tab }: BottomNavProps) {
@@ -26,7 +26,7 @@ export function BottomNav({ tab }: BottomNavProps) {
             `nav-item ${isActive || tab === id ? 'nav-item-active' : ''}`
           }
           aria-current={tab === id ? 'page' : undefined}
-          end={id === 'today' || id === 'insights'}
+          end={id === 'today'}
         >
           <Icon name={id} size={24} className="nav-item-icon" />
           <span className="nav-item-label">{t(labelKey)}</span>

@@ -6,7 +6,7 @@ Resuming: Habits & Reminders
 
 ## Short description (max 80)
 
-Habits, vitals and reminders in one daily list. Missed a day? Just resume.
+Track your day, gently. Missed a day? Just resume.
 
 ## Full description (max 4000)
 
@@ -27,6 +27,7 @@ REMINDERS FOR EVERYTHING ELSE
 • Bills, doctor visits, birthdays and festivals
 • They wait on your Today list until they are done
 • Every-year reminders come back on their own
+• Share an event, like a puja or a garba night, on WhatsApp. Family adds it to their reminders in one tap.
 
 MADE FOR INDIA
 • English, हिन्दी, ગુજરાતી, मराठी, తెలుగు and தமிழ்
@@ -43,7 +44,8 @@ Files are in `screenshots/`.
 2. Small steps count
 3. Your BP and weight, week by week
 4. Bills, visits, birthdays: never forget
-5. Set up in a minute
+5. Share an event with family
+6. Set up in a minute
 
 ## Tags / category
 

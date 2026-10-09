@@ -5,11 +5,13 @@ import {
   ScrollRestoration,
   useLocation,
   useNavigate,
+  useParams,
   useSearchParams,
 } from 'react-router-dom'
 import { Capacitor } from '@capacitor/core'
 import { useAuth } from './hooks/useAuth'
 import { useAndroidBackButton } from './hooks/useAndroidBackButton'
+import { useSharedEventLinks } from './hooks/useSharedEventLinks'
 import { AppShell } from './components/AppShell'
 import { BrandTitle } from './components/BrandTitle'
 import { LandingPage } from './components/LandingPage'
@@ -17,6 +19,7 @@ import { LegalPage } from './components/LegalPage'
 import { FeedbackPage } from './components/FeedbackPage'
 import { NotFoundPage } from './components/NotFoundPage'
 import { DeleteAccountPage } from './components/DeleteAccountPage'
+import { SharedEventPage } from './components/SharedEventPage'
 import { StartPage } from './components/StartPage'
 import { GuestMergeBanner } from './components/GuestMergeBanner'
 import { GuestAppShell, isGuestAppPath } from './components/GuestAppShell'
@@ -63,7 +66,10 @@ function CheckinOpenedPing() {
 
 function RootLayout() {
   useAndroidBackButton()
+  useSharedEventLinks()
   const { localeChosen, localeResolved } = useLocale()
+  const { pathname } = useLocation()
+  const skipLanguage = !Capacitor.isNativePlatform() && pathname.startsWith('/e/')
 
   useEffect(() => {
     if (!localeResolved) return
@@ -76,7 +82,7 @@ function RootLayout() {
 
   if (!localeResolved) return <LoadingScreen />
 
-  if (!localeChosen) return <LanguageScreen />
+  if (!localeChosen && !skipLanguage) return <LanguageScreen />
 
   return (
     <>
@@ -230,6 +236,20 @@ function PublicFeedbackRoute() {
   )
 }
 
+function SharedEventRoute() {
+  const { code = '' } = useParams()
+
+  useEffect(() => {
+    trackPageView('/e', 'shared-event')
+  }, [])
+
+  return (
+    <PublicPageFrame>
+      <SharedEventPage code={code.toLowerCase()} />
+    </PublicPageFrame>
+  )
+}
+
 /** Pathless layout: keeps AppShell mounted across app routes. */
 function AppShellLayout() {
   return (
@@ -255,6 +275,7 @@ export const appRouteObjects = [
       { path: '/terms', element: <PublicLegalRoute page="terms" /> },
       { path: '/feedback', element: <PublicFeedbackRoute /> },
       { path: '/delete-account', element: <PublicDeleteAccountRoute /> },
+      { path: '/e/:code', element: <SharedEventRoute /> },
       {
         element: <RequireAuth />,
         children: [
@@ -272,8 +293,10 @@ export const appRouteObjects = [
               { path: '/numbers/:id/edit', element: <RouteSlot /> },
               { path: '/medicines/new', element: <RouteSlot /> },
               { path: '/medicines/:id', element: <RouteSlot /> },
+              { path: '/reminders', element: <RouteSlot /> },
               { path: '/reminders/new', element: <RouteSlot /> },
               { path: '/reminders/:id', element: <RouteSlot /> },
+              { path: '/reminders/:id/edit', element: <RouteSlot /> },
               { path: '/insights', element: <RouteSlot /> },
               { path: '/review/:weekStart', element: <RouteSlot /> },
               { path: '/settings/themes', element: <RouteSlot /> },

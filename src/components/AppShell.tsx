@@ -54,6 +54,8 @@ import { TodayScreen } from './TodayScreen'
 import { MedicineSection } from './MedicineSection'
 import { MedicineEditor } from './MedicineForm'
 import { ReminderEditor } from './ReminderForm'
+import { reminderPrefillFrom, reminderShareRequested } from '../lib/reminderSchedule'
+import { ShareReminder } from './ShareReminder'
 import { askForReminderAlerts } from '../lib/reminderNotifications'
 import { untimedReminderNames } from '../lib/reminderAlerts'
 import { ReminderListSection } from './ReminderSection'
@@ -61,6 +63,7 @@ import { OnboardingScreen } from './OnboardingScreen'
 import { InstallPrompt } from './InstallPrompt'
 import { BrandTitle } from './BrandTitle'
 import { BottomNav } from './BottomNav'
+import { InsightsHeaderButton } from './InsightsHeaderButton'
 import { Toast } from './Toast'
 import { SiteFooter } from './SiteFooter'
 
@@ -78,6 +81,9 @@ const AnalyticsScreen = lazy(() =>
 )
 const AdminFeedbackScreen = lazy(() =>
   import('./AdminFeedbackScreen').then((m) => ({ default: m.AdminFeedbackScreen })),
+)
+const AdminSharedEventsScreen = lazy(() =>
+  import('./AdminSharedEventsScreen').then((m) => ({ default: m.AdminSharedEventsScreen })),
 )
 const AdminGroupsScreen = lazy(() =>
   import('./AdminGroupsScreen').then((m) => ({ default: m.AdminGroupsScreen })),
@@ -958,6 +964,10 @@ export function AppShell() {
       trackPageView(location.pathname, 'Group numbers')
       return
     }
+    if (adminPage === 'events') {
+      trackPageView('/admin/events', 'Shared events')
+      return
+    }
     if (themesOpen) {
       trackPageView('/settings/themes', 'Themes')
       return
@@ -979,12 +989,16 @@ export function AppShell() {
       return
     }
     if (view?.name === 'reminders') {
-      trackPageView(view.reminderId ? '/reminders/edit' : '/reminders/new', 'Reminder')
+      trackPageView(
+        view.edit ? '/reminders/edit' : view.reminderId ? '/reminders/view' : '/reminders/new',
+        'Reminder',
+      )
       return
     }
     if (tab === 'today') trackPageView('/today', 'Today')
     else if (tab === 'activities') trackPageView('/activities', 'Activity')
-    else if (tab === 'metrics') trackPageView('/numbers', 'Vitals')
+    else if (tab === 'reminders') trackPageView('/reminders', 'Reminders')
+    else if (tab === 'metrics') trackPageView('/numbers', 'Health')
     else if (tab === 'insights') {
       trackPageView('/insights', 'Insights')
       track('insights_viewed', { range: insightsWindow })
@@ -1004,7 +1018,9 @@ export function AppShell() {
       ? 'Analytics · Resuming'
       : adminPage === 'groups'
         ? 'Group numbers · Resuming'
-        : 'Feedback · Resuming'
+        : adminPage === 'events'
+          ? 'Shared events · Resuming'
+          : 'Feedback · Resuming'
     : reviewWeekStart
       ? 'This week · Resuming'
     : themesOpen
@@ -1015,6 +1031,8 @@ export function AppShell() {
         ? `${t('nav.today')} · Resuming`
         : tab === 'activities'
           ? `${t('nav.abhyas')} · Resuming`
+          : tab === 'reminders'
+            ? `${t('nav.reminders')} · Resuming`
           : tab === 'metrics'
             ? `${t('nav.vitals')} · Resuming`
             : `${t('nav.insights')} · Resuming`
@@ -1774,6 +1792,8 @@ export function AppShell() {
           <h1 className="app-title">Analytics</h1>
         ) : adminPage === 'feedback' ? (
           <h1 className="app-title">Feedback</h1>
+        ) : adminPage === 'events' ? (
+          <h1 className="app-title">Shared events</h1>
         ) : adminPage === 'groups' ? (
           <h1 className="app-title">Group numbers</h1>
         ) : themesOpen ? (
@@ -1786,6 +1806,7 @@ export function AppShell() {
           <BrandTitle className="app-title" homeTo="/today" />
         )}
         <div className="app-header-actions">
+          <InsightsHeaderButton active={tab === 'insights' && !settingsOpen && !themesOpen && !adminPage} />
           <button
             type="button"
             className={`icon-btn ${settingsOpen || themesOpen || adminPage ? 'icon-btn-active' : ''}`}
@@ -1814,6 +1835,10 @@ export function AppShell() {
         ) : adminPage === 'feedback' ? (
           <Suspense fallback={<ScreenChunkFallback />}>
             <AdminFeedbackScreen />
+          </Suspense>
+        ) : adminPage === 'events' ? (
+          <Suspense fallback={<ScreenChunkFallback />}>
+            <AdminSharedEventsScreen />
           </Suspense>
         ) : adminPage === 'groups' ? (
           <Suspense fallback={<ScreenChunkFallback />}>
@@ -1847,6 +1872,10 @@ export function AppShell() {
                   onOpenFeedback={() => {
                     if (!isAdmin) return
                     navigate('/admin/feedback')
+                  }}
+                  onOpenSharedEvents={() => {
+                    if (!isAdmin) return
+                    navigate('/admin/events')
                   }}
                   onOpenGroups={(groupId) => {
                     navigate(groupId ? `/admin/groups/${groupId}` : '/admin/groups')
@@ -1906,7 +1935,7 @@ export function AppShell() {
               )
             ) : (
               <>
-                {tab === 'today' && view?.name !== 'reminders' && (
+                {tab === 'today' && (
                   <TodayScreen
                     dateLabel={dateLabel}
                     rows={todayRows}
@@ -1986,6 +2015,33 @@ export function AppShell() {
                       setError(null)
                       navigate('/reminders/new')
                     }}
+                    onOpenInsights={() => navigate('/insights')}
+                  />
+                )}
+
+                {view?.name === 'reminderList' && (
+                  <ReminderListSection
+                    dueNow={reminderState.open}
+                    later={reminderState.comingUp}
+                    today={reminderState.today}
+                    loading={reminderState.loading}
+                    error={reminderState.error}
+                    onAdd={() => {
+                      setError(null)
+                      navigate('/reminders/new')
+                    }}
+                    onOpen={(reminder) => {
+                      setError(null)
+                      navigate(`/reminders/${reminder.id}`)
+                    }}
+                    onShare={
+                      user
+                        ? (reminder) => {
+                            setError(null)
+                            navigate(`/reminders/${reminder.id}`, { state: { reminderShare: true } })
+                          }
+                        : undefined
+                    }
                   />
                 )}
 
@@ -1997,7 +2053,32 @@ export function AppShell() {
                     loading={reminderState.loading}
                     saving={saving}
                     error={error}
-                    onCancel={() => navigateBack(navigate, '/today')}
+                    editing={view.edit === true}
+                    onEdit={(reminder) => {
+                      setError(null)
+                      navigate(`/reminders/${reminder.id}/edit`)
+                    }}
+                    onCancel={() =>
+                      navigateBack(navigate, view.edit && view.reminderId ? `/reminders/${view.reminderId}` : '/reminders')
+                    }
+                    prefill={reminderPrefillFrom(location.state)}
+                    onAlertOff={(reminder, alertOff) => void reminderState.setAlertOff(reminder, alertOff)}
+                    shareFor={(reminder) =>
+                      user ? (
+                        <ShareReminder
+                          reminder={reminder}
+                          userId={user.id}
+                          today={reminderState.today}
+                          onShared={(eventId) => reminderState.markShared(reminder.id, eventId)}
+                          onStatus={(status) => reminderState.markSharedStatus(reminder.id, status)}
+                          focus={reminderShareRequested(location.state)}
+                          onReplace={async (input) => {
+                            await reminderState.remove(reminder.id)
+                            navigate('/reminders/new', { replace: true, state: { reminderPrefill: input } })
+                          }}
+                        />
+                      ) : null
+                    }
                     onSubmit={async (input) => {
                       if (view?.name !== 'reminders') return
                       const reminderId = view.reminderId
@@ -2010,7 +2091,7 @@ export function AppShell() {
                           return 'full'
                         }
                         void askForReminderAlerts(input)
-                        navigateBack(navigate, '/today')
+                        navigateBack(navigate, reminderId ? `/reminders/${reminderId}` : '/reminders')
                       } catch (err) {
                         setError(err instanceof Error ? err.message : 'Could not save that reminder')
                       } finally {
@@ -2022,7 +2103,7 @@ export function AppShell() {
                       setError(null)
                       try {
                         await reminderState.remove(reminder.id)
-                        navigateBack(navigate, '/today')
+                        navigateBack(navigate, '/reminders')
                       } catch (err) {
                         setError(err instanceof Error ? err.message : 'Could not delete that reminder')
                       } finally {
@@ -2047,21 +2128,6 @@ export function AppShell() {
                   onAdd={() => {
                     setError(null)
                     navigate('/activities/new')
-                  }}
-                />
-                <ReminderListSection
-                  dueNow={reminderState.open}
-                  later={reminderState.comingUp}
-                  today={reminderState.today}
-                  loading={reminderState.loading}
-                  error={reminderState.error}
-                  onAdd={() => {
-                    setError(null)
-                    navigate('/reminders/new')
-                  }}
-                  onOpen={(reminder) => {
-                    setError(null)
-                    navigate(`/reminders/${reminder.id}`)
                   }}
                 />
               </>

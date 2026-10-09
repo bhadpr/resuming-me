@@ -4,9 +4,11 @@ import type { Locale } from '../lib/i18n'
 import {
   formatReminderDay,
   formatReminderTime,
+  isSharedEventGone,
   tomorrowOf,
   type Reminder,
 } from '../lib/reminderSchedule'
+import { isShareableReminder } from '../lib/sharedEvents'
 import { Icon } from './Icon'
 import { ReminderKindMark } from './ReminderKindIcon'
 import { SkipLink, UndoSkipButton } from './TodaySkip'
@@ -25,6 +27,8 @@ function reminderWhen(
   ]
   if (reminder.day < today) parts.push(t('reminders.from', { day: formatReminderDay(reminder.day, today, locale) }))
   if (reminder.everyYear) parts.push(t('reminders.everyYear'))
+  if (reminder.sharedStatus === 'cancelled') parts.push(t('sharedEvent.cancelledLine'))
+  else if (reminder.sharedStatus === 'switched_off') parts.push(t('sharedEvent.switchedOffLine'))
   return parts.join(' · ')
 }
 
@@ -60,9 +64,11 @@ export function ReminderRow({ reminder, today, busy, onDone, onSkip, onMove, onC
         </span>
       </div>
       <div className="today-extra">
-        <button type="button" className="today-extra-btn" disabled={busy} onClick={() => onMove(tomorrowOf(today))}>
-          {t('reminders.moveTomorrow')}
-        </button>
+        {!reminder.sharedEventId && (
+          <button type="button" className="today-extra-btn" disabled={busy} onClick={() => onMove(tomorrowOf(today))}>
+            {t('reminders.moveTomorrow')}
+          </button>
+        )}
         <button
           type="button"
           className="today-extra-btn"
@@ -141,7 +147,7 @@ export function ReminderDoneRow({
 }
 
 interface ReminderListSectionProps {
-  /** Open reminders for today, including earlier days still open. */
+  /** Open reminders for today. Earlier days still open are dropped here; they stay on Today. */
   dueNow: Reminder[]
   /** Open reminders after today, by date. */
   later: Reminder[]
@@ -150,9 +156,18 @@ interface ReminderListSectionProps {
   error: string | null
   onAdd: () => void
   onOpen: (reminder: Reminder) => void
+  /** Signed in only: guests cannot make shared events. */
+  onShare?: (reminder: Reminder) => void
 }
 
-/** Every open reminder on the Activity tab, grouped by day. Done ones are not listed. */
+/** Not yet shared, or shared by this account and still on. Copies from others are not shared on. */
+function canShareFromList(reminder: Reminder, today: string): boolean {
+  if (!isShareableReminder(reminder, today)) return false
+  if (!reminder.sharedEventId) return true
+  return reminder.sharedByMe === true && !isSharedEventGone(reminder)
+}
+
+/** The Reminders tab: open reminders from today on, grouped by day. Done and past ones are not listed. */
 export function ReminderListSection({
   dueNow,
   later,
@@ -161,11 +176,13 @@ export function ReminderListSection({
   error,
   onAdd,
   onOpen,
+  onShare,
 }: ReminderListSectionProps) {
   const { locale, t } = useLocale()
   const tomorrow = tomorrowOf(today)
   const groups: { key: string; label: string; items: Reminder[] }[] = []
-  if (dueNow.length > 0) groups.push({ key: 'today', label: t('reminders.today'), items: dueNow })
+  const todays = dueNow.filter((reminder) => reminder.day >= today)
+  if (todays.length > 0) groups.push({ key: 'today', label: t('reminders.today'), items: todays })
   for (const reminder of later) {
     const last = groups[groups.length - 1]
     if (last?.key === reminder.day) {
@@ -180,10 +197,10 @@ export function ReminderListSection({
   }
 
   return (
-    <section className="medicine-section reminder-list-section">
+    <div className="activity-list-screen reminder-list-section">
       <div className="screen-heading">
         <div>
-          <h2>{t('reminders.title')}</h2>
+          <h2>{t('nav.reminders')}</h2>
           <p className="screen-sub">{t('reminders.sub')}</p>
         </div>
         <button type="button" className="btn btn-primary btn-compact" aria-label={t('reminders.add')} onClick={onAdd}>
@@ -196,30 +213,59 @@ export function ReminderListSection({
       {loading && groups.length === 0 ? (
         <p className="muted-center">{t('reminders.loading')}</p>
       ) : groups.length === 0 ? (
-        <p className="medicine-empty">{t('reminders.empty')}</p>
+        <section className="empty-state">
+          <span className="empty-state-icon"><Icon name="reminders" size={24} /></span>
+          <p>{t('reminders.empty')}</p>
+          <button type="button" className="btn btn-primary" onClick={onAdd}>
+            {t('reminders.add')}
+          </button>
+        </section>
       ) : (
         groups.map((group) => (
           <div key={group.key} className="reminder-day-group">
             <p className="reminder-day-label">{group.label}</p>
             <ul className="activity-list">
-              {group.items.map((reminder) => (
-                <li key={reminder.id}>
-                  <button type="button" className="activity-row item-kind-reminder" onClick={() => onOpen(reminder)}>
-                    <ReminderKindMark kind={reminder.kind} />
-                    <span className="activity-meta">
-                      <span className="activity-name reminder-text-line">{reminder.text}</span>
-                      <span className="activity-desc">{reminderWhen(reminder, today, locale, t)}</span>
-                    </span>
-                    <span className="activity-chevron" aria-hidden>
-                      <Icon name="chevron" />
-                    </span>
-                  </button>
-                </li>
-              ))}
+              {group.items.map((reminder) => {
+                const shareable = onShare != null && canShareFromList(reminder, today)
+                return (
+                  <li key={reminder.id} className="reminder-list-item">
+                    <button
+                      type="button"
+                      className={`activity-row item-kind-reminder${shareable ? ' reminder-row-shareable' : ''}`}
+                      onClick={() => onOpen(reminder)}
+                    >
+                      <ReminderKindMark kind={reminder.kind} />
+                      <span className="activity-meta">
+                        <span className="activity-name reminder-text-line">{reminder.text}</span>
+                        <span className="activity-desc">{reminderWhen(reminder, today, locale, t)}</span>
+                        {reminder.sharedEventId && (
+                          <span className="reminder-tags">
+                            <span className="badge badge-shared">{t('sharedEvent.sharedTag')}</span>
+                          </span>
+                        )}
+                      </span>
+                      <span className="activity-chevron" aria-hidden>
+                        <Icon name="chevron" />
+                      </span>
+                    </button>
+                    {shareable && (
+                      <button
+                        type="button"
+                        className="reminder-row-share"
+                        aria-label={t('sharedEvent.shareThis', { text: reminder.text })}
+                        onClick={() => onShare(reminder)}
+                      >
+                        <Icon name="share" />
+                        <span>{t('sharedEvent.shareShort')}</span>
+                      </button>
+                    )}
+                  </li>
+                )
+              })}
             </ul>
           </div>
         ))
       )}
-    </section>
+    </div>
   )
 }

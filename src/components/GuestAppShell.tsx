@@ -2,7 +2,7 @@ import { useEffect, useState } from 'react'
 import { useLocation } from 'react-router-dom'
 import { useAuth } from '../hooks/useAuth'
 import { useLocale } from '../hooks/useLocale'
-import { guestMedicineSchedules, guestTakenMarks, loadGuestDraft } from '../lib/guestDraft'
+import { guestMedicineSchedules, guestTakenMarks, loadGuestDraft, saveGuestSharedStatuses } from '../lib/guestDraft'
 import { mealMessageKey } from '../lib/medicineFormat'
 import { listenForMedicineNotificationActions, syncMedicineNotifications } from '../lib/medicineNotifications'
 import { MEDICINE_REMINDER_CHANGED } from '../lib/medicineReminderState'
@@ -13,14 +13,24 @@ import {
   syncReminderNotifications,
 } from '../lib/reminderNotifications'
 import { REMINDERS_CHANGED } from '../lib/reminderSchedule'
+import { withSharedStatuses } from '../lib/reminders'
 import { track } from '../lib/track'
 import { useDocumentMeta } from '../hooks/useDocumentMeta'
 import { BrandTitle } from './BrandTitle'
 import { BottomNav } from './BottomNav'
 import { EmailSignInForm } from './EmailSignInForm'
 import { GuestActivitiesPage, GuestVitalsPage } from './GuestLibrary'
-import { GuestReminderEditor } from './GuestReminders'
+import { GuestReminderEditor, GuestReminderList } from './GuestReminders'
+import { InsightsHeaderButton } from './InsightsHeaderButton'
 import { GuestTodayPage } from './GuestTodayPage'
+
+const TAB_LABEL_KEYS: Record<AppTab, string> = {
+  today: 'nav.today',
+  activities: 'nav.abhyas',
+  reminders: 'nav.reminders',
+  metrics: 'nav.vitals',
+  insights: 'nav.insights',
+}
 
 function guestTabFromPath(pathname: string): AppTab {
   return tabFromView(parseAppPath(pathname))
@@ -34,15 +44,7 @@ export function GuestAppShell() {
   useGuestReminderAlerts()
   const view = parseAppPath(location.pathname)
   const tab = guestTabFromPath(location.pathname)
-  const label =
-    tab === 'activities'
-      ? t('nav.abhyas')
-      : tab === 'metrics'
-        ? t('nav.vitals')
-        : tab === 'insights'
-          ? t('nav.insights')
-          : t('nav.today')
-  useDocumentMeta({ title: `${label} · Resuming`, noindex: true })
+  useDocumentMeta({ title: `${t(TAB_LABEL_KEYS[tab])} · Resuming`, noindex: true })
 
   useEffect(() => {
     if (tab !== 'insights') return
@@ -53,13 +55,16 @@ export function GuestAppShell() {
     <div className="app">
       <header className="app-header">
         <BrandTitle className="app-title" homeTo="/today" />
+        <div className="app-header-actions">
+          <InsightsHeaderButton active={tab === 'insights'} />
+        </div>
       </header>
       <main className="app-main">
-        {view?.name === 'reminders' ? (
-          <GuestReminderEditor key={view.reminderId ?? 'new'} reminderId={view.reminderId} />
-        ) : (
-          tab === 'today' && <GuestTodayPage />
+        {view?.name === 'reminders' && (
+          <GuestReminderEditor key={view.reminderId ?? 'new'} reminderId={view.reminderId} editing={view.edit === true} />
         )}
+        {view?.name === 'reminderList' && <GuestReminderList />}
+        {tab === 'today' && <GuestTodayPage />}
         {tab === 'activities' && <GuestActivitiesPage />}
         {tab === 'metrics' && <GuestVitalsPage />}
         {tab === 'insights' && <GuestSignInPanel tab={tab} />}
@@ -134,6 +139,21 @@ function useGuestReminderAlerts(): void {
   }, [])
 
   useEffect(() => {
+    const refresh = () => {
+      if (document.visibilityState !== 'visible') return
+      const draft = loadGuestDraft()
+      if (!draft?.reminders.some((item) => item.sharedEventId)) return
+      void withSharedStatuses(draft.reminders).then((updated) => {
+        const latest = loadGuestDraft()
+        if (latest) saveGuestSharedStatuses(latest, updated)
+      })
+    }
+    refresh()
+    document.addEventListener('visibilitychange', refresh)
+    return () => document.removeEventListener('visibilitychange', refresh)
+  }, [])
+
+  useEffect(() => {
     const sync = () => {
       const { copy, labels } = reminderAlertText(locale)
       void syncReminderNotifications(loadGuestDraft()?.reminders ?? [], copy, labels).catch(() => {})
@@ -149,14 +169,7 @@ function GuestSignInPanel({ tab }: { tab: AppTab }) {
   const { t } = useLocale()
   const [signingIn, setSigningIn] = useState(false)
   const [error, setError] = useState<string | null>(null)
-  const label =
-    tab === 'activities'
-      ? t('nav.abhyas')
-      : tab === 'metrics'
-        ? t('nav.vitals')
-        : tab === 'insights'
-          ? t('nav.insights')
-          : t('nav.today')
+  const label = t(TAB_LABEL_KEYS[tab])
   const displayError = authError || error
 
   async function handleGoogle() {
@@ -203,6 +216,6 @@ export function isGuestAppPath(pathname: string): boolean {
   if (pathname === '/today' || pathname === '/insights') return true
   if (pathname === '/activities' || pathname.startsWith('/activities/')) return true
   if (pathname === '/numbers' || pathname.startsWith('/numbers/')) return true
-  if (pathname.startsWith('/reminders/')) return true
+  if (pathname === '/reminders' || pathname.startsWith('/reminders/')) return true
   return false
 }

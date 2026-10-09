@@ -6,9 +6,13 @@ export type IconName =
   | 'settings'
   | 'today'
   | 'activities'
+  | 'reminders'
   | 'metrics'
   | 'insights'
   | 'calendar'
+  | 'lock'
+  | 'photo'
+  | 'share'
 
 type IconProps = {
   name: IconName
@@ -61,6 +65,28 @@ function IconPaths({ name }: { name: IconName }) {
           <path d="M12 14h.01" />
         </>
       )
+    case 'lock':
+      return (
+        <>
+          <path d="M6 11h12a1 1 0 0 1 1 1v8a1 1 0 0 1-1 1H6a1 1 0 0 1-1-1v-8a1 1 0 0 1 1-1z" />
+          <path d="M8 11V7a4 4 0 0 1 8 0v4" />
+        </>
+      )
+    case 'photo':
+      return (
+        <>
+          <path d="M5 4h14a2 2 0 0 1 2 2v12a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V6a2 2 0 0 1 2-2z" />
+          <path d="M3 16l5-5 4 4 3-3 6 6" />
+          <path d="M15.5 8.5h.01" />
+        </>
+      )
+    case 'share':
+      return (
+        <>
+          <path d="M18 8a3 3 0 1 0 0-6 3 3 0 0 0 0 6zM6 15a3 3 0 1 0 0-6 3 3 0 0 0 0 6zM18 22a3 3 0 1 0 0-6 3 3 0 0 0 0 6z" />
+          <path d="M8.6 13.5l6.8 4M15.4 6.5l-6.8 4" />
+        </>
+      )
     case 'calendar':
       return (
         <>
@@ -73,6 +99,13 @@ function IconPaths({ name }: { name: IconName }) {
         <>
           <path d="M8 6h13M8 12h13M8 18h13" />
           <path d="M3 6h.01M3 12h.01M3 18h.01" />
+        </>
+      )
+    case 'reminders':
+      return (
+        <>
+          <path d="M6 8a6 6 0 0 1 12 0c0 7 3 9 3 9H3s3-2 3-9" />
+          <path d="M10.3 21a1.94 1.94 0 0 0 3.4 0" />
         </>
       )
     case 'metrics':

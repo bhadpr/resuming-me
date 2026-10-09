@@ -414,6 +414,13 @@ export function AnalyticsScreen() {
                 {reminders.kinds.map((row) => `${row.kind} ${row.count}`).join(' · ')}
               </li>
             )}
+            <li className="analytics-rank-row">
+              Shared events · made {reminders.shared.created} · link opens {reminders.shared.opened} · added{' '}
+              {reminders.shared.added} · installs from a link {reminders.shared.installs}
+            </li>
+            <li className="analytics-rank-row">
+              Shared events cancelled {reminders.shared.cancelled} · reports {reminders.shared.reported}
+            </li>
           </ul>
         )}
       </section>

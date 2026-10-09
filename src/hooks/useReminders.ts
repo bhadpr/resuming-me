@@ -18,6 +18,7 @@ import {
   remindersForToday,
   type Reminder,
   type ReminderInput,
+  type SharedReminderStatus,
 } from '../lib/reminderSchedule'
 import {
   ReminderCapError,
@@ -27,8 +28,10 @@ import {
   listReminders,
   moveReminder,
   reopenReminder,
+  setReminderAlertOff,
   updateReminder,
 } from '../lib/reminders'
+import { forgetSharedReminder } from '../lib/sharedEvents'
 import { track } from '../lib/track'
 
 export function useReminders(userId: string | undefined) {
@@ -180,8 +183,18 @@ export function useReminders(userId: string | undefined) {
   }
 
   async function remove(id: string): Promise<void> {
+    const reminder = reminders.find((item) => item.id === id)
     await deleteReminder(id)
+    if (reminder) forgetSharedReminder(reminder)
     setReminders((current) => current.filter((item) => item.id !== id))
+  }
+
+  async function setAlertOff(reminder: Reminder, alertOff: boolean): Promise<boolean> {
+    return run(reminder.id, { alertOff }, () => setReminderAlertOff(reminder.id, alertOff))
+  }
+
+  function markSharedStatus(id: string, sharedStatus: SharedReminderStatus): void {
+    patchLocal(id, { sharedStatus })
   }
 
   async function markDone(reminder: Reminder): Promise<boolean> {
@@ -206,6 +219,11 @@ export function useReminders(userId: string | undefined) {
     return run(reminder.id, { day }, () => moveReminder(reminder.id, day))
   }
 
+  /** The server already linked it when the event was made. */
+  function markShared(id: string, sharedEventId: string): void {
+    patchLocal(id, { sharedEventId, sharedStatus: 'active', sharedByMe: true })
+  }
+
   return {
     today,
     reminders,
@@ -223,5 +241,8 @@ export function useReminders(userId: string | undefined) {
     markDone,
     markNotDone,
     move,
+    markShared,
+    markSharedStatus,
+    setAlertOff,
   }
 }

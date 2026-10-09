@@ -36,6 +36,17 @@
                 <data android:scheme="@string/custom_url_scheme" android:host="auth" android:pathPrefix="/callback" />
             </intent-filter>
 
+            <!-- Shared event links. Verified by https://resuming.me/.well-known/assetlinks.json -->
+            <intent-filter android:autoVerify="true">
+                <action android:name="android.intent.action.VIEW" />
+                <category android:name="android.intent.category.DEFAULT" />
+                <category android:name="android.intent.category.BROWSABLE" />
+                <data android:scheme="https" />
+                <data android:host="resuming.me" />
+                <data android:host="www.resuming.me" />
+                <data android:pathPrefix="/e/" />
+            </intent-filter>
+
             <intent-filter>
                 <action android:name="androidx.health.ACTION_SHOW_PERMISSIONS_RATIONALE" />
             </intent-filter>

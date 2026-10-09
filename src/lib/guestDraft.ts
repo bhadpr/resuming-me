@@ -508,6 +508,11 @@ function normalizeGuestReminders(list: unknown, now = Date.now()): Reminder[] {
       kind: reminderKindOf(item.kind),
       everyYear: item.everyYear === true,
       doneAt,
+      sharedEventId: typeof item.sharedEventId === 'string' ? item.sharedEventId : null,
+      ...(item.alertOff === true ? { alertOff: true } : {}),
+      ...(item.sharedStatus === 'active' || item.sharedStatus === 'cancelled' || item.sharedStatus === 'switched_off'
+        ? { sharedStatus: item.sharedStatus }
+        : {}),
     })
   }
   return reminders
@@ -524,6 +529,7 @@ function newGuestReminder(input: ReminderInput): Reminder {
     kind: reminderKindOf(input.kind),
     everyYear: input.everyYear === true,
     doneAt: null,
+    sharedEventId: input.sharedEventId ?? null,
   }
 }
 
@@ -565,6 +571,22 @@ export function updateGuestReminder(draft: GuestDraft, id: string, patch: Partia
     ...draft,
     reminders: draft.reminders.map((item) => (item.id === id ? { ...item, ...patch } : item)),
   })
+  announceRemindersChanged()
+  return next
+}
+
+/** Keeps what the server said about shared events, so a cancelled copy stays quiet offline. */
+export function saveGuestSharedStatuses(draft: GuestDraft, updated: readonly Reminder[]): GuestDraft {
+  const status = new Map(updated.map((item) => [item.id, item.sharedStatus]))
+  let changed = false
+  const reminders = draft.reminders.map((item) => {
+    const next = status.get(item.id)
+    if (!item.sharedEventId || next === undefined || next === item.sharedStatus) return item
+    changed = true
+    return { ...item, sharedStatus: next }
+  })
+  if (!changed) return draft
+  const next = saveGuestDraft({ ...draft, reminders })
   announceRemindersChanged()
   return next
 }

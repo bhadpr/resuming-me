@@ -125,6 +125,16 @@ function PrivacyContent() {
           the device.
         </li>
         <li>
+          <strong>Shared events.</strong> If you share a reminder, we store its text, the
+          optional From line you type, its day, time, time zone and kind, and a short link
+          code, tied to your account. Anyone with the link can see the text, the From line
+          and the time, but never your name, email or phone number. When someone adds a
+          shared event, we store that their account, or an anonymous id for their device,
+          follows it, so we can count how many people added it and tell their copy if it is
+          cancelled. We do not show the organizer who added it. If someone reports an
+          event, we store the reason and their account or anonymous device id.
+        </li>
+        <li>
           <strong>Steps.</strong> On Android, if you allow it, the app reads today’s
           step count from Health Connect on your phone and shows it on Today. We do
           not write steps to Health Connect, and we do not send that count to our
@@ -178,8 +188,10 @@ function PrivacyContent() {
         cross-context behavioral advertising.
       </p>
       <p>
-        Reminders are not shared with other people. Their text is not sent to our
-        analytics, which count only how many reminders are added and done.
+        Your reminders are private unless you choose Share on WhatsApp. A shared event can
+        be seen by anyone with its link. Reminder and event text is not sent to our
+        analytics, which count only how many reminders and shared events are added,
+        opened and done.
       </p>
 
       <h3>Health information</h3>
@@ -430,9 +442,19 @@ function TermsContent() {
       <h3>Reminders</h3>
       <p>
         Reminders you add are stored so the Service can show them on Today and, if you
-        ask, alert you on your Android phone or by email. They are not shared with other
-        people. An alert or an email can arrive late or not at all. Do not rely on{' '}
+        ask, alert you on your Android phone or by email. They stay private unless you
+        share one. An alert or an email can arrive late or not at all. Do not rely on{' '}
         {PRODUCT_NAME} alone for anything where a missed reminder could cause harm.
+      </p>
+
+      <h3>Shared events</h3>
+      <p>
+        When you share a reminder, anyone with the link can see its text, its From line and
+        its time, and add it. Share only events you are entitled to announce. Do not use a
+        shared event for ads, spam, web links, or anything misleading, hateful or harmful.
+        A shared event cannot be changed; you can stop new adds, reset the link, or cancel
+        it. We may switch off any shared event that is reported or that breaks these Terms,
+        without notice.
       </p>
 
       <h3>Health, medicines, and vitals</h3>

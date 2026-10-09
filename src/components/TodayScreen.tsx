@@ -114,6 +114,7 @@ interface TodayScreenProps {
   onSkipMedicineDose?: (dose: DueDose) => void
   reminders?: ReminderSectionProps & { error: string | null }
   onAddReminder?: () => void
+  onOpenInsights?: () => void
 }
 
 export function TodayScreen({
@@ -165,6 +166,7 @@ export function TodayScreen({
   onSkipMedicineDose,
   reminders,
   onAddReminder,
+  onOpenInsights,
 }: TodayScreenProps) {
   const { t, locale } = useLocale()
   const skips = useTodaySkips(todayLocalDate())
@@ -486,6 +488,13 @@ export function TodayScreen({
             </div>
           )}
 
+          {hasActivities && onOpenInsights && (
+            <div className="today-add-row today-progress-row">
+              <button type="button" className="btn btn-secondary today-add" onClick={onOpenInsights}>
+                {t('today.progress')}
+              </button>
+            </div>
+          )}
         </>
       )}
     </div>

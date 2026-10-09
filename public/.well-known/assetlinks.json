@@ -1,0 +1,12 @@
+[
+  {
+    "relation": ["delegate_permission/common.handle_all_urls"],
+    "target": {
+      "namespace": "android_app",
+      "package_name": "com.cheerfulgames.resuming",
+      "sha256_cert_fingerprints": [
+        "83:0A:25:22:18:62:3D:D2:DD:A0:6A:F4:18:50:EA:7B:B6:30:BE:9D:C4:77:06:BD:C4:5B:5C:F9:F0:00:D2:44"
+      ]
+    }
+  }
+]

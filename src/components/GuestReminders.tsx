@@ -11,14 +11,17 @@ import {
 import { navigateBack } from '../lib/navigation'
 import { askForReminderAlerts } from '../lib/reminderNotifications'
 import { REMINDERS_CHANGED, remindersComingUp, remindersForToday } from '../lib/reminderSchedule'
+import { forgetSharedReminder } from '../lib/sharedEvents'
 import { track } from '../lib/track'
 import { ReminderEditor } from './ReminderForm'
+import { GuestSaveWidget } from './GuestSaveWidget'
 import { ReminderListSection } from './ReminderSection'
 
-export function GuestReminderEditor({ reminderId }: { reminderId?: string }) {
+export function GuestReminderEditor({ reminderId, editing = false }: { reminderId?: string; editing?: boolean }) {
   const navigate = useNavigate()
-  const [draft] = useState<GuestDraft | null>(() => loadGuestDraft())
+  const [draft, setDraft] = useState<GuestDraft | null>(() => loadGuestDraft())
   if (!draft) return null
+  const viewPath = reminderId ? `/reminders/${reminderId}` : '/reminders'
 
   return (
     <ReminderEditor
@@ -28,12 +31,14 @@ export function GuestReminderEditor({ reminderId }: { reminderId?: string }) {
       loading={false}
       saving={false}
       error={null}
-      onCancel={() => navigateBack(navigate, '/today')}
+      editing={editing}
+      onEdit={(reminder) => navigate(`/reminders/${reminder.id}/edit`)}
+      onCancel={() => navigateBack(navigate, editing ? viewPath : '/reminders')}
       onSubmit={async (input) => {
         const current = loadGuestDraft()
         if (!current) return
         if (reminderId) {
-          updateGuestReminder(current, reminderId, input)
+          setDraft(updateGuestReminder(current, reminderId, input))
         } else {
           if (!addGuestReminder(current, input)) return 'full'
           track('reminder_added', {
@@ -45,12 +50,17 @@ export function GuestReminderEditor({ reminderId }: { reminderId?: string }) {
           })
         }
         void askForReminderAlerts(input)
-        navigateBack(navigate, '/today')
+        navigateBack(navigate, viewPath)
+      }}
+      onAlertOff={(reminder, alertOff) => {
+        const current = loadGuestDraft()
+        if (current) setDraft(updateGuestReminder(current, reminder.id, { alertOff }))
       }}
       onDelete={async (reminder) => {
         const current = loadGuestDraft()
         if (current) removeGuestReminder(current, reminder.id)
-        navigateBack(navigate, '/today')
+        forgetSharedReminder(reminder)
+        navigateBack(navigate, '/reminders')
       }}
     />
   )
@@ -68,14 +78,17 @@ export function GuestReminderList() {
   const today = todayLocalDate()
 
   return (
-    <ReminderListSection
-      dueNow={remindersForToday(draft.reminders, today)}
-      later={remindersComingUp(draft.reminders, today)}
-      today={today}
-      loading={false}
-      error={null}
-      onAdd={() => navigate('/reminders/new')}
-      onOpen={(reminder) => navigate(`/reminders/${reminder.id}`)}
-    />
+    <>
+      <GuestSaveWidget draft={draft} />
+      <ReminderListSection
+        dueNow={remindersForToday(draft.reminders, today)}
+        later={remindersComingUp(draft.reminders, today)}
+        today={today}
+        loading={false}
+        error={null}
+        onAdd={() => navigate('/reminders/new')}
+        onOpen={(reminder) => navigate(`/reminders/${reminder.id}`)}
+      />
+    </>
   )
 }

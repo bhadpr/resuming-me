@@ -33,7 +33,7 @@ One **Today** screen brings together four kinds of items:
 ```mermaid
 flowchart LR
   subgraph Client["Client (React PWA / Capacitor Android)"]
-    UI[Screens: Today, Activities, Numbers, Insights, Review, Settings]
+    UI[Screens: Today, Activities, Reminders, Health, Insights, Review, Settings]
     LIB[src/lib: rules for day status, comebacks, moments, review, patterns]
     LS[(localStorage: guest draft, timer, offline queue, prefs)]
     NOTIF[Local notifications]
@@ -453,7 +453,7 @@ No third-party analytics SDK (Google Analytics, Sentry, PostHog, Firebase, etc.)
 
 ## 9. Planned next (from phase docs)
 
-- **Phase 8 — Shared event reminders**: date-range reminders, share on WhatsApp, an event page, deep link into the app, copies that follow changes, counts, report and switch off.
+- **Phase 8 — Shared event reminders**: one-day reminders shared on WhatsApp, an event page, deep link into the app, locked once shared, cancel, counts, close or reset the link, report and switch off.
 - **Phase 9 — Welcome flow by link**: starter tracks set on a marketing group, read from the install link or website link, language hint, finish rate and five-day return by track.
 - **AI micro-steps**: deploy an Edge Function behind `VITE_MICRO_STEPS_API_URL`.
 

@@ -1,15 +1,10 @@
-import { Capacitor, registerPlugin } from '@capacitor/core'
+import { Capacitor } from '@capacitor/core'
 import { todayLocalDate } from './dates'
+import { readInstallAttribution } from './installReferrer'
 import { codesFromReferrer } from './marketing'
 import { createSupabaseClient, isSupabaseConfigured } from './supabase'
 
 const REPORTED_ON_KEY = 'resuming-marketing-open-on'
-
-interface InstallReferrerPlugin {
-  getAttribution(): Promise<{ ok: boolean; deviceKey: string; referrer: string }>
-}
-
-const InstallReferrer = registerPlugin<InstallReferrerPlugin>('InstallReferrer')
 
 /** Tag this Android device from the Play install link, then record each new local day. */
 export async function captureMarketingOpen(): Promise<void> {
@@ -23,13 +18,8 @@ export async function captureMarketingOpen(): Promise<void> {
     /* still try the network call */
   }
 
-  let attribution: { ok: boolean; deviceKey: string; referrer: string }
-  try {
-    attribution = await InstallReferrer.getAttribution()
-  } catch {
-    return
-  }
-  if (!attribution.ok || !/^[0-9a-f]{64}$/.test(attribution.deviceKey)) return
+  const attribution = await readInstallAttribution()
+  if (!attribution?.ok || !/^[0-9a-f]{64}$/.test(attribution.deviceKey)) return
 
   const codes = codesFromReferrer(attribution.referrer)
   const { error } = await createSupabaseClient().rpc('marketing_record_open', {

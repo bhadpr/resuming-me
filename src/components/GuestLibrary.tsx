@@ -19,7 +19,6 @@ import {
 } from '../lib/guestDraft'
 import { VITAL_GOAL_IDS, isGuestVital, standardVitalTarget } from '../lib/onboardingFlow'
 import { Icon, type IconName } from './Icon'
-import { GuestReminderList } from './GuestReminders'
 import { GuestSaveWidget } from './GuestSaveWidget'
 
 function useGuestDraft(): [GuestDraft | null, (next: GuestDraft) => void] {
@@ -133,7 +132,6 @@ export function GuestActivitiesPage() {
         items={habits}
         onAdd={() => navigate('/start?step=1&add=1')}
       />
-      <GuestReminderList />
     </>
   )
 }

@@ -8,7 +8,8 @@ export function safeNextPath(next: string | null | undefined): string | null {
   return next
 }
 
-export type AppTab = 'today' | 'activities' | 'metrics' | 'insights'
+/** Bottom nav tabs, plus Insights, which opens from the header and has no bottom tab. */
+export type AppTab = 'today' | 'activities' | 'reminders' | 'metrics' | 'insights'
 
 export type AppView =
   | { name: 'today' }
@@ -19,12 +20,13 @@ export type AppView =
   | { name: 'numbers'; screen: 'form'; metricId?: string }
   | { name: 'numbers'; screen: 'detail'; metricId: string }
   | { name: 'medicines'; medicineId?: string }
-  | { name: 'reminders'; reminderId?: string }
+  | { name: 'reminders'; reminderId?: string; edit?: boolean }
+  | { name: 'reminderList' }
   | { name: 'insights' }
   | { name: 'review'; weekStart: string }
   | { name: 'settings'; page?: 'reminders' }
   | { name: 'themes' }
-  | { name: 'admin'; page: 'analytics' | 'feedback' | 'groups'; groupId?: string }
+  | { name: 'admin'; page: 'analytics' | 'feedback' | 'groups' | 'events'; groupId?: string }
 
 const APP_ROUTES: Array<{ pattern: string; parse: (params: Record<string, string | undefined>) => AppView }> = [
   { pattern: '/today', parse: () => ({ name: 'today' }) },
@@ -55,9 +57,14 @@ const APP_ROUTES: Array<{ pattern: string; parse: (params: Record<string, string
   },
   { pattern: '/reminders/new', parse: () => ({ name: 'reminders' }) },
   {
+    pattern: '/reminders/:id/edit',
+    parse: (p) => ({ name: 'reminders', reminderId: p.id, edit: true }),
+  },
+  {
     pattern: '/reminders/:id',
     parse: (p) => ({ name: 'reminders', reminderId: p.id }),
   },
+  { pattern: '/reminders', parse: () => ({ name: 'reminderList' }) },
   { pattern: '/insights', parse: () => ({ name: 'insights' }) },
   { pattern: '/review/:weekStart', parse: (p) => ({ name: 'review', weekStart: p.weekStart! }) },
   { pattern: '/settings/themes', parse: () => ({ name: 'themes' }) },
@@ -65,6 +72,7 @@ const APP_ROUTES: Array<{ pattern: string; parse: (params: Record<string, string
   { pattern: '/settings', parse: () => ({ name: 'settings' }) },
   { pattern: '/admin/analytics', parse: () => ({ name: 'admin', page: 'analytics' }) },
   { pattern: '/admin/feedback', parse: () => ({ name: 'admin', page: 'feedback' }) },
+  { pattern: '/admin/events', parse: () => ({ name: 'admin', page: 'events' }) },
   {
     pattern: '/admin/groups/:groupId',
     parse: (p) => ({ name: 'admin', page: 'groups', groupId: p.groupId }),
@@ -84,6 +92,7 @@ export function tabFromView(view: AppView | null): AppTab {
   if (!view) return 'today'
   if (view.name === 'numbers' || view.name === 'medicines') return 'metrics'
   if (view.name === 'activities') return 'activities'
+  if (view.name === 'reminders' || view.name === 'reminderList') return 'reminders'
   if (view.name === 'insights') return 'insights'
   return 'today'
 }
@@ -101,6 +110,7 @@ export function showAppChrome(view: AppView | null): boolean {
     view.name === 'numbers' ||
     view.name === 'medicines' ||
     view.name === 'reminders' ||
+    view.name === 'reminderList' ||
     view.name === 'insights' ||
     view.name === 'review'
   )

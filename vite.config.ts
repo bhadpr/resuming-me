@@ -27,7 +27,7 @@ export default defineConfig({
         id: '/',
         name: 'Resuming',
         short_name: 'Resuming',
-        description: 'A small habit you can start again. Do two minutes.',
+        description: 'Track your day, gently. Missed a day? Just resume.',
         theme_color: '#fff4e8',
         background_color: '#fff4e8',
         display: 'standalone',

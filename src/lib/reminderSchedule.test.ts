@@ -118,6 +118,16 @@ describe('reminder lists', () => {
     ])
   })
 
+  it('keeps a cancelled shared event on its day, then lets it go', () => {
+    const shared = [
+      reminder('cancelled-today', today, { sharedEventId: 'e1', sharedStatus: 'cancelled' }),
+      reminder('cancelled-earlier', '2026-10-04', { sharedEventId: 'e2', sharedStatus: 'cancelled' }),
+      reminder('off-earlier', '2026-10-05', { sharedEventId: 'e3', sharedStatus: 'switched_off' }),
+      reminder('active-earlier', '2026-10-05', { sharedEventId: 'e4', sharedStatus: 'active' }),
+    ]
+    expect(remindersForToday(shared, today).map((item) => item.id)).toEqual(['active-earlier', 'cancelled-today'])
+  })
+
   it('lists only what was done today', () => {
     expect(remindersDoneToday(list, today).map((item) => item.id)).toEqual(['done-today'])
   })

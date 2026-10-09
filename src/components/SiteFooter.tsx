@@ -67,21 +67,23 @@ export function SiteFooter({
 
   return (
     <footer className={`site-footer ${compact ? 'site-footer-compact' : ''}`}>
-      <nav className="site-footer-social" aria-label="Social media">
-        {SOCIAL_LINKS.map((link) => (
-          <a
-            key={link.id}
-            className="site-footer-social-link"
-            href={link.href}
-            target="_blank"
-            rel="noopener noreferrer"
-            aria-label={link.label}
-            title={link.label}
-          >
-            {SOCIAL_ICONS[link.id]}
-          </a>
-        ))}
-      </nav>
+      {SOCIAL_LINKS.length > 0 && (
+        <nav className="site-footer-social" aria-label="Social media">
+          {SOCIAL_LINKS.map((link) => (
+            <a
+              key={link.id}
+              className="site-footer-social-link"
+              href={link.href}
+              target="_blank"
+              rel="noopener noreferrer"
+              aria-label={link.label}
+              title={link.label}
+            >
+              {SOCIAL_ICONS[link.id]}
+            </a>
+          ))}
+        </nav>
+      )}
 
       <nav className="site-footer-nav" aria-label="Company">
         {FOOTER_NAV.map((item) => (

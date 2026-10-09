@@ -46,6 +46,14 @@ export type TrackedEventName =
   | 'pattern_tapped'
   | 'reminder_added'
   | 'reminder_done'
+  | 'shared_event_created'
+  | 'shared_event_shared'
+  | 'shared_event_viewed'
+  | 'shared_event_added'
+  | 'shared_event_installed'
+  | 'shared_event_reset'
+  | 'shared_event_cancelled'
+  | 'shared_event_reported'
 
 type EventInsert = Database['public']['Tables']['events']['Insert']
 
