@@ -1,4 +1,5 @@
 import { useEffect, useState } from 'react'
+import { eventPhotoUrl } from '../lib/eventPhotoUrl'
 import { formatFeedbackTime } from '../lib/feedback'
 import {
   listSharedEventsForAdmin,
@@ -6,6 +7,7 @@ import {
   sharedEventUrl,
   type AdminSharedEvent,
 } from '../lib/sharedEvents'
+import { EventPhoto } from './ReminderKindIcon'
 
 const STATUS_LABEL: Record<AdminSharedEvent['status'], string> = {
   active: 'Active',
@@ -41,9 +43,13 @@ export function AdminSharedEventsScreen() {
     setBusyId(row.id)
     setError(null)
     try {
-      await setSharedEventSwitchedOff(row.id, off)
+      await setSharedEventSwitchedOff(row.id, off, row.photoPath)
       setRows((current) =>
-        current.map((item) => (item.id === row.id ? { ...item, status: off ? 'switched_off' : 'active' } : item)),
+        current.map((item) =>
+          item.id === row.id
+            ? { ...item, status: off ? 'switched_off' : 'active', photoPath: off ? null : item.photoPath }
+            : item,
+        ),
       )
     } catch (err) {
       setError(err instanceof Error ? err.message : 'Could not change that event')
@@ -57,7 +63,7 @@ export function AdminSharedEventsScreen() {
   return (
     <div className="analytics-screen">
       <p className="screen-sub settings-lead">
-        Reported events first. Switching one off hides its page and stops alerts on every copy.
+        Reported events first. Switching one off hides its page, stops alerts on every copy, and deletes its photo.
       </p>
 
       {error && <p className="error">{error}</p>}
@@ -89,6 +95,8 @@ export function AdminSharedEventsScreen() {
                     <strong>{row.text}</strong>
                     <span className="analytics-stat-hint">{formatFeedbackTime(row.createdAt)}</span>
                   </div>
+                  <EventPhoto src={eventPhotoUrl(row.photoPath)} alt="Event photo" />
+                  {row.description && <p className="reminder-description">{row.description}</p>}
                   <p className="admin-feedback-who">
                     From {row.from} · {row.day} ·{' '}
                     <a href={sharedEventUrl(row.code)} target="_blank" rel="noreferrer">

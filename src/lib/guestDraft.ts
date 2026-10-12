@@ -12,6 +12,7 @@ import {
   REMINDER_DONE_KEEP_MS,
   REMINDER_OPEN_MAX,
   announceRemindersChanged,
+  cleanReminderDescription,
   cleanReminderText,
   isDay,
   isNextYearCopyOf,
@@ -21,6 +22,7 @@ import {
   type Reminder,
   type ReminderInput,
 } from './reminderSchedule'
+import { isEventPhotoPath, isReminderPhotoData } from './eventPhotoUrl'
 import { getLocale, t } from './i18n'
 import { canLogPastGoal, countPortion, countProgressLabel } from './dayStatus'
 import { endOfWeekSunday, startOfWeekMonday } from './dates'
@@ -498,9 +500,12 @@ function normalizeGuestReminders(list: unknown, now = Date.now()): Reminder[] {
       if (open >= REMINDER_OPEN_MAX) continue
       open += 1
     }
+    const description = cleanReminderDescription(item.description)
     reminders.push({
       id: item.id,
       text,
+      ...(description ? { description } : {}),
+      ...(isReminderPhotoData(item.photoData) ? { photoData: item.photoData } : {}),
       day: item.day,
       hour: timed ? item.hour! : null,
       minute: timed ? item.minute! : null,
@@ -513,6 +518,7 @@ function normalizeGuestReminders(list: unknown, now = Date.now()): Reminder[] {
       ...(item.sharedStatus === 'active' || item.sharedStatus === 'cancelled' || item.sharedStatus === 'switched_off'
         ? { sharedStatus: item.sharedStatus }
         : {}),
+      ...(isEventPhotoPath(item.sharedPhotoPath) ? { sharedPhotoPath: item.sharedPhotoPath } : {}),
     })
   }
   return reminders
@@ -522,6 +528,8 @@ function newGuestReminder(input: ReminderInput): Reminder {
   return {
     id: `guest-${newId()}`,
     text: cleanReminderText(input.text),
+    description: cleanReminderDescription(input.description),
+    photoData: input.photo?.dataUrl ?? (isReminderPhotoData(input.photoData) ? input.photoData : null),
     day: input.day,
     hour: input.hour,
     minute: input.hour == null ? null : input.minute,
@@ -567,9 +575,10 @@ export function reopenGuestReminder(draft: GuestDraft, id: string): GuestDraft {
 }
 
 export function updateGuestReminder(draft: GuestDraft, id: string, patch: Partial<Reminder>): GuestDraft {
+  const cleaned = 'description' in patch ? { ...patch, description: cleanReminderDescription(patch.description) } : patch
   const next = saveGuestDraft({
     ...draft,
-    reminders: draft.reminders.map((item) => (item.id === id ? { ...item, ...patch } : item)),
+    reminders: draft.reminders.map((item) => (item.id === id ? { ...item, ...cleaned } : item)),
   })
   announceRemindersChanged()
   return next
@@ -577,13 +586,16 @@ export function updateGuestReminder(draft: GuestDraft, id: string, patch: Partia
 
 /** Keeps what the server said about shared events, so a cancelled copy stays quiet offline. */
 export function saveGuestSharedStatuses(draft: GuestDraft, updated: readonly Reminder[]): GuestDraft {
-  const status = new Map(updated.map((item) => [item.id, item.sharedStatus]))
+  const byId = new Map(updated.map((item) => [item.id, item]))
   let changed = false
   const reminders = draft.reminders.map((item) => {
-    const next = status.get(item.id)
-    if (!item.sharedEventId || next === undefined || next === item.sharedStatus) return item
+    const fresh = byId.get(item.id)
+    if (!item.sharedEventId || !fresh) return item
+    const status = fresh.sharedStatus ?? item.sharedStatus
+    const photo = fresh.sharedPhotoPath === undefined ? item.sharedPhotoPath : fresh.sharedPhotoPath
+    if (status === item.sharedStatus && photo === item.sharedPhotoPath) return item
     changed = true
-    return { ...item, sharedStatus: next }
+    return { ...item, sharedStatus: status, sharedPhotoPath: photo }
   })
   if (!changed) return draft
   const next = saveGuestDraft({ ...draft, reminders })

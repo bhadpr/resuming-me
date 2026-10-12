@@ -21,6 +21,7 @@ import {
   type Reminder,
   type ReminderInput,
 } from './reminderSchedule'
+import { watchSharedEventAlerts } from './sharedEventCheck'
 import { createSupabaseClient } from './supabase'
 import { track } from './track'
 
@@ -102,9 +103,12 @@ export async function syncReminderNotifications(
   })
   await LocalNotifications.cancel({ notifications: reminderNotificationIds().map((id) => ({ id })) })
   const alerts = planReminderAlerts(reminders, activeReminderSnoozes(now), now, readPartTimes().evening, copy)
-  if (alerts.length === 0) return
-  const permission = await LocalNotifications.checkPermissions()
-  if (permission.display !== 'granted') return
+  const permission = alerts.length > 0 ? await LocalNotifications.checkPermissions() : null
+  if (alerts.length === 0 || permission?.display !== 'granted') {
+    await watchSharedEventAlerts(false)
+    return
+  }
+  const sharedEventIds = new Map(reminders.map((item) => [item.id, item.sharedEventId ?? null]))
   await ensureReminderChannel()
   await LocalNotifications.schedule({
     notifications: alerts.map((alert) => ({
@@ -112,12 +116,19 @@ export async function syncReminderNotifications(
       title: alert.title,
       body: alert.body,
       schedule: { at: alert.at, allowWhileIdle: true },
-      extra: { dest: 'today', kind: 'reminder', reminderId: alert.reminderId, alert: alert.kind },
+      extra: {
+        dest: 'today',
+        kind: 'reminder',
+        reminderId: alert.reminderId,
+        alert: alert.kind,
+        sharedEventId: sharedEventIds.get(alert.reminderId) ?? null,
+      },
       channelId: CHANNEL_ID,
       actionTypeId: alert.kind === 'before' ? undefined : ACTION_TYPE,
       autoCancel: true,
     })),
   })
+  await watchSharedEventAlerts(alerts.some((alert) => sharedEventIds.get(alert.reminderId)))
 }
 
 /** Asks for notification permission once a saved reminder would alert. Android only. */

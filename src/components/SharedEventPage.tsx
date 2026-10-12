@@ -5,7 +5,8 @@ import { useAuth } from '../hooks/useAuth'
 import { useDocumentMeta } from '../hooks/useDocumentMeta'
 import { useLocale } from '../hooks/useLocale'
 import { todayLocalDate } from '../lib/dates'
-import { addGuestReminder, ensureGuestDraft, loadGuestDraft } from '../lib/guestDraft'
+import { eventPhotoUrl } from '../lib/eventPhotoUrl'
+import { addGuestReminder, ensureGuestDraft, loadGuestDraft, updateGuestReminder } from '../lib/guestDraft'
 import { askForReminderAlerts } from '../lib/reminderNotifications'
 import type { ReminderInput } from '../lib/reminderSchedule'
 import { ReminderCapError, addReminder } from '../lib/reminders'
@@ -26,7 +27,7 @@ import {
   type SharedReportReason,
 } from '../lib/sharedEvents'
 import { track } from '../lib/track'
-import { ReminderKindMark } from './ReminderKindIcon'
+import { EventPhoto, ReminderKindMark } from './ReminderKindIcon'
 
 type Load = { state: 'loading' } | { state: 'error' } | { state: 'ready'; event: SharedEvent | null }
 
@@ -110,6 +111,7 @@ export function SharedEventPage({ code }: { code: string }) {
     const local = localEventTime(found)
     const input: ReminderInput = {
       text: found.text,
+      description: found.description,
       day: local?.day ?? found.day,
       hour: local?.hour ?? found.hour,
       minute: local?.minute ?? found.minute,
@@ -134,9 +136,14 @@ export function SharedEventPage({ code }: { code: string }) {
         }
       } else {
         const draft = ensureGuestDraft()
-        if (!draft.reminders.some((item) => item.sharedEventId === found.id) && !addGuestReminder(draft, input)) {
-          setIssueKey('reminders.full')
-          return
+        if (!draft.reminders.some((item) => item.sharedEventId === found.id)) {
+          const next = addGuestReminder(draft, input)
+          if (!next) {
+            setIssueKey('reminders.full')
+            return
+          }
+          const added = next.reminders.find((item) => item.sharedEventId === found.id)
+          if (added && found.photoPath) updateGuestReminder(next, added.id, { sharedPhotoPath: found.photoPath })
         }
       }
       track('shared_event_added', { signed_in: Boolean(user), native })
@@ -179,6 +186,7 @@ export function SharedEventPage({ code }: { code: string }) {
   return (
     <section className="shared-event">
       <p className="shared-event-intro">{t('sharedEvent.intro')}</p>
+      <EventPhoto src={eventPhotoUrl(found.photoPath)} alt={t('sharedEvent.photoAlt')} />
       <div className="shared-event-card">
         <ReminderKindMark kind={found.kind} />
         <div className="shared-event-body">
@@ -190,6 +198,7 @@ export function SharedEventPage({ code }: { code: string }) {
               {t('sharedEvent.eventTime', { when: formatSharedWhen(found, locale), zone: found.timeZone })}
             </p>
           )}
+          {found.description && <p className="reminder-description">{found.description}</p>}
         </div>
       </div>
 

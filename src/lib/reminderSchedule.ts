@@ -2,6 +2,7 @@ import { addDays, daysBetween, parseLocalDate, todayLocalDate } from './dates'
 import { localeTag, type Locale } from './i18n'
 
 export const REMINDER_TEXT_MAX = 120
+export const REMINDER_DESCRIPTION_MAX = 500
 export const REMINDER_OPEN_MAX = 100
 /** Done reminders older than this are not loaded. Today only needs today's. */
 export const REMINDER_DONE_KEEP_MS = 36 * 60 * 60 * 1000
@@ -9,6 +10,14 @@ export const REMINDER_DONE_KEEP_MS = 36 * 60 * 60 * 1000
 export interface Reminder {
   id: string
   text: string
+  /** Plain text, shown as written. Links are not made clickable. */
+  description?: string | null
+  /** Signed in: the private photo in storage. */
+  photoPath?: string | null
+  /** Signed in: a short-lived address for photoPath, filled in on load. */
+  photoUrl?: string | null
+  /** Guest: a small photo kept on the device as a data URL. */
+  photoData?: string | null
   /** YYYY-MM-DD, local. */
   day: string
   /** Both null means any time that day. */
@@ -26,6 +35,8 @@ export interface Reminder {
   alertOff?: boolean
   /** The shared event's status, learned on load. Missing means active or not known yet. */
   sharedStatus?: SharedReminderStatus
+  /** The shared event's photo in storage, learned with its status. Null once the event is switched off. */
+  sharedPhotoPath?: string | null
   /** This account made the shared event, so it can share it again. Copies from others are false. */
   sharedByMe?: boolean
 }
@@ -42,8 +53,20 @@ export function reminderAlerts(reminder: Reminder): boolean {
   return !reminder.doneAt && !reminder.alertOff && !isSharedEventGone(reminder)
 }
 
+/** A photo picked on the form: a full one for the account, a small one for a guest's device. */
+export interface ReminderPhoto {
+  blob: Blob
+  dataUrl: string
+}
+
 export interface ReminderInput {
   text: string
+  description?: string | null
+  /** A new photo, or null to remove it. Missing leaves it as it is. */
+  photo?: ReminderPhoto | null
+  /** An existing photo carried to a copy, such as next year's. */
+  photoPath?: string | null
+  photoData?: string | null
   day: string
   hour: number | null
   minute: number | null
@@ -73,6 +96,9 @@ export function nextYearDay(day: string): string {
 export function nextYearCopy(reminder: Reminder): ReminderInput {
   return {
     text: reminder.text,
+    description: reminder.description ?? null,
+    ...(reminder.photoPath ? { photoPath: reminder.photoPath } : {}),
+    ...(reminder.photoData ? { photoData: reminder.photoData } : {}),
     day: nextYearDay(reminder.day),
     hour: reminder.hour,
     minute: reminder.minute,
@@ -117,6 +143,21 @@ export function cleanReminderText(text: string): string {
   return text.replace(/\s+/g, ' ').trim().slice(0, REMINDER_TEXT_MAX)
 }
 
+/** Keeps line breaks, at most one blank line in a row. Null when empty. */
+export function cleanReminderDescription(text: string | null | undefined): string | null {
+  if (typeof text !== 'string') return null
+  const cleaned = text
+    .replace(/\r\n?/g, '\n')
+    .split('\n')
+    .map((line) => line.replace(/[^\S\n]+/g, ' ').trim())
+    .join('\n')
+    .replace(/\n{3,}/g, '\n\n')
+    .trim()
+    .slice(0, REMINDER_DESCRIPTION_MAX)
+    .trim()
+  return cleaned || null
+}
+
 export function isDay(value: unknown): value is string {
   return typeof value === 'string' && /^\d{4}-\d{2}-\d{2}$/.test(value)
 }
@@ -128,6 +169,7 @@ export function reminderPrefillFrom(state: unknown): ReminderInput | undefined {
   const timed = Number.isInteger(value.hour) && Number.isInteger(value.minute)
   return {
     text: value.text,
+    description: cleanReminderDescription(value.description),
     day: value.day,
     hour: timed ? value.hour! : null,
     minute: timed ? value.minute! : null,

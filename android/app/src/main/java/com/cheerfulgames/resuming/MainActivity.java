@@ -12,6 +12,7 @@ public class MainActivity extends BridgeActivity {
     @Override
     public void onCreate(Bundle savedInstanceState) {
         registerPlugin(InstallReferrerPlugin.class);
+        registerPlugin(SharedEventCheckPlugin.class);
         super.onCreate(savedInstanceState);
         lockPhonesToPortrait();
         applyFontScale();

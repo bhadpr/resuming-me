@@ -75,9 +75,12 @@ describe('isShareableReminder', () => {
 
 describe('replacementReminder', () => {
   it('keeps the details and drops the link to the old event', () => {
-    const next = replacementReminder(reminder({ sharedEventId: 'e1', remindBefore: true, alertOff: true }))
+    const next = replacementReminder(
+      reminder({ sharedEventId: 'e1', remindBefore: true, alertOff: true, description: 'Shivaji Mandal hall' }),
+    )
     expect(next).toEqual({
       text: 'Ganesh Aarti',
+      description: 'Shivaji Mandal hall',
       day: '2026-09-07',
       hour: 19,
       minute: 0,

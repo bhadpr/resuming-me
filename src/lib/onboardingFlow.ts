@@ -1,5 +1,5 @@
 import type { GuestActivity, GuestDraft } from './guestDraft'
-import { habitVideoFor } from '../data/habitVideos'
+import { habitVideoFor, type HabitVideo } from '../data/habitVideos'
 import { t } from './i18n'
 import { formatReminderClock } from './checkinPrefs'
 import { FASTING_HOURS_PER_TAP, PROTEIN_GRAMS_PER_PORTION } from './dayStatus'
@@ -152,15 +152,18 @@ export function isPranayamHabit(templateId: string | null | undefined): boolean 
   return templateId != null && PRANAYAM_IDS.has(templateId)
 }
 
-/** Follow-along habits play their clip (or placeholder) when the timer starts. */
-export function playsVideoWithTimer(templateId: string | null | undefined): boolean {
-  if (templateId == null) return false
-  return FOLLOW_ALONG_IDS.has(templateId) || habitVideoFor(templateId) != null
+/** Follow-along habits, and any habit with its own video, play it when the timer starts. */
+export function playsVideoWithTimer(
+  templateId: string | null | undefined,
+  own: HabitVideo | null = null,
+): boolean {
+  if (habitVideoFor(templateId, own) != null) return true
+  return templateId != null && FOLLOW_ALONG_IDS.has(templateId)
 }
 
-/** Only habits with a real clip offer Watch on Today. */
-export function showsHabitVideo(templateId: string | null | undefined): boolean {
-  return habitVideoFor(templateId) != null
+/** Only habits with a real clip, built in or their own, offer Watch on Today. */
+export function showsHabitVideo(templateId: string | null | undefined, own: HabitVideo | null = null): boolean {
+  return habitVideoFor(templateId, own) != null
 }
 
 /** Caption under the habit video (real clip or placeholder). */
@@ -168,7 +171,9 @@ export function habitVideoCaption(
   templateId: string | null,
   name: string,
   measure?: string | null,
+  own: HabitVideo | null = null,
 ): string {
+  if (own) return t('video.follow', { name })
   const measured =
     measure === 'grams' ||
     measure === 'glasses' ||
@@ -185,7 +190,7 @@ export function habitVideoCaption(
   ) {
     return t('video.why', { name: name.toLowerCase() })
   }
-  if (templateId && habitVideoFor(templateId)) {
+  if (habitVideoFor(templateId, own)) {
     return t('video.follow', { name })
   }
   return t('video.how', { name })

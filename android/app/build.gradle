@@ -56,6 +56,9 @@ dependencies {
     implementation "androidx.core:core-splashscreen:$coreSplashScreenVersion"
     implementation project(':capacitor-android')
     implementation "com.android.installreferrer:installreferrer:2.2"
+    implementation "androidx.work:work-runtime:2.10.1"
+    // Worker's API needs ListenableFuture; Health Connect already ships this Guava at runtime.
+    implementation "com.google.guava:guava:31.1-android"
     testImplementation "junit:junit:$junitVersion"
     androidTestImplementation "androidx.test.ext:junit:$androidxJunitVersion"
     androidTestImplementation "androidx.test.espresso:espresso-core:$androidxEspressoCoreVersion"

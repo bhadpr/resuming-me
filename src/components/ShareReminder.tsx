@@ -1,6 +1,9 @@
 import { useEffect, useRef, useState } from 'react'
 import { Capacitor } from '@capacitor/core'
 import { useLocale } from '../hooks/useLocale'
+import { eventPhotoUrl, reminderPhotoSrc } from '../lib/eventPhotoUrl'
+import { compressEventPhoto } from '../lib/eventPhotos'
+import { reminderPhotoBlob } from '../lib/reminderPhotos'
 import { canSharePhoto, copyPhotoToClipboard, sharePhotoWithText } from '../lib/sharePhoto'
 import type { Reminder, ReminderInput, SharedReminderStatus } from '../lib/reminderSchedule'
 import {
@@ -47,6 +50,26 @@ function issueKey(issue: SharedEventIssue): string {
   return 'sharedEvent.shareFailed'
 }
 
+/**
+ * The photo to send: the event's saved one once shared, otherwise the reminder's own.
+ * Null when there is none or it does not load.
+ */
+async function photoToSend(reminder: Reminder): Promise<File | null> {
+  let blob: Blob | null = null
+  const saved = eventPhotoUrl(reminder.sharedPhotoPath)
+  if (saved) {
+    try {
+      const response = await fetch(saved)
+      if (response.ok) blob = await response.blob()
+    } catch {
+      blob = null
+    }
+  } else {
+    blob = await reminderPhotoBlob(reminder)
+  }
+  return blob ? new File([blob], 'invitation.jpg', { type: 'image/jpeg' }) : null
+}
+
 /** Sends to WhatsApp, or the browser's tab when a pop-up blocker stops the new one. */
 function openUrl(url: string, pending: Window | null): void {
   if (pending) {
@@ -68,8 +91,10 @@ export function ShareReminder({ reminder, userId, today, onShared, onStatus, onR
   const [issue, setIssue] = useState<SharedEventIssue | null>(null)
   const [confirm, setConfirm] = useState<Confirm>(null)
   const [notice, setNotice] = useState<string | null>(() => carriedNotices.get(reminder.id) ?? null)
+  /** Loaded ahead, so the Share tap still opens WhatsApp or the share sheet straight away. */
   const [photo, setPhoto] = useState<File | null>(null)
-  /** Before the first share: the From line, photo, and lock warning show after one tap. */
+  const photoSrc = reminderPhotoSrc(reminder)
+  /** Before the first share: the From line, photo note, and lock warning show after one tap. */
   const [setup, setSetup] = useState(focus)
   /** The organizer's Stop new adds, Reset link, and Cancel, folded away until asked for. */
   const [manage, setManage] = useState(false)
@@ -103,6 +128,19 @@ export function ShareReminder({ reminder, userId, today, onShared, onStatus, onR
   }, [eventId, owned?.id])
 
   useEffect(() => {
+    let live = true
+    setPhoto(null)
+    if (!photoSrc) return
+    void photoToSend(reminder).then((file) => {
+      if (live) setPhoto(file)
+    })
+    return () => {
+      live = false
+    }
+    // eslint-disable-next-line react-hooks/exhaustive-deps -- reload only when the picture itself changes
+  }, [photoSrc])
+
+  useEffect(() => {
     if (!focus || checking || scrolled.current || !section.current) return
     scrolled.current = true
     section.current.scrollIntoView({ behavior: 'smooth', block: 'center' })
@@ -117,24 +155,29 @@ export function ShareReminder({ reminder, userId, today, onShared, onStatus, onR
     setIssue(null)
     setNotice(null)
     const fromLine = owned ? owned.from : cleanFromLine(from)
-    if (!owned && (hasWebLink(reminder.text) || hasWebLink(fromLine))) {
+    if (!owned && (hasWebLink(reminder.text) || hasWebLink(reminder.description) || hasWebLink(fromLine))) {
       setIssue('links')
       return
     }
-    const withPhoto = photo != null && canSharePhoto(photo)
-    const copied = photo != null && !withPhoto ? await copyPhotoToClipboard(photo) : false
+    const sending = photo
+    const withPhoto = sending != null && canSharePhoto(sending)
+    const copied = sending != null && !withPhoto ? await copyPhotoToClipboard(sending) : false
     const pending = withPhoto || owned || Capacitor.isNativePlatform() ? null : window.open('', '_blank')
     setBusy(true)
+    let photoNotSaved = false
     try {
       let event = owned
       if (!event) {
-        const made = await createSharedEvent(userId, reminder, fromLine)
+        const upload = sending ? await compressEventPhoto(sending).catch(() => null) : null
+        const made = await createSharedEvent(userId, reminder, fromLine, upload)
+        photoNotSaved = sending != null && made.photoPath == null
         event = { id: made.id, code: made.code, from: fromLine, status: 'active', takingAdds: true, followers: 0 }
         setOwned(event)
         track('shared_event_created', {
           has_from: fromLine != null,
           has_time: reminder.hour != null,
           kind: reminder.kind,
+          photo: made.photoPath != null,
         })
       }
       const message = sharedEventMessage(
@@ -149,20 +192,25 @@ export function ShareReminder({ reminder, userId, today, onShared, onStatus, onR
         locale,
       )
       if (withPhoto) {
-        const result = await sharePhotoWithText(photo, message)
+        const result = await sharePhotoWithText(sending, message)
         if (result === 'needsTap') {
           setNotice(t('sharedEvent.photoTapAgain'))
           return
         }
         if (result === 'shared') track('shared_event_shared', { first: !owned, photo: true })
       } else {
-        if (photo) {
+        if (sending) {
           const note = t(copied ? 'sharedEvent.photoCopied' : 'sharedEvent.photoNotHere')
           setNotice(note)
           if (!reminder.sharedEventId) carriedNotices.set(reminder.id, note)
         }
         openUrl(whatsAppShareUrl(message), pending)
         track('shared_event_shared', { first: !owned, photo: false, photo_copied: copied })
+      }
+      if (photoNotSaved) {
+        const note = t('sharedEvent.photoNotSaved')
+        setNotice(note)
+        if (!reminder.sharedEventId) carriedNotices.set(reminder.id, note)
       }
       if (!reminder.sharedEventId) onShared(event.id)
     } catch (err) {
@@ -219,7 +267,6 @@ export function ShareReminder({ reminder, userId, today, onShared, onStatus, onR
         {issue && <p className="error">{t(issueKey(issue))}</p>}
         {open && (
           <>
-            <PhotoPicker photo={photo} disabled={busy} onChange={setPhoto} />
             <button
               type="button"
               className="btn btn-primary share-event-btn"
@@ -365,7 +412,7 @@ export function ShareReminder({ reminder, userId, today, onShared, onStatus, onR
               }}
             />
           </label>
-          <PhotoPicker photo={photo} disabled={busy} onChange={setPhoto} />
+          {photoSrc && <p className="share-event-note">{t('sharedEvent.photoNote')}</p>}
           <p className="share-event-warn">
             <Icon name="lock" />
             <span>
@@ -390,70 +437,5 @@ export function ShareReminder({ reminder, userId, today, onShared, onStatus, onR
         </>
       )}
     </section>
-  )
-}
-
-interface PhotoPickerProps {
-  photo: File | null
-  disabled: boolean
-  onChange: (photo: File | null) => void
-}
-
-/** An optional photo, such as an invitation card. It goes only to WhatsApp, never to Resuming. */
-function PhotoPicker({ photo, disabled, onChange }: PhotoPickerProps) {
-  const { t } = useLocale()
-  const input = useRef<HTMLInputElement>(null)
-  const [preview, setPreview] = useState<string | null>(null)
-
-  useEffect(() => {
-    if (!photo) {
-      setPreview(null)
-      return
-    }
-    const url = URL.createObjectURL(photo)
-    setPreview(url)
-    return () => URL.revokeObjectURL(url)
-  }, [photo])
-
-  return (
-    <div className="share-photo">
-      <input
-        ref={input}
-        className="share-photo-input"
-        type="file"
-        accept="image/*"
-        tabIndex={-1}
-        aria-hidden="true"
-        onChange={(event) => {
-          const file = event.target.files?.[0]
-          if (file && file.type.startsWith('image/')) onChange(file)
-          event.target.value = ''
-        }}
-      />
-      {photo && preview ? (
-        <div className="share-photo-chosen">
-          <img className="share-photo-thumb" src={preview} alt={t('sharedEvent.photoAlt')} />
-          <div className="share-photo-actions">
-            <button type="button" className="btn btn-ghost btn-sm" disabled={disabled} onClick={() => input.current?.click()}>
-              {t('sharedEvent.changePhoto')}
-            </button>
-            <button type="button" className="btn btn-ghost btn-sm" disabled={disabled} onClick={() => onChange(null)}>
-              {t('sharedEvent.removePhoto')}
-            </button>
-          </div>
-        </div>
-      ) : (
-        <button
-          type="button"
-          className="btn btn-ghost btn-sm share-photo-add"
-          disabled={disabled}
-          onClick={() => input.current?.click()}
-        >
-          <Icon name="photo" />
-          {t('sharedEvent.addPhoto')}
-        </button>
-      )}
-      <p className="share-event-note">{t('sharedEvent.photoNote')}</p>
-    </div>
   )
 }

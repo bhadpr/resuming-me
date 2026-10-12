@@ -143,9 +143,9 @@ The link is open, so the organizer needs a way to stop it spreading without hurt
 - Events over a range of days, such as every day for a festival. Each day can be shared as its own event for now.
 - Sharing yearly reminders.
 - RSVPs, comments, or chat on an event.
-- Changing an event after it is shared, and push notifications to deliver changes.
+- Changing an event after it is shared, and push notifications to deliver changes. A cancel still reaches a closed app: while alerts for shared events are armed, Android checks about once an hour (when online) and drops the alerts of cancelled or switched-off events. Timing is up to Android, so a cancel in the last hour may still ring.
 - The organizer seeing who added it.
-- Photos or posters on the event.
+- Photos or posters on the event. (Added later: one optional photo, saved with the event at the first share and fixed after. It shows on the event page, on each copy's reminder page, and as the row picture on Today and Reminders. Switching an event off deletes it.)
 - More than one time per day.
 - Donations or payments.
 - iPhone app links and alerts.

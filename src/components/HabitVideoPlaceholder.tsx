@@ -1,5 +1,6 @@
 import { useEffect, useMemo, useRef } from 'react'
-import { habitVideoFor, habitYoutubeEmbedUrl } from '../data/habitVideos'
+import { habitVideoFor, habitYoutubeEmbedUrl, youtubeWatchUrl, type HabitVideo } from '../data/habitVideos'
+import { useLocale } from '../hooks/useLocale'
 import { habitVideoCaption } from '../lib/onboardingFlow'
 
 function postYoutubeCommand(iframe: HTMLIFrameElement | null, func: 'playVideo' | 'pauseVideo') {
@@ -18,6 +19,7 @@ export function HabitVideoPlaceholder({
   paused = false,
   placeholder = false,
   shape = 'wide',
+  own = null,
 }: {
   templateId: string | null
   name: string
@@ -28,9 +30,12 @@ export function HabitVideoPlaceholder({
   placeholder?: boolean
   /** A Short is a tall 9:16 frame. */
   shape?: 'wide' | 'short'
+  /** The habit's own YouTube video, which replaces the built-in one. */
+  own?: HabitVideo | null
 }) {
-  const video = habitVideoFor(templateId)
-  const caption = habitVideoCaption(templateId, name, measure)
+  const { t } = useLocale()
+  const video = habitVideoFor(templateId, own)
+  const caption = habitVideoCaption(templateId, name, measure, own)
   const withTimer = playing || paused
   const iframeRef = useRef<HTMLIFrameElement>(null)
   /** Tracks play state after the live session iframe is up; first start uses embed autoplay. */
@@ -85,7 +90,17 @@ export function HabitVideoPlaceholder({
             referrerPolicy="strict-origin-when-cross-origin"
           />
         </div>
-        <figcaption className="screen-sub">{caption}</figcaption>
+        <figcaption className="screen-sub">
+          {caption}
+          {own && video === own && (
+            <>
+              {' '}
+              <a className="habit-video-open" href={youtubeWatchUrl(own)} target="_blank" rel="noreferrer">
+                {t('video.openOnYoutube')}
+              </a>
+            </>
+          )}
+        </figcaption>
       </figure>
     )
   }

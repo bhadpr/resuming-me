@@ -11,6 +11,7 @@ import { AUTH_PROVIDERS } from '../../lib/authProviders'
 import { MEDICINES_ENABLED } from '../../config'
 import { formatReminderClock } from '../../lib/checkinPrefs'
 import { addDays, todayLocalDate } from '../../lib/dates'
+import { reminderPhotoSrc } from '../../lib/eventPhotoUrl'
 import { parseTimeInput } from '../../lib/dailyDigest'
 import { enableDailyDigestFromOnboarding } from '../../lib/localNotifications'
 import {
@@ -1513,7 +1514,7 @@ export function StartFlow({
           <ul className="start-medicine-list">
             {openReminders.map((reminder) => (
               <li key={reminder.id} className="start-medicine-row">
-                <ReminderKindMark kind={reminder.kind} />
+                <ReminderKindMark kind={reminder.kind} photo={reminderPhotoSrc(reminder)} />
                 <span className="activity-meta">
                   <span className="activity-name">{reminder.text}</span>
                   <span className="activity-desc">{reminderWhen(reminder)}</span>

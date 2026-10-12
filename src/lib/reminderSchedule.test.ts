@@ -1,6 +1,8 @@
 import { describe, expect, it } from 'vitest'
 import {
   DEFAULT_PART_TIMES,
+  REMINDER_DESCRIPTION_MAX,
+  cleanReminderDescription,
   cleanReminderText,
   formatShortReminderTime,
   isNextYearCopyOf,
@@ -8,6 +10,7 @@ import {
   nextYearDay,
   partOfTime,
   reminderKindOf,
+  reminderPrefillFrom,
   remindersComingUp,
   remindersDoneToday,
   remindersForToday,
@@ -27,6 +30,7 @@ describe('every year', () => {
     const birthday: Reminder = {
       id: 'b',
       text: "Amma's birthday",
+      description: 'Order the cake',
       day: '2026-10-10',
       hour: 8,
       minute: 0,
@@ -37,6 +41,7 @@ describe('every year', () => {
     }
     expect(nextYearCopy(birthday)).toEqual({
       text: "Amma's birthday",
+      description: 'Order the cake',
       day: '2027-10-10',
       hour: 8,
       minute: 0,
@@ -52,6 +57,32 @@ describe('every year', () => {
     expect(isNextYearCopyOf({ ...reminderOf('c', '2027-10-11'), everyYear: true }, done)).toBe(false)
     expect(isNextYearCopyOf(reminderOf('c', '2027-10-10'), done)).toBe(false)
     expect(isNextYearCopyOf({ ...reminderOf('c', '2027-10-10'), everyYear: true, text: 'Other' }, done)).toBe(false)
+  })
+})
+
+describe('cleanReminderDescription', () => {
+  it('keeps line breaks, tidies spaces, and allows one blank line in a row', () => {
+    expect(cleanReminderDescription('  Hall B,   2nd floor \r\n\r\n\r\n\r\nBring  the form  ')).toBe(
+      'Hall B, 2nd floor\n\nBring the form',
+    )
+  })
+
+  it('is null when empty or missing', () => {
+    expect(cleanReminderDescription('   \n \n ')).toBeNull()
+    expect(cleanReminderDescription(null)).toBeNull()
+    expect(cleanReminderDescription(undefined)).toBeNull()
+  })
+
+  it('stops at 500 characters', () => {
+    expect(cleanReminderDescription('a'.repeat(600))).toHaveLength(REMINDER_DESCRIPTION_MAX)
+  })
+})
+
+describe('reminderPrefillFrom', () => {
+  it('carries the description into a new reminder', () => {
+    expect(
+      reminderPrefillFrom({ reminderPrefill: { text: 'Garba', description: ' Bring water ', day: '2026-10-12' } }),
+    ).toMatchObject({ text: 'Garba', description: 'Bring water' })
   })
 })
 

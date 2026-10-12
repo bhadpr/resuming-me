@@ -1,9 +1,13 @@
-import { useState, type FormEvent, type ReactNode } from 'react'
+import { useRef, useState, type FormEvent, type ReactNode } from 'react'
+import { reminderPhotoSrc } from '../lib/eventPhotoUrl'
+import { prepareReminderPhoto } from '../lib/reminderPhotos'
 import { useLocale } from '../hooks/useLocale'
 import {
   REMINDER_KINDS,
+  REMINDER_DESCRIPTION_MAX,
   REMINDER_PARTS,
   REMINDER_TEXT_MAX,
+  cleanReminderDescription,
   formatReminderTime,
   formatShortReminderTime,
   isSharedEventGone,
@@ -16,11 +20,12 @@ import {
   type ReminderIssue,
   type ReminderKind,
   type ReminderPart,
+  type ReminderPhoto,
 } from '../lib/reminderSchedule'
 import { formatSharedWhen } from '../lib/sharedEvents'
 import { AppAlertsNote } from './AppAlertsNote'
 import { Icon } from './Icon'
-import { ReminderKindMark } from './ReminderKindIcon'
+import { EventPhoto, ReminderKindMark } from './ReminderKindIcon'
 
 type DayChoice = 'today' | 'tomorrow' | 'pick'
 type TimeChoice = ReminderPart | 'any' | 'pick'
@@ -65,6 +70,12 @@ export function ReminderForm({
   const seedDay = initial ?? (prefill && prefill.day >= today ? prefill : null)
   const [parts] = useState(readPartTimes)
   const [text, setText] = useState(seed?.text ?? '')
+  const [description, setDescription] = useState(seed?.description ?? '')
+  /** Missing until the person picks or removes a photo, so an edit leaves the stored one alone. */
+  const [photo, setPhoto] = useState<ReminderPhoto | null | undefined>(undefined)
+  const [photoBusy, setPhotoBusy] = useState(false)
+  const [photoFailed, setPhotoFailed] = useState(false)
+  const currentPhoto = photo === undefined ? (initial ? reminderPhotoSrc(initial) : null) : (photo?.dataUrl ?? null)
   const [dayChoice, setDayChoice] = useState<DayChoice>(() => initialDay(seedDay, today))
   const [pickedDay, setPickedDay] = useState(seedDay?.day ?? tomorrowOf(today))
   const [timeChoice, setTimeChoice] = useState<TimeChoice>(() =>
@@ -100,6 +111,8 @@ export function ReminderForm({
     event.preventDefault()
     const input: ReminderInput = {
       text,
+      description: cleanReminderDescription(description),
+      ...(photo !== undefined ? { photo } : {}),
       day: resolvedDay(),
       ...resolvedTime(),
       remindBefore: dayBeforeOn,
@@ -145,6 +158,39 @@ export function ReminderForm({
             }}
           />
         </label>
+
+        <label className="field">
+          <span className="reminder-question">{t('reminders.description')}</span>
+          <textarea
+            className="field-input reminder-description-input"
+            value={description}
+            rows={3}
+            maxLength={REMINDER_DESCRIPTION_MAX}
+            placeholder={t('reminders.descriptionPlaceholder')}
+            onChange={(event) => setDescription(event.target.value)}
+          />
+        </label>
+
+        <ReminderPhotoField
+          src={currentPhoto}
+          busy={photoBusy}
+          failed={photoFailed}
+          onPick={async (file) => {
+            setPhotoBusy(true)
+            setPhotoFailed(false)
+            try {
+              setPhoto(await prepareReminderPhoto(file))
+            } catch {
+              setPhotoFailed(true)
+            } finally {
+              setPhotoBusy(false)
+            }
+          }}
+          onRemove={() => {
+            setPhoto(null)
+            setPhotoFailed(false)
+          }}
+        />
 
         <p className="reminder-question">{t('reminders.kind')}</p>
         <div className="reminder-kinds">
@@ -259,10 +305,67 @@ export function ReminderForm({
 
       {(issueText || error) && <p className="error">{issueText || error}</p>}
 
-      <button type="submit" className="btn btn-primary" disabled={saving}>
+      <button type="submit" className="btn btn-primary" disabled={saving || photoBusy}>
         {saving ? t('reminders.saving') : t('reminders.save')}
       </button>
     </form>
+  )
+}
+
+interface ReminderPhotoFieldProps {
+  src: string | null
+  busy: boolean
+  failed: boolean
+  onPick: (file: File) => void
+  onRemove: () => void
+}
+
+/** An optional photo, such as an invitation card. It takes the place of the kind picture. */
+function ReminderPhotoField({ src, busy, failed, onPick, onRemove }: ReminderPhotoFieldProps) {
+  const { t } = useLocale()
+  const input = useRef<HTMLInputElement>(null)
+  return (
+    <div className="field photo-pick">
+      <span className="reminder-question">{t('reminders.photo')}</span>
+      <input
+        ref={input}
+        className="photo-pick-input"
+        type="file"
+        accept="image/*"
+        tabIndex={-1}
+        aria-hidden="true"
+        onChange={(event) => {
+          const file = event.target.files?.[0]
+          if (file && file.type.startsWith('image/')) onPick(file)
+          event.target.value = ''
+        }}
+      />
+      {src ? (
+        <div className="photo-pick-chosen">
+          <img className="photo-pick-thumb" src={src} alt={t('sharedEvent.photoAlt')} />
+          <div className="photo-pick-actions">
+            <button type="button" className="btn btn-ghost btn-sm" disabled={busy} onClick={() => input.current?.click()}>
+              {t('sharedEvent.changePhoto')}
+            </button>
+            <button type="button" className="btn btn-ghost btn-sm" disabled={busy} onClick={onRemove}>
+              {t('sharedEvent.removePhoto')}
+            </button>
+          </div>
+        </div>
+      ) : (
+        <button
+          type="button"
+          className="btn btn-secondary btn-sm photo-pick-add"
+          disabled={busy}
+          onClick={() => input.current?.click()}
+        >
+          <Icon name="photo" />
+          {busy ? t('reminders.photoReading') : t('reminders.addPhoto')}
+        </button>
+      )}
+      {failed && <p className="error">{t('reminders.photoFailed')}</p>}
+      <p className="reminder-switch-hint">{t('reminders.photoHint')}</p>
+    </div>
   )
 }
 
@@ -324,11 +427,14 @@ function ReminderView({ reminder, saving, error, onDelete, onCancel, onEdit, sha
       </button>
       <h2 className="form-title">{t(shared ? 'sharedEvent.lockedTitle' : 'reminders.viewTitle')}</h2>
 
+      <EventPhoto src={reminderPhotoSrc(reminder)} alt={t('sharedEvent.photoAlt')} />
+
       <div className="reminder-summary">
-        <ReminderKindMark kind={reminder.kind} />
+        <ReminderKindMark kind={reminder.kind} photo={reminderPhotoSrc(reminder)} />
         <div className="reminder-summary-body">
           <p className="reminder-summary-text">{reminder.text}</p>
           <p className="reminder-summary-when">{when}</p>
+          {reminder.description && <p className="reminder-description">{reminder.description}</p>}
           {gone && (
             <p className="reminder-shared-gone">
               {t(reminder.sharedStatus === 'cancelled' ? 'sharedEvent.cancelledLine' : 'sharedEvent.switchedOffLine')}

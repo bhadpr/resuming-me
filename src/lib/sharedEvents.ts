@@ -1,7 +1,9 @@
 import { parseLocalDate } from './dates'
+import { addEventPhoto, removeEventPhoto } from './eventPhotos'
 import { localeTag, translate, type Locale } from './i18n'
 import { PLAY_PACKAGE } from './marketing'
 import {
+  cleanReminderDescription,
   cleanReminderText,
   formatReminderTime,
   reminderKindOf,
@@ -24,6 +26,8 @@ export interface SharedEvent {
   code: string
   /** Null when the admin switched the event off. */
   text: string | null
+  description: string | null
+  photoPath: string | null
   from: string | null
   /** YYYY-MM-DD in the organizer's time zone. */
   day: string
@@ -62,6 +66,7 @@ export function cleanFromLine(value: string): string | null {
 export function replacementReminder(reminder: Reminder): ReminderInput {
   return {
     text: reminder.text,
+    description: reminder.description ?? null,
     day: reminder.day,
     hour: reminder.hour,
     minute: reminder.minute,
@@ -308,6 +313,8 @@ export interface AdminSharedEvent {
   id: string
   code: string
   text: string
+  description: string | null
+  photoPath: string | null
   from: string
   day: string
   status: SharedEventStatus
@@ -325,6 +332,8 @@ export async function listSharedEventsForAdmin(): Promise<AdminSharedEvent[]> {
     id: row.id,
     code: row.code,
     text: row.text,
+    description: row.description ?? null,
+    photoPath: row.photo_path ?? null,
     from: row.from_line,
     day: row.day,
     status: statusOf(row.status),
@@ -340,23 +349,29 @@ export async function listSharedEventsForAdmin(): Promise<AdminSharedEvent[]> {
   }))
 }
 
-/** Switched off, the event page shows nothing and copies stop alerting. Admin only. */
-export async function setSharedEventSwitchedOff(eventId: string, off: boolean): Promise<void> {
+/** Switched off, the event page shows nothing, copies stop alerting, and the photo is deleted. Admin only. */
+export async function setSharedEventSwitchedOff(eventId: string, off: boolean, photoPath?: string | null): Promise<void> {
   const { error } = await createSupabaseClient()
     .from('shared_events')
     .update({ status: off ? 'switched_off' : 'active' })
     .eq('id', eventId)
   if (error) throw error
+  if (off && photoPath) await removeEventPhoto(eventId, photoPath)
 }
 
-/** Makes the event from the organizer's reminder and links the two. */
+/**
+ * Makes the event from the organizer's reminder and links the two, then adds the photo.
+ * A photo that fails to upload leaves the event shared without one.
+ */
 export async function createSharedEvent(
   userId: string,
   reminder: Reminder,
   from: string | null,
-): Promise<{ id: string; code: string }> {
+  photo: Blob | null = null,
+): Promise<{ id: string; code: string; photoPath: string | null; photoFailed: boolean }> {
   const text = cleanReminderText(reminder.text)
-  if (hasWebLink(text) || hasWebLink(from)) throw new SharedEventError('links')
+  const description = cleanReminderDescription(reminder.description)
+  if (hasWebLink(text) || hasWebLink(description) || hasWebLink(from)) throw new SharedEventError('links')
   const client = createSupabaseClient()
   for (let attempt = 0; attempt < 3; attempt += 1) {
     const { data, error } = await client
@@ -364,6 +379,7 @@ export async function createSharedEvent(
       .insert({
         owner_id: userId,
         text,
+        description,
         from_line: from,
         day: reminder.day,
         hour: reminder.hour,
@@ -378,7 +394,12 @@ export async function createSharedEvent(
       throw new SharedEventError(issueFromError(error))
     }
     await linkReminderToSharedEvent(reminder.id, data.id)
-    return data
+    if (!photo) return { ...data, photoPath: null, photoFailed: false }
+    try {
+      return { ...data, photoPath: await addEventPhoto(data.id, photo), photoFailed: false }
+    } catch {
+      return { ...data, photoPath: null, photoFailed: true }
+    }
   }
   throw new SharedEventError('failed')
 }
@@ -393,6 +414,8 @@ export async function getSharedEvent(code: string): Promise<SharedEvent | null> 
     id: row.id,
     code: row.code,
     text: row.text,
+    description: row.description ?? null,
+    photoPath: row.photo_path ?? null,
     from: row.from_line,
     day: row.day,
     hour: row.hour,

@@ -108,7 +108,9 @@ function PrivacyContent() {
           <strong>App content you create.</strong> Activities, health measurements you
           choose to log (such as blood pressure, heart rate, weight, and sleep), log
           entries, timers, micro-steps, timezone preferences, and related settings you
-          enter in the Service.
+          enter in the Service, including a YouTube link you choose as a habit’s video.
+          Habit videos play in YouTube’s own player, so YouTube’s privacy policy covers
+          what you watch there.
         </li>
         <li>
           <strong>Medicines.</strong> If you are signed in, we store each medicine’s
@@ -119,16 +121,20 @@ function PrivacyContent() {
         </li>
         <li>
           <strong>Reminders.</strong> If you are signed in, we store each reminder’s
-          text, its day, an optional time, its kind, whether it comes back every year,
+          text, optional description and photo, its day, an optional time, its kind, whether it comes back every year,
           whether you asked for an alert the day before, and when you marked it done. We
-          store them to show them on Today and to alert you. A guest’s reminders stay on
-          the device.
+          store them to show them on Today and to alert you. A reminder’s photo is kept
+          private to your account, after the app shrinks it and removes hidden details
+          such as where it was taken. Deleting the reminder or your account deletes it.
+          A guest’s reminders, and their photos, stay on the device.
         </li>
         <li>
-          <strong>Shared events.</strong> If you share a reminder, we store its text, the
-          optional From line you type, its day, time, time zone and kind, and a short link
-          code, tied to your account. Anyone with the link can see the text, the From line
-          and the time, but never your name, email or phone number. When someone adds a
+          <strong>Shared events.</strong> If you share a reminder, we store its text and
+          description, the optional From line you type, its day, time, time zone and kind,
+          a copy of the reminder’s photo if it has one, and a short link code, tied to your
+          account. Anyone with the link can see the text, description, photo, From line and
+          time, but never your name, email or phone number. Switching an event off deletes
+          its photo, and deleting your account deletes the photos of events you shared. When someone adds a
           shared event, we store that their account, or an anonymous id for their device,
           follows it, so we can count how many people added it and tell their copy if it is
           cancelled. We do not show the organizer who added it. If someone reports an
@@ -188,8 +194,8 @@ function PrivacyContent() {
         cross-context behavioral advertising.
       </p>
       <p>
-        Your reminders are private unless you choose Share on WhatsApp. A shared event can
-        be seen by anyone with its link. Reminder and event text is not sent to our
+        Your reminders and their photos are private unless you choose Share on WhatsApp. A shared event,
+        with its photo, can be seen by anyone with its link. Reminder and event text is not sent to our
         analytics, which count only how many reminders and shared events are added,
         opened and done.
       </p>
@@ -449,9 +455,10 @@ function TermsContent() {
 
       <h3>Shared events</h3>
       <p>
-        When you share a reminder, anyone with the link can see its text, its From line and
-        its time, and add it. Share only events you are entitled to announce. Do not use a
-        shared event for ads, spam, web links, or anything misleading, hateful or harmful.
+        When you share a reminder, anyone with the link can see its text, description,
+        photo, From line and time, and add it. Share only events you are entitled to
+        announce, and only photos you have the right to share. Do not use a shared event
+        for ads, spam, web links, or anything misleading, hateful or harmful.
         A shared event cannot be changed; you can stop new adds, reset the link, or cancel
         it. We may switch off any shared event that is reported or that breaks these Terms,
         without notice.

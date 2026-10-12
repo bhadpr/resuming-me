@@ -12,6 +12,7 @@ interface RewriterElement {
   setAttribute(name: string, value: string): void
   setInnerContent(content: string): void
   append(content: string, options?: { html: boolean }): void
+  remove(): void
 }
 
 declare class HTMLRewriter {
@@ -27,9 +28,18 @@ interface SharedEventRow {
   hour: number | null
   minute: number | null
   status: string
+  photo_path?: string | null
 }
 
 const EVENT_PATH = /^\/e\/([a-z0-9]{6,12})\/?$/i
+const PHOTO_PATH = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}\/[a-z0-9-]{8,64}\.jpg$/
+
+/** The event's own photo for the preview, while the event is live. */
+function photoUrl(env: Env, row: SharedEventRow | null): string | null {
+  if (!env.SUPABASE_URL || !row || row.status !== 'active' || !row.photo_path) return null
+  if (!PHOTO_PATH.test(row.photo_path)) return null
+  return `${env.SUPABASE_URL.replace(/\/+$/, '')}/storage/v1/object/public/event-photos/${row.photo_path}`
+}
 
 async function fetchEvent(env: Env, code: string): Promise<SharedEventRow | null> {
   if (!env.SUPABASE_URL || !env.SUPABASE_ANON_KEY) return null
@@ -94,15 +104,31 @@ export default {
     if (!match || !(page.headers.get('content-type') ?? '').includes('text/html')) return page
 
     const code = match[1].toLowerCase()
-    const { title, description } = preview(await fetchEvent(env, code))
+    const row = await fetchEvent(env, code)
+    const { title, description } = preview(row)
+    const photo = photoUrl(env, row)
     const pageUrl = `https://resuming.me/e/${code}`
     const set = (value: string) => ({
       element(element: RewriterElement) {
         element.setAttribute('content', attr(value))
       },
     })
+    const drop = {
+      element(element: RewriterElement) {
+        element.remove()
+      },
+    }
 
-    const rewritten = new HTMLRewriter()
+    let rewriter = new HTMLRewriter()
+    if (photo) {
+      rewriter = rewriter
+        .on('meta[property="og:image"]', set(photo))
+        .on('meta[name="twitter:image"]', set(photo))
+        .on('meta[property="og:image:width"]', drop)
+        .on('meta[property="og:image:height"]', drop)
+    }
+
+    const rewritten = rewriter
       .on('title', {
         element(element) {
           element.setInnerContent(title)

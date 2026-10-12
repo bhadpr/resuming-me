@@ -1,6 +1,15 @@
+import { isEventPhotoPath, isReminderPhotoData } from './eventPhotoUrl'
+import {
+  dataUrlToBlob,
+  rememberReminderPhoto,
+  removeReminderPhotoIfUnused,
+  uploadReminderPhoto,
+  withReminderPhotoUrls,
+} from './reminderPhotos'
 import { createSupabaseClient } from './supabase'
 import {
   REMINDER_DONE_KEEP_MS,
+  cleanReminderDescription,
   cleanReminderText,
   nextYearCopy,
   nextYearDay,
@@ -24,6 +33,8 @@ function fromRow(row: ReminderRow): Reminder {
   return {
     id: row.id,
     text: row.text,
+    description: row.description ?? null,
+    photoPath: row.photo_path ?? null,
     day: row.day,
     hour: row.hour,
     minute: row.minute,
@@ -56,14 +67,16 @@ export async function withSharedStatuses<T extends Reminder>(list: readonly T[])
       createSupabaseClient().rpc('shared_event_statuses', { p_ids: ids }),
       ownedSharedEventIds(ids).catch(() => new Set<string>()),
     ])
-    const status = new Map(error ? [] : (data ?? []).map((row) => [row.id, row.status]))
+    const rows = new Map(error ? [] : (data ?? []).map((row) => [row.id, row]))
     return list.map((item) => {
       if (!item.sharedEventId) return item
-      const next = status.get(item.sharedEventId)
+      const row = rows.get(item.sharedEventId)
+      const next = row?.status
       const known = next === 'active' || next === 'cancelled' || next === 'switched_off'
       return {
         ...item,
         ...(known ? { sharedStatus: next } : {}),
+        ...(row ? { sharedPhotoPath: isEventPhotoPath(row.photo_path) ? row.photo_path : null } : {}),
         sharedByMe: owned.has(item.sharedEventId),
       }
     })
@@ -86,7 +99,25 @@ export async function listReminders(now = new Date()): Promise<Reminder[]> {
     .or(`done_at.is.null,done_at.gte.${since}`)
     .order('day', { ascending: true })
   if (error) throw error
-  return withSharedStatuses((data ?? []).map(fromRow))
+  return withReminderPhotoUrls(await withSharedStatuses((data ?? []).map(fromRow)))
+}
+
+/** The photo to store for a new reminder: a picked one must upload; a guest's moves over if it can. */
+async function photoForNewReminder(userId: string, input: ReminderInput): Promise<{ path: string | null; url: string | null }> {
+  if (input.photo) {
+    const path = await uploadReminderPhoto(userId, input.photo.blob)
+    return { path, url: rememberReminderPhoto(path, input.photo.blob) }
+  }
+  if (isReminderPhotoData(input.photoData)) {
+    try {
+      const blob = dataUrlToBlob(input.photoData)
+      const path = await uploadReminderPhoto(userId, blob)
+      return { path, url: rememberReminderPhoto(path, blob) }
+    } catch {
+      return { path: null, url: null }
+    }
+  }
+  return { path: input.photoPath ?? null, url: null }
 }
 
 export async function getReminder(id: string): Promise<Reminder | null> {
@@ -101,11 +132,14 @@ export async function addReminder(
   input: ReminderInput & { doneAt?: string | null },
 ): Promise<Reminder> {
   const client = createSupabaseClient()
+  const photo = await photoForNewReminder(userId, input)
   const { data, error } = await client
     .from('reminders')
     .insert({
       user_id: userId,
       text: cleanReminderText(input.text),
+      description: cleanReminderDescription(input.description),
+      photo_path: photo.path,
       day: input.day,
       hour: input.hour,
       minute: input.hour == null ? null : input.minute,
@@ -119,18 +153,44 @@ export async function addReminder(
     .select('*')
     .single()
   if (error) {
+    if (photo.path && photo.path !== input.photoPath) void removeReminderPhotoIfUnused(photo.path)
     if (capError(error)) throw new ReminderCapError()
     throw error
   }
-  return fromRow(data)
+  const saved = fromRow(data)
+  if (photo.url) return { ...saved, photoUrl: photo.url }
+  return saved.photoPath ? (await withReminderPhotoUrls([saved]))[0] : saved
 }
 
-export async function updateReminder(id: string, input: ReminderInput): Promise<void> {
+/** Saves the edit. Returns the photo fields when the photo changed. */
+export async function updateReminder(
+  id: string,
+  input: ReminderInput,
+): Promise<Pick<Reminder, 'photoPath' | 'photoUrl'> | null> {
   const client = createSupabaseClient()
+  let next: { path: string | null; url: string | null } | null = null
+  let previous: string | null = null
+  if (input.photo !== undefined) {
+    const { data: row, error: rowError } = await client
+      .from('reminders')
+      .select('user_id, photo_path')
+      .eq('id', id)
+      .single()
+    if (rowError) throw rowError
+    previous = row.photo_path
+    if (input.photo) {
+      const path = await uploadReminderPhoto(row.user_id, input.photo.blob)
+      next = { path, url: rememberReminderPhoto(path, input.photo.blob) }
+    } else {
+      next = { path: null, url: null }
+    }
+  }
   const { error } = await client
     .from('reminders')
     .update({
       text: cleanReminderText(input.text),
+      description: cleanReminderDescription(input.description),
+      ...(next ? { photo_path: next.path } : {}),
       day: input.day,
       hour: input.hour,
       minute: input.hour == null ? null : input.minute,
@@ -139,7 +199,13 @@ export async function updateReminder(id: string, input: ReminderInput): Promise<
       every_year: input.everyYear === true,
     })
     .eq('id', id)
-  if (error) throw error
+  if (error) {
+    if (next?.path) void removeReminderPhotoIfUnused(next.path)
+    throw error
+  }
+  if (!next) return null
+  if (previous && previous !== next.path) void removeReminderPhotoIfUnused(previous)
+  return { photoPath: next.path, photoUrl: next.url }
 }
 
 export async function linkReminderToSharedEvent(id: string, sharedEventId: string): Promise<void> {
@@ -195,6 +261,8 @@ export async function reopenReminder(reminder: Reminder): Promise<void> {
 
 export async function deleteReminder(id: string): Promise<void> {
   const client = createSupabaseClient()
+  const { data: row } = await client.from('reminders').select('photo_path').eq('id', id).maybeSingle()
   const { error } = await client.from('reminders').delete().eq('id', id)
   if (error) throw error
+  void removeReminderPhotoIfUnused(row?.photo_path)
 }

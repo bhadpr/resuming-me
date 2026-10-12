@@ -493,6 +493,67 @@ describe('guest reminders', () => {
     expect(saved.reminders.map((item) => item.id)).toEqual(['open'])
   })
 
+  it('keeps a cleaned description, through add, edit, and reload', () => {
+    memoryStorage()
+    let draft = addGuestReminder(ensureGuestDraft('UTC'), {
+      text: 'Garba',
+      description: '  Shanti hall \n\n\n Bring water ',
+      day: '2026-10-12',
+      hour: null,
+      minute: null,
+    })!
+    expect(draft.reminders[0].description).toBe('Shanti hall\n\nBring water')
+    draft = updateGuestReminder(draft, draft.reminders[0].id, { description: '   ' })
+    expect(loadGuestDraft()?.reminders[0].description).toBeUndefined()
+  })
+
+  it('keeps a shared event photo, and drops it once the event no longer has one', () => {
+    memoryStorage()
+    const photo = '0b6f6a3e-5a7d-4c1e-9f1a-2b3c4d5e6f70/1f2e3d4c-5b6a-4789-8abc-def012345678.jpg'
+    let draft = addGuestReminder(ensureGuestDraft('UTC'), {
+      text: 'Garba',
+      day: '2026-10-12',
+      hour: 19,
+      minute: 0,
+      sharedEventId: 'e1',
+    })!
+    const copy = draft.reminders[0]
+    draft = saveGuestSharedStatuses(draft, [{ ...copy, sharedStatus: 'active', sharedPhotoPath: photo }])
+    expect(loadGuestDraft()?.reminders[0]).toMatchObject({ sharedStatus: 'active', sharedPhotoPath: photo })
+    saveGuestSharedStatuses(draft, [{ ...copy, sharedStatus: 'switched_off', sharedPhotoPath: null }])
+    expect(loadGuestDraft()?.reminders[0].sharedStatus).toBe('switched_off')
+    expect(loadGuestDraft()?.reminders[0].sharedPhotoPath).toBeUndefined()
+  })
+
+  it("keeps a guest's reminder photo on the device, and removes it when asked", () => {
+    memoryStorage()
+    const dataUrl = 'data:image/jpeg;base64,/9j/4AAQ'
+    const draft = addGuestReminder(ensureGuestDraft('UTC'), {
+      text: 'Wedding',
+      day: '2026-11-20',
+      hour: null,
+      minute: null,
+      photo: { blob: new Blob(['x']), dataUrl },
+    })!
+    const saved = loadGuestDraft()?.reminders[0]
+    expect(saved?.photoData).toBe(dataUrl)
+    expect(saved).not.toHaveProperty('photo')
+    updateGuestReminder(draft, draft.reminders[0].id, { photoData: null })
+    expect(loadGuestDraft()?.reminders[0].photoData).toBeUndefined()
+  })
+
+  it('drops a stored photo that is not a small JPEG', () => {
+    memoryStorage()
+    addGuestReminder(ensureGuestDraft('UTC'), {
+      text: 'Wedding',
+      day: '2026-11-20',
+      hour: null,
+      minute: null,
+      photoData: 'javascript:alert(1)',
+    })
+    expect(loadGuestDraft()?.reminders[0].photoData).toBeUndefined()
+  })
+
   it('keeps the day-before choice, and treats a missing one as off', () => {
     memoryStorage()
     const draft = addGuestReminder(ensureGuestDraft('UTC'), {

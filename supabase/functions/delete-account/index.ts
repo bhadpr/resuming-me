@@ -92,16 +92,31 @@ Deno.serve(async (req) => {
       )
     }
 
-    // Medicine photos are not removed by deleting the auth user.
-    try {
-      const { data: photos, error: photoListError } = await admin.storage
-        .from('medicine-photos')
-        .list(user.id)
-      if (!photoListError && photos && photos.length > 0) {
-        await admin.storage
-          .from('medicine-photos')
-          .remove(photos.map((file) => `${user.id}/${file.name}`))
+    // Medicine and reminder photos are not removed by deleting the auth user.
+    for (const bucket of ['medicine-photos', 'reminder-photos']) {
+      try {
+        const { data: photos, error: photoListError } = await admin.storage
+          .from(bucket)
+          .list(user.id, { limit: 1000 })
+        if (!photoListError && photos && photos.length > 0) {
+          await admin.storage
+            .from(bucket)
+            .remove(photos.map((file) => `${user.id}/${file.name}`))
+        }
+      } catch {
+        /* bucket may not exist yet */
       }
+    }
+
+    // Shared event photos live under the event id, and the events go with the user below.
+    try {
+      const { data: events } = await admin
+        .from('shared_events')
+        .select('photo_path')
+        .eq('owner_id', user.id)
+        .not('photo_path', 'is', null)
+      const paths = (events ?? []).map((row) => row.photo_path as string)
+      if (paths.length > 0) await admin.storage.from('event-photos').remove(paths)
     } catch {
       /* bucket may not exist yet */
     }

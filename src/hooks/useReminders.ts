@@ -10,6 +10,8 @@ import {
 import {
   REMINDERS_CHANGED,
   REMINDER_OPEN_MAX,
+  cleanReminderDescription,
+  cleanReminderText,
   isNextYearCopyOf,
   openReminderCount,
   reminderKindOf,
@@ -164,6 +166,7 @@ export function useReminders(userId: string | undefined) {
         kind: saved.kind,
         every_year: saved.everyYear,
         signed_in: true,
+        photo: saved.photoPath != null,
       })
       return 'ok'
     } catch (err) {
@@ -173,12 +176,17 @@ export function useReminders(userId: string | undefined) {
   }
 
   async function update(id: string, input: ReminderInput): Promise<void> {
-    await updateReminder(id, input)
+    const photo = await updateReminder(id, input)
     patchLocal(id, {
-      ...input,
+      text: cleanReminderText(input.text),
+      description: cleanReminderDescription(input.description),
+      day: input.day,
+      hour: input.hour,
+      minute: input.hour == null ? null : input.minute,
       remindBefore: input.remindBefore === true,
       kind: reminderKindOf(input.kind),
       everyYear: input.everyYear === true,
+      ...(photo ?? {}),
     })
   }
 

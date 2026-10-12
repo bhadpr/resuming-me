@@ -109,6 +109,8 @@ export interface Database {
           archived: boolean
           template_id?: string | null
           name_overridden?: boolean
+          video_youtube_id?: string | null
+          video_start_seconds?: number | null
           created_at: string
           updated_at: string
         }
@@ -120,6 +122,8 @@ export interface Database {
           type: ActivityType
           template_id?: string | null
           name_overridden?: boolean
+          video_youtube_id?: string | null
+          video_start_seconds?: number | null
           tracking_mode: TrackingMode
           target_value?: number | null
           target_unit?: string | null
@@ -151,6 +155,8 @@ export interface Database {
           archived?: boolean
           template_id?: string | null
           name_overridden?: boolean
+          video_youtube_id?: string | null
+          video_start_seconds?: number | null
           updated_at?: string
         }
         Relationships: []
@@ -335,6 +341,8 @@ export interface Database {
           id: string
           user_id: string
           text: string
+          description: string | null
+          photo_path: string | null
           day: string
           hour: number | null
           minute: number | null
@@ -351,6 +359,8 @@ export interface Database {
           id?: string
           user_id: string
           text: string
+          description?: string | null
+          photo_path?: string | null
           day: string
           hour?: number | null
           minute?: number | null
@@ -365,6 +375,8 @@ export interface Database {
         }
         Update: {
           text?: string
+          description?: string | null
+          photo_path?: string | null
           day?: string
           hour?: number | null
           minute?: number | null
@@ -383,6 +395,8 @@ export interface Database {
           code: string
           owner_id: string
           text: string
+          description: string | null
+          photo_path: string | null
           from_line: string | null
           day: string
           hour: number | null
@@ -399,6 +413,7 @@ export interface Database {
           code?: string
           owner_id: string
           text: string
+          description?: string | null
           from_line?: string | null
           day: string
           hour?: number | null
@@ -414,6 +429,7 @@ export interface Database {
           code?: string
           status?: string
           taking_adds?: boolean
+          photo_path?: string | null
         }
         Relationships: []
       }
@@ -850,6 +866,8 @@ export interface Database {
           kind: string
           status: string
           taking_adds: boolean
+          description: string | null
+          photo_path: string | null
         }[]
       }
       follow_shared_event: {
@@ -862,7 +880,7 @@ export interface Database {
       }
       shared_event_statuses: {
         Args: { p_ids: string[] }
-        Returns: { id: string; status: string }[]
+        Returns: { id: string; status: string; photo_path: string | null }[]
       }
       my_shared_event: {
         Args: { p_event_id: string }
@@ -899,6 +917,8 @@ export interface Database {
           spam: number
           harmful: number
           other: number
+          description: string | null
+          photo_path: string | null
         }[]
       }
     }

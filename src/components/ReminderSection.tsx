@@ -8,6 +8,7 @@ import {
   tomorrowOf,
   type Reminder,
 } from '../lib/reminderSchedule'
+import { reminderPhotoSrc } from '../lib/eventPhotoUrl'
 import { isShareableReminder } from '../lib/sharedEvents'
 import { Icon } from './Icon'
 import { ReminderKindMark } from './ReminderKindIcon'
@@ -49,7 +50,7 @@ export function ReminderRow({ reminder, today, busy, onDone, onSkip, onMove, onC
   return (
     <li className="today-row today-row-stack today-row-compact item-kind-reminder">
       <div className="today-row-head">
-        <ReminderKindMark kind={reminder.kind} />
+        <ReminderKindMark kind={reminder.kind} photo={reminderPhotoSrc(reminder)} />
         <span className="activity-name reminder-text-line">{reminder.text}</span>
       </div>
       <div className="today-row-main">
@@ -123,7 +124,7 @@ export function ReminderDoneRow({
   return (
     <li className="today-row today-row-stack today-row-compact today-row-done item-kind-reminder">
       <div className="today-row-head">
-        <ReminderKindMark kind={reminder.kind} />
+        <ReminderKindMark kind={reminder.kind} photo={reminderPhotoSrc(reminder)} />
         <span className="activity-name reminder-text-line reminder-struck">{reminder.text}</span>
       </div>
       <div className="today-row-main">
@@ -234,7 +235,7 @@ export function ReminderListSection({
                       className={`activity-row item-kind-reminder${shareable ? ' reminder-row-shareable' : ''}`}
                       onClick={() => onOpen(reminder)}
                     >
-                      <ReminderKindMark kind={reminder.kind} />
+                      <ReminderKindMark kind={reminder.kind} photo={reminderPhotoSrc(reminder)} />
                       <span className="activity-meta">
                         <span className="activity-name reminder-text-line">{reminder.text}</span>
                         <span className="activity-desc">{reminderWhen(reminder, today, locale, t)}</span>

@@ -3322,6 +3322,11 @@ select.field-input.language-select {
   min-height: 2.75rem;
 }
 
+.reminder-description-input {
+  resize: vertical;
+  min-height: 5rem;
+}
+
 .reminder-choices,
 .reminder-delete {
   display: flex;
@@ -3466,6 +3471,32 @@ select.field-input.language-select {
 .reminder-summary-when {
   margin: 0;
   color: var(--color-text-muted);
+}
+
+.reminder-description {
+  margin: var(--space-2) 0 0;
+  white-space: pre-wrap;
+  overflow-wrap: anywhere;
+}
+
+.reminder-photo-mark {
+  border: 1px solid var(--color-border);
+  background: var(--color-surface);
+}
+
+.event-photo {
+  display: block;
+  border-radius: var(--radius-lg);
+  overflow: hidden;
+  border: 1px solid var(--color-border);
+  background: var(--color-surface);
+}
+
+.event-photo img {
+  display: block;
+  width: 100%;
+  max-height: 60vh;
+  object-fit: contain;
 }
 
 .reminder-locked {
@@ -3636,30 +3667,30 @@ select.field-input.language-select {
   font-weight: var(--weight-semibold);
 }
 
-.share-photo {
+.photo-pick {
   display: flex;
   flex-direction: column;
   gap: var(--space-1);
 }
 
-.share-photo-input {
+.photo-pick-input {
   display: none;
 }
 
-.share-photo-add {
+.photo-pick-add {
   align-self: flex-start;
   display: inline-flex;
   gap: var(--space-2);
   align-items: center;
 }
 
-.share-photo-chosen {
+.photo-pick-chosen {
   display: flex;
   gap: var(--space-3);
   align-items: center;
 }
 
-.share-photo-thumb {
+.photo-pick-thumb {
   width: 4.5rem;
   height: 4.5rem;
   object-fit: cover;
@@ -3667,7 +3698,7 @@ select.field-input.language-select {
   border: 1px solid var(--color-border);
 }
 
-.share-photo-actions {
+.photo-pick-actions {
   display: flex;
   flex-wrap: wrap;
   gap: var(--space-1);

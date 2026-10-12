@@ -1,6 +1,7 @@
 import { useEffect, useState, type FormEvent } from 'react'
 import { ACTIVITY_TEMPLATES, HABIT_GROUPS, activityInputFromTemplate, templateById, tinyHint } from '../data/activityTemplates'
 import { HABIT_ART } from '../data/habitArt'
+import { activityOwnVideo, habitVideoFor, parseYoutubeLink, youtubeWatchUrl } from '../data/habitVideos'
 import { HabitIcon } from './HabitIcon'
 import { DayPeriodPicker } from './DayPeriodPicker'
 import { GoalTargetPicker } from './GoalTargetPicker'
@@ -98,6 +99,10 @@ export function ActivityForm({
   const [goalText, setGoalText] = useState('')
   const goalTemplateId = selectedTemplateId ?? input.templateId ?? null
   const goalHabit = isDailyGoalHabit({ templateId: goalTemplateId })
+  const savedVideo = initial ? activityOwnVideo(initial) : null
+  const [videoText, setVideoText] = useState(savedVideo ? youtubeWatchUrl(savedVideo) : '')
+  const [videoInvalid, setVideoInvalid] = useState(false)
+  const hasBuiltInVideo = goalTemplateId != null && habitVideoFor(goalTemplateId) != null
 
   useEffect(() => {
     onPhaseChange?.(phase)
@@ -168,13 +173,26 @@ export function ActivityForm({
     setSelectedTemplateId(template.id)
     setInput(next)
     setGoalText('')
+    setVideoText('')
+    setVideoInvalid(false)
     goPhase('details')
   }
 
   async function handleSubmit(e: FormEvent) {
     e.preventDefault()
     if (goalHabit && input.targetValue == null) return
-    await onSubmit(withCatalog(input, selectedTemplateId ?? input.templateId ?? null))
+    const video = videoText.trim() ? parseYoutubeLink(videoText) : null
+    if (videoText.trim() && !video) {
+      setVideoInvalid(true)
+      return
+    }
+    const videoChanged =
+      (video?.youtubeId ?? null) !== (savedVideo?.youtubeId ?? null) ||
+      (video?.startSeconds ?? null) !== (savedVideo?.startSeconds ?? null)
+    await onSubmit({
+      ...withCatalog(input, selectedTemplateId ?? input.templateId ?? null),
+      ...(videoChanged ? { video } : {}),
+    })
   }
 
   const showTarget =
@@ -462,6 +480,27 @@ export function ActivityForm({
         </div>
       </fieldset>
       )}
+
+      <label className="field">
+        <span className="field-label">{t('form.video')}</span>
+        <input
+          className="field-input"
+          type="text"
+          inputMode="url"
+          autoComplete="off"
+          value={videoText}
+          placeholder={t('form.videoPlaceholder')}
+          onChange={(e) => {
+            setVideoText(e.target.value)
+            setVideoInvalid(false)
+          }}
+        />
+        {videoInvalid ? (
+          <span className="error">{t('form.videoInvalid')}</span>
+        ) : (
+          <span className="screen-sub">{t(hasBuiltInVideo ? 'form.videoHintDefault' : 'form.videoHint')}</span>
+        )}
+      </label>
 
       {initial && (
         <p className="form-hint">

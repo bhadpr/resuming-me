@@ -2,6 +2,7 @@ import { createSupabaseClient } from './supabase'
 import { todayLocalDate, yesterdayLocalDate } from './dates'
 import type { ActivityType, TrackingMode } from '../types/database'
 import type { Database } from '../types/database'
+import type { HabitVideo } from '../data/habitVideos'
 
 export type Activity = Database['public']['Tables']['activities']['Row']
 
@@ -22,6 +23,8 @@ export interface ActivityInput {
   templateId?: string | null
   /** True when they renamed a catalog habit. That text stays in every language. */
   nameOverridden?: boolean
+  /** Their own YouTube video. Null clears it; missing leaves it as it is. */
+  video?: HabitVideo | null
 }
 
 export function validateActivityInput(input: ActivityInput): string | null {
@@ -94,6 +97,14 @@ function toInsertRow(userId: string, input: ActivityInput, effectiveFrom: string
     archived: false,
     template_id: input.templateId ?? null,
     name_overridden: input.nameOverridden ?? false,
+    ...(input.video ? videoColumns(input.video) : {}),
+  }
+}
+
+function videoColumns(video: HabitVideo | null) {
+  return {
+    video_youtube_id: video?.youtubeId ?? null,
+    video_start_seconds: video?.startSeconds && video.startSeconds > 0 ? Math.floor(video.startSeconds) : null,
   }
 }
 
@@ -190,6 +201,7 @@ export async function updateActivity(
     off_weekdays: input.offWeekdays ?? [],
     template_id: input.templateId ?? existing.template_id ?? null,
     name_overridden: input.nameOverridden ?? existing.name_overridden ?? false,
+    ...(input.video !== undefined ? videoColumns(input.video) : {}),
   }
 
   if (targetChanged) {

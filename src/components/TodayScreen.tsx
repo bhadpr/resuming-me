@@ -25,6 +25,7 @@ import { formatDuration } from '../lib/timer'
 import { smallerChoiceProp, track } from '../lib/track'
 import { DeadlineOverduePrompt } from './DeadlineOverduePrompt'
 import { HabitMark } from './HabitMark'
+import { activityOwnVideo } from '../data/habitVideos'
 import { HabitVideoPlaceholder } from './HabitVideoPlaceholder'
 import { AppAlertsNote } from './AppAlertsNote'
 import { Icon } from './Icon'
@@ -762,8 +763,9 @@ function TodayActivityRow({
   >(null)
   const [videoOpen, setVideoOpen] = useState(false)
   const templateId = habitTemplateId(activity)
-  const canShowVideo = showsHabitVideo(templateId)
-  const followAlong = canShowVideo && playsVideoWithTimer(templateId)
+  const ownVideo = activityOwnVideo(activity)
+  const canShowVideo = showsHabitVideo(templateId, ownVideo)
+  const followAlong = canShowVideo && playsVideoWithTimer(templateId, ownVideo)
   useEffect(() => {
     if (followAlong && isThisTimer) setVideoOpen(true)
   }, [followAlong, isThisTimer])
@@ -1202,6 +1204,7 @@ function TodayActivityRow({
       {canShowVideo && videoOpen && (
         <HabitVideoPlaceholder
           templateId={templateId}
+          own={ownVideo}
           name={activity.name}
           playing={followAlong && timerLive}
           paused={followAlong && timerPaused}

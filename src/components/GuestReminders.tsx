@@ -38,7 +38,13 @@ export function GuestReminderEditor({ reminderId, editing = false }: { reminderI
         const current = loadGuestDraft()
         if (!current) return
         if (reminderId) {
-          setDraft(updateGuestReminder(current, reminderId, input))
+          const { photo, ...fields } = input
+          setDraft(
+            updateGuestReminder(current, reminderId, {
+              ...fields,
+              ...(photo !== undefined ? { photoData: photo?.dataUrl ?? null } : {}),
+            }),
+          )
         } else {
           if (!addGuestReminder(current, input)) return 'full'
           track('reminder_added', {
@@ -47,6 +53,7 @@ export function GuestReminderEditor({ reminderId, editing = false }: { reminderI
             kind: input.kind ?? 'other',
             every_year: input.everyYear === true,
             signed_in: false,
+            photo: input.photo != null,
           })
         }
         void askForReminderAlerts(input)
