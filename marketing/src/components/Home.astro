@@ -1,0 +1,378 @@
+---
+import Icon from './Icons.astro'
+import TryToday from './TryToday.astro'
+import InsightsMock from './InsightsMock.astro'
+import StepsMock from './StepsMock.astro'
+import { APP_URL, CONTACT_EMAIL, HERO_SCENES, LANGUAGES, PLAY_LIVE, WEB_APP_URL, playUrl } from '../site'
+import type { Copy } from '../i18n/en'
+
+interface Props {
+  copy: Copy
+}
+
+const { copy } = Astro.props
+const lang = copy.lang
+const art = (name: string) => `/habits/${name}.webp`
+const chipArt = ['walking', 'water', 'kapalabhati', 'anuloma-viloma', 'bhramari', 'prayer', 'reading', 'meditate']
+const stepArt = ['walking', 'water']
+---
+
+<a class="skip-link" href="#main">{copy.nav.skip}</a>
+
+<header class="site-header">
+  <div class="wrap">
+    <a class="brand" href="/" aria-label="Resuming">
+      <img src="/logo.svg" alt="" width="34" height="34" />
+      Resuming
+    </a>
+    <nav class="site-nav" aria-label="Sections">
+      <a href="#how">{copy.nav.how}</a>
+      <a href="#habits">{copy.nav.habits}</a>
+      <a href="#reminders">{copy.nav.reminders}</a>
+      <a href="#progress">{copy.nav.progress}</a>
+      <a href="#health">{copy.nav.health}</a>
+      <a href="#faq">{copy.nav.faq}</a>
+    </nav>
+    {PLAY_LIVE ? (
+      <a class="btn btn-play header-cta" href={playUrl('header')}>
+        <Icon name="play" />
+        {copy.cta.playSmall}
+      </a>
+    ) : (
+      <a class="btn btn-play header-cta" href={WEB_APP_URL}>{copy.cta.open}</a>
+    )}
+  </div>
+</header>
+
+<main id="main">
+  <section class="hero">
+    <div class="wrap">
+      <div>
+        <p class="eyebrow">{copy.hero.eyebrow}</p>
+        <h1>
+          {copy.hero.title}
+          <span class="accent">{copy.hero.titleAccent}</span>
+        </h1>
+        <p class="lead">{copy.hero.lead}</p>
+        <div class="cta-row">
+          {PLAY_LIVE ? (
+            <>
+              <a class="btn btn-play" href={playUrl('hero')}>
+                <Icon name="play" />
+                <span><small>{copy.cta.playOn}</small>{copy.cta.playSmall}</span>
+              </a>
+              <a class="btn btn-web" href={WEB_APP_URL}>{copy.cta.web}</a>
+            </>
+          ) : (
+            <>
+              <a class="btn btn-play" href={WEB_APP_URL}>{copy.cta.web}</a>
+              <span class="play-soon"><Icon name="play" />{copy.cta.playSoon}</span>
+            </>
+          )}
+        </div>
+        <p class="cta-note">{copy.cta.webNote}</p>
+      </div>
+
+      <div class="hero-visual">
+        <div class="float-art float-art-1"><img src={art('water')} alt="" width="80" height="80" /></div>
+        <div class="float-art float-art-2"><img src={art('kapalabhati')} alt="" width="80" height="80" /></div>
+        <div class="float-art float-art-3"><img src={art('walking')} alt="" width="80" height="80" /></div>
+        <div class="phone">
+          <video
+            data-hero-video
+            data-scenes={HERO_SCENES.join(',')}
+            src={`/media/hero-${lang}.mp4`}
+            poster={`/media/hero-${lang}.webp`}
+            width="576"
+            height="1024"
+            muted
+            loop
+            playsinline
+            preload="metadata"
+            aria-label={copy.hero.videoLabel}
+          ></video>
+        </div>
+        <p class="caption-chip" aria-hidden="true"><span data-hero-caption data-captions={JSON.stringify(copy.hero.captions)}>{copy.hero.captions[0]}</span></p>
+      </div>
+    </div>
+  </section>
+
+  <section class="section" id="how" style="padding-top: 0">
+    <div class="wrap">
+      <div class="section-head center">
+        <h2>{copy.how.title}</h2>
+      </div>
+      <ol class="steps">
+        {copy.how.steps.map((step, i) => (
+          <li class="step">
+            <span class="step-num" aria-hidden="true">{i + 1}</span>
+            {stepArt[i] ? (
+              <div class="step-art"><img src={art(stepArt[i])} alt="" width="88" height="88" loading="lazy" /></div>
+            ) : (
+              <div class="step-art step-resume"><Icon name="resume" /></div>
+            )}
+            <h3>{step.title}</h3>
+            <p>{step.body}</p>
+          </li>
+        ))}
+      </ol>
+    </div>
+  </section>
+
+  <section class="section" style="padding-top: 0">
+    <div class="wrap">
+      <figure class="idea" style="margin: 0">
+        <img src="/art/bench-to-path.webp" alt={copy.idea.alt} width="1152" height="864" loading="lazy" />
+        <figcaption class="idea-text">
+          <h2>{copy.idea.title}</h2>
+          <p class="lead">{copy.idea.body}</p>
+        </figcaption>
+      </figure>
+    </div>
+  </section>
+
+  <section class="section" id="habits">
+    <div class="wrap feature">
+      <div class="feature-shots teal">
+        <div class="phone phone-sm"><img src={`/media/timer-${lang}.webp`} alt={copy.habits.shotAlt} width="576" height="1024" loading="lazy" /></div>
+      </div>
+      <div class="feature-text">
+        <span class="kicker">{copy.habits.kicker}</span>
+        <h2>{copy.habits.title}</h2>
+        <p class="lead" style="margin-top: 1rem">{copy.habits.body}</p>
+        <ul class="points">
+          {copy.habits.points.map((point) => <li>{point}</li>)}
+        </ul>
+        <ul class="chips" aria-label={copy.habits.kicker}>
+          {copy.habits.chips.map((chip, i) => (
+            <li><img src={art(chipArt[i])} alt="" width="30" height="30" loading="lazy" />{chip}</li>
+          ))}
+        </ul>
+      </div>
+    </div>
+  </section>
+
+  <section class="section" id="reminders">
+    <div class="wrap feature flip">
+      <div class="feature-shots">
+        <div class="phone phone-sm"><img src={`/media/reminder-${lang}.webp`} alt={copy.reminders.shotAlt} width="576" height="1024" loading="lazy" /></div>
+        <div class="phone phone-sm"><img src={`/media/shared-${lang}.webp`} alt={copy.reminders.sharedAlt} width="576" height="1024" loading="lazy" /></div>
+      </div>
+      <div class="feature-text">
+        <span class="kicker">{copy.reminders.kicker}</span>
+        <h2>{copy.reminders.title}</h2>
+        <p class="lead" style="margin-top: 1rem">{copy.reminders.body}</p>
+        <div class="subfeature">
+          <h3><Icon name="whatsapp" />{copy.reminders.shareTitle}</h3>
+          <p>{copy.reminders.shareBody}</p>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <section class="section" id="progress">
+    <div class="wrap feature">
+      <div class="feature-shots mint">
+        <InsightsMock copy={copy.progress.mock} lang={lang} />
+      </div>
+      <div class="feature-text">
+        <span class="kicker">{copy.progress.kicker}</span>
+        <h2>{copy.progress.title}</h2>
+        <p class="lead" style="margin-top: 1rem">{copy.progress.body}</p>
+        <ul class="points">
+          {copy.progress.points.map((point) => <li>{point}</li>)}
+        </ul>
+      </div>
+    </div>
+  </section>
+
+  <section class="section" id="steps">
+    <div class="wrap feature flip">
+      <div class="feature-shots sky">
+        <StepsMock copy={copy.steps.mock} lang={lang} />
+      </div>
+      <div class="feature-text">
+        <span class="kicker">{copy.steps.kicker}</span>
+        <h2>{copy.steps.title}</h2>
+        <p class="lead" style="margin-top: 1rem">{copy.steps.body}</p>
+        <ul class="points">
+          {copy.steps.points.map((point) => <li>{point}</li>)}
+        </ul>
+        <p class="fine">{PLAY_LIVE ? copy.steps.note : copy.steps.noteSoon}</p>
+      </div>
+    </div>
+  </section>
+
+  <section class="section" id="health">
+    <div class="wrap feature">
+      <div class="feature-shots lilac">
+        <div class="phone phone-sm"><img src={`/media/bp-${lang}.webp`} alt={copy.health.shotAlt} width="576" height="1024" loading="lazy" /></div>
+      </div>
+      <div class="feature-text">
+        <span class="kicker">{copy.health.kicker}</span>
+        <h2>{copy.health.title}</h2>
+        <p class="lead" style="margin-top: 1rem">{copy.health.body}</p>
+        <p class="fine">{copy.health.note}</p>
+      </div>
+    </div>
+  </section>
+
+  <section class="section">
+    <div class="wrap">
+      <div class="section-head center">
+        <h2>{copy.languages.title}</h2>
+        <p class="lead">{copy.languages.body}</p>
+      </div>
+      <ul class="lang-grid">
+        {LANGUAGES.map((language) => (
+          <li class="lang-tile" lang={language.code}>
+            <p class="lang-name">{language.name}</p>
+            <p class="lang-line">{language.line}</p>
+          </li>
+        ))}
+      </ul>
+    </div>
+  </section>
+
+  <section class="section" id="try">
+    <div class="wrap try">
+      <div>
+        <span class="kicker">{copy.try.kicker}</span>
+        <h2>{copy.try.title}</h2>
+        <p class="lead" style="margin: 1rem 0 2rem">{copy.try.body}</p>
+        <a class="btn btn-primary" href={WEB_APP_URL}>{copy.try.startOwn}</a>
+      </div>
+      <TryToday copy={copy.try} />
+    </div>
+  </section>
+
+  <section class="section">
+    <div class="wrap">
+      <div class="privacy-band">
+        <h2>{copy.privacy.title}</h2>
+        <ul class="privacy-grid">
+          {copy.privacy.items.map((item, i) => (
+            <li>
+              <Icon name={(['no-ads', 'no-sell', 'phone'] as const)[i]} />
+              <strong>{item.title}</strong>
+              <span>{item.body}</span>
+            </li>
+          ))}
+        </ul>
+        <a href={`${APP_URL}/privacy`}>{copy.privacy.link} →</a>
+      </div>
+    </div>
+  </section>
+
+  <section class="section" id="faq">
+    <div class="wrap">
+      <div class="section-head center">
+        <h2>{copy.faq.title}</h2>
+      </div>
+      <div class="faq">
+        {copy.faq.items.map((item) => (
+          <details>
+            <summary>{item.q}</summary>
+            <p>{!PLAY_LIVE && 'aSoon' in item ? item.aSoon : item.a}</p>
+          </details>
+        ))}
+      </div>
+    </div>
+  </section>
+
+  <section class="section" style="padding-top: 0">
+    <div class="wrap">
+      <div class="final">
+        <h2>{copy.final.title}</h2>
+        <p class="lead">{copy.final.body}</p>
+        <div class="cta-row">
+          {PLAY_LIVE ? (
+            <>
+              <a class="btn btn-play" href={playUrl('final')}>
+                <Icon name="play" />
+                <span><small>{copy.cta.playOn}</small>{copy.cta.playSmall}</span>
+              </a>
+              <a class="btn btn-web" href={WEB_APP_URL}>{copy.cta.web}</a>
+            </>
+          ) : (
+            <>
+              <a class="btn btn-play" href={WEB_APP_URL}>{copy.cta.web}</a>
+              <span class="play-soon"><Icon name="play" />{copy.cta.playSoon}</span>
+            </>
+          )}
+        </div>
+      </div>
+    </div>
+  </section>
+</main>
+
+<footer class="site-footer">
+  <div class="wrap">
+    <div class="footer-top">
+      <a class="brand" href="/" aria-label="Resuming">
+        <img src="/logo.svg" alt="" width="34" height="34" />
+        Resuming
+      </a>
+      <nav class="footer-links" aria-label="Legal">
+        <a href={`${APP_URL}/privacy`}>{copy.footer.privacy}</a>
+        <a href={`${APP_URL}/terms`}>{copy.footer.terms}</a>
+        <a href={`mailto:${CONTACT_EMAIL}`}>{copy.footer.contact}</a>
+      </nav>
+    </div>
+    <p>{copy.footer.disclaimer}</p>
+    <p>© 2026 {copy.footer.company}</p>
+  </div>
+</footer>
+
+<script>
+  const video = document.querySelector<HTMLVideoElement>('[data-hero-video]')
+  const caption = document.querySelector<HTMLElement>('[data-hero-caption]')
+  if (video && caption) {
+    const scenes = (video.dataset.scenes ?? '').split(',').map(Number)
+    const captions: string[] = JSON.parse(caption.dataset.captions ?? '[]')
+    const still = window.matchMedia('(prefers-reduced-motion: reduce)')
+    let shown = 0
+
+    const sceneAt = (time: number) => {
+      let end = 0
+      for (let i = 0; i < scenes.length; i++) {
+        end += scenes[i]
+        if (time < end) return i
+      }
+      return scenes.length - 1
+    }
+
+    video.addEventListener('timeupdate', () => {
+      const scene = sceneAt(video.currentTime)
+      if (scene === shown) return
+      shown = scene
+      caption.style.opacity = '0'
+      setTimeout(() => {
+        caption.textContent = captions[scene] ?? ''
+        caption.style.opacity = '1'
+      }, 200)
+    })
+
+    const sync = () => (still.matches ? video.pause() : void video.play().catch(() => {}))
+    still.addEventListener('change', sync)
+    sync()
+  }
+
+  const growing = document.querySelectorAll<HTMLElement>('[data-grow]')
+  if ('IntersectionObserver' in window) {
+    const seen = new IntersectionObserver(
+      (entries) => {
+        for (const entry of entries) {
+          if (!entry.isIntersecting) continue
+          entry.target.classList.add('is-in')
+          seen.unobserve(entry.target)
+        }
+      },
+      { threshold: 0.4 },
+    )
+    for (const chart of growing) {
+      chart.classList.add('grow-ready')
+      seen.observe(chart)
+    }
+  }
+</script>

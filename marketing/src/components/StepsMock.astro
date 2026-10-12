@@ -1,0 +1,84 @@
+---
+import type { Copy } from '../i18n/en'
+
+interface Props {
+  copy: Copy['steps']['mock']
+  lang: string
+}
+
+const { copy, lang } = Astro.props
+
+const GOAL = 8000
+const LAST_DAY = new Date(2026, 9, 11)
+const STEPS = [8420, 5310, 9150, 6020, 8800, 4100, 6240]
+const WALK_MINUTES = 25
+const WALK_METERS = 2140
+
+const fill = (template: string, values: Record<string, string | number>) =>
+  template.replace(/\{(\w+)\}/g, (_, key) => String(values[key] ?? ''))
+const number = new Intl.NumberFormat(lang)
+const compact = new Intl.NumberFormat(lang, { notation: 'compact', maximumFractionDigits: 1 })
+const weekday = new Intl.DateTimeFormat(lang, { weekday: 'short' })
+
+const days = STEPS.map((steps, i) => {
+  const date = new Date(LAST_DAY)
+  date.setDate(LAST_DAY.getDate() - (STEPS.length - 1 - i))
+  return { steps, date, met: steps >= GOAL, today: i === STEPS.length - 1 }
+})
+const today = STEPS[STEPS.length - 1]
+const best = Math.max(...STEPS)
+const scale = Math.max(GOAL, best) * 1.08
+const goalPct = (GOAL / scale) * 100
+const metDays = days.filter((d) => d.met).length
+const average = Math.round(STEPS.reduce((sum, s) => sum + s, 0) / STEPS.length)
+const km = WALK_METERS / 1000
+const distance = `${number.format(Number(km.toFixed(1)))} km`
+---
+
+<div class="mock-card">
+  <div class="mock-head">
+    <h3>{copy.heading}</h3>
+  </div>
+
+  <div class="mock-row">
+    <div class="ins-row-head">
+      <img src="/habits/steps.webp" alt="" width="40" height="40" loading="lazy" />
+      <span>
+        <span class="today-name">{copy.steps}</span>
+        <span class="today-meta">
+          {fill(copy.stepsToday, { value: number.format(today), goal: number.format(GOAL) })}
+        </span>
+      </span>
+    </div>
+    <p class="mock-label">{copy.week}</p>
+    <div class="steps-chart" role="img" aria-label={copy.chartLabel} data-grow>
+      {days.map((d) => (
+        <div class={`steps-day${d.today ? ' is-today' : ''}`}>
+          <span class="steps-value">{compact.format(d.steps)}</span>
+          <span class="steps-track">
+            <span class="steps-goal" style={`bottom: ${goalPct.toFixed(1)}%`}></span>
+            <span
+              class={`steps-bar${d.met ? ' is-met' : ''}`}
+              style={`height: ${Math.min(100, (d.steps / scale) * 100).toFixed(1)}%`}
+            ></span>
+          </span>
+          <span class="steps-label">{weekday.format(d.date)}</span>
+        </div>
+      ))}
+    </div>
+    <p class="ins-caption">
+      {fill(copy.weekMet, { met: metDays, days: days.length })} · {fill(copy.weekAverage, { value: number.format(average) })}
+    </p>
+  </div>
+
+  <div class="mock-row is-done">
+    <div class="ins-row-head">
+      <img src="/habits/walking.webp" alt="" width="40" height="40" loading="lazy" />
+      <span>
+        <span class="today-name">{copy.walk}</span>
+        <span class="today-meta">{fill(copy.walkMeta, { minutes: WALK_MINUTES })}</span>
+        <span class="distance">{distance}</span>
+      </span>
+    </div>
+  </div>
+</div>

@@ -1,0 +1,40 @@
+---
+import '../styles/site.css'
+import { SITE_URL } from '../site'
+import type { Copy } from '../i18n/en'
+
+interface Props {
+  copy: Copy
+  path: string
+}
+
+const { copy, path } = Astro.props
+const canonical = new URL(path, SITE_URL).href
+---
+
+<!doctype html>
+<html lang={copy.lang} dir={copy.dir}>
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <title>{copy.meta.title}</title>
+    <meta name="description" content={copy.meta.description} />
+    <link rel="canonical" href={canonical} />
+    <meta name="theme-color" content="#fff4e8" />
+    <link rel="icon" href="/favicon.svg" type="image/svg+xml" />
+    <link rel="icon" href="/favicon.ico" sizes="any" />
+    <link rel="apple-touch-icon" href="/apple-touch-icon.png" />
+    <link rel="preload" href="/fonts/sourceserif4-vEFF2_tTDB4M7-auWDN0ahZJW3IX2ih5nk3AucvUHf6kDXr4Y3qwzQ.woff2" as="font" type="font/woff2" crossorigin />
+    <link rel="preload" href="/fonts/sourcesans3-nwpStKy2OAdR1K-IwhWudF-R3w8aZejf5Hc.woff2" as="font" type="font/woff2" crossorigin />
+    <meta property="og:type" content="website" />
+    <meta property="og:site_name" content="Resuming" />
+    <meta property="og:title" content={copy.meta.title} />
+    <meta property="og:description" content={copy.meta.description} />
+    <meta property="og:url" content={canonical} />
+    <meta property="og:image" content={`${SITE_URL}/media/hero-${copy.lang}.webp`} />
+    <meta name="twitter:card" content="summary_large_image" />
+  </head>
+  <body>
+    <slot />
+  </body>
+</html>

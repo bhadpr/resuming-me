@@ -1,0 +1,21 @@
+# The marketing site at resuming.app. The app at resuming.me has its own wrangler.toml at the repo root.
+
+name = "resuming-app"
+compatibility_date = "2026-08-12"
+main = "worker/index.js"
+workers_dev = false
+
+[assets]
+directory = "./dist"
+binding = "ASSETS"
+not_found_handling = "404-page"
+html_handling = "auto-trailing-slash"
+run_worker_first = true
+
+[[routes]]
+pattern = "resuming.app"
+custom_domain = true
+
+[[routes]]
+pattern = "www.resuming.app"
+custom_domain = true

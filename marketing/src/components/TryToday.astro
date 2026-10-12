@@ -1,0 +1,102 @@
+---
+import type { Copy } from '../i18n/en'
+
+interface Props {
+  copy: Copy['try']
+}
+
+const { copy } = Astro.props
+const glasses = 8
+---
+
+<div class="today-card" data-today data-of={copy.ofGlasses} data-goal={copy.glasses} data-done={copy.done} data-undo={copy.undo} data-resumed={copy.resumed} data-all-done={copy.allDone}>
+  <div class="today-card-head">
+    <h3>{copy.heading}</h3>
+  </div>
+  <ul class="today-list">
+    <li class="today-row" data-row="water" data-target={glasses}>
+      <img src="/habits/water.webp" alt="" width="44" height="44" loading="lazy" />
+      <span>
+        <span class="today-name">{copy.water}</span>
+        <span class="today-meta" data-meta>{copy.glasses.replace('{target}', String(glasses))}</span>
+        <span class="progress" aria-hidden="true"><span data-bar></span></span>
+      </span>
+      <button type="button" class="today-btn" data-action="count">{copy.glassButton}</button>
+    </li>
+    <li class="today-row" data-row="prayer">
+      <img src="/habits/prayer.webp" alt="" width="44" height="44" loading="lazy" />
+      <span>
+        <span class="today-name">{copy.prayer}</span>
+        <span class="today-meta">{copy.prayerMeta}</span>
+      </span>
+      <button type="button" class="today-btn" data-action="toggle" aria-pressed="false">{copy.done}</button>
+    </li>
+    <li class="today-row quiet" data-row="reading">
+      <img src="/habits/reading.webp" alt="" width="44" height="44" loading="lazy" />
+      <span>
+        <span class="today-name">{copy.reading}</span>
+        <span class="today-meta" data-meta>{copy.readingMeta}</span>
+      </span>
+      <button type="button" class="today-btn" data-action="resume" aria-pressed="false">{copy.resume}</button>
+    </li>
+    <li class="today-row reminder" data-row="bill">
+      <img src="/reminders/bill.webp" alt="" width="44" height="44" loading="lazy" />
+      <span>
+        <span class="today-name">{copy.bill}</span>
+        <span class="today-meta">{copy.billMeta}</span>
+      </span>
+      <button type="button" class="today-btn" data-action="toggle" aria-pressed="false">{copy.done}</button>
+    </li>
+  </ul>
+  <p class="today-status" data-status role="status" aria-live="polite"></p>
+</div>
+
+<script>
+  for (const card of document.querySelectorAll<HTMLElement>('[data-today]')) {
+    const text = card.dataset
+    const status = card.querySelector<HTMLElement>('[data-status]')!
+    const rows = [...card.querySelectorAll<HTMLElement>('.today-row')]
+
+    const refresh = () => {
+      const allDone = rows.every((row) => row.classList.contains('is-done'))
+      status.textContent = allDone ? text.allDone ?? '' : ''
+    }
+
+    for (const row of rows) {
+      const button = row.querySelector<HTMLButtonElement>('button')!
+      const meta = row.querySelector<HTMLElement>('[data-meta]')
+      const quietLine = meta?.textContent ?? ''
+      let count = 0
+
+      button.addEventListener('click', () => {
+        const action = button.dataset.action
+        if (action === 'count') {
+          const target = Number(row.dataset.target)
+          count = count >= target ? 0 : count + 1
+          const bar = row.querySelector<HTMLElement>('[data-bar]')!
+          bar.style.width = `${(count / target) * 100}%`
+          meta!.textContent =
+            count === 0
+              ? (text.goal ?? '').replace('{target}', String(target))
+              : count >= target
+                ? (text.goal ?? '').replace('{target}', String(count))
+                : (text.of ?? '').replace('{value}', String(count)).replace('{target}', String(target))
+          row.classList.toggle('is-done', count >= target)
+        } else {
+          const done = button.getAttribute('aria-pressed') !== 'true'
+          button.setAttribute('aria-pressed', String(done))
+          row.classList.toggle('is-done', done)
+          if (action === 'toggle') button.textContent = done ? text.undo ?? '' : text.done ?? ''
+          if (action === 'resume') {
+            button.textContent = done ? text.undo ?? '' : row.dataset.resumeLabel ?? button.textContent
+            if (meta) meta.textContent = done ? text.resumed ?? '' : quietLine
+            row.classList.toggle('quiet', !done)
+          }
+        }
+        refresh()
+      })
+
+      if (button.dataset.action === 'resume') row.dataset.resumeLabel = button.textContent ?? ''
+    }
+  }
+</script>

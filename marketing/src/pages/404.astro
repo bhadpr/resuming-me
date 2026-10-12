@@ -1,0 +1,16 @@
+---
+import Base from '../layouts/Base.astro'
+import { en } from '../i18n/en'
+---
+
+<Base copy={en} path="/404">
+  <main class="not-found">
+    <a class="brand" href="/" aria-label="Resuming">
+      <img src="/logo.svg" alt="" width="34" height="34" />
+      Resuming
+    </a>
+    <h1>{en.notFound.title}</h1>
+    <p class="lead">{en.notFound.body}</p>
+    <a class="btn btn-primary" href="/">{en.notFound.home}</a>
+  </main>
+</Base>
