@@ -31,8 +31,13 @@ const canonical = new URL(path, SITE_URL).href
     <meta property="og:title" content={copy.meta.title} />
     <meta property="og:description" content={copy.meta.description} />
     <meta property="og:url" content={canonical} />
-    <meta property="og:image" content={`${SITE_URL}/media/hero-${copy.lang}.webp`} />
+    <meta property="og:image" content={`${SITE_URL}/og.jpg`} />
+    <meta property="og:image:type" content="image/jpeg" />
+    <meta property="og:image:width" content="1200" />
+    <meta property="og:image:height" content="630" />
+    <meta property="og:image:alt" content={copy.meta.imageAlt} />
     <meta name="twitter:card" content="summary_large_image" />
+    <meta name="twitter:image" content={`${SITE_URL}/og.jpg`} />
   </head>
   <body>
     <slot />

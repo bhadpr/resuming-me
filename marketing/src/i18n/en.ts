@@ -3,9 +3,10 @@ export const en = {
   lang: 'en',
   dir: 'ltr',
   meta: {
-    title: 'Resuming: Habits & Reminders. Missed a day? Just resume.',
+    title: 'Resuming: Habits, Health & Reminders. Missed a day? Just resume.',
     description:
-      'One gentle daily list for your habits, your BP and weight, and the family’s dates. Free, no ads, in English, Hindi, Gujarati, Marathi, Telugu and Tamil.',
+      'Habits like walking, water and Pranayam. Your BP, weight and steps. Reminders for bills, doctor visits and weddings. Free, no ads, in 6 languages.',
+    imageAlt: 'Resuming. Missed a day? Just resume. Habits, Health and Reminders, beside a painting of a woman walking toward the morning sun.',
   },
   nav: {
     how: 'How it works',
