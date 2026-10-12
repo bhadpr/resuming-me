@@ -775,6 +775,17 @@ select.field-input.language-select {
   line-height: var(--leading-body);
 }
 
+.start-intro {
+  margin: var(--space-2) 0 0;
+  color: var(--color-text-muted);
+  font-size: var(--text-sm);
+  line-height: var(--leading-body);
+}
+
+.start-intro + .start-medicine-title {
+  margin-top: var(--space-2);
+}
+
 .start-yes-no {
   display: grid;
   grid-template-columns: 1fr 1fr;

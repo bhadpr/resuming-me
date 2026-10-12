@@ -44,9 +44,7 @@ export const en = {
     days: '{done}/{total} days · goal {target} {unit}',
   },
   start: {
-    pick: 'What do you want to start?',
-    pickSub:
-      'We will ask you a series of common activities, and you choose which ones you would like to start. Two or three activities are a good way to begin.',
+    pick: 'A few quick yes-or-no questions. Two or three yeses are a good start.',
     activitiesIntro: 'Here are a few activities. Please select the ones you would like to start.',
     no: 'No',
     featuredWalk: 'Go for a walk every day',
@@ -58,7 +56,9 @@ export const en = {
     exploreLess: 'Show less',
     medicineBody:
       'Do you want to track your medicine each day? We’ll remind you so you don’t forget.',
-    pranayamBody: 'Do you want a daily pranayam? We’ll keep it short.',
+    pranayamBody: 'Do you want to do a little pranayam every day?',
+    pranayamLike:
+      'Pranayam is breathing practice you do sitting down, like Anuloma Viloma. Start with two minutes. A follow-along video plays with the timer.',
     pranayamReady: 'We’ll start with Anuloma Viloma.',
     pranayamSub: 'A few minutes is enough. Add another if you like.',
     workoutBody: 'Do you want to start a regular workout?',
@@ -91,7 +91,9 @@ export const en = {
     medicinesReady: 'Your medicines',
     medicinesSub: 'Add another bottle, or continue.',
     addAnotherMedicine: 'Add another medicine',
-    reminderAskBody: 'Anything you keep putting off? A bill, a doctor visit, a call. We’ll put it on Today.',
+    reminderAskBody: 'Any dates to remember? A bill, a doctor visit, a wedding or a puja. We’ll put it on Today.',
+    reminderAskLike: 'Got an invitation card? Add a photo of it, so the venue and time are right there.',
+    reminderPreviewEvent: 'Wedding or puja',
     remindersReady: 'Your reminders',
     remindersSub: 'Add another, or continue.',
     addAnotherReminder: 'Add another reminder',

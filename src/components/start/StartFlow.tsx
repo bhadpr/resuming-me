@@ -91,7 +91,7 @@ const VITAL_IDS = ['blood_pressure', 'weight', 'heart_rate', 'steps'] as const
 
 /** Pictures under each yes/no question, so people see what they would get. */
 const MEDICINE_PREVIEW = ['allopathic', 'ayurvedic', 'homeopathic'] as const
-const REMINDER_PREVIEW = ['bill', 'doctor', 'errand', 'event'] as const
+const REMINDER_PREVIEW = ['bill', 'doctor', 'event', 'errand'] as const
 const WORKOUT_PREVIEW = ['walk', 'running', 'exercise', 'stretching'] as const
 
 function StartPreview({
@@ -1444,11 +1444,12 @@ export function StartFlow({
             {t('start.back')}
           </button>
           <h2 className="screen-heading start-medicine-title">{t('start.reminderAskBody')}</h2>
+          <p className="screen-sub">{t('start.reminderAskLike')}</p>
           <StartPreview
             items={REMINDER_PREVIEW.map((kind) => ({
               id: kind,
               mark: <ReminderKindMark kind={kind} />,
-              label: t(`reminders.kinds.${kind}`),
+              label: kind === 'event' ? t('start.reminderPreviewEvent') : t(`reminders.kinds.${kind}`),
             }))}
           />
           <div className="start-yes-no">
@@ -1559,6 +1560,7 @@ export function StartFlow({
             {t('start.back')}
           </button>
           <h2 className="screen-heading start-medicine-title">{t('start.pranayamBody')}</h2>
+          <p className="screen-sub">{t('start.pranayamLike')}</p>
           <StartPreview items={habitPreview(PRANAYAM_IDS)} />
           <div className="start-yes-no">
             <button type="button" className="btn btn-primary" onClick={acceptPranayam}>
@@ -1612,8 +1614,7 @@ export function StartFlow({
 
       {draft.step === 1 && !trackName && !adding && draft.pickPhase === 'workout' && (
         <>
-          <h1 className="screen-heading">{t('start.pick')}</h1>
-          <p className="screen-sub">{t('start.pickSub')}</p>
+          <p className="start-intro">{t('start.pick')}</p>
           <h2 className="screen-heading start-medicine-title">{t('start.workoutBody')}</h2>
           <p className="screen-sub">{t('start.workoutLike')}</p>
           <StartPreview items={habitPreview(WORKOUT_PREVIEW)} />
