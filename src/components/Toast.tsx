@@ -1,3 +1,5 @@
+import { useLocale } from '../hooks/useLocale'
+
 interface ToastProps {
   message: string
   onUndo?: () => void
@@ -5,7 +7,8 @@ interface ToastProps {
 }
 
 /** Fixed bottom toast above the tab bar. */
-export function Toast({ message, onUndo, undoLabel = 'Undo' }: ToastProps) {
+export function Toast({ message, onUndo, undoLabel }: ToastProps) {
+  const { t } = useLocale()
   return (
     <div className="app-toast" role="status" aria-live="polite">
       <span className="app-toast-message">{message}</span>
@@ -15,7 +18,7 @@ export function Toast({ message, onUndo, undoLabel = 'Undo' }: ToastProps) {
             ·
           </span>
           <button type="button" className="app-toast-undo" onClick={onUndo}>
-            {undoLabel}
+            {undoLabel ?? t('toast.undo')}
           </button>
         </>
       )}

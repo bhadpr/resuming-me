@@ -558,7 +558,7 @@ export function activitySizeControl(
     if (activity.templateId === 'exercise') {
       return { steps: EXERCISE_MINUTE_STEPS, suffix: '', label: durationChipLabel }
     }
-    return { steps: TIMER_MINUTE_STEPS, suffix: ' min' }
+    return { steps: TIMER_MINUTE_STEPS, suffix: ` ${t('unit.min')}` }
   }
   if (activity.trackingMode === 'count') {
     return { steps: COUNT_STEPS, suffix: '×' }

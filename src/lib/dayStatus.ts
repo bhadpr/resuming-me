@@ -6,6 +6,7 @@ import {
   startOfMonth,
   startOfWeekMonday,
 } from './dates.ts'
+import { t } from './i18n'
 import {
   countQualifyingSessions,
   sumSessionSeconds,
@@ -34,15 +35,15 @@ export function countProgressLabel(
   unit: string | null | undefined,
 ): string {
   const word = (amount: number): string => {
-    if (unit === 'g') return 'g'
-    if (unit === 'hours' || unit === 'hr') return amount === 1 ? 'hour' : 'hours'
-    if (unit === 'glasses') return amount === 1 ? 'glass' : 'glasses'
+    if (unit === 'g') return t('unit.g')
+    if (unit === 'hours' || unit === 'hr') return amount === 1 ? t('unit.hour') : t('unit.hours')
+    if (unit === 'glasses') return amount === 1 ? t('unit.glass') : t('unit.glasses')
     return ''
   }
-  if (!word(target)) return `${value} of ${target}`
+  if (!word(target)) return t('today.progressOf', { value, target })
   if (value <= 0) return `${target} ${word(target)}`
   if (value >= target) return `${value} ${word(value)}`
-  return `${value} of ${target} ${word(target)}`
+  return t('today.progressOf', { value, target: `${target} ${word(target)}` })
 }
 
 /** Protein and fasting can keep logging after the goal is met. */

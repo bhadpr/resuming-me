@@ -1,5 +1,6 @@
 import type { LogEntry } from './logs'
 import type { Activity } from './activities'
+import { t } from './i18n'
 
 /** Convert activity target to seconds (timer mode). */
 export function targetToSeconds(activity: Activity): number {
@@ -88,17 +89,19 @@ export function sessionProgressLabel(
   unit: string | null,
 ): string {
   const done = Math.max(0, seconds)
+  const sec = t('unit.sec')
+  const min = t('unit.min')
   if (unit === 'seconds') {
     const goal = Math.round(targetSeconds)
-    if (done <= 0) return `${goal} sec`
-    if (done >= targetSeconds) return `${Math.round(done)} sec`
-    return `${Math.floor(done)} of ${goal} sec`
+    if (done <= 0) return `${goal} ${sec}`
+    if (done >= targetSeconds) return `${Math.round(done)} ${sec}`
+    return t('today.progressOf', { value: Math.floor(done), target: `${goal} ${sec}` })
   }
   const goal = minutesText(targetSeconds / 60, Math.round)
-  if (done <= 0) return `${goal} min`
-  if (done >= targetSeconds) return `${minutesText(done / 60, Math.round)} min`
-  if (done < 60) return `${Math.floor(done)} sec of ${goal} min`
-  return `${minutesText(done / 60, Math.floor)} of ${goal} min`
+  if (done <= 0) return `${goal} ${min}`
+  if (done >= targetSeconds) return `${minutesText(done / 60, Math.round)} ${min}`
+  if (done < 60) return t('today.progressOf', { value: `${Math.floor(done)} ${sec}`, target: `${goal} ${min}` })
+  return t('today.progressOf', { value: minutesText(done / 60, Math.floor), target: `${goal} ${min}` })
 }
 
 export function computeElapsedSeconds(params: {

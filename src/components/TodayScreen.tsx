@@ -878,7 +878,7 @@ function TodayActivityRow({
               disabled={busy}
               onClick={() => (done ? onUncheck() : onCheckOff())}
             >
-              {done ? 'Undo' : 'Done'}
+              {done ? t('toast.undo') : t('today.done')}
             </button>
           )}
           {actionKind === 'count' && !skipped && (

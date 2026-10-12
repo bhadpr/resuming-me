@@ -1,5 +1,6 @@
 import { describe, expect, it } from 'vitest'
 import { countProgressLabel, getDayStatus, showedUp, type DayStatusActivity } from './dayStatus'
+import { bindLocale } from './i18n'
 import type { LogEntry } from './logs'
 
 describe('countProgressLabel', () => {
@@ -10,6 +11,16 @@ describe('countProgressLabel', () => {
     expect(countProgressLabel(20, 16, 'hours')).toBe('20 hours')
     expect(countProgressLabel(10, 50, 'g')).toBe('10 of 50 g')
     expect(countProgressLabel(1, 3, null)).toBe('1 of 3')
+  })
+
+  it('follows the app language', () => {
+    bindLocale('hi')
+    try {
+      expect(countProgressLabel(3, 8, 'glasses')).toBe('8 गिलास में से 3')
+      expect(countProgressLabel(1, 3, null)).toBe('3 में से 1')
+    } finally {
+      bindLocale('en')
+    }
   })
 })
 

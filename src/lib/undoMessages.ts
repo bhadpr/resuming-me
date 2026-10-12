@@ -1,19 +1,20 @@
 /** Calm undo-toast copy for Today write actions. */
+import { t } from './i18n'
 
 export function formatSessionUndoMessage(
   activityName: string,
   durationSeconds: number,
 ): string {
   const minutes = Math.max(1, Math.round(durationSeconds / 60))
-  return `Logged ${minutes} min of ${activityName}`
+  return t('toast.loggedMinutes', { minutes, name: activityName })
 }
 
 export function formatCompletedUndoMessage(activityName: string): string {
-  return `Logged ${activityName}`
+  return t('toast.logged', { name: activityName })
 }
 
 export function formatCountUndoMessage(activityName: string): string {
-  return `Logged +1 of ${activityName}`
+  return t('toast.loggedCount', { name: activityName })
 }
 
 export function formatMetricUndoMessage(
@@ -23,14 +24,13 @@ export function formatMetricUndoMessage(
   secondary?: number | null,
 ): string {
   const shown = secondary == null ? String(value) : `${value}/${secondary}`
-  return `Logged ${shown} ${unit} · ${metricName}`
+  return t('toast.loggedValue', { value: shown, unit, name: metricName })
 }
 
 export function formatSkipUndoMessage(activityName: string): string {
-  return `Skipped ${activityName}`
+  return t('toast.skipped', { name: activityName })
 }
 
 export function formatRestDayUndoMessage(): string {
-  return 'Rest day marked'
+  return t('toast.restDay')
 }
-

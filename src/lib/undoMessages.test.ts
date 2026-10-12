@@ -7,6 +7,7 @@ import {
   formatSessionUndoMessage,
   formatSkipUndoMessage,
 } from './undoMessages'
+import { bindLocale } from './i18n'
 
 describe('undoMessages', () => {
   it('formats session minutes', () => {
@@ -32,5 +33,15 @@ describe('undoMessages', () => {
   it('formats skip and rest day', () => {
     expect(formatSkipUndoMessage('Meditate')).toBe('Skipped Meditate')
     expect(formatRestDayUndoMessage()).toBe('Rest day marked')
+  })
+
+  it('follows the app language', () => {
+    bindLocale('hi')
+    try {
+      expect(formatCountUndoMessage('पानी')).toBe('पानी: +1 दर्ज किया')
+      expect(formatSessionUndoMessage('चलना', 300)).toBe('चलना: 5 मि. दर्ज किए')
+    } finally {
+      bindLocale('en')
+    }
   })
 })
