@@ -11,6 +11,7 @@ export const en = {
     gujarati: 'ગુજરાતી',
     marathi: 'मराठी',
     tamil: 'தமிழ்',
+    bengali: 'বাংলা',
   },
   nav: {
     today: 'Today',

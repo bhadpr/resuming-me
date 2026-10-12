@@ -737,10 +737,22 @@ p {
   list-style: none;
 }
 
+.lang-grid > .lang-tile:last-child:nth-child(odd) {
+  grid-column: 1 / -1;
+}
+
 @media (min-width: 820px) {
   .lang-grid {
     grid-template-columns: repeat(3, 1fr);
     gap: 1rem;
+  }
+
+  .lang-grid > .lang-tile:last-child:nth-child(odd) {
+    grid-column: auto;
+  }
+
+  .lang-grid > .lang-tile:last-child:nth-child(3n + 1) {
+    grid-column: 1 / -1;
   }
 }
 

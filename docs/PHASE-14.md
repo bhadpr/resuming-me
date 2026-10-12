@@ -10,7 +10,7 @@ Goal: resuming.app is a fast, rich, static marketing site that explains Resuming
 | resuming.app | Owned. No site yet. Registrar and DNS to check. |
 | Marketing | No marketing site. The Play listing, banners, and six store screenshots exist in `play-listing/`. |
 | Brand | Name "Resuming: Habits & Reminders". Tagline "Track your day, gently. Missed a day? Just resume." Clay artwork and themes in the app (`docs/DESIGN.md`). |
-| Languages | English, Hindi, Gujarati, Marathi, Telugu, Tamil. |
+| Languages | English, Hindi, Gujarati, Marathi, Telugu, Tamil, Bengali. |
 | Features on Android | Habits (with Pranayam and Heartfulness videos, and an own YouTube video on any habit), vitals (BP, weight, sleep, water), steps from Health Connect, reminders with a description and photo, sharing an event on WhatsApp, six languages. |
 | Not on Android | Medicines (web only for now, `MEDICINES_ENABLED`). |
 

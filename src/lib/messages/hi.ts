@@ -17,6 +17,7 @@ export const hi: DeepString<typeof en> = {
     gujarati: 'ગુજરાતી',
     marathi: 'मराठी',
     tamil: 'தமிழ்',
+    bengali: 'বাংলা',
   },
   nav: {
     today: 'आज',

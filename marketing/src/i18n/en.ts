@@ -5,7 +5,7 @@ export const en = {
   meta: {
     title: 'Resuming: Habits, Health & Reminders. Missed a day? Just resume.',
     description:
-      'Habits like walking, water and Pranayam. Your BP, weight and steps. Reminders for bills, doctor visits and weddings. Free, no ads, in 6 languages.',
+      'Habits like walking, water and Pranayam. Your BP, weight and steps. Reminders for bills, doctor visits and weddings. Free, no ads, in 7 languages.',
     imageAlt: 'Resuming. Missed a day? Just resume. Habits, Health and Reminders, beside a painting of a woman walking toward the morning sun.',
   },
   nav: {
@@ -141,7 +141,7 @@ export const en = {
   },
   languages: {
     title: 'In your language',
-    body: 'Every screen, in six languages. Names you type stay exactly as you wrote them.',
+    body: 'Every screen, in seven languages. Names you type stay exactly as you wrote them.',
   },
   try: {
     kicker: 'Try it here',

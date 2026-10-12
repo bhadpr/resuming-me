@@ -8,6 +8,7 @@ const LABEL_KEY: Record<Locale, string> = {
   gu: 'language.gujarati',
   mr: 'language.marathi',
   ta: 'language.tamil',
+  bn: 'language.bengali',
 }
 
 /** Language switch. The choice is saved on this device. */

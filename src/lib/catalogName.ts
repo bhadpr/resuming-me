@@ -166,21 +166,55 @@ const TA_LABELS: Record<string, string> = {
   relaxation: 'ஓய்வு',
 }
 
+/** Bengali labels for catalog habits and vitals. */
+const BN_LABELS: Record<string, string> = {
+  reading: 'পড়া',
+  walk: 'হাঁটা',
+  running: 'দৌড়',
+  exercise: 'শক্তি',
+  meditate: 'ধ্যান',
+  stretching: 'ব্যায়াম',
+  water: 'জল',
+  protein: 'প্রোটিন',
+  fasting: 'উপোস',
+  sleep_hours: 'ঘুম',
+  weight: 'ওজন',
+  steps: 'পদক্ষেপ',
+  blood_pressure: 'রক্তচাপ',
+  heart_rate: 'হৃৎস্পন্দন',
+  journaling: 'ডায়েরি',
+  writing: 'লেখা',
+  daily_writing: 'রোজ লেখা',
+  study: 'পড়াশোনা',
+  language: 'ভাষা',
+  music: 'সংগীত',
+  painting: 'ছবি আঁকা',
+  dancing: 'নাচ',
+  bhastrika: 'ভস্ত্রিকা',
+  kapalabhati: 'কপালভাতি',
+  anuloma_viloma: 'অনুলোম বিলোম',
+  bhramari: 'ভ্রামরী',
+  rejuvenation: 'পরিষ্কার',
+  prayer: 'প্রার্থনা',
+  relaxation: 'বিশ্রাম',
+}
+
 const CATALOG_LABELS: Partial<Record<Locale, Record<string, string>>> = {
   hi: HI_LABELS,
   te: TE_LABELS,
   gu: GU_LABELS,
   mr: MR_LABELS,
   ta: TA_LABELS,
+  bn: BN_LABELS,
 }
 
 /** Extra stored names that still mean a catalog item. */
 const EXTRA_LABELS: Record<string, readonly string[]> = {
-  steps: ['daily steps', 'steps', 'कदम', 'అడుగులు', 'પગલાં', 'पावले', 'அடிகள்'],
-  sleep_hours: ['sleep', 'नींद', 'నిద్ర', 'ઊંઘ', 'झोप', 'தூக்கம்'],
-  exercise: ['strength', 'exercise', 'ताकत', 'బలం', 'તાકાત', 'ताकद', 'வலிமை'],
-  stretching: ['exercises', 'stretch', 'व्यायाम', 'వ్యాయామం', 'કસરત', 'व्यायाम', 'உடற்பயிற்சி'],
-  walk: ['walking', 'walk', 'चलना', 'నడక', 'ચાલવું', 'चालणे', 'நடை'],
+  steps: ['daily steps', 'steps', 'कदम', 'అడుగులు', 'પગલાં', 'पावले', 'அடிகள்', 'পদক্ষেপ'],
+  sleep_hours: ['sleep', 'नींद', 'నిద్ర', 'ઊંઘ', 'झोप', 'தூக்கம்', 'ঘুম'],
+  exercise: ['strength', 'exercise', 'ताकत', 'బలం', 'તાકાત', 'ताकद', 'வலிமை', 'শক্তি'],
+  stretching: ['exercises', 'stretch', 'व्यायाम', 'వ్యాయామం', 'કસરત', 'व्यायाम', 'உடற்பயிற்சி', 'ব্যায়াম'],
+  walk: ['walking', 'walk', 'चलना', 'నడక', 'ચાલવું', 'चालणे', 'நடை', 'হাঁটা'],
   rejuvenation: ['cleaning'],
 }
 
@@ -205,6 +239,7 @@ export function isCatalogLabel(templateId: string, name: string): boolean {
     GU_LABELS[templateId],
     MR_LABELS[templateId],
     TA_LABELS[templateId],
+    BN_LABELS[templateId],
     ...(EXTRA_LABELS[templateId] ?? []),
   ]
   return labels.some((label) => label?.trim().toLowerCase() === normalized)

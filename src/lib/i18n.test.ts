@@ -1,5 +1,5 @@
 import { afterEach, describe, expect, it, vi } from 'vitest'
-import { hasSavedLocale, persistLocale, translate } from './i18n'
+import { hasSavedLocale, localeTag, persistLocale, translate } from './i18n'
 
 function memoryStorage() {
   const store = new Map<string, string>()
@@ -48,5 +48,12 @@ describe('language.choose', () => {
   it('names Marathi and Tamil in their own scripts', () => {
     expect(translate('mr', 'language.marathi')).toBe('मराठी')
     expect(translate('ta', 'language.tamil')).toBe('தமிழ்')
+  })
+
+  it('speaks Bengali, with 0-9 digits in dates and counts', () => {
+    expect(translate('bn', 'language.bengali')).toBe('বাংলা')
+    expect(translate('en', 'language.bengali')).toBe('বাংলা')
+    expect(translate('bn', 'today.resume')).toBe('চালিয়ে যান')
+    expect((12345).toLocaleString(localeTag('bn'))).toBe('12,345')
   })
 })

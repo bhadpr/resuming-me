@@ -12,6 +12,7 @@ import '@fontsource-variable/noto-sans-devanagari/wght.css'
 import '@fontsource-variable/noto-sans-gujarati/wght.css'
 import '@fontsource-variable/noto-sans-telugu/wght.css'
 import '@fontsource-variable/noto-sans-tamil/wght.css'
+import '@fontsource-variable/noto-sans-bengali/wght.css'
 import './themes.css'
 import './index.css'
 

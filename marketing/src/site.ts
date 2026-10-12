@@ -21,6 +21,7 @@ export const LANGUAGES = [
   { code: 'mr', name: 'मराठी', line: 'जे राहिले, तिथून पुन्हा सुरू.' },
   { code: 'te', name: 'తెలుగు', line: 'వాయిదా వేసిన దాన్ని మళ్లీ చేపట్టు.' },
   { code: 'ta', name: 'தமிழ்', line: 'தள்ளிப்போட்டதை அங்கிருந்து மீண்டும் தொடங்கு.' },
+  { code: 'bn', name: 'বাংলা', line: 'যা পিছিয়ে গেছে, সেখান থেকেই আবার শুরু।' },
 ] as const
 
 /** Hero loop scene lengths in seconds, matching the captions. */

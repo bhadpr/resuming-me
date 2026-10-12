@@ -16,6 +16,7 @@ import { track } from '../lib/track'
 import { templateLabel } from '../lib/catalogName'
 import { useLocale } from '../hooks/useLocale'
 import { LanguagePicker } from './LanguagePicker'
+import { localeTag, type Locale } from '../lib/i18n'
 
 function LandingBrand() {
   return (
@@ -33,13 +34,16 @@ interface LandingPageProps {
   onSignIn: () => Promise<void>
 }
 
-const PREVIEW_DAYS = ['M', 'T', 'W', 'T', 'F', 'S', 'S'] as const
+/** Monday-first narrow weekday names, e.g. M T W … in English. */
+function previewDays(locale: Locale): string[] {
+  const format = new Intl.DateTimeFormat(localeTag(locale), { weekday: 'narrow' })
+  return Array.from({ length: 7 }, (_, index) => format.format(new Date(2024, 0, 1 + index)))
+}
 
 /** Sample week — gaps, then coming back. */
 const PREVIEW_SERIES = [
   {
     name: 'Walking',
-    unit: 'min',
     target: 20,
     values: [0, 10, 0, 20, 15, 0, 20],
   },
@@ -57,6 +61,8 @@ export function LandingPage({
 }: LandingPageProps) {
   const navigate = useNavigate()
   const { t, locale } = useLocale()
+  const days = previewDays(locale)
+  const minUnit = t('unit.min')
   const native = Capacitor.isNativePlatform()
   const [error, setError] = useState<string | null>(null)
   const [signingIn, setSigningIn] = useState(false)
@@ -158,9 +164,9 @@ export function LandingPage({
                     <span className="landing-preview-stat">
                       {t('landing.days', {
                         done: doneDays,
-                        total: PREVIEW_DAYS.length,
+                        total: days.length,
                         target: series.target,
-                        unit: series.unit,
+                        unit: minUnit,
                       })}
                     </span>
                   </div>
@@ -175,10 +181,10 @@ export function LandingPage({
                             <div
                               className={`landing-preview-bar landing-preview-bar-${state}`}
                               style={{ height: `${Math.max(ratio * 100, value > 0 ? 12 : 0)}%` }}
-                              title={`${PREVIEW_DAYS[index]}: ${value} ${series.unit}`}
+                              title={`${days[index]}: ${value} ${minUnit}`}
                             />
                           </div>
-                          <span className="landing-preview-day">{PREVIEW_DAYS[index]}</span>
+                          <span className="landing-preview-day">{days[index]}</span>
                         </div>
                       )
                     })}

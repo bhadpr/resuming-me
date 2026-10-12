@@ -2,7 +2,7 @@
 
 :root {
   --font-indic: 'Noto Sans Devanagari Variable', 'Noto Sans Gujarati Variable',
-    'Noto Sans Telugu Variable', 'Noto Sans Tamil Variable';
+    'Noto Sans Telugu Variable', 'Noto Sans Tamil Variable', 'Noto Sans Bengali Variable';
   --font-body: 'Source Sans 3', var(--font-indic), system-ui, sans-serif;
   --font-display: 'Source Serif 4', var(--font-indic), Georgia, serif;
   --font-mono: var(--font-body);

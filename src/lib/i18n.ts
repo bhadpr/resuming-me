@@ -1,3 +1,4 @@
+import { bn } from './messages/bn'
 import { en } from './messages/en'
 import { gu } from './messages/gu'
 import { hi } from './messages/hi'
@@ -5,9 +6,9 @@ import { mr } from './messages/mr'
 import { ta } from './messages/ta'
 import { te } from './messages/te'
 
-export type Locale = 'en' | 'hi' | 'te' | 'gu' | 'mr' | 'ta'
+export type Locale = 'en' | 'hi' | 'te' | 'gu' | 'mr' | 'ta' | 'bn'
 
-export const LOCALES: readonly Locale[] = ['en', 'hi', 'te', 'gu', 'mr', 'ta']
+export const LOCALES: readonly Locale[] = ['en', 'hi', 'te', 'gu', 'mr', 'ta', 'bn']
 
 const LOCALE_TAGS: Record<Locale, string> = {
   en: 'en-IN',
@@ -16,6 +17,8 @@ const LOCALE_TAGS: Record<Locale, string> = {
   gu: 'gu-IN',
   mr: 'mr-IN',
   ta: 'ta-IN',
+  // Copy fills in 0-9 digits, so dates and counts use them too instead of Bengali numerals.
+  bn: 'bn-IN-u-nu-latn',
 }
 
 const STORAGE_KEY = 'resuming-locale'
@@ -93,7 +96,7 @@ function fill(template: string, vars?: Vars): string {
   )
 }
 
-const catalogs: Record<Locale, Tree> = { en, hi, te, gu, mr, ta }
+const catalogs: Record<Locale, Tree> = { en, hi, te, gu, mr, ta, bn }
 
 export function translate(locale: Locale, key: string, vars?: Vars): string {
   const raw = lookup(catalogs[locale], key) ?? lookup(catalogs.en, key) ?? key

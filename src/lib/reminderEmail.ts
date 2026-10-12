@@ -60,6 +60,14 @@ const COPY: Record<string, Copy> = {
     open: 'இன்றைத் திறக்க',
     off: 'Resuming மின்னஞ்சல்களை நிறுத்து',
   },
+  bn: {
+    subjectOne: 'আজ: {text}',
+    subjectMany: 'আজ {count}টা রিমাইন্ডার',
+    intro: 'আজকের রিমাইন্ডার:',
+    outro: 'হয়ে গেলে অ্যাপে হয়ে গেছে টিপুন।',
+    open: 'আজ খুলুন',
+    off: 'Resuming-এর ইমেল বন্ধ করুন',
+  },
 }
 
 const MARATHI_DIGITS = '०१२३४५६७८९'
