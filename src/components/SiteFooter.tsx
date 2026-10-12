@@ -4,6 +4,7 @@ import {
   COMPANY_NAME,
   COPYRIGHT_YEAR,
   FOOTER_NAV,
+  MARKETING_URL,
   SOCIAL_LINKS,
   type SocialLinkId,
 } from '../lib/site'
@@ -91,6 +92,9 @@ export function SiteFooter({
             {item.label}
           </Link>
         ))}
+        <a className="site-footer-link" href={MARKETING_URL} target="_blank" rel="noreferrer">
+          resuming.app
+        </a>
       </nav>
 
       <p className="site-footer-copy">

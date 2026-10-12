@@ -51,7 +51,7 @@ Files are in `screenshots/`.
 
 - Category: Health & Fitness
 - Contact email: resuming.me@gmail.com
-- Website: https://resuming.me
+- Website: https://resuming.app
 - Privacy policy: https://resuming.me/privacy
 
 ## App content: Health apps declaration
@@ -62,3 +62,12 @@ Tick only these:
 - Stress management, relaxation, mental acuity
 
 Do not tick "Medication and treatment management". Medicines are hidden in the Android app until it moves to an organization developer account.
+
+## App content: Health Connect permissions
+
+The app only reads. It asks for no write permissions. Give one reason per permission:
+
+- **Steps (`READ_STEPS`):** Shows today's steps on the Today screen next to the user's daily step goal, and the daily totals for the last 7 days. Read only, and never sent off the device.
+- **Distance (`READ_DISTANCE`):** Shows how far the user went during a walk or run they timed in the app. Read only. Kept on the device and never sent to our servers.
+
+Data safety needs no change for these: neither steps nor distance leaves the phone, so Play does not count them as collected.

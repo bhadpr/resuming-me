@@ -3,6 +3,7 @@ import {
   COPYRIGHT_YEAR,
   GOVERNING_LAW,
   LEGAL_LAST_UPDATED,
+  MARKETING_URL,
   PRIVACY_LAST_UPDATED,
   TERMS_LAST_UPDATED,
   PRODUCT_NAME,
@@ -63,6 +64,13 @@ function AboutContent() {
         Built for a single person who wants a calm, no-shame tool — not gamification,
         not social pressure, just a clearer view of what you are (and aren’t) picking
         back up.
+      </p>
+      <p>
+        See what Resuming can do, with a short video, at{' '}
+        <a href={MARKETING_URL} target="_blank" rel="noreferrer">
+          resuming.app
+        </a>
+        .
       </p>
       <p className="legal-muted">Last updated: {LEGAL_LAST_UPDATED}</p>
     </>
@@ -141,10 +149,15 @@ function PrivacyContent() {
           event, we store the reason and their account or anonymous device id.
         </li>
         <li>
-          <strong>Steps.</strong> On Android, if you allow it, the app reads today’s
-          step count from Health Connect on your phone and shows it on Today. We do
-          not write steps to Health Connect, and we do not send that count to our
-          servers. A number you type, and your daily step goal, stay on this device.
+          <strong>Steps and distance.</strong> On Android, if you allow it, the app
+          reads your step counts from Health Connect on your phone: today’s count, shown
+          on Today, and your daily totals for the last 7 days, shown next to your goal.
+          If you also allow distance, the app reads how far you went during a walk or
+          run you timed in the app, and shows it with that session. We do not write
+          steps or distance to Health Connect, and we do not send step counts or
+          distances to our servers. Distances for past sessions are kept on this device
+          so they don’t have to be read again. A number you type, and your daily step
+          goal, stay on this device.
           Our use of information received from Health Connect follows the Health
           Connect Permissions policy, including its Limited Use requirements.
         </li>
@@ -173,8 +186,8 @@ function PrivacyContent() {
           visits. See “Cookies &amp; local storage” below. On Android, an optional daily
           reminder, medicine reminders, and alerts for your own reminders are scheduled
           on the device only. They
-          are not delivered through a cloud push service. A typed step count and the
-          daily step goal stay on the device.
+          are not delivered through a cloud push service. A typed step count, the
+          daily step goal, and distances read from Health Connect stay on the device.
         </li>
       </ul>
 
@@ -263,7 +276,8 @@ function PrivacyContent() {
         <li>
           Local preferences such as theme, language, a guest onboarding draft (kept on
           this device for up to 7 days, until you save an account), daily reminder time,
-          a typed step count, the daily step goal, and in-progress timer state
+          a typed step count, the daily step goal, distances read for timed walks and runs,
+          and in-progress timer state
         </li>
         <li>
           A service worker / progressive web app cache that stores app assets for faster

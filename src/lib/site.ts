@@ -60,6 +60,8 @@ export type SocialLinkId =
 export const COMPANY_NAME = 'Cheerful Games, Inc.'
 export const COPYRIGHT_YEAR = 2026
 export const PRODUCT_NAME = 'Resuming'
+/** The marketing site; resuming.me stays the app. */
+export const MARKETING_URL = 'https://resuming.app'
 
 /**
  * Governing law for the Terms. Update to the state where Cheerful Games, Inc.
@@ -68,10 +70,10 @@ export const PRODUCT_NAME = 'Resuming'
 export const GOVERNING_LAW = 'the State of Washington, United States'
 
 /** Shown on About. */
-export const LEGAL_LAST_UPDATED = `October 8, ${COPYRIGHT_YEAR}`
+export const LEGAL_LAST_UPDATED = `October 12, ${COPYRIGHT_YEAR}`
 
 /** Shown on the Privacy Policy and the Terms. */
-export const PRIVACY_LAST_UPDATED = `October 9, ${COPYRIGHT_YEAR}`
+export const PRIVACY_LAST_UPDATED = `October 12, ${COPYRIGHT_YEAR}`
 export const TERMS_LAST_UPDATED = `October 9, ${COPYRIGHT_YEAR}`
 
 export interface SocialLink {
