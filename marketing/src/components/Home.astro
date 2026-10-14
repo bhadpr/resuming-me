@@ -27,11 +27,11 @@ const stepArt = ['walking', 'water']
       Resuming
     </a>
     <nav class="site-nav" aria-label="Sections">
-      <a href="#how">{copy.nav.how}</a>
       <a href="#habits">{copy.nav.habits}</a>
       <a href="#reminders">{copy.nav.reminders}</a>
       <a href="#health">{copy.nav.health}</a>
       <a href="#progress">{copy.nav.progress}</a>
+      <a href="#how">{copy.nav.how}</a>
       <a href="#faq">{copy.nav.faq}</a>
     </nav>
     {PLAY_LIVE ? (
@@ -109,40 +109,6 @@ const stepArt = ['walking', 'water']
     </div>
   </section>
 
-  <section class="section" id="how" style="padding-top: 0">
-    <div class="wrap">
-      <div class="section-head center">
-        <h2>{copy.how.title}</h2>
-      </div>
-      <ol class="steps">
-        {copy.how.steps.map((step, i) => (
-          <li class="step">
-            <span class="step-num" aria-hidden="true">{i + 1}</span>
-            {stepArt[i] ? (
-              <div class="step-art"><img src={art(stepArt[i])} alt="" width="88" height="88" loading="lazy" /></div>
-            ) : (
-              <div class="step-art step-resume"><Icon name="resume" /></div>
-            )}
-            <h3>{step.title}</h3>
-            <p>{step.body}</p>
-          </li>
-        ))}
-      </ol>
-    </div>
-  </section>
-
-  <section class="section" style="padding-top: 0">
-    <div class="wrap">
-      <figure class="idea" style="margin: 0">
-        <img src="/art/bench-to-path.webp" alt={copy.idea.alt} width="1152" height="864" loading="lazy" />
-        <figcaption class="idea-text">
-          <h2>{copy.idea.title}</h2>
-          <p class="lead">{copy.idea.body}</p>
-        </figcaption>
-      </figure>
-    </div>
-  </section>
-
   <section class="section" id="habits">
     <div class="wrap feature">
       <div class="feature-shots teal">
@@ -164,24 +130,8 @@ const stepArt = ['walking', 'water']
     </div>
   </section>
 
-  <section class="section" id="reminders">
-    <div class="wrap feature flip">
-      <div class="feature-shots">
-        <div class="phone phone-sm"><img src={`/media/reminder-${lang}.webp`} alt={copy.reminders.shotAlt} width="576" height="1024" loading="lazy" /></div>
-      </div>
-      <div class="feature-text">
-        <span class="kicker">{copy.reminders.kicker}</span>
-        <h2>{copy.reminders.title}</h2>
-        <p class="lead" style="margin-top: 1rem">{copy.reminders.body}</p>
-        <ul class="points">
-          {copy.reminders.points.map((point) => <li>{point}</li>)}
-        </ul>
-      </div>
-    </div>
-  </section>
-
   <section class="section" id="community">
-    <div class="wrap feature">
+    <div class="wrap feature flip">
       <div class="feature-shots">
         <div class="phone phone-sm"><img src={`/media/shared-${lang}.webp`} alt={copy.community.sharedAlt} width="576" height="1024" loading="lazy" /></div>
         <div class="phone phone-sm"><img src={`/media/shared-mall-${lang}.webp`} alt={copy.community.sharedMallAlt} width="576" height="1024" loading="lazy" /></div>
@@ -196,6 +146,22 @@ const stepArt = ['walking', 'water']
         </div>
         <ul class="points">
           {copy.community.points.map((point) => <li>{point}</li>)}
+        </ul>
+      </div>
+    </div>
+  </section>
+
+  <section class="section" id="reminders">
+    <div class="wrap feature">
+      <div class="feature-shots">
+        <div class="phone phone-sm"><img src={`/media/reminder-${lang}.webp`} alt={copy.reminders.shotAlt} width="576" height="1024" loading="lazy" /></div>
+      </div>
+      <div class="feature-text">
+        <span class="kicker">{copy.reminders.kicker}</span>
+        <h2>{copy.reminders.title}</h2>
+        <p class="lead" style="margin-top: 1rem">{copy.reminders.body}</p>
+        <ul class="points">
+          {copy.reminders.points.map((point) => <li>{point}</li>)}
         </ul>
       </div>
     </div>
@@ -245,6 +211,40 @@ const stepArt = ['walking', 'water']
           {copy.progress.points.map((point) => <li>{point}</li>)}
         </ul>
       </div>
+    </div>
+  </section>
+
+  <section class="section" id="how">
+    <div class="wrap">
+      <div class="section-head center">
+        <h2>{copy.how.title}</h2>
+      </div>
+      <ol class="steps">
+        {copy.how.steps.map((step, i) => (
+          <li class="step">
+            <span class="step-num" aria-hidden="true">{i + 1}</span>
+            {stepArt[i] ? (
+              <div class="step-art"><img src={art(stepArt[i])} alt="" width="88" height="88" loading="lazy" /></div>
+            ) : (
+              <div class="step-art step-resume"><Icon name="resume" /></div>
+            )}
+            <h3>{step.title}</h3>
+            <p>{step.body}</p>
+          </li>
+        ))}
+      </ol>
+    </div>
+  </section>
+
+  <section class="section">
+    <div class="wrap">
+      <figure class="idea" style="margin: 0">
+        <img src="/art/bench-to-path.webp" alt={copy.idea.alt} width="1152" height="864" loading="lazy" />
+        <figcaption class="idea-text">
+          <h2>{copy.idea.title}</h2>
+          <p class="lead">{copy.idea.body}</p>
+        </figcaption>
+      </figure>
     </div>
   </section>
 

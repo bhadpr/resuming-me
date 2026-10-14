@@ -231,9 +231,9 @@ export const en = {
     body: 'A walk, a glass of water, five minutes of breathing. Resuming will be there when you come back.',
   },
   about: {
-    metaTitle: 'About Resuming, a free habit, health and reminder app · Cheerful Games, Inc.',
+    metaTitle: 'About Resuming, a free habit, health and reminder app',
     metaDescription:
-      'Resuming is a free habit, health and reminder app made by Cheerful Games, Inc. No ads, no selling your data, in 7 languages. Contact and links.',
+      'Resuming is a free habit, health and reminder app. No ads, no selling your data, in 7 languages. Contact and links.',
     title: 'About Resuming',
     lead: 'Resuming is a free habit, health and reminder app. It keeps a day’s small habits, health numbers like blood pressure, weight and steps, and the family’s dates in one list called Today.',
     sections: [
