@@ -47,6 +47,7 @@ function fromRow(row: ReminderRow): Reminder {
     hour: row.hour,
     minute: row.minute,
     remindBefore: row.remind_before ?? false,
+    remindWeekBefore: row.remind_week_before ?? false,
     kind: reminderKindOf(row.kind),
     everyYear: row.every_year ?? false,
     repeat: isReminderRepeat(row.repeat_every) ? row.repeat_every : null,
@@ -55,6 +56,8 @@ function fromRow(row: ReminderRow): Reminder {
     lastDoneOn: row.last_done_on ?? null,
     doneAt: row.done_at,
     sharedEventId: row.shared_event_id ?? null,
+    communityId: row.community_id ?? null,
+    communityPhotoPath: isEventPhotoPath(row.community_photo_path) ? row.community_photo_path : null,
     alertOff: row.alert_off ?? false,
   }
 }
@@ -189,11 +192,14 @@ export async function addReminder(
       hour: input.hour,
       minute: input.hour == null ? null : input.minute,
       remind_before: input.remindBefore === true,
+      remind_week_before: input.remindWeekBefore === true,
       kind: reminderKindOf(input.kind),
       every_year: input.everyYear === true && !input.repeat,
       ...repeatColumns(input),
       done_at: input.doneAt ?? null,
       shared_event_id: input.sharedEventId ?? null,
+      community_id: input.communityId ?? null,
+      community_photo_path: isEventPhotoPath(input.communityPhotoPath) ? input.communityPhotoPath : null,
       alert_off: input.alertOff === true,
     })
     .select('*')
@@ -241,6 +247,7 @@ export async function updateReminder(
       hour: input.hour,
       minute: input.hour == null ? null : input.minute,
       remind_before: input.remindBefore === true,
+      remind_week_before: input.remindWeekBefore === true,
       kind: reminderKindOf(input.kind),
       every_year: input.everyYear === true && !input.repeat,
       ...repeatColumns(input),

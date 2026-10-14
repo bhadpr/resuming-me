@@ -1,4 +1,5 @@
 import { useRef, useState, type FormEvent, type ReactNode } from 'react'
+import { addDays } from '../lib/dates'
 import { reminderPhotoSrc } from '../lib/eventPhotoUrl'
 import { prepareReminderPhoto } from '../lib/reminderPhotos'
 import { useLocale } from '../hooks/useLocale'
@@ -94,6 +95,7 @@ export function ReminderForm({
     seed?.hour != null ? `${pad(seed.hour)}:${pad(seed.minute ?? 0)}` : '10:00',
   )
   const [remindBefore, setRemindBefore] = useState(seed?.remindBefore ?? false)
+  const [remindWeekBefore, setRemindWeekBefore] = useState(seed?.remindWeekBefore ?? false)
   const [kind, setKind] = useState<ReminderKind | null>(seed?.kind ?? null)
   const [everyYear, setEveryYear] = useState(initial?.everyYear ?? false)
   const [repeat, setRepeat] = useState<ReminderRepeat | null>(initial?.repeat ?? null)
@@ -103,6 +105,9 @@ export function ReminderForm({
   const repeating = repeat !== null
   const canRemindBefore = resolvedDay() > today && !repeating
   const dayBeforeOn = canRemindBefore && remindBefore
+  /** A week ahead only makes sense when that evening has not passed. */
+  const canRemindWeekBefore = !repeating && resolvedDay() >= addDays(today, 7)
+  const weekBeforeOn = canRemindWeekBefore && remindWeekBefore
   /** Keeps the original first day, so editing a repeat cannot stretch its two months. */
   const repeatFrom = initial?.repeat && initial.repeatFrom && resolvedDay() === initial.day ? initial.repeatFrom : resolvedDay()
   const repeatUntil = clampRepeatUntil(repeatFrom, pickedUntil ?? defaultRepeatUntil(repeatFrom))
@@ -132,6 +137,7 @@ export function ReminderForm({
       day: resolvedDay(),
       ...resolvedTime(),
       remindBefore: dayBeforeOn,
+      remindWeekBefore: weekBeforeOn,
       kind: kind ?? 'other',
       everyYear: everyYear && !repeating,
       ...(repeat
@@ -371,9 +377,27 @@ export function ReminderForm({
             </span>
           </label>
         )}
+
+        {canRemindWeekBefore && (
+          <label className="reminder-switch">
+            <input
+              type="checkbox"
+              checked={remindWeekBefore}
+              onChange={(event) => setRemindWeekBefore(event.target.checked)}
+            />
+            <span>
+              {t('reminders.weekBefore')}
+              <span className="reminder-switch-hint">
+                {t('reminders.weekBeforeHint', {
+                  time: formatReminderTime(parts.evening.hour, parts.evening.minute, locale),
+                })}
+              </span>
+            </span>
+          </label>
+        )}
       </fieldset>
 
-      {(timeChoice !== 'any' || dayBeforeOn) && <AppAlertsNote where="reminder" />}
+      {(timeChoice !== 'any' || dayBeforeOn || weekBeforeOn) && <AppAlertsNote where="reminder" />}
 
       {(issueText || error) && <p className="error">{issueText || error}</p>}
 
@@ -482,11 +506,12 @@ function ReminderView({ reminder, saving, error, onDelete, onCancel, onEdit, sha
   const { locale, t } = useLocale()
   const shared = Boolean(reminder.sharedEventId)
   const gone = isSharedEventGone(reminder)
-  const alerts = reminder.hour != null || reminder.remindBefore
+  const alerts = reminder.hour != null || reminder.remindBefore || reminder.remindWeekBefore
   const when = [
     formatSharedWhen(reminder, locale),
     reminder.everyYear ? t('reminders.everyYear') : null,
     repeatSummary(reminder, locale, t),
+    reminder.remindWeekBefore ? t('reminders.weekBeforeShort') : null,
     reminder.remindBefore ? t('reminders.dayBeforeShort') : null,
   ]
     .filter(Boolean)

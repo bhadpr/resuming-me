@@ -471,6 +471,28 @@ describe('guest reminders', () => {
     expect(loadGuestDraft()?.reminders).toEqual([])
   })
 
+  it('keeps which community reminder a copy came from, and its picture', () => {
+    memoryStorage()
+    const photo = '0b6f6a3e-5a7d-4c1e-9f1a-2b3c4d5e6f70/1f2e3d4c-5b6a-4789-8abc-def012345678.jpg'
+    addGuestReminder(ensureGuestDraft('UTC'), {
+      text: 'Diwali',
+      day: '2999-11-08',
+      hour: null,
+      minute: null,
+      remindBefore: true,
+      kind: 'event',
+      communityId: '0b6f6a3e-5a7d-4c1e-9f1a-2b3c4d5e6f70',
+      communityPhotoPath: photo,
+    })
+    expect(loadGuestDraft()?.reminders[0]).toMatchObject({
+      communityId: '0b6f6a3e-5a7d-4c1e-9f1a-2b3c4d5e6f70',
+      communityPhotoPath: photo,
+      remindBefore: true,
+    })
+    addGuestReminder(loadGuestDraft()!, { text: 'Fake', day: '2999-11-09', hour: null, minute: null, communityPhotoPath: '../x.jpg' })
+    expect(loadGuestDraft()?.reminders[1].communityPhotoPath).toBeUndefined()
+  })
+
   it('keeps a repeat, moves it on when done, and puts it back', () => {
     memoryStorage()
     const today = todayLocalDate()

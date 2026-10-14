@@ -50,6 +50,12 @@ export function reminderAlertText(locale: Locale): { copy: ReminderAlertCopy; la
               time: formatReminderTime(reminder.hour, reminder.minute, locale),
             })
           : translate(locale, 'reminders.alertTomorrow'),
+      weekBefore: (reminder) =>
+        reminder.hour != null && reminder.minute != null
+          ? translate(locale, 'reminders.alertWeekAt', {
+              time: formatReminderTime(reminder.hour, reminder.minute, locale),
+            })
+          : translate(locale, 'reminders.alertWeek'),
     },
     labels: {
       done: translate(locale, 'reminders.done'),
@@ -135,7 +141,7 @@ export async function syncReminderNotifications(
       },
       channelId: CHANNEL_ID,
       actionTypeId:
-        alert.kind === 'before' ? undefined : repeating.has(alert.reminderId) ? REPEAT_ACTION_TYPE : ACTION_TYPE,
+        alert.kind === 'before' || alert.kind === 'week' ? undefined : repeating.has(alert.reminderId) ? REPEAT_ACTION_TYPE : ACTION_TYPE,
       autoCancel: true,
     })),
   })
@@ -145,7 +151,7 @@ export async function syncReminderNotifications(
 /** Asks for notification permission once a saved reminder would alert. Android only. */
 export async function askForReminderAlerts(input: ReminderInput): Promise<void> {
   if (!nativePluginAvailable()) return
-  if (input.hour == null && !input.remindBefore) return
+  if (input.hour == null && !input.remindBefore && !input.remindWeekBefore) return
   try {
     await requestDailyDigestPermission()
   } catch {

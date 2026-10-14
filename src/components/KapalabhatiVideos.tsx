@@ -3,6 +3,7 @@ import {
   KAPALABHATI_CLIPS,
   KAPALABHATI_DEFAULT_SPEED,
   kapalabhatiNeighbours,
+  type KapalabhatiClip,
   type KapalabhatiSpeed,
 } from '../data/kapalbhatiVideos'
 import { useLocale } from '../hooks/useLocale'
@@ -30,10 +31,13 @@ export function KapalabhatiVideos({
   name,
   playing = false,
   paused = false,
+  clips = KAPALABHATI_CLIPS,
 }: {
   name: string
   playing?: boolean
   paused?: boolean
+  /** Three speeds. Kapalabhati's clips are the default; Bhastrika passes its own. */
+  clips?: readonly KapalabhatiClip[]
 }) {
   const { t } = useLocale()
   const [speed, setSpeed] = useState<KapalabhatiSpeed>(KAPALABHATI_DEFAULT_SPEED)
@@ -55,7 +59,7 @@ export function KapalabhatiVideos({
   }, [playing, paused, withTimer])
 
   function pick(next: KapalabhatiSpeed) {
-    for (const clip of KAPALABHATI_CLIPS) {
+    for (const clip of clips) {
       if (clip.speed !== next) videos.current[clip.speed]?.pause()
     }
     setSpeed(next)
@@ -66,7 +70,7 @@ export function KapalabhatiVideos({
   return (
     <figure className="habit-video kapal-videos">
       <div className="kapal-row">
-        {KAPALABHATI_CLIPS.map((clip) => {
+        {clips.map((clip) => {
           const middle = clip.speed === speed
           const order = middle ? 1 : clip.speed === left ? 0 : 2
           const label = t(`video.speed.${clip.speed}`)
@@ -107,6 +111,54 @@ export function KapalabhatiVideos({
       <figcaption className="screen-sub">
         {t('video.follow', { name })} {t('video.speedPick')}
       </figcaption>
+    </figure>
+  )
+}
+
+/** One of our own clips, such as Bhramari or Anulom Vilom. The timer plays and pauses it. */
+export function OwnClipVideo({
+  name,
+  src,
+  poster,
+  playing = false,
+  paused = false,
+}: {
+  name: string
+  src: string
+  poster: string
+  playing?: boolean
+  paused?: boolean
+}) {
+  const { t } = useLocale()
+  const video = useRef<HTMLVideoElement>(null)
+  const wasWithTimer = useRef(false)
+  const withTimer = playing || paused
+
+  useEffect(() => {
+    if (playing) {
+      void startPlaying(video.current)
+    } else if (paused || wasWithTimer.current) {
+      video.current?.pause()
+    }
+    wasWithTimer.current = withTimer
+  }, [playing, paused, withTimer])
+
+  return (
+    <figure className="habit-video breath-clip">
+      <div className="kapal-frame">
+        <video
+          ref={video}
+          className="kapal-video"
+          src={src}
+          poster={poster}
+          controls
+          loop
+          playsInline
+          preload="metadata"
+          aria-label={name}
+        />
+      </div>
+      <figcaption className="screen-sub">{t('video.follow', { name })}</figcaption>
     </figure>
   )
 }

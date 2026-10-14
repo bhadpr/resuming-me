@@ -21,6 +21,8 @@ export function LanguageScreen() {
       <BrandTitle size="lg" />
       <p className="tagline language-screen-tagline" lang="en">
         {translate('en', 'landing.tagline')}
+        {'\n'}
+        {translate('en', 'landing.taglineAccent')}
       </p>
       <p className="language-screen-prompt" lang="en">
         {translate('en', 'language.choose')}

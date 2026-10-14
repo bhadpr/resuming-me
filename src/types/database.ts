@@ -347,6 +347,7 @@ export interface Database {
           hour: number | null
           minute: number | null
           remind_before: boolean
+          remind_week_before: boolean
           kind: string
           every_year: boolean
           repeat_every: string | null
@@ -355,6 +356,8 @@ export interface Database {
           last_done_on: string | null
           done_at: string | null
           shared_event_id: string | null
+          community_id: string | null
+          community_photo_path: string | null
           alert_off: boolean
           created_at: string
           updated_at: string
@@ -369,6 +372,7 @@ export interface Database {
           hour?: number | null
           minute?: number | null
           remind_before?: boolean
+          remind_week_before?: boolean
           kind?: string
           every_year?: boolean
           repeat_every?: string | null
@@ -377,6 +381,8 @@ export interface Database {
           last_done_on?: string | null
           done_at?: string | null
           shared_event_id?: string | null
+          community_id?: string | null
+          community_photo_path?: string | null
           alert_off?: boolean
           created_at?: string
           updated_at?: string
@@ -389,6 +395,7 @@ export interface Database {
           hour?: number | null
           minute?: number | null
           remind_before?: boolean
+          remind_week_before?: boolean
           kind?: string
           every_year?: boolean
           repeat_every?: string | null
@@ -398,6 +405,45 @@ export interface Database {
           done_at?: string | null
           shared_event_id?: string | null
           alert_off?: boolean
+        }
+        Relationships: []
+      }
+      community_reminders: {
+        Row: {
+          id: string
+          titles: Json
+          day: string
+          remind_before: boolean
+          remind_week_before: boolean
+          kind: string
+          photo_path: string | null
+          active: boolean
+          sort_order: number
+          created_at: string
+          updated_at: string
+        }
+        Insert: {
+          id?: string
+          titles: Json
+          day: string
+          remind_before?: boolean
+          remind_week_before?: boolean
+          kind?: string
+          photo_path?: string | null
+          active?: boolean
+          sort_order?: number
+          created_at?: string
+          updated_at?: string
+        }
+        Update: {
+          titles?: Json
+          day?: string
+          remind_before?: boolean
+          remind_week_before?: boolean
+          kind?: string
+          photo_path?: string | null
+          active?: boolean
+          sort_order?: number
         }
         Relationships: []
       }

@@ -1,5 +1,7 @@
 import { useEffect, useState } from 'react'
 import { useNavigate } from 'react-router-dom'
+import { useLocale } from '../hooks/useLocale'
+import { addedCommunityIds, communityReminderInput } from '../lib/communityReminders'
 import { todayLocalDate } from '../lib/dates'
 import {
   addGuestReminder,
@@ -80,6 +82,7 @@ export function GuestReminderEditor({ reminderId, editing = false }: { reminderI
 
 export function GuestReminderList() {
   const navigate = useNavigate()
+  const { locale } = useLocale()
   const [draft, setDraft] = useState<GuestDraft | null>(() => loadGuestDraft())
   useEffect(() => {
     const refresh = () => setDraft(loadGuestDraft())
@@ -100,6 +103,29 @@ export function GuestReminderList() {
         error={null}
         onAdd={() => navigate('/reminders/new')}
         onOpen={(reminder) => navigate(`/reminders/${reminder.id}`)}
+        community={{
+          addedIds: addedCommunityIds(draft.reminders),
+          onAdd: async (item) => {
+            const current = loadGuestDraft()
+            if (!current) return 'ok'
+            const input = communityReminderInput(item, locale)
+            const next = addGuestReminder(current, input)
+            if (!next) return 'full'
+            setDraft(next)
+            track('reminder_added', {
+              has_time: false,
+              day_before: input.remindBefore === true,
+              kind: input.kind ?? 'event',
+              every_year: false,
+              repeat: 'none',
+              signed_in: false,
+              photo: false,
+              community: true,
+            })
+            void askForReminderAlerts(input)
+            return 'ok'
+          },
+        }}
       />
     </>
   )

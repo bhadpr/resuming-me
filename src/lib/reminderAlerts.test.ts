@@ -29,6 +29,7 @@ function reminder(id: string, day: string, extra: Partial<Reminder> = {}): Remin
 const copy: ReminderAlertCopy = {
   now: 'Now',
   dayBefore: (item) => (item.hour == null ? 'Tomorrow' : `Tomorrow ${item.hour}`),
+  weekBefore: (item) => (item.hour == null ? 'In a week' : `In a week ${item.hour}`),
 }
 const evening = { hour: 18, minute: 0 }
 const now = new Date(2026, 9, 6, 10, 0)
@@ -59,6 +60,26 @@ describe('planReminderAlerts', () => {
       at: new Date(2026, 9, 6, 11, 30),
     })
     expect(alerts[1].id).toBe(REMINDER_NOTIFICATION_ID_BASE + 1)
+  })
+
+  it('adds an evening alert a week before when asked, and skips one that has passed', () => {
+    const alerts = planReminderAlerts(
+      [
+        reminder('diwali', '2026-10-20', { remindWeekBefore: true, remindBefore: true }),
+        reminder('timed', '2026-10-14', { hour: 9, minute: 0, remindWeekBefore: true }),
+        reminder('soon', '2026-10-10', { remindWeekBefore: true }),
+      ],
+      [],
+      now,
+      evening,
+      copy,
+    )
+    expect(alerts.map((alert) => [alert.reminderId, alert.kind, alert.at, alert.body])).toEqual([
+      ['timed', 'week', new Date(2026, 9, 7, 18, 0), 'In a week 9'],
+      ['diwali', 'week', new Date(2026, 9, 13, 18, 0), 'In a week'],
+      ['timed', 'time', new Date(2026, 9, 14, 9, 0), 'Now'],
+      ['diwali', 'before', new Date(2026, 9, 19, 18, 0), 'Tomorrow'],
+    ])
   })
 
   it('adds an evening alert the day before when asked', () => {

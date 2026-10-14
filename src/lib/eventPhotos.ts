@@ -6,9 +6,9 @@ const MAX_SIDE = 1280
 const MAX_BYTES = 950_000
 
 /** Redrawing drops the photo's hidden details, such as where it was taken. */
-export async function compressEventPhoto(file: Blob): Promise<Blob> {
+export async function compressEventPhoto(file: Blob, maxSide = MAX_SIDE): Promise<Blob> {
   const bitmap = await createImageBitmap(file)
-  const scale = Math.min(1, MAX_SIDE / Math.max(bitmap.width, bitmap.height))
+  const scale = Math.min(1, maxSide / Math.max(bitmap.width, bitmap.height))
   const canvas = document.createElement('canvas')
   canvas.width = Math.max(1, Math.round(bitmap.width * scale))
   canvas.height = Math.max(1, Math.round(bitmap.height * scale))

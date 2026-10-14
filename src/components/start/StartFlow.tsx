@@ -60,8 +60,10 @@ import { BrandTitle } from '../BrandTitle'
 import { MedicineForm } from '../MedicineForm'
 import { MedicineThumb } from '../MedicineThumb'
 import { Icon } from '../Icon'
+import { CommunityReminderPicker } from '../CommunityReminderPicker'
 import { ReminderEditor } from '../ReminderForm'
 import { ReminderKindMark } from '../ReminderKindIcon'
+import { addedCommunityIds, communityReminderInput } from '../../lib/communityReminders'
 import { askForReminderAlerts } from '../../lib/reminderNotifications'
 import {
   formatReminderDay,
@@ -277,13 +279,14 @@ const WELCOME_PHASES: readonly (readonly StartPickPhase[])[] = [
   ['workout', 'workouts', 'workoutDetail'],
   ['pranayam', 'pranayams', 'pranayamDetail'],
   ...(MEDICINES_ENABLED ? [['ask', 'medicine', 'medicines'] as const] : []),
+  ['reminderCommunity'],
   ['reminderAsk', 'reminder', 'reminders'],
   ['vitals', 'vitalPicks', 'targets', 'activities'],
 ]
 const WELCOME_QUESTIONS = WELCOME_PHASES.length + 2
 
-/** The question after pranayam: medicine where it is offered, otherwise reminders. */
-const AFTER_PRANAYAM: StartPickPhase = MEDICINES_ENABLED ? 'ask' : 'reminderAsk'
+/** The question after pranayam: medicine where it is offered, otherwise the community calendar. */
+const AFTER_PRANAYAM: StartPickPhase = MEDICINES_ENABLED ? 'ask' : 'reminderCommunity'
 
 /** One dot per welcome question. Follow-up screens stay on their question's dot. */
 function welcomeQuestion(draft: GuestDraft): number {
@@ -520,34 +523,7 @@ export function StartFlow({
   }
 
   function acceptPranayam() {
-    if (draft.activities.some((item) => item.templateId === 'anuloma_viloma')) {
-      persist({ ...draft, pickPhase: 'pranayams' })
-      return
-    }
-    const template = ACTIVITY_TEMPLATES.find((item) => item.id === 'anuloma_viloma')
-    if (!template) return
-    const input = activityInputFromTemplate(template, 'tiny')
-    const next = upsertGuestActivity(draft, {
-      localId: newLocalId(),
-      name: input.name,
-      emoji: input.emoji,
-      type: input.type,
-      trackingMode: input.trackingMode,
-      targetValue: input.targetValue,
-      targetUnit: input.targetUnit,
-      weeklyTarget: input.weeklyTarget,
-      deadline: null,
-      templateId: template.id,
-      why: null,
-      usuallyWhen: null,
-    })
-    persist({ ...next, pickPhase: 'pranayams' })
-    track('activity_created', {
-      template_id: catalogTrackId(template.id),
-      type: template.type,
-      tracking: template.trackingMode,
-      signed_in: false,
-    })
+    persist({ ...draft, pickPhase: 'pranayams' })
   }
 
   function declinePranayam() {
@@ -1338,7 +1314,7 @@ export function StartFlow({
               type="button"
               className="btn btn-secondary"
               onClick={() =>
-                persist({ ...draft, pickPhase: 'reminderAsk', medicineDaily: false, medicines: [] })
+                persist({ ...draft, pickPhase: 'reminderCommunity', medicineDaily: false, medicines: [] })
               }
             >
               {t('start.no')}
@@ -1417,7 +1393,7 @@ export function StartFlow({
           <button
             type="button"
             className="btn btn-primary"
-            onClick={() => persist({ ...draft, pickPhase: 'reminderAsk', medicineDaily: true })}
+            onClick={() => persist({ ...draft, pickPhase: 'reminderCommunity', medicineDaily: true })}
           >
             {t('start.continue')}
           </button>
@@ -1425,6 +1401,44 @@ export function StartFlow({
       )}
 
       {draft.step === 1 && !trackName && !adding && draft.pickPhase === 'reminderAsk' && (
+        <>
+          <button
+            type="button"
+            className="btn btn-ghost start-back"
+            onClick={() => persist({ ...draft, pickPhase: 'reminderCommunity' })}
+          >
+            <Icon name="back" />
+            {t('start.back')}
+          </button>
+          <h2 className="screen-heading start-medicine-title">{t('start.reminderAskBody')}</h2>
+          <p className="screen-sub">{t('start.reminderAskLike')}</p>
+          <StartPreview
+            items={REMINDER_PREVIEW.map((kind) => ({
+              id: kind,
+              mark: <ReminderKindMark kind={kind} />,
+              label: kind === 'event' ? t('start.reminderPreviewEvent') : t(`reminders.kinds.${kind}`),
+            }))}
+          />
+          <div className="start-yes-no">
+            <button
+              type="button"
+              className="btn btn-primary"
+              onClick={() => persist({ ...draft, pickPhase: 'reminder' })}
+            >
+              {t('landing.yes')}
+            </button>
+            <button
+              type="button"
+              className="btn btn-secondary"
+              onClick={() => persist({ ...draft, pickPhase: 'vitals' })}
+            >
+              {t('start.no')}
+            </button>
+          </div>
+        </>
+      )}
+
+      {draft.step === 1 && !trackName && !adding && draft.pickPhase === 'reminderCommunity' && (
         <>
           <button
             type="button"
@@ -1443,33 +1457,36 @@ export function StartFlow({
             <Icon name="back" />
             {t('start.back')}
           </button>
-          <h2 className="screen-heading start-medicine-title">{t('start.reminderAskBody')}</h2>
-          <p className="screen-sub">{t('start.reminderAskLike')}</p>
-          <StartPreview
-            items={REMINDER_PREVIEW.map((kind) => ({
-              id: kind,
-              mark: <ReminderKindMark kind={kind} />,
-              label: kind === 'event' ? t('start.reminderPreviewEvent') : t(`reminders.kinds.${kind}`),
-            }))}
+          <h1 className="screen-heading">{t('reminders.community.title')}</h1>
+          <p className="screen-sub">{t('reminders.community.sub')}</p>
+          <CommunityReminderPicker
+            today={today}
+            addedIds={addedCommunityIds(draft.reminders)}
+            onEmpty={() => persist({ ...draft, pickPhase: 'reminderAsk' })}
+            onAdd={async (item) => {
+              const input = communityReminderInput(item, locale)
+              const next = addGuestReminder(draft, input)
+              if (!next) return 'full'
+              track('reminder_added', {
+                has_time: false,
+                day_before: input.remindBefore === true,
+                kind: input.kind ?? 'event',
+                every_year: false,
+                signed_in: false,
+                community: true,
+              })
+              void askForReminderAlerts(input)
+              persist(saveGuestDraft({ ...next, pickPhase: 'reminderCommunity' }))
+              return 'ok'
+            }}
           />
-          <div className="start-yes-no">
-            <button
-              type="button"
-              className="btn btn-primary"
-              onClick={() =>
-                persist({ ...draft, pickPhase: openReminders.length > 0 ? 'reminders' : 'reminder' })
-              }
-            >
-              {t('landing.yes')}
-            </button>
-            <button
-              type="button"
-              className="btn btn-secondary"
-              onClick={() => persist({ ...draft, pickPhase: 'vitals' })}
-            >
-              {t('start.no')}
-            </button>
-          </div>
+          <button
+            type="button"
+            className="btn btn-primary"
+            onClick={() => persist({ ...draft, pickPhase: 'reminderAsk' })}
+          >
+            {t('start.continue')}
+          </button>
         </>
       )}
 
@@ -1585,23 +1602,29 @@ export function StartFlow({
           </button>
           <h1 className="screen-heading">{t('start.pranayamReady')}</h1>
           <p className="screen-sub">{t('start.pranayamSub')}</p>
-          <div className="start-featured">
+          <ul className="community-grid picture-picks">
             {PRANAYAM_IDS.map((id) => {
               const selected = draft.activities.some((item) => item.templateId === id)
+              const name = templateLabel(id, locale)
               return (
-                <button
-                  key={id}
-                  type="button"
-                  className={`start-featured-option${selected ? ' is-selected' : ''}`}
-                  aria-pressed={selected}
-                  onClick={() => toggleTemplate(id)}
-                >
-                  <HabitMark templateId={id} />
-                  <span>{templateLabel(id, locale)}</span>
-                </button>
+                <li key={id} className={`community-card${selected ? ' community-card-added' : ''}`}>
+                  <div className="community-photo-frame">
+                    <HabitMark templateId={id} />
+                  </div>
+                  <span className="community-name">{name}</span>
+                  <button
+                    type="button"
+                    className={`btn btn-sm ${selected ? 'btn-secondary' : 'btn-primary'}`}
+                    aria-pressed={selected}
+                    aria-label={`${selected ? t('reminders.community.added') : t('reminders.community.add')}: ${name}`}
+                    onClick={() => toggleTemplate(id)}
+                  >
+                    {selected ? t('reminders.community.added') : t('reminders.community.add')}
+                  </button>
+                </li>
               )
             })}
-          </div>
+          </ul>
           <button
             type="button"
             className="btn btn-primary"
@@ -1641,23 +1664,29 @@ export function StartFlow({
           </button>
           <h1 className="screen-heading">{t('start.workoutReady')}</h1>
           <p className="screen-sub">{t('start.workoutSub')}</p>
-          <div className="start-featured">
+          <ul className="community-grid picture-picks">
             {WORKOUT_IDS.map((id) => {
               const selected = draft.activities.some((item) => item.templateId === id)
+              const name = templateLabel(id, locale)
               return (
-                <button
-                  key={id}
-                  type="button"
-                  className={`start-featured-option${selected ? ' is-selected' : ''}`}
-                  aria-pressed={selected}
-                  onClick={() => toggleTemplate(id)}
-                >
-                  <HabitMark templateId={id} />
-                  <span>{templateLabel(id, locale)}</span>
-                </button>
+                <li key={id} className={`community-card${selected ? ' community-card-added' : ''}`}>
+                  <div className="community-photo-frame">
+                    <HabitMark templateId={id} />
+                  </div>
+                  <span className="community-name">{name}</span>
+                  <button
+                    type="button"
+                    className={`btn btn-sm ${selected ? 'btn-secondary' : 'btn-primary'}`}
+                    aria-pressed={selected}
+                    aria-label={`${selected ? t('reminders.community.added') : t('reminders.community.add')}: ${name}`}
+                    onClick={() => toggleTemplate(id)}
+                  >
+                    {selected ? t('reminders.community.added') : t('reminders.community.add')}
+                  </button>
+                </li>
               )
             })}
-          </div>
+          </ul>
           <button type="button" className="btn btn-primary" onClick={continueWorkouts}>
             {t('start.continue')}
           </button>
@@ -1702,23 +1731,29 @@ export function StartFlow({
           </button>
           <h1 className="screen-heading">{t('start.vitalsReady')}</h1>
           <p className="screen-sub">{t('start.vitalsSub')}</p>
-          <div className="start-featured">
+          <ul className="community-grid picture-picks">
             {VITAL_IDS.map((id) => {
               const selected = draft.activities.some((item) => item.templateId === id)
+              const name = templateLabel(id, locale)
               return (
-                <button
-                  key={id}
-                  type="button"
-                  className={`start-featured-option${selected ? ' is-selected' : ''}`}
-                  aria-pressed={selected}
-                  onClick={() => toggleTemplate(id)}
-                >
-                  <HabitMark templateId={id} />
-                  <span>{templateLabel(id, locale)}</span>
-                </button>
+                <li key={id} className={`community-card${selected ? ' community-card-added' : ''}`}>
+                  <div className="community-photo-frame">
+                    <HabitMark templateId={id} />
+                  </div>
+                  <span className="community-name">{name}</span>
+                  <button
+                    type="button"
+                    className={`btn btn-sm ${selected ? 'btn-secondary' : 'btn-primary'}`}
+                    aria-pressed={selected}
+                    aria-label={`${selected ? t('reminders.community.added') : t('reminders.community.add')}: ${name}`}
+                    onClick={() => toggleTemplate(id)}
+                  >
+                    {selected ? t('reminders.community.added') : t('reminders.community.add')}
+                  </button>
+                </li>
               )
             })}
-          </div>
+          </ul>
           <button type="button" className="btn btn-primary" onClick={continueVitals}>
             {t('start.continue')}
           </button>

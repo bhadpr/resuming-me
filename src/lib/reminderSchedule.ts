@@ -26,6 +26,8 @@ export interface Reminder {
   minute: number | null
   /** An evening alert on the day before. */
   remindBefore: boolean
+  /** An evening alert a week before. */
+  remindWeekBefore?: boolean
   kind: ReminderKind
   /** Done makes next year's copy. */
   everyYear: boolean
@@ -40,6 +42,10 @@ export interface Reminder {
   doneAt: string | null
   /** Set on the organizer's reminder and on every copy of a shared event. Such a reminder is not edited. */
   sharedEventId?: string | null
+  /** The community reminder this was picked from, so the list can show it as added. */
+  communityId?: string | null
+  /** That community reminder's picture, kept on this reminder after it is picked. */
+  communityPhotoPath?: string | null
   /** The person turned this reminder's alerts off. It still shows on Today. */
   alertOff?: boolean
   /** The shared event's status, learned on load. Missing means active or not known yet. */
@@ -80,6 +86,7 @@ export interface ReminderInput {
   hour: number | null
   minute: number | null
   remindBefore?: boolean
+  remindWeekBefore?: boolean
   kind?: ReminderKind
   everyYear?: boolean
   repeat?: ReminderRepeat | null
@@ -87,6 +94,8 @@ export interface ReminderInput {
   repeatFrom?: string | null
   lastDoneOn?: string | null
   sharedEventId?: string | null
+  communityId?: string | null
+  communityPhotoPath?: string | null
   alertOff?: boolean
 }
 
@@ -116,6 +125,7 @@ export function nextYearCopy(reminder: Reminder): ReminderInput {
     hour: reminder.hour,
     minute: reminder.minute,
     remindBefore: reminder.remindBefore,
+    ...(reminder.remindWeekBefore ? { remindWeekBefore: true } : {}),
     kind: reminder.kind,
     everyYear: true,
   }
@@ -187,6 +197,7 @@ export function reminderPrefillFrom(state: unknown): ReminderInput | undefined {
     hour: timed ? value.hour! : null,
     minute: timed ? value.minute! : null,
     remindBefore: value.remindBefore === true,
+    ...(value.remindWeekBefore === true ? { remindWeekBefore: true } : {}),
     kind: reminderKindOf(value.kind),
   }
 }

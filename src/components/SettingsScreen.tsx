@@ -43,6 +43,7 @@ interface SettingsScreenProps {
   onOpenAnalytics?: () => void
   onOpenFeedback?: () => void
   onOpenSharedEvents?: () => void
+  onOpenCommunity?: () => void
   onOpenGroups?: (groupId?: string) => void
   onOpenThemes?: () => void
   todayItems?: DigestItem[]
@@ -141,6 +142,7 @@ export function SettingsScreen({
   onOpenAnalytics,
   onOpenFeedback,
   onOpenSharedEvents,
+  onOpenCommunity,
   onOpenGroups,
   onOpenThemes,
   todayItems = [],
@@ -723,6 +725,21 @@ export function SettingsScreen({
               <span className="activity-meta">
                 <span className="activity-name">Shared events</span>
                 <span className="activity-desc">Reports, and switching an event off</span>
+              </span>
+              <span className="activity-chevron" aria-hidden>
+                <Icon name="chevron" />
+              </span>
+            </button>
+          )}
+          {onOpenCommunity && (
+            <button
+              type="button"
+              className="theme-option settings-nav-link"
+              onClick={onOpenCommunity}
+            >
+              <span className="activity-meta">
+                <span className="activity-name">Community reminders</span>
+                <span className="activity-desc">Diwali, Christmas and other days people can pick</span>
               </span>
               <span className="activity-chevron" aria-hidden>
                 <Icon name="chevron" />

@@ -26,7 +26,7 @@ export type AppView =
   | { name: 'review'; weekStart: string }
   | { name: 'settings'; page?: 'reminders' }
   | { name: 'themes' }
-  | { name: 'admin'; page: 'analytics' | 'feedback' | 'groups' | 'events'; groupId?: string }
+  | { name: 'admin'; page: 'analytics' | 'feedback' | 'groups' | 'events' | 'community'; groupId?: string }
 
 const APP_ROUTES: Array<{ pattern: string; parse: (params: Record<string, string | undefined>) => AppView }> = [
   { pattern: '/today', parse: () => ({ name: 'today' }) },
@@ -73,6 +73,7 @@ const APP_ROUTES: Array<{ pattern: string; parse: (params: Record<string, string
   { pattern: '/admin/analytics', parse: () => ({ name: 'admin', page: 'analytics' }) },
   { pattern: '/admin/feedback', parse: () => ({ name: 'admin', page: 'feedback' }) },
   { pattern: '/admin/events', parse: () => ({ name: 'admin', page: 'events' }) },
+  { pattern: '/admin/community', parse: () => ({ name: 'admin', page: 'community' }) },
   {
     pattern: '/admin/groups/:groupId',
     parse: (p) => ({ name: 'admin', page: 'groups', groupId: p.groupId }),

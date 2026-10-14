@@ -1,9 +1,9 @@
 import { useEffect, useMemo, useRef } from 'react'
-import { usesKapalabhatiClips } from '../data/kapalbhatiVideos'
+import { singleBreathClip, speedBreathClips } from '../data/breathVideos'
 import { habitVideoFor, habitYoutubeEmbedUrl, youtubeWatchUrl, type HabitVideo } from '../data/habitVideos'
 import { useLocale } from '../hooks/useLocale'
 import { habitVideoCaption } from '../lib/onboardingFlow'
-import { KapalabhatiVideos } from './KapalabhatiVideos'
+import { KapalabhatiVideos, OwnClipVideo } from './KapalabhatiVideos'
 
 function postYoutubeCommand(iframe: HTMLIFrameElement | null, func: 'playVideo' | 'pauseVideo') {
   iframe?.contentWindow?.postMessage(
@@ -76,10 +76,24 @@ export function HabitVideoPlaceholder({
     .filter(Boolean)
     .join(' ')
 
-  // Kapalabhati has its own three clips, one for each speed. They show even where other habits
-  // keep an empty frame, such as while choosing the length.
-  if (usesKapalabhatiClips(templateId, own)) {
-    return <KapalabhatiVideos name={name} playing={playing} paused={paused} />
+  // Our own clips replace the built-in YouTube video, and they show even while choosing a length.
+  // A video the person added themselves still wins.
+  const speeds = own == null ? speedBreathClips(templateId) : null
+  if (speeds) {
+    return <KapalabhatiVideos key={templateId} name={name} clips={speeds} playing={playing} paused={paused} />
+  }
+  const single = own == null ? singleBreathClip(templateId) : null
+  if (single) {
+    return (
+      <OwnClipVideo
+        key={templateId}
+        name={name}
+        src={single.src}
+        poster={single.poster}
+        playing={playing}
+        paused={paused}
+      />
+    )
   }
 
   if (video && !placeholder) {

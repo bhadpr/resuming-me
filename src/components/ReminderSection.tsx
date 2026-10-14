@@ -1,4 +1,5 @@
 import { useState } from 'react'
+import type { CommunityReminder } from '../lib/communityReminders'
 import { useLocale } from '../hooks/useLocale'
 import type { Locale } from '../lib/i18n'
 import {
@@ -11,6 +12,7 @@ import {
 import { reminderPhotoSrc } from '../lib/eventPhotoUrl'
 import { repeatSummary } from '../lib/reminderRepeat'
 import { isShareableReminder } from '../lib/sharedEvents'
+import { CommunityReminderPicker } from './CommunityReminderPicker'
 import { Icon } from './Icon'
 import { ReminderKindMark } from './ReminderKindIcon'
 import { SkipLink, UndoSkipButton } from './TodaySkip'
@@ -162,6 +164,11 @@ interface ReminderListSectionProps {
   onOpen: (reminder: Reminder) => void
   /** Signed in only: guests cannot make shared events. */
   onShare?: (reminder: Reminder) => void
+  /** Days many people keep, such as Diwali. Adding one makes an ordinary reminder. */
+  community?: {
+    addedIds: readonly string[]
+    onAdd: (item: CommunityReminder) => Promise<'ok' | 'full'>
+  }
 }
 
 /** Not yet shared, or shared by this account and still on. Copies from others are not shared on. */
@@ -181,8 +188,10 @@ export function ReminderListSection({
   onAdd,
   onOpen,
   onShare,
+  community,
 }: ReminderListSectionProps) {
   const { locale, t } = useLocale()
+  const [communityOpen, setCommunityOpen] = useState(false)
   const tomorrow = tomorrowOf(today)
   const groups: { key: string; label: string; items: Reminder[] }[] = []
   const todays = dueNow.filter((reminder) => reminder.day >= today)
@@ -211,6 +220,25 @@ export function ReminderListSection({
           {t('list.add')}
         </button>
       </div>
+
+      {community && (
+        <div className="reminder-community-toggle">
+          <button
+            type="button"
+            className="btn btn-secondary btn-compact"
+            aria-expanded={communityOpen}
+            onClick={() => setCommunityOpen((open) => !open)}
+          >
+            {communityOpen ? t('reminders.community.close') : t('reminders.community.open')}
+          </button>
+          {communityOpen && (
+            <>
+              <p className="screen-sub">{t('reminders.community.sub')}</p>
+              <CommunityReminderPicker today={today} addedIds={community.addedIds} onAdd={community.onAdd} />
+            </>
+          )}
+        </div>
+      )}
 
       {error && <p className="error">{error}</p>}
 

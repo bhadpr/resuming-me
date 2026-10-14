@@ -169,6 +169,7 @@ export function useReminders(userId: string | undefined) {
         repeat: saved.repeat ?? 'none',
         signed_in: true,
         photo: saved.photoPath != null,
+        community: input.communityId != null,
       })
       return 'ok'
     } catch (err) {
@@ -186,6 +187,7 @@ export function useReminders(userId: string | undefined) {
       hour: input.hour,
       minute: input.hour == null ? null : input.minute,
       remindBefore: input.remindBefore === true,
+      remindWeekBefore: input.remindWeekBefore === true,
       kind: reminderKindOf(input.kind),
       everyYear: input.everyYear === true && !input.repeat,
       repeat: input.repeat ?? null,

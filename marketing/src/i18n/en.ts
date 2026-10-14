@@ -64,7 +64,7 @@ export const en = {
   idea: {
     title: 'Starting again is the skill.',
     body: 'Most habit apps count how long you kept going. Resuming cares about how often you come back. A missed day isn’t a failure. It’s just a day. Tap Resume, and the minutes you already did are still there.',
-    alt: 'A woman resting on a park bench, and the same woman walking on toward the morning sun.',
+    alt: 'A woman meditating by a sunrise window, with a glass of water, a blood pressure cuff, walking shoes, and a board of dates to remember.',
   },
   habits: {
     kicker: 'Habits',

@@ -257,6 +257,8 @@ The referral system works, but these must be done before anyone is paid on its n
 
 ## Launch-day checklist
 
+The working lists, with the release order and the pay checks, are in [LAUNCH.md](./LAUNCH.md). The short list below is the same shape.
+
 **Before launch day**
 1. Set the referral group numbers and fix P15-15.
 2. Add the privacy-policy and Data safety lines.

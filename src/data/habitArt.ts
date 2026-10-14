@@ -33,12 +33,12 @@ export const HABIT_ART: Record<string, string> = {
   dancing: '/habits/dancing.webp',
 }
 
-/** Full-scene people art for the size step (not the compact tile icons). */
+/** The same illustrations as the workout cards, shown larger while choosing a length. */
 export const HABIT_SIZE_ART: Record<string, string> = {
-  walk: '/habits/scenes/walking.webp',
-  running: '/habits/scenes/running.webp',
-  exercise: '/habits/scenes/strength.webp',
-  stretching: '/habits/scenes/exercises.webp',
+  walk: '/habits/walking.webp',
+  running: '/habits/running.webp',
+  exercise: '/habits/strength.webp',
+  stretching: '/habits/stretching.webp',
 }
 
 const NAME_ALIASES: Record<string, string> = {

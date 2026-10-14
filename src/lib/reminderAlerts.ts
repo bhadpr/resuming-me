@@ -9,7 +9,7 @@ export const REMINDER_SNOOZE_MS = 60 * 60 * 1000
 
 const SNOOZE_STORAGE_KEY = 'resuming-reminder-snoozes'
 
-export type ReminderAlertKind = 'time' | 'before' | 'snooze'
+export type ReminderAlertKind = 'time' | 'before' | 'week' | 'snooze'
 
 export interface ReminderAlert {
   id: number
@@ -30,6 +30,8 @@ export interface ReminderAlertCopy {
   now: string
   /** Body of the evening alert, given the reminder. */
   dayBefore: (reminder: Reminder) => string
+  /** Body of the alert a week ahead, given the reminder. */
+  weekBefore: (reminder: Reminder) => string
 }
 
 function atClock(day: string, hour: number, minute: number): Date {
@@ -68,6 +70,18 @@ export function planReminderAlerts(
       const at = atClock(reminder.day, reminder.hour, reminder.minute)
       if (at > now) {
         alerts.push({ reminderId: reminder.id, kind: 'time', at, title: reminder.text, body: copy.now })
+      }
+    }
+    if (reminder.remindWeekBefore) {
+      const at = atClock(addDays(reminder.day, -7), evening.hour, evening.minute)
+      if (at > now) {
+        alerts.push({
+          reminderId: reminder.id,
+          kind: 'week',
+          at,
+          title: reminder.text,
+          body: copy.weekBefore(reminder),
+        })
       }
     }
     if (reminder.remindBefore) {

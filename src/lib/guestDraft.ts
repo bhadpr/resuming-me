@@ -113,6 +113,7 @@ export type StartPickPhase =
   | 'medicine'
   | 'medicines'
   | 'reminderAsk'
+  | 'reminderCommunity'
   | 'reminder'
   | 'reminders'
   | 'pranayam'
@@ -131,6 +132,7 @@ const PICK_PHASES: readonly StartPickPhase[] = [
   'medicine',
   'medicines',
   'reminderAsk',
+  'reminderCommunity',
   'reminder',
   'reminders',
   'pranayam',
@@ -514,10 +516,13 @@ function normalizeGuestReminders(list: unknown, now = Date.now()): Reminder[] {
       hour: timed ? item.hour! : null,
       minute: timed ? item.minute! : null,
       remindBefore: item.remindBefore === true,
+      ...(item.remindWeekBefore === true ? { remindWeekBefore: true } : {}),
       kind: reminderKindOf(item.kind),
       everyYear: item.everyYear === true,
       doneAt,
       sharedEventId: typeof item.sharedEventId === 'string' ? item.sharedEventId : null,
+      ...(typeof item.communityId === 'string' ? { communityId: item.communityId } : {}),
+      ...(isEventPhotoPath(item.communityPhotoPath) ? { communityPhotoPath: item.communityPhotoPath } : {}),
       ...(item.alertOff === true ? { alertOff: true } : {}),
       ...(item.sharedStatus === 'active' || item.sharedStatus === 'cancelled' || item.sharedStatus === 'switched_off'
         ? { sharedStatus: item.sharedStatus }
@@ -554,6 +559,7 @@ function newGuestReminder(input: ReminderInput): Reminder {
     hour: input.hour,
     minute: input.hour == null ? null : input.minute,
     remindBefore: input.remindBefore === true,
+    ...(input.remindWeekBefore === true ? { remindWeekBefore: true } : {}),
     kind: reminderKindOf(input.kind),
     everyYear: input.everyYear === true && !input.repeat,
     ...(isReminderRepeat(input.repeat) && input.repeatUntil
@@ -566,6 +572,8 @@ function newGuestReminder(input: ReminderInput): Reminder {
       : {}),
     doneAt: null,
     sharedEventId: input.sharedEventId ?? null,
+    ...(input.communityId ? { communityId: input.communityId } : {}),
+    ...(isEventPhotoPath(input.communityPhotoPath) ? { communityPhotoPath: input.communityPhotoPath } : {}),
   }
 }
 

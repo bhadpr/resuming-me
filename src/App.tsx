@@ -304,6 +304,8 @@ export const appRouteObjects = [
               { path: '/settings', element: <RouteSlot /> },
               { path: '/admin/analytics', element: <RouteSlot /> },
               { path: '/admin/feedback', element: <RouteSlot /> },
+              { path: '/admin/events', element: <RouteSlot /> },
+              { path: '/admin/community', element: <RouteSlot /> },
               { path: '/admin/groups', element: <RouteSlot /> },
               { path: '/admin/groups/:groupId', element: <RouteSlot /> },
             ],

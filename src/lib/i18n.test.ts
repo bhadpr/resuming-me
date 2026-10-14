@@ -42,7 +42,8 @@ describe('language.choose', () => {
       "As a first step, let's choose your preferred Language.",
     )
     expect(translate('en', 'language.later')).toBe('You can change this later in Settings.')
-    expect(translate('en', 'landing.tagline')).toBe('Get back to what you put off.')
+    expect(translate('en', 'landing.tagline')).toBe('Missed a day?')
+    expect(translate('en', 'landing.taglineAccent')).toBe('Just resume.')
   })
 
   it('names Marathi and Tamil in their own scripts', () => {

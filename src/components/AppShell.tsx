@@ -56,6 +56,7 @@ import { MedicineEditor } from './MedicineForm'
 import { ReminderEditor } from './ReminderForm'
 import { reminderPrefillFrom, reminderShareRequested } from '../lib/reminderSchedule'
 import { ShareReminder } from './ShareReminder'
+import { addedCommunityIds, communityReminderInput } from '../lib/communityReminders'
 import { askForReminderAlerts } from '../lib/reminderNotifications'
 import { untimedReminderNames } from '../lib/reminderAlerts'
 import { ReminderListSection } from './ReminderSection'
@@ -81,6 +82,9 @@ const AnalyticsScreen = lazy(() =>
 )
 const AdminFeedbackScreen = lazy(() =>
   import('./AdminFeedbackScreen').then((m) => ({ default: m.AdminFeedbackScreen })),
+)
+const AdminCommunityScreen = lazy(() =>
+  import('./AdminCommunityScreen').then((m) => ({ default: m.AdminCommunityScreen })),
 )
 const AdminSharedEventsScreen = lazy(() =>
   import('./AdminSharedEventsScreen').then((m) => ({ default: m.AdminSharedEventsScreen })),
@@ -968,6 +972,10 @@ export function AppShell() {
       trackPageView('/admin/events', 'Shared events')
       return
     }
+    if (adminPage === 'community') {
+      trackPageView('/admin/community', 'Community reminders')
+      return
+    }
     if (themesOpen) {
       trackPageView('/settings/themes', 'Themes')
       return
@@ -1020,7 +1028,9 @@ export function AppShell() {
         ? 'Group numbers · Resuming'
         : adminPage === 'events'
           ? 'Shared events · Resuming'
-          : 'Feedback · Resuming'
+          : adminPage === 'community'
+            ? 'Community reminders · Resuming'
+            : 'Feedback · Resuming'
     : reviewWeekStart
       ? 'This week · Resuming'
     : themesOpen
@@ -1794,6 +1804,8 @@ export function AppShell() {
           <h1 className="app-title">Feedback</h1>
         ) : adminPage === 'events' ? (
           <h1 className="app-title">Shared events</h1>
+        ) : adminPage === 'community' ? (
+          <h1 className="app-title">Community reminders</h1>
         ) : adminPage === 'groups' ? (
           <h1 className="app-title">Group numbers</h1>
         ) : themesOpen ? (
@@ -1840,6 +1852,10 @@ export function AppShell() {
           <Suspense fallback={<ScreenChunkFallback />}>
             <AdminSharedEventsScreen />
           </Suspense>
+        ) : adminPage === 'community' ? (
+          <Suspense fallback={<ScreenChunkFallback />}>
+            <AdminCommunityScreen />
+          </Suspense>
         ) : adminPage === 'groups' ? (
           <Suspense fallback={<ScreenChunkFallback />}>
             <AdminGroupsScreen
@@ -1876,6 +1892,10 @@ export function AppShell() {
                   onOpenSharedEvents={() => {
                     if (!isAdmin) return
                     navigate('/admin/events')
+                  }}
+                  onOpenCommunity={() => {
+                    if (!isAdmin) return
+                    navigate('/admin/community')
                   }}
                   onOpenGroups={(groupId) => {
                     navigate(groupId ? `/admin/groups/${groupId}` : '/admin/groups')
@@ -2042,6 +2062,15 @@ export function AppShell() {
                           }
                         : undefined
                     }
+                    community={{
+                      addedIds: addedCommunityIds(reminderState.reminders),
+                      onAdd: async (item) => {
+                        const input = communityReminderInput(item, locale)
+                        const result = await reminderState.add(input)
+                        if (result === 'ok') void askForReminderAlerts(input)
+                        return result
+                      },
+                    }}
                   />
                 )}
 

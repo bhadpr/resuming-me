@@ -110,7 +110,10 @@ export function LandingPage({
       <div className="landing">
         <div className="landing-card">
           <LandingBrand />
-          <p className="tagline">{t('landing.tagline')}</p>
+          <p className="tagline">
+            {t('landing.tagline')}
+            <span className="tagline-accent">{t('landing.taglineAccent')}</span>
+          </p>
           <div className="notice notice-warning">
             <p>{configError ?? 'Supabase is not configured.'}</p>
           </div>
@@ -124,16 +127,19 @@ export function LandingPage({
     <div className="landing">
       <div className="landing-card">
         <LandingBrand />
-        <p className="tagline">{t('landing.tagline')}</p>
+        <p className="tagline">
+          {t('landing.tagline')}
+          <span className="tagline-accent">{t('landing.taglineAccent')}</span>
+        </p>
         <p className="explainer">{t('landing.explainer')}</p>
 
         <figure className="landing-hero-figure">
           <img
             className="landing-hero-image"
-            src="/landing/hero.png"
-            alt="Sitting with what’s been put off, then walking toward the light again."
-            width={768}
-            height={1024}
+            src="/landing/hero-idea-3d.jpg"
+            alt="A woman meditating by a sunrise window, with a glass of water, a blood pressure cuff, walking shoes, and a board of dates to remember."
+            width={1152}
+            height={864}
             decoding="async"
           />
         </figure>
