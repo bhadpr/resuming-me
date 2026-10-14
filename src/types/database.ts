@@ -806,6 +806,22 @@ export interface Database {
           log_events: number
         }[]
       }
+      onboarding_funnel_summary: {
+        Args: { p_days: number }
+        Returns: Json
+      }
+      guest_journey_summary: {
+        Args: { p_days: number }
+        Returns: Json
+      }
+      reminder_analytics_summary: {
+        Args: { p_days: number }
+        Returns: Json
+      }
+      loop_analytics_summary: {
+        Args: { p_days?: number }
+        Returns: Json
+      }
       marketing_record_open: {
         Args: {
           p_device_key: string

@@ -1,24 +1,6 @@
 import { ANALYTICS_WINDOW_DAYS, type AnalyticsWindow } from './analytics'
+import { asCount, asList, asRecord, fetchAnalyticsSummary } from './adminRpc'
 import { REMINDER_KINDS } from './reminderSchedule'
-import { createSupabaseClient } from './supabase'
-
-export const REMINDER_EVENT_NAMES = [
-  'reminder_added',
-  'reminder_done',
-  'shared_event_created',
-  'shared_event_viewed',
-  'shared_event_added',
-  'shared_event_installed',
-  'shared_event_cancelled',
-  'shared_event_reported',
-] as const
-
-export interface ReminderEventRow {
-  name: string
-  props: unknown
-  anon_id: string | null
-  user_id: string | null
-}
 
 export interface ReminderSummary {
   added: number
@@ -42,77 +24,40 @@ export interface ReminderSummary {
   }
 }
 
-const SHARED_COUNTS: Record<string, keyof ReminderSummary['shared']> = {
-  shared_event_created: 'created',
-  shared_event_viewed: 'opened',
-  shared_event_added: 'added',
-  shared_event_installed: 'installs',
-  shared_event_cancelled: 'cancelled',
-  shared_event_reported: 'reported',
-}
-
-function propsOf(row: ReminderEventRow): Record<string, unknown> {
-  return row.props && typeof row.props === 'object' ? (row.props as Record<string, unknown>) : {}
-}
-
 /** Counts only. Reminder text is never sent with these events. */
-export function summarizeReminderEvents(rows: readonly ReminderEventRow[]): ReminderSummary {
-  const people = new Set<string>()
+export function parseReminderSummary(data: unknown): ReminderSummary {
+  const row = asRecord(data)
+  const shared = asRecord(row.shared)
   const kinds = new Map<string, number>()
-  const summary: ReminderSummary = {
-    added: 0,
-    done: 0,
-    people: 0,
-    withTime: 0,
-    dayBefore: 0,
-    everyYear: 0,
-    signedIn: 0,
-    doneFromNotification: 0,
-    kinds: [],
-    shared: { created: 0, opened: 0, added: 0, installs: 0, cancelled: 0, reported: 0 },
+  for (const entry of asList(row.kinds)) {
+    const kind = REMINDER_KINDS.includes(entry.kind as (typeof REMINDER_KINDS)[number])
+      ? (entry.kind as string)
+      : 'other'
+    kinds.set(kind, (kinds.get(kind) ?? 0) + asCount(entry.count))
   }
-  for (const row of rows) {
-    const sharedKey = SHARED_COUNTS[row.name]
-    if (sharedKey) {
-      summary.shared[sharedKey] += 1
-      continue
-    }
-    const props = propsOf(row)
-    const who = row.user_id ?? row.anon_id
-    if (who) people.add(who)
-    if (row.name === 'reminder_added') {
-      summary.added += 1
-      if (props.has_time === true) summary.withTime += 1
-      if (props.day_before === true) summary.dayBefore += 1
-      if (props.every_year === true) summary.everyYear += 1
-      if (props.signed_in === true) summary.signedIn += 1
-      const kind = REMINDER_KINDS.includes(props.kind as (typeof REMINDER_KINDS)[number])
-        ? (props.kind as string)
-        : 'other'
-      kinds.set(kind, (kinds.get(kind) ?? 0) + 1)
-    } else if (row.name === 'reminder_done') {
-      summary.done += 1
-      if (props.from === 'notification') summary.doneFromNotification += 1
-    }
+  return {
+    added: asCount(row.added),
+    done: asCount(row.done),
+    people: asCount(row.people),
+    withTime: asCount(row.withTime),
+    dayBefore: asCount(row.dayBefore),
+    everyYear: asCount(row.everyYear),
+    signedIn: asCount(row.signedIn),
+    doneFromNotification: asCount(row.doneFromNotification),
+    kinds: [...kinds.entries()]
+      .map(([kind, count]) => ({ kind, count }))
+      .sort((a, b) => b.count - a.count || a.kind.localeCompare(b.kind)),
+    shared: {
+      created: asCount(shared.created),
+      opened: asCount(shared.opened),
+      added: asCount(shared.added),
+      installs: asCount(shared.installs),
+      cancelled: asCount(shared.cancelled),
+      reported: asCount(shared.reported),
+    },
   }
-  summary.people = people.size
-  summary.kinds = [...kinds.entries()]
-    .map(([kind, count]) => ({ kind, count }))
-    .sort((a, b) => b.count - a.count || a.kind.localeCompare(b.kind))
-  return summary
 }
 
-export async function fetchReminderEvents(window: AnalyticsWindow): Promise<ReminderEventRow[]> {
-  const client = createSupabaseClient()
-  const since = new Date()
-  since.setUTCDate(since.getUTCDate() - (ANALYTICS_WINDOW_DAYS[window] - 1))
-  since.setUTCHours(0, 0, 0, 0)
-  const { data, error } = await client
-    .from('events')
-    .select('name, props, anon_id, user_id')
-    .gte('created_at', since.toISOString())
-    .in('name', [...REMINDER_EVENT_NAMES])
-    .limit(8000)
-  if (error) throw error
-  return (data ?? []) as ReminderEventRow[]
+export async function fetchReminderSummary(window: AnalyticsWindow): Promise<ReminderSummary> {
+  return parseReminderSummary(await fetchAnalyticsSummary('reminder_analytics_summary', ANALYTICS_WINDOW_DAYS[window]))
 }

@@ -1,7 +1,5 @@
 import { useEffect, useState } from 'react'
 import {
-  fetchJourneyEvents,
-  fetchOnboardingEvents,
   fetchPageViewsForAnalytics,
   fetchProductAnalytics,
   fetchSignedInEmails,
@@ -14,11 +12,11 @@ import {
   type ProductAnalyticsSummary,
   type SignedInAccount,
 } from '../lib/analytics'
-import { summarizeOnboardingFunnel } from '../lib/onboardingFunnel'
-import { summarizeCreates, summarizeGuestJourney } from '../lib/guestJourney'
+import { fetchOnboardingFunnel, type OnboardingFunnel } from '../lib/onboardingFunnel'
+import { fetchGuestJourney, type CreateCounts, type GuestJourney } from '../lib/guestJourney'
 import { templateLabel } from '../lib/catalogName'
-import { cohortRetention, fetchLoopEvents, summarizeComebackLoop } from '../lib/loopAnalytics'
-import { fetchReminderEvents, summarizeReminderEvents, type ReminderSummary } from '../lib/reminderAnalytics'
+import { fetchLoopAnalytics, type CohortRow, type ComebackLoopSummary } from '../lib/loopAnalytics'
+import { fetchReminderSummary, type ReminderSummary } from '../lib/reminderAnalytics'
 import { fetchSiteEvents, summarizeSiteEvents, type SiteSummary } from '../lib/siteAnalytics'
 
 export function AnalyticsScreen() {
@@ -31,13 +29,13 @@ export function AnalyticsScreen() {
   const [accountsError, setAccountsError] = useState<string | null>(null)
   const [error, setError] = useState<string | null>(null)
   const [productError, setProductError] = useState<string | null>(null)
-  const [funnel, setFunnel] = useState<ReturnType<typeof summarizeOnboardingFunnel> | null>(null)
+  const [funnel, setFunnel] = useState<OnboardingFunnel | null>(null)
   const [funnelError, setFunnelError] = useState<string | null>(null)
-  const [loop, setLoop] = useState<ReturnType<typeof summarizeComebackLoop> | null>(null)
-  const [cohorts, setCohorts] = useState<ReturnType<typeof cohortRetention>>([])
+  const [loop, setLoop] = useState<ComebackLoopSummary | null>(null)
+  const [cohorts, setCohorts] = useState<CohortRow[]>([])
   const [loopError, setLoopError] = useState<string | null>(null)
-  const [journey, setJourney] = useState<ReturnType<typeof summarizeGuestJourney> | null>(null)
-  const [creates, setCreates] = useState<ReturnType<typeof summarizeCreates> | null>(null)
+  const [journey, setJourney] = useState<GuestJourney | null>(null)
+  const [creates, setCreates] = useState<CreateCounts | null>(null)
   const [journeyError, setJourneyError] = useState<string | null>(null)
   const [reminders, setReminders] = useState<ReminderSummary | null>(null)
   const [remindersError, setRemindersError] = useState<string | null>(null)
@@ -69,9 +67,9 @@ export function AnalyticsScreen() {
   useEffect(() => {
     let mounted = true
     setRemindersError(null)
-    fetchReminderEvents(window)
-      .then((rows) => {
-        if (mounted) setReminders(summarizeReminderEvents(rows))
+    fetchReminderSummary(window)
+      .then((summary) => {
+        if (mounted) setReminders(summary)
       })
       .catch((err) => {
         if (!mounted) return
@@ -132,11 +130,11 @@ export function AnalyticsScreen() {
   useEffect(() => {
     let mounted = true
     setJourneyError(null)
-    fetchJourneyEvents(window)
-      .then((rows) => {
+    fetchGuestJourney(window)
+      .then((result) => {
         if (!mounted) return
-        setJourney(summarizeGuestJourney(rows))
-        setCreates(summarizeCreates(rows))
+        setJourney(result.journey)
+        setCreates(result.creates)
       })
       .catch((err) => {
         if (!mounted) return
@@ -152,10 +150,10 @@ export function AnalyticsScreen() {
   useEffect(() => {
     let mounted = true
     setFunnelError(null)
-    fetchOnboardingEvents(window)
-      .then((rows) => {
+    fetchOnboardingFunnel(window)
+      .then((result) => {
         if (!mounted) return
-        setFunnel(summarizeOnboardingFunnel(rows))
+        setFunnel(result)
       })
       .catch((err) => {
         if (!mounted) return
@@ -170,22 +168,11 @@ export function AnalyticsScreen() {
   useEffect(() => {
     let mounted = true
     setLoopError(null)
-    fetchLoopEvents(90)
-      .then((rows) => {
+    fetchLoopAnalytics(90)
+      .then((result) => {
         if (!mounted) return
-        const active = new Set(rows.map((row) => row.userId).filter((id): id is string => Boolean(id))).size
-        setLoop(summarizeComebackLoop(rows, active))
-        setCohorts(
-          cohortRetention({
-            signups: rows
-              .filter((row) => row.name === 'signup_completed' && row.userId)
-              .map((row) => ({ userId: row.userId as string, at: row.createdAt })),
-            showedUp: rows
-              .filter((row) => (row.name === 'log_created' || row.name === 'app_opened') && row.userId)
-              .map((row) => ({ userId: row.userId as string, at: row.createdAt })),
-            asOf: new Date().toISOString().slice(0, 10),
-          }),
-        )
+        setLoop(result.loop)
+        setCohorts(result.cohorts)
       })
       .catch((err) => {
         if (!mounted) return

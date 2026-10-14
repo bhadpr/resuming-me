@@ -1,4 +1,5 @@
 import { ANALYTICS_WINDOW_DAYS, type AnalyticsWindow, type NamedCount } from './analytics'
+import { fetchAllRows } from './pagedFetch'
 import { createSupabaseClient } from './supabase'
 
 /** Written by the marketing site at resuming.app (marketing/src/measure.ts). */
@@ -113,14 +114,15 @@ export async function fetchSiteEvents(window: AnalyticsWindow): Promise<SiteEven
   const since = new Date()
   since.setUTCDate(since.getUTCDate() - (ANALYTICS_WINDOW_DAYS[window] - 1))
   since.setUTCHours(0, 0, 0, 0)
-  const { data, error } = await client
-    .from('events')
-    .select('name, props, anon_id')
-    .eq('platform', 'website')
-    .in('name', [...SITE_EVENT_NAMES])
-    .gte('created_at', since.toISOString())
-    .order('created_at', { ascending: true })
-    .limit(10000)
-  if (error) throw error
-  return (data ?? []) as SiteEventRow[]
+  return fetchAllRows<SiteEventRow>((from, to) =>
+    client
+      .from('events')
+      .select('name, props, anon_id')
+      .eq('platform', 'website')
+      .in('name', [...SITE_EVENT_NAMES])
+      .gte('created_at', since.toISOString())
+      .order('created_at', { ascending: true })
+      .order('id', { ascending: true })
+      .range(from, to),
+  )
 }

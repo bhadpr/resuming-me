@@ -1,7 +1,7 @@
 import { describe, expect, it } from 'vitest'
 import { bindLocale, t } from './i18n'
 import { isCatalogLabel, templateLabel, visibleName } from './catalogName'
-import { summarizeCreates, summarizeGuestJourney } from './guestJourney'
+import { parseGuestJourney } from './guestJourney'
 
 describe('catalog names follow the language', () => {
   it('keeps a custom name and translates a catalog habit', () => {
@@ -34,25 +34,28 @@ describe('catalog names follow the language', () => {
   })
 })
 
-describe('guest journey', () => {
-  it('counts unsigned steps by anonymous id and catalog vs custom creates', () => {
-    const events = [
-      { name: 'landing_viewed', anon_id: 'a' },
-      { name: 'landing_viewed', anon_id: 'a' },
-      { name: 'intent_journey_started', anon_id: 'a' },
-      { name: 'onboarding_started', anon_id: 'a' },
-      { name: 'onboarding_step_completed', anon_id: 'a', props: { step: 1 } },
-      { name: 'log_created', anon_id: 'a', user_id: 'user-a', props: { signed_in: false } },
-      { name: 'log_created', anon_id: 'b', user_id: 'user-b', props: { signed_in: true } },
-      { name: 'signin_shown', anon_id: 'a' },
-      { name: 'signup_completed', anon_id: 'a', user_id: 'user-a' },
-      { name: 'activity_created', anon_id: 'a', props: { template_id: 'walk' } },
-      { name: 'activity_created', anon_id: 'a', props: { template_id: 'custom' } },
-      { name: 'metric_created', anon_id: 'c', props: { template_id: 'weight' } },
-      { name: 'metric_created', anon_id: 'c', props: { template_id: 'custom' } },
-      { name: 'activity_created', anon_id: 'old' },
-    ]
-    expect(summarizeGuestJourney(events)).toEqual({
+describe('parseGuestJourney', () => {
+  it('reads the journey and create totals counted in the database', () => {
+    const result = parseGuestJourney({
+      journey: {
+        landing: 1,
+        intentStarted: 1,
+        setupStarted: 1,
+        habitsPicked: 1,
+        firstLog: 1,
+        signInShown: 1,
+        signups: 1,
+      },
+      creates: {
+        habitsCatalog: 1,
+        habitsCustom: 1,
+        vitalsCatalog: 1,
+        vitalsCustom: 1,
+        topHabits: [{ id: 'walk', count: 1 }],
+        topVitals: [{ id: 'weight', count: 1 }],
+      },
+    })
+    expect(result.journey).toEqual({
       landing: 1,
       intentStarted: 1,
       setupStarted: 1,
@@ -61,14 +64,14 @@ describe('guest journey', () => {
       signInShown: 1,
       signups: 1,
     })
-    expect(summarizeCreates(events)).toMatchObject({
-      habitsCatalog: 1,
-      habitsCustom: 1,
-      vitalsCatalog: 1,
-      vitalsCustom: 1,
-    })
-    expect(summarizeCreates(events).topHabits).toEqual([{ id: 'walk', count: 1 }])
-    expect(summarizeCreates(events).topVitals).toEqual([{ id: 'weight', count: 1 }])
-    expect(t('nav.today')).toBe('Today')
+    expect(result.creates).toMatchObject({ habitsCatalog: 1, habitsCustom: 1, vitalsCatalog: 1, vitalsCustom: 1 })
+    expect(result.creates.topHabits).toEqual([{ id: 'walk', count: 1 }])
+    expect(result.creates.topVitals).toEqual([{ id: 'weight', count: 1 }])
+  })
+
+  it('treats a missing result as zeros', () => {
+    const result = parseGuestJourney(null)
+    expect(result.journey.landing).toBe(0)
+    expect(result.creates.topHabits).toEqual([])
   })
 })
