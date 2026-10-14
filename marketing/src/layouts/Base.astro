@@ -1,15 +1,26 @@
 ---
 import '../styles/site.css'
-import { SITE_URL } from '../site'
+import { APP_URL, BING_SITE_VERIFICATION, GOOGLE_SITE_VERIFICATION, SITE_URL } from '../site'
 import type { Copy } from '../i18n/en'
 
 interface Props {
   copy: Copy
   path: string
+  /** For pages other than the home page. */
+  title?: string
+  description?: string
+  /** Structured data objects, written as JSON-LD. */
+  jsonLd?: object[]
+  /** Keeps the page out of search results, for the 404 page. */
+  noindex?: boolean
 }
 
-const { copy, path } = Astro.props
+const { copy, path, jsonLd = [], noindex = false } = Astro.props
+const title = Astro.props.title ?? copy.meta.title
+const description = Astro.props.description ?? copy.meta.description
 const canonical = new URL(path, SITE_URL).href
+/** "<" is escaped so the data can never close the script tag early. */
+const ld = (data: object) => JSON.stringify(data).replace(/</g, '\\u003c')
 ---
 
 <!doctype html>
@@ -17,9 +28,12 @@ const canonical = new URL(path, SITE_URL).href
   <head>
     <meta charset="utf-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1" />
-    <title>{copy.meta.title}</title>
-    <meta name="description" content={copy.meta.description} />
+    <title>{title}</title>
+    <meta name="description" content={description} />
     <link rel="canonical" href={canonical} />
+    {noindex && <meta name="robots" content="noindex" />}
+    {GOOGLE_SITE_VERIFICATION && <meta name="google-site-verification" content={GOOGLE_SITE_VERIFICATION} />}
+    {BING_SITE_VERIFICATION && <meta name="msvalidate.01" content={BING_SITE_VERIFICATION} />}
     <meta name="theme-color" content="#fff4e8" />
     <link rel="icon" href="/favicon.svg" type="image/svg+xml" />
     <link rel="icon" href="/favicon.ico" sizes="any" />
@@ -28,8 +42,8 @@ const canonical = new URL(path, SITE_URL).href
     <link rel="preload" href="/fonts/sourcesans3-nwpStKy2OAdR1K-IwhWudF-R3w8aZejf5Hc.woff2" as="font" type="font/woff2" crossorigin />
     <meta property="og:type" content="website" />
     <meta property="og:site_name" content="Resuming" />
-    <meta property="og:title" content={copy.meta.title} />
-    <meta property="og:description" content={copy.meta.description} />
+    <meta property="og:title" content={title} />
+    <meta property="og:description" content={description} />
     <meta property="og:url" content={canonical} />
     <meta property="og:image" content={`${SITE_URL}/og.jpg`} />
     <meta property="og:image:type" content="image/jpeg" />
@@ -37,9 +51,25 @@ const canonical = new URL(path, SITE_URL).href
     <meta property="og:image:height" content="630" />
     <meta property="og:image:alt" content={copy.meta.imageAlt} />
     <meta name="twitter:card" content="summary_large_image" />
+    <meta name="twitter:title" content={title} />
+    <meta name="twitter:description" content={description} />
     <meta name="twitter:image" content={`${SITE_URL}/og.jpg`} />
+    {jsonLd.map((data) => <script type="application/ld+json" set:html={ld(data)} />)}
   </head>
   <body>
     <slot />
+    <div class="consent" data-consent-banner role="dialog" aria-labelledby="consent-title" hidden>
+      <div class="consent-text">
+        <p class="consent-title" id="consent-title">{copy.consent.title}</p>
+        <p>{copy.consent.body} <a href={`${APP_URL}/privacy`}>{copy.consent.more}</a></p>
+      </div>
+      <div class="consent-actions">
+        <button type="button" class="btn btn-primary" data-consent-choice="yes">{copy.consent.allow}</button>
+        <button type="button" class="btn btn-primary" data-consent-choice="no">{copy.consent.decline}</button>
+      </div>
+    </div>
+    <script>
+      import '../measure'
+    </script>
   </body>
 </html>

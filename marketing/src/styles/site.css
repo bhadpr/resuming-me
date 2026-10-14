@@ -209,6 +209,41 @@ p {
   box-shadow: 0 8px 22px rgb(10 118 120 / 0.18);
 }
 
+/* Not available yet: dashed and quiet, and it does nothing when pressed. */
+.btn-ios,
+.btn-ios:disabled {
+  border: 1.5px dashed var(--border-strong);
+  background: transparent;
+  color: var(--body);
+  cursor: not-allowed;
+  box-shadow: none;
+}
+
+.btn-ios:hover {
+  transform: none;
+}
+
+.btn-ios svg {
+  width: 1.2rem;
+  height: 1.2rem;
+  flex: none;
+  color: var(--muted);
+}
+
+.btn-ios small {
+  display: block;
+  font-size: 0.7rem;
+  font-weight: 600;
+  letter-spacing: 0.06em;
+  text-transform: uppercase;
+  color: var(--muted);
+}
+
+.btn-ios span {
+  text-align: left;
+  line-height: 1.15;
+}
+
 .btn-primary {
   background: var(--primary);
   color: #fff;
@@ -248,6 +283,37 @@ p {
   margin-top: 0.75rem;
   color: var(--muted);
   font-size: 0.95rem;
+}
+
+/* A phone cannot scan its own screen, so the QR code only shows where there is room for a second device. */
+.qr-card {
+  display: none;
+}
+
+@media (min-width: 900px) and (hover: hover) {
+  .qr-card {
+    display: flex;
+    align-items: center;
+    gap: 0.9rem;
+    max-width: 22rem;
+    margin-top: 1.5rem;
+  }
+
+  .qr-card img {
+    flex: none;
+    width: 88px;
+    height: 88px;
+    padding: 6px;
+    border: 1px solid var(--border);
+    border-radius: 12px;
+    background: #fff;
+  }
+
+  .qr-card p {
+    color: var(--body);
+    font-size: 0.9rem;
+    line-height: 1.35;
+  }
 }
 
 /* Header */
@@ -360,9 +426,33 @@ p {
   color: var(--primary);
 }
 
+.hero .hero-sub {
+  max-width: 30rem;
+  margin: 1.1rem 0 0;
+  color: var(--ink);
+  font-size: clamp(1.2rem, 1rem + 1vw, 1.5rem);
+  font-weight: 600;
+  line-height: 1.3;
+}
+
 .hero .lead {
   max-width: 34rem;
-  margin: 1.5rem 0 2rem;
+  margin: 1rem 0 2rem;
+}
+
+@media (max-width: 599px) {
+  .hero {
+    padding-top: 1.5rem;
+  }
+
+  .hero .lead {
+    margin-bottom: 1.5rem;
+    font-size: 1rem;
+  }
+
+  .eyebrow {
+    margin-bottom: 1rem;
+  }
 }
 
 .hero-visual {
@@ -593,6 +683,7 @@ p {
 /* Feature rows */
 .feature {
   display: grid;
+  grid-template-columns: minmax(0, 1fr);
   gap: 2.5rem;
   align-items: center;
 }
@@ -626,6 +717,28 @@ p {
 
 .feature-shots .phone-sm + .phone-sm {
   margin-top: 3rem;
+}
+
+/* Two phones side by side shrink together on a narrow screen instead of running off it. */
+.feature-shots .phone-sm {
+  flex: 0 1 auto;
+  min-width: 0;
+}
+
+@media (max-width: 599px) {
+  .feature-shots:has(.phone-sm + .phone-sm) {
+    gap: 0.75rem;
+    padding-inline: 0.75rem;
+  }
+
+  .feature-shots .phone-sm:has(+ .phone-sm),
+  .feature-shots .phone-sm + .phone-sm {
+    width: 42vw;
+  }
+
+  .feature-shots .phone-sm + .phone-sm {
+    margin-top: 2rem;
+  }
 }
 
 .feature-text p + p,
@@ -718,7 +831,7 @@ p {
 
 @media (min-width: 900px) {
   .feature {
-    grid-template-columns: 1fr 1fr;
+    grid-template-columns: minmax(0, 1fr) minmax(0, 1fr);
     gap: 4.5rem;
   }
 
@@ -799,8 +912,15 @@ p {
   margin: 0.25rem 0.25rem 1rem;
 }
 
-.today-card-head h3 {
+/* The title inside a sample screen. A styled paragraph, so it is not a heading on the page. */
+.mock-title {
+  margin: 0;
+  color: var(--ink);
+  font-family: var(--font-display);
   font-size: 1.5rem;
+  font-weight: 600;
+  letter-spacing: -0.01em;
+  line-height: 1.12;
 }
 
 .today-card-head span {
@@ -945,9 +1065,6 @@ p {
   margin: 0.25rem 0.25rem 1rem;
 }
 
-.mock-head h3 {
-  font-size: 1.5rem;
-}
 
 .segmented {
   display: inline-flex;
@@ -1423,8 +1540,79 @@ p {
   text-decoration: none;
 }
 
-.footer-links a:hover {
+.footer-links a:hover,
+.footer-links .link-btn:hover {
   color: var(--primary);
+}
+
+.link-btn {
+  padding: 0;
+  border: 0;
+  background: none;
+  color: var(--body);
+  font: inherit;
+  font-weight: 600;
+  cursor: pointer;
+}
+
+.link-btn[hidden] {
+  display: none;
+}
+
+/* Visit-counting question, shown only to visitors in regions that require asking */
+.consent {
+  position: fixed;
+  inset: auto 1rem 1rem 1rem;
+  z-index: 50;
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 0.9rem 1.5rem;
+  max-width: 52rem;
+  margin: 0 auto;
+  padding: 1rem 1.25rem;
+  border: 1px solid var(--border-strong);
+  border-radius: 1rem;
+  background: var(--surface);
+  box-shadow: 0 12px 32px rgba(26, 37, 40, 0.18);
+}
+
+.consent[hidden] {
+  display: none;
+}
+
+.consent-text {
+  flex: 1 1 22rem;
+  font-size: 0.92rem;
+  line-height: 1.5;
+  color: var(--body);
+}
+
+.consent-text p {
+  margin: 0;
+}
+
+.consent-text .consent-title {
+  margin-bottom: 0.2rem;
+  font-weight: 700;
+  color: var(--ink);
+}
+
+.consent-text a {
+  color: var(--primary);
+  font-weight: 600;
+}
+
+.consent-actions {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.6rem;
+}
+
+.consent-actions .btn {
+  min-height: 2.75rem;
+  padding: 0.55rem 1.1rem;
+  font-size: 0.95rem;
 }
 
 /* Not found */
@@ -1453,4 +1641,27 @@ p {
     animation: none !important;
     transition: none !important;
   }
+}
+
+.about-wrap {
+  max-width: 44rem;
+  padding-block: 3rem 4rem;
+}
+
+.about h1 {
+  font-size: clamp(2.2rem, 1.5rem + 3vw, 3.2rem);
+  margin-bottom: 1rem;
+}
+
+.about section {
+  margin-top: 2rem;
+}
+
+.about h2 {
+  font-size: 1.5rem;
+  margin-bottom: 0.5rem;
+}
+
+.about section p + p {
+  margin-top: 0.75rem;
 }

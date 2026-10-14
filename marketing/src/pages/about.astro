@@ -1,0 +1,65 @@
+---
+import Base from '../layouts/Base.astro'
+import Footer from '../components/Footer.astro'
+import { en } from '../i18n/en'
+import { APP_URL, CONTACT_EMAIL, PLAY_LIVE, SITE_URL } from '../site'
+import { organization } from '../structuredData'
+
+const about = en.about
+const aboutPage = {
+  '@context': 'https://schema.org',
+  '@type': 'AboutPage',
+  name: about.title,
+  url: `${SITE_URL}/about/`,
+  description: about.metaDescription,
+  about: { '@id': `${SITE_URL}/#organization` },
+}
+---
+
+<Base
+  copy={en}
+  path="/about/"
+  title={about.metaTitle}
+  description={about.metaDescription}
+  jsonLd={[organization(), aboutPage]}
+>
+  <header class="site-header">
+    <div class="wrap">
+      <a class="brand" href="/" aria-label="Resuming">
+        <img src="/logo.svg" alt="" width="34" height="34" />
+        Resuming
+      </a>
+      <a class="btn btn-play header-cta" href="/">{about.links.home}</a>
+    </div>
+  </header>
+
+  <main id="main" class="about">
+    <div class="wrap about-wrap">
+      <h1>{about.title}</h1>
+      <p class="lead">{about.lead}</p>
+
+      {about.sections.map((section) => (
+        <section>
+          <h2>{section.title}</h2>
+          <p>{section.body}</p>
+        </section>
+      ))}
+
+      <section>
+        <h2>{about.where.title}</h2>
+        <p>{PLAY_LIVE ? about.where.body : about.where.bodySoon}</p>
+      </section>
+
+      <section>
+        <h2>{about.contact.title}</h2>
+        <p>{about.contact.body} <a href={`mailto:${CONTACT_EMAIL}`}>{CONTACT_EMAIL}</a></p>
+        <p>
+          <a href={`${APP_URL}/privacy`}>{about.links.privacy}</a> ·
+          <a href={`${APP_URL}/terms`}>{about.links.terms}</a>
+        </p>
+      </section>
+    </div>
+  </main>
+
+  <Footer copy={en} />
+</Base>

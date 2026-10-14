@@ -2,8 +2,9 @@
 import Base from '../layouts/Base.astro'
 import Home from '../components/Home.astro'
 import { en } from '../i18n/en'
+import { homeStructuredData } from '../structuredData'
 ---
 
-<Base copy={en} path="/">
+<Base copy={en} path="/" jsonLd={homeStructuredData(en)}>
   <Home copy={en} />
 </Base>

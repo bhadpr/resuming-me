@@ -1,9 +1,10 @@
 ---
 import Icon from './Icons.astro'
+import Footer from './Footer.astro'
 import TryToday from './TryToday.astro'
 import InsightsMock from './InsightsMock.astro'
 import StepsMock from './StepsMock.astro'
-import { APP_URL, CONTACT_EMAIL, HERO_SCENES, LANGUAGES, PLAY_LIVE, WEB_APP_URL, playUrl } from '../site'
+import { APP_URL, HERO_SCENES, LANGUAGES, PLAY_LIVE, WEB_APP_URL, playUrl } from '../site'
 import type { Copy } from '../i18n/en'
 
 interface Props {
@@ -29,8 +30,8 @@ const stepArt = ['walking', 'water']
       <a href="#how">{copy.nav.how}</a>
       <a href="#habits">{copy.nav.habits}</a>
       <a href="#reminders">{copy.nav.reminders}</a>
-      <a href="#progress">{copy.nav.progress}</a>
       <a href="#health">{copy.nav.health}</a>
+      <a href="#progress">{copy.nav.progress}</a>
       <a href="#faq">{copy.nav.faq}</a>
     </nav>
     {PLAY_LIVE ? (
@@ -53,6 +54,7 @@ const stepArt = ['walking', 'water']
           {copy.hero.title}
           <span class="accent">{copy.hero.titleAccent}</span>
         </h1>
+        <p class="hero-sub">{copy.hero.sub}</p>
         <p class="lead">{copy.hero.lead}</p>
         <div class="cta-row">
           {PLAY_LIVE ? (
@@ -62,6 +64,10 @@ const stepArt = ['walking', 'water']
                 <span><small>{copy.cta.playOn}</small>{copy.cta.playSmall}</span>
               </a>
               <a class="btn btn-web" href={WEB_APP_URL}>{copy.cta.web}</a>
+              <button type="button" class="btn btn-ios" disabled>
+                <Icon name="phone" />
+                <span><small>{copy.cta.iosSmall}</small>{copy.cta.iosMain}</span>
+              </button>
             </>
           ) : (
             <>
@@ -71,6 +77,12 @@ const stepArt = ['walking', 'water']
           )}
         </div>
         <p class="cta-note">{copy.cta.webNote}</p>
+        {PLAY_LIVE && (
+          <div class="qr-card">
+            <img src="/qr-play.svg" alt={copy.cta.scanAlt} width="88" height="88" loading="lazy" />
+            <p>{copy.cta.scan}</p>
+          </div>
+        )}
       </div>
 
       <div class="hero-visual">
@@ -82,7 +94,7 @@ const stepArt = ['walking', 'water']
             data-hero-video
             data-scenes={HERO_SCENES.join(',')}
             src={`/media/hero-${lang}.mp4`}
-            poster={`/media/hero-${lang}.webp`}
+            poster={`/media/today-${lang}.webp`}
             width="576"
             height="1024"
             muted
@@ -156,38 +168,55 @@ const stepArt = ['walking', 'water']
     <div class="wrap feature flip">
       <div class="feature-shots">
         <div class="phone phone-sm"><img src={`/media/reminder-${lang}.webp`} alt={copy.reminders.shotAlt} width="576" height="1024" loading="lazy" /></div>
-        <div class="phone phone-sm"><img src={`/media/shared-${lang}.webp`} alt={copy.reminders.sharedAlt} width="576" height="1024" loading="lazy" /></div>
       </div>
       <div class="feature-text">
         <span class="kicker">{copy.reminders.kicker}</span>
         <h2>{copy.reminders.title}</h2>
         <p class="lead" style="margin-top: 1rem">{copy.reminders.body}</p>
-        <div class="subfeature">
-          <h3><Icon name="whatsapp" />{copy.reminders.shareTitle}</h3>
-          <p>{copy.reminders.shareBody}</p>
-        </div>
-      </div>
-    </div>
-  </section>
-
-  <section class="section" id="progress">
-    <div class="wrap feature">
-      <div class="feature-shots mint">
-        <InsightsMock copy={copy.progress.mock} lang={lang} />
-      </div>
-      <div class="feature-text">
-        <span class="kicker">{copy.progress.kicker}</span>
-        <h2>{copy.progress.title}</h2>
-        <p class="lead" style="margin-top: 1rem">{copy.progress.body}</p>
         <ul class="points">
-          {copy.progress.points.map((point) => <li>{point}</li>)}
+          {copy.reminders.points.map((point) => <li>{point}</li>)}
         </ul>
       </div>
     </div>
   </section>
 
-  <section class="section" id="steps">
+  <section class="section" id="community">
+    <div class="wrap feature">
+      <div class="feature-shots">
+        <div class="phone phone-sm"><img src={`/media/shared-${lang}.webp`} alt={copy.community.sharedAlt} width="576" height="1024" loading="lazy" /></div>
+        <div class="phone phone-sm"><img src={`/media/shared-mall-${lang}.webp`} alt={copy.community.sharedMallAlt} width="576" height="1024" loading="lazy" /></div>
+      </div>
+      <div class="feature-text">
+        <span class="kicker">{copy.community.kicker}</span>
+        <h2>{copy.community.title}</h2>
+        <p class="lead" style="margin-top: 1rem">{copy.community.body}</p>
+        <div class="subfeature">
+          <h3><Icon name="whatsapp" />{copy.community.shareTitle}</h3>
+          <p>{copy.community.shareBody}</p>
+        </div>
+        <ul class="points">
+          {copy.community.points.map((point) => <li>{point}</li>)}
+        </ul>
+      </div>
+    </div>
+  </section>
+
+  <section class="section" id="health">
     <div class="wrap feature flip">
+      <div class="feature-shots lilac">
+        <div class="phone phone-sm"><img src={`/media/bp-${lang}.webp`} alt={copy.health.shotAlt} width="576" height="1024" loading="lazy" /></div>
+      </div>
+      <div class="feature-text">
+        <span class="kicker">{copy.health.kicker}</span>
+        <h2>{copy.health.title}</h2>
+        <p class="lead" style="margin-top: 1rem">{copy.health.body}</p>
+        <p class="fine">{copy.health.note}</p>
+      </div>
+    </div>
+  </section>
+
+  <section class="section" id="steps">
+    <div class="wrap feature">
       <div class="feature-shots sky">
         <StepsMock copy={copy.steps.mock} lang={lang} />
       </div>
@@ -203,16 +232,18 @@ const stepArt = ['walking', 'water']
     </div>
   </section>
 
-  <section class="section" id="health">
-    <div class="wrap feature">
-      <div class="feature-shots lilac">
-        <div class="phone phone-sm"><img src={`/media/bp-${lang}.webp`} alt={copy.health.shotAlt} width="576" height="1024" loading="lazy" /></div>
+  <section class="section" id="progress">
+    <div class="wrap feature flip">
+      <div class="feature-shots mint">
+        <InsightsMock copy={copy.progress.mock} lang={lang} />
       </div>
       <div class="feature-text">
-        <span class="kicker">{copy.health.kicker}</span>
-        <h2>{copy.health.title}</h2>
-        <p class="lead" style="margin-top: 1rem">{copy.health.body}</p>
-        <p class="fine">{copy.health.note}</p>
+        <span class="kicker">{copy.progress.kicker}</span>
+        <h2>{copy.progress.title}</h2>
+        <p class="lead" style="margin-top: 1rem">{copy.progress.body}</p>
+        <ul class="points">
+          {copy.progress.points.map((point) => <li>{point}</li>)}
+        </ul>
       </div>
     </div>
   </section>
@@ -293,6 +324,10 @@ const stepArt = ['walking', 'water']
                 <span><small>{copy.cta.playOn}</small>{copy.cta.playSmall}</span>
               </a>
               <a class="btn btn-web" href={WEB_APP_URL}>{copy.cta.web}</a>
+              <button type="button" class="btn btn-ios" disabled>
+                <Icon name="phone" />
+                <span><small>{copy.cta.iosSmall}</small>{copy.cta.iosMain}</span>
+              </button>
             </>
           ) : (
             <>
@@ -306,23 +341,7 @@ const stepArt = ['walking', 'water']
   </section>
 </main>
 
-<footer class="site-footer">
-  <div class="wrap">
-    <div class="footer-top">
-      <a class="brand" href="/" aria-label="Resuming">
-        <img src="/logo.svg" alt="" width="34" height="34" />
-        Resuming
-      </a>
-      <nav class="footer-links" aria-label="Legal">
-        <a href={`${APP_URL}/privacy`}>{copy.footer.privacy}</a>
-        <a href={`${APP_URL}/terms`}>{copy.footer.terms}</a>
-        <a href={`mailto:${CONTACT_EMAIL}`}>{copy.footer.contact}</a>
-      </nav>
-    </div>
-    <p>{copy.footer.disclaimer}</p>
-    <p>© 2026 {copy.footer.company}</p>
-  </div>
-</footer>
+<Footer copy={copy} />
 
 <script>
   const video = document.querySelector<HTMLVideoElement>('[data-hero-video]')

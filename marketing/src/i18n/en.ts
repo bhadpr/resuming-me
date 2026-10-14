@@ -3,7 +3,7 @@ export const en = {
   lang: 'en',
   dir: 'ltr',
   meta: {
-    title: 'Resuming: Habits, Health & Reminders. Missed a day? Just resume.',
+    title: 'Resuming: Free Habit, Health & Reminder App for Everyone',
     description:
       'Habits like walking, water and Pranayam. Your BP, weight and steps. Reminders for bills, doctor visits and weddings. Free, no ads, in 7 languages.',
     imageAlt: 'Resuming. Missed a day? Just resume. Habits, Health and Reminders, beside a painting of a woman walking toward the morning sun.',
@@ -25,11 +25,16 @@ export const en = {
     webNote: 'No account needed to try.',
     open: 'Open the app',
     playSoon: 'Coming soon to Google Play',
+    iosSmall: 'In progress',
+    iosMain: 'Get it on iPhone',
+    scan: 'On a computer? Scan to open Google Play on your Android phone.',
+    scanAlt: 'QR code that opens Resuming on Google Play',
   },
   hero: {
-    eyebrow: 'Free · No ads · In your language',
+    eyebrow: 'No ads · 7 languages · Works in your browser',
     title: 'Missed a day?',
     titleAccent: 'Just resume.',
+    sub: 'A free daily app to track your habits, health and reminders.',
     lead: 'One gentle list for your day: a short walk, water, Pranayam, your BP, and the family’s bills, doctor visits and weddings. When life gets busy, pick up where you left off. No guilt, no broken streaks.',
     videoLabel: 'The Resuming app: ticking off water, a Kapalabhati timer, resuming a walk, and a wedding reminder with its invitation card.',
     captions: [
@@ -124,20 +129,36 @@ export const en = {
     },
   },
   reminders: {
-    kicker: 'Reminders',
-    title: 'The family’s dates, in one place',
-    body: 'Bills, doctor visits, birthdays, festivals and weddings wait on Today until they’re done. Add a photo of the invitation card, so the venue and time are right there.',
-    shareTitle: 'Share an event on WhatsApp',
-    shareBody: 'Send a wedding or a puja to the family group. They open the link and add it to their own reminders in one tap, photo and all. If it’s cancelled, everyone who added it sees that.',
-    shotAlt: 'A reminder for Riya’s wedding showing the invitation card, the date, and the venue.',
-    sharedAlt: 'The page family members see when they open a shared wedding link, with an Add button.',
+    kicker: 'Personal reminders',
+    title: 'Your own dates, waiting on Today',
+    body: 'Bills, doctor visits, birthdays and festivals wait on Today until they’re done. Add a photo, such as an invitation card, so the venue and time are right there.',
+    points: [
+      'Only you can see them',
+      'An optional time, and a day-before alert on Android',
+      'Repeat every year for birthdays and festivals',
+    ],
+    shotAlt: 'The Reminders screen with a dental visit today at 4:30 pm and a Tatkal ticket to book tomorrow at 10:00 am.',
+  },
+  community: {
+    kicker: 'Families and communities',
+    title: 'Share dates with everyone who is invited',
+    body: 'Planning a wedding, a puja or a get-together? Send it to the family or community group, photo and all. Everyone who opens the link adds it to their own reminders in one tap.',
+    shareTitle: 'Share on WhatsApp',
+    shareBody: 'Tap Share on WhatsApp, pick the group, and send. Each person gets their own copy on Today.',
+    points: [
+      'One link for the whole group',
+      'If it’s cancelled, everyone who added it sees that',
+      'Only the “From” line you type is shown, never your email or phone number',
+    ],
+    sharedAlt: 'The page family members see when they open a shared wedding link, with the invitation card.',
+    sharedMallAlt: 'The page friends see when they open a shared link to meet at Inorbit Mall, with an illustration of friends having coffee and an add button.',
   },
   health: {
     kicker: 'Health',
     title: 'Your BP and weight, week by week',
     body: 'Log blood pressure, weight, heart rate and sleep in a few seconds, and see how they change over the weeks.',
     note: 'Resuming is a wellness and habit app. It does not give medical advice.',
-    shotAlt: 'Logging a blood pressure reading of 126 over 82 on the Today screen.',
+    shotAlt: 'The Today screen with a weight of 71.7 kg and a blood pressure reading of 126 over 82 being logged.',
   },
   languages: {
     title: 'In your language',
@@ -152,8 +173,8 @@ export const en = {
     glassButton: '1 glass',
     ofGlasses: '{value} of {target} glasses',
     glasses: '{target} glasses',
-    prayer: 'Prayer',
-    prayerMeta: '2 min',
+    meditation: 'Meditation',
+    meditationMeta: '10 min',
     reading: 'Reading',
     readingMeta: 'Quiet yesterday',
     bill: 'Pay electricity bill',
@@ -209,17 +230,62 @@ export const en = {
     title: 'Start with one small thing today.',
     body: 'A walk, a glass of water, five minutes of breathing. Resuming will be there when you come back.',
   },
+  about: {
+    metaTitle: 'About Resuming, a free habit, health and reminder app · Cheerful Games, Inc.',
+    metaDescription:
+      'Resuming is a free habit, health and reminder app made by Cheerful Games, Inc. No ads, no selling your data, in 7 languages. Contact and links.',
+    title: 'About Resuming',
+    lead: 'Resuming is a free habit, health and reminder app. It keeps a day’s small habits, health numbers like blood pressure, weight and steps, and the family’s dates in one list called Today.',
+    sections: [
+      {
+        title: 'The idea',
+        body: 'Most habit apps count how long you kept going. Resuming cares about how often you come back. A missed day isn’t a failure. After a quiet stretch, Resuming offers a smaller step to start again, and the days you did show up still count.',
+      },
+      {
+        title: 'Who makes it',
+        body: 'Resuming is made by Cheerful Games, Inc. It is free, it has no ads, and we don’t sell your data.',
+      },
+      {
+        title: 'Languages',
+        body: 'Every screen is in English, Hindi, Gujarati, Marathi, Telugu, Tamil and Bengali. Names you type stay exactly as you wrote them.',
+      },
+      {
+        title: 'Not medical advice',
+        body: 'Resuming is a wellness and habit app. It is not a medical device and does not give medical advice. Talk to your doctor about your health.',
+      },
+    ],
+    where: {
+      title: 'Where you can use it',
+      body: 'In any browser at resuming.me, on a phone or a computer, with no account needed to try. Google Play has the Android app for Android 7.0 or newer.',
+      bodySoon:
+        'In any browser at resuming.me, on a phone or a computer, with no account needed to try. The Android app, for Android 7.0 or newer, is coming soon to Google Play.',
+    },
+    contact: {
+      title: 'Contact',
+      body: 'Questions, feedback and privacy requests:',
+    },
+    links: { privacy: 'Privacy policy', terms: 'Terms', home: 'Back to Resuming' },
+  },
   notFound: {
     title: 'This page isn’t here.',
     body: 'The link may be old or mistyped. Everything else is on the home page.',
     home: 'Go to the home page',
   },
   footer: {
+    about: 'About',
     privacy: 'Privacy',
     terms: 'Terms',
     contact: 'Contact',
     disclaimer: 'Resuming is a wellness and habit app. It is not a medical device and does not give medical advice.',
     company: 'Cheerful Games, Inc.',
+    analyticsChoice: 'Visit counting',
+  },
+  consent: {
+    title: 'Count your visit?',
+    body: 'We would like to count visits and button taps on this site, to see what helps people. This keeps a random ID in your browser. No ads, no selling, nothing shared with anyone else.',
+    allow: 'Yes, count my visit',
+    decline: 'No thanks',
+    more: 'How we use it',
   },
 }
 
