@@ -49,6 +49,21 @@ describe('sitePageFromPath', () => {
     expect(published).toContain('Washington My Health My Data Act')
   })
 
+  it('tells people about website analytics on every copy of the privacy policy', () => {
+    for (const file of ['public/privacy.html', 'public/privacy/index.html']) {
+      const html = readFileSync(file, 'utf8')
+      expect(html).toContain('Website visits (resuming.app)')
+      expect(html).toContain('random visitor id')
+      expect(html).toContain('Global Privacy')
+      expect(html).toContain('On resuming.app only')
+      expect(html).toContain('we ask first')
+      expect(html).toContain('deleted automatically after 13 months')
+      expect(html).toContain('hashed')
+      expect(html).toContain('can remain in our backups for')
+      expect(html).not.toContain('ordinary backup cycle')
+    }
+  })
+
   it('ships the full terms at the public terms URL', () => {
     const html = readFileSync('public/terms/index.html', 'utf8')
     expect(html).toContain('Terms')

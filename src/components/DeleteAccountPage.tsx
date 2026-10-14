@@ -63,10 +63,10 @@ export function DeleteAccountPage({ onBack }: DeleteAccountPageProps) {
         <h3>What we keep</h3>
         <p>
           Deleted habits and deleted accounts are removed from {PRODUCT_NAME}. We do not
-          keep a separate copy in the app. Encrypted backups may still hold that data
-          until those backups expire in the ordinary backup cycle. We may also keep a
-          limited record when the law or security requires it. Anonymous usage counts
-          that are not tied to your account can remain.
+          keep a separate copy in the app. Encrypted backups can still hold that data
+          for up to 7 days. We may also keep a limited record when the law or security
+          requires it. Your usage events are deleted with your account. Totals that are
+          not tied to you, such as referral install counts, can remain.
         </p>
 
         <h3>Need help?</h3>

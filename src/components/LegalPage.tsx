@@ -180,6 +180,21 @@ function PrivacyContent() {
           we do not send them to third-party analytics vendors.
         </li>
         <li>
+          <strong>Website visits (resuming.app).</strong> On our website we count visits
+          and button taps with first-party events: when a page is viewed (its language,
+          whether you are on a phone or a computer, the website you came from, and any
+          campaign tag in the link you used), and when you tap a Google Play button or a
+          “Try it in your browser” button. A random visitor id, stored in your browser
+          and not linked to an account, ties these together. We do not save your IP
+          address or the full address of the page you came from with these events, and we
+          do not record them when your browser sends Do Not Track or Global Privacy
+          Control. They stay on our first-party infrastructure and are not sent to
+          third-party analytics vendors. If you visit from the European Union, the
+          United Kingdom, Switzerland, Norway, Iceland or Liechtenstein, we ask first
+          and count nothing until you say yes; you can change your answer at any time
+          with the “Visit counting” link in the website footer.
+        </li>
+        <li>
           <strong>Local device storage.</strong> On your device we may store session
           credentials, theme preference, onboarding state, daily reminder preference,
           active timer state, and offline sync queues so the app works reliably between
@@ -219,8 +234,8 @@ function PrivacyContent() {
         marks, and bottle photos are health information. We store them when you are
         signed in and you add them, so the Service can show your log and your reminders.
         We do not sell this information. We do not use it for advertising. Deleting the
-        item, or deleting your account, removes it from our active systems, subject to
-        ordinary backup cycles.
+        item, or deleting your account, removes it from our active systems. Deleted data can remain in our backups for
+        up to 7 days.
       </p>
       <p>
         This Service is a personal log. It is not a clinic, a medical record under the
@@ -268,8 +283,9 @@ function PrivacyContent() {
       <h3>Cookies &amp; local storage</h3>
       <p>
         {PRODUCT_NAME} does not use advertising cookies or third-party marketing
-        trackers. We (and our infrastructure providers) use essential browser storage
-        and similar technologies so the Service functions, including:
+        trackers. We (and our infrastructure providers) use browser storage and similar
+        technologies so the Service functions, and to count visits to our website,
+        including:
       </p>
       <ul>
         <li>Authentication / session storage so you stay signed in</li>
@@ -283,13 +299,19 @@ function PrivacyContent() {
           A service worker / progressive web app cache that stores app assets for faster
           loading and offline resilience
         </li>
+        <li>
+          On resuming.app only: a random visitor id in your browser’s local storage (not a
+          cookie), used to count visits and button taps. The website works without it,
+          and in the regions above it is only saved after you agree
+        </li>
       </ul>
       <p>
-        These technologies are necessary for core functionality. You can clear site data
-        in your browser or sign out to remove session credentials; doing so may sign you
-        out or reset local preferences. If we later introduce analytics or other
-        non-essential cookies, we will update this Policy and, where required by law,
-        request your consent before using them.
+        Apart from the website visitor id, these technologies are necessary for core
+        functionality. You can clear site data in your browser or sign out to remove
+        session credentials and the visitor id; doing so may sign you out or reset local
+        preferences. If we later introduce other analytics or non-essential cookies, we
+        will update this Policy and, where required by law, request your consent before
+        using them.
       </p>
 
       <h3>Retention</h3>
@@ -298,9 +320,19 @@ function PrivacyContent() {
         as needed to provide the Service. Feedback may be retained longer as needed to
         improve the product and handle support. We may retain limited records where
         required for legal, security, or operational purposes. When you delete content in
-        the app, we remove it from active systems subject to ordinary backup cycles.
+        the app, we remove it from active systems. Deleted data can remain in our backups for up
+        to 7 days.
         Deleting a medicine removes its bottle photo. Deleting your account removes
         those photos with the rest of your account data.
+      </p>
+      <p>
+        Usage data is kept for a limited time. Anonymous usage events, website visit
+        counts and page views are deleted automatically after 13 months. When you
+        delete your account, we also delete your usage events, including those your
+        device sent before you signed in. Referral install records hold only a hashed
+        device ID and a referral group, and are not linked to an account. After 13
+        months the device ID in them is replaced with a random value, and only totals
+        are kept.
       </p>
 
       <h3>Security</h3>

@@ -19,6 +19,7 @@ import { summarizeCreates, summarizeGuestJourney } from '../lib/guestJourney'
 import { templateLabel } from '../lib/catalogName'
 import { cohortRetention, fetchLoopEvents, summarizeComebackLoop } from '../lib/loopAnalytics'
 import { fetchReminderEvents, summarizeReminderEvents, type ReminderSummary } from '../lib/reminderAnalytics'
+import { fetchSiteEvents, summarizeSiteEvents, type SiteSummary } from '../lib/siteAnalytics'
 
 export function AnalyticsScreen() {
   const [window, setWindow] = useState<AnalyticsWindow>('7d')
@@ -40,6 +41,30 @@ export function AnalyticsScreen() {
   const [journeyError, setJourneyError] = useState<string | null>(null)
   const [reminders, setReminders] = useState<ReminderSummary | null>(null)
   const [remindersError, setRemindersError] = useState<string | null>(null)
+  const [site, setSite] = useState<SiteSummary | null>(null)
+  const [siteLoading, setSiteLoading] = useState(true)
+  const [siteError, setSiteError] = useState<string | null>(null)
+
+  useEffect(() => {
+    let mounted = true
+    setSiteLoading(true)
+    setSiteError(null)
+    fetchSiteEvents(window)
+      .then((rows) => {
+        if (mounted) setSite(summarizeSiteEvents(rows))
+      })
+      .catch((err) => {
+        if (!mounted) return
+        setSite(null)
+        setSiteError(err instanceof Error ? err.message : 'Could not load website numbers')
+      })
+      .finally(() => {
+        if (mounted) setSiteLoading(false)
+      })
+    return () => {
+      mounted = false
+    }
+  }, [window])
 
   useEffect(() => {
     let mounted = true
@@ -296,6 +321,59 @@ export function AnalyticsScreen() {
         )}
       </section>
 
+      <section className="today-section">
+        <h3 className="section-label">Website</h3>
+        <p className="screen-sub insights-hint">
+          resuming.app visitors, counted by a random id in their browser. Tag a link with ?utm_source=name to see
+          that channel.
+        </p>
+        {siteError && <p className="error">{siteError}</p>}
+        {siteLoading || !site ? (
+          <p className="muted-center">{siteLoading ? 'Loading website numbers…' : 'No website data yet.'}</p>
+        ) : site.pageViews === 0 ? (
+          <p className="muted-center">No website visits in this window.</p>
+        ) : (
+          <>
+            <section className="analytics-overview">
+              <StatCard label="Visitors" value={formatInt(site.visitors)} hint={`${formatInt(site.pageViews)} page views`} />
+              <StatCard
+                label="Tapped Google Play"
+                value={formatInt(site.tappedPlay)}
+                hint={percentOf(site.tappedPlay, site.visitors)}
+              />
+              <StatCard
+                label="Tried in browser"
+                value={formatInt(site.tappedBrowser)}
+                hint={percentOf(site.tappedBrowser, site.visitors)}
+              />
+            </section>
+            <h4 className="section-label">Where they came from</h4>
+            <ul className="analytics-rank-list">
+              {site.sources.map((row) => (
+                <li key={row.source} className="analytics-rank-row">
+                  <div className="analytics-rank-meta">
+                    <span className="activity-name">{row.source}</span>
+                    <span className="insights-rate">
+                      {formatInt(row.visitors)} · Play {formatInt(row.tappedPlay)} ({percentOf(row.tappedPlay, row.visitors)})
+                    </span>
+                  </div>
+                </li>
+              ))}
+            </ul>
+            <section className="analytics-split">
+              <div className="today-section">
+                <h4 className="section-label">Taps</h4>
+                <RankList rows={site.taps} empty="No taps yet." />
+              </div>
+              <div className="today-section">
+                <h4 className="section-label">Devices</h4>
+                <RankList rows={site.devices} empty="No device data." />
+              </div>
+            </section>
+          </>
+        )}
+      </section>
+
       {error && <p className="error">{error}</p>}
 
       {loading || !summary ? (
@@ -542,6 +620,11 @@ function barHeight(count: number, all: number[]): number {
 
 function formatInt(n: number): string {
   return new Intl.NumberFormat().format(n)
+}
+
+function percentOf(part: number, whole: number): string {
+  if (whole <= 0) return '—'
+  return `${Math.round((part / whole) * 100)}%`
 }
 
 function formatDecimal(n: number): string {

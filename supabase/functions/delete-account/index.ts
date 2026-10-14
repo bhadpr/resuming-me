@@ -92,6 +92,16 @@ Deno.serve(async (req) => {
       )
     }
 
+    // Usage events keep only a blanked user id after deletion, so remove them (and the events this
+    // device sent before sign-in). Also takes the email off any referral seat.
+    const { error: usageError } = await admin.rpc('erase_user_usage', { p_user: user.id })
+    if (usageError) {
+      return new Response(JSON.stringify({ ok: false, error: usageError.message }), {
+        status: 500,
+        headers: { ...corsHeaders, 'Content-Type': 'application/json' },
+      })
+    }
+
     // Medicine and reminder photos are not removed by deleting the auth user.
     for (const bucket of ['medicine-photos', 'reminder-photos']) {
       try {
