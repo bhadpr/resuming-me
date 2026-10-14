@@ -668,6 +668,12 @@ export const mr: DeepString<typeof en> = {
     sky: 'आकाशी',
     skyDesc: 'उजळ आकाशी निळा, उन्हासारखी पिवळी बटणे.',
   },
+  vitalChart: {
+    withinTarget: '{total} पैकी {met} नोंदी लक्ष्याच्या आत',
+    on: 'लक्ष्याच्या आत',
+    off: 'लक्ष्याच्या बाहेर',
+    tap: 'तारीख आणि मूल्य पाहण्यासाठी ठिपक्यावर टॅप करा.',
+  },
   toast: {
     undo: 'परत घ्या',
     logged: '{name} नोंदवले',

@@ -46,12 +46,18 @@ export type MetricWindowDays = 7 | 30 | 90
 
 export interface MetricTrendStats {
   windowDays: MetricWindowDays
-  values: Array<{ date: string; value: number }>
+  /** `secondary` is the lower number of a pair such as blood pressure. */
+  values: Array<{ date: string; value: number; secondary: number | null }>
   min: number | null
   max: number | null
   avg: number | null
   /** Last value minus first value in window (null if <2 points). */
   delta: number | null
+  /** The same four numbers for the lower number of a pair. Null when no day has one. */
+  secondaryMin: number | null
+  secondaryMax: number | null
+  secondaryAvg: number | null
+  secondaryDelta: number | null
 }
 
 export function computeMetricTrendStats(
@@ -62,7 +68,11 @@ export function computeMetricTrendStats(
   const from = addDays(today, -(windowDays - 1))
   const values = entries
     .filter((e) => e.date >= from && e.date <= today)
-    .map((e) => ({ date: e.date, value: Number(e.value) }))
+    .map((e) => ({
+      date: e.date,
+      value: Number(e.value),
+      secondary: e.secondary_value == null ? null : Number(e.secondary_value),
+    }))
     .sort((a, b) => a.date.localeCompare(b.date))
 
   if (values.length === 0) {
@@ -73,17 +83,45 @@ export function computeMetricTrendStats(
       max: null,
       avg: null,
       delta: null,
+      secondaryMin: null,
+      secondaryMax: null,
+      secondaryAvg: null,
+      secondaryDelta: null,
     }
   }
 
-  const nums = values.map((v) => v.value)
-  const min = Math.min(...nums)
-  const max = Math.max(...nums)
-  const avg = nums.reduce((a, b) => a + b, 0) / nums.length
-  const delta =
-    values.length >= 2 ? values[values.length - 1].value - values[0].value : null
+  const first = summarize(values.map((v) => v.value))
+  const second = summarize(
+    values.filter((v) => v.secondary != null).map((v) => v.secondary as number),
+  )
 
-  return { windowDays, values, min, max, avg, delta }
+  return {
+    windowDays,
+    values,
+    min: first.min,
+    max: first.max,
+    avg: first.avg,
+    delta: first.delta,
+    secondaryMin: second.min,
+    secondaryMax: second.max,
+    secondaryAvg: second.avg,
+    secondaryDelta: second.delta,
+  }
+}
+
+function summarize(nums: number[]): {
+  min: number | null
+  max: number | null
+  avg: number | null
+  delta: number | null
+} {
+  if (nums.length === 0) return { min: null, max: null, avg: null, delta: null }
+  return {
+    min: Math.min(...nums),
+    max: Math.max(...nums),
+    avg: nums.reduce((a, b) => a + b, 0) / nums.length,
+    delta: nums.length >= 2 ? nums[nums.length - 1] - nums[0] : null,
+  }
 }
 
 export function describeLogEntry(entry: LogEntry): string {

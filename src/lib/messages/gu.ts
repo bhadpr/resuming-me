@@ -668,6 +668,12 @@ export const gu: DeepString<typeof en> = {
     sky: 'આકાશી',
     skyDesc: 'તેજસ્વી આકાશી વાદળી, તડકા જેવાં પીળાં બટન.',
   },
+  vitalChart: {
+    withinTarget: '{total} માંથી {met} રીડિંગ લક્ષ્યની અંદર',
+    on: 'લક્ષ્યની અંદર',
+    off: 'લક્ષ્યની બહાર',
+    tap: 'તારીખ અને કિંમત જોવા બિંદુ પર ટેપ કરો.',
+  },
   toast: {
     undo: 'પાછું લો',
     logged: '{name} નોંધ્યું',

@@ -668,6 +668,12 @@ export const hi: DeepString<typeof en> = {
     sky: 'आसमानी',
     skyDesc: 'चमकीला आसमानी नीला, धूप जैसे पीले बटन।',
   },
+  vitalChart: {
+    withinTarget: '{total} में से {met} रीडिंग लक्ष्य के भीतर',
+    on: 'लक्ष्य के भीतर',
+    off: 'लक्ष्य से बाहर',
+    tap: 'तारीख और मान देखने के लिए बिंदु पर टैप करें।',
+  },
   toast: {
     undo: 'वापस लें',
     logged: '{name} दर्ज किया',

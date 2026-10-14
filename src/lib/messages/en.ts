@@ -664,6 +664,12 @@ export const en = {
     sky: 'Sky',
     skyDesc: 'Bright sky blue with sunny yellow buttons.',
   },
+  vitalChart: {
+    withinTarget: '{met} of {total} readings within target',
+    on: 'Within target',
+    off: 'Off target',
+    tap: 'Tap a dot for its date and value.',
+  },
   toast: {
     undo: 'Undo',
     logged: 'Logged {name}',

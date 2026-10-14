@@ -128,4 +128,48 @@ describe('computeMetricTrendStats', () => {
     expect(stats.avg).toBe(179)
     expect(stats.delta).toBe(-2)
   })
+
+  it('keeps the lower number of a pair, such as blood pressure', () => {
+    const row = (date: string, value: number, secondary: number | null): MetricEntry => ({
+      id: date,
+      metric_id: 'bp',
+      user_id: 'u1',
+      date,
+      value,
+      secondary_value: secondary,
+      created_at: '',
+      updated_at: '',
+    })
+    const stats = computeMetricTrendStats(
+      [row('2026-08-09', 130, 86), row('2026-08-10', 124, 82), row('2026-08-11', 118, 78)],
+      7,
+      '2026-08-11',
+    )
+    expect(stats.values.map((v) => v.secondary)).toEqual([86, 82, 78])
+    expect([stats.min, stats.max, stats.avg, stats.delta]).toEqual([118, 130, 124, -12])
+    expect([stats.secondaryMin, stats.secondaryMax, stats.secondaryAvg, stats.secondaryDelta]).toEqual([
+      78, 86, 82, -8,
+    ])
+  })
+
+  it('has no lower-number stats for a single number', () => {
+    const stats = computeMetricTrendStats(
+      [
+        {
+          id: '1',
+          metric_id: 'w',
+          user_id: 'u1',
+          date: '2026-08-11',
+          value: 70,
+          secondary_value: null,
+          created_at: '',
+          updated_at: '',
+        },
+      ],
+      7,
+      '2026-08-11',
+    )
+    expect(stats.secondaryMin).toBeNull()
+    expect(stats.secondaryDelta).toBeNull()
+  })
 })

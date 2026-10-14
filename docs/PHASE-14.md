@@ -10,8 +10,8 @@ Goal: resuming.app is a fast, rich, static marketing site that explains Resuming
 | resuming.app | Owned. No site yet. Registrar and DNS to check. |
 | Marketing | No marketing site. The Play listing, banners, and six store screenshots exist in `play-listing/`. |
 | Brand | Name "Resuming: Habits & Reminders". Tagline "Track your day, gently. Missed a day? Just resume." Clay artwork and themes in the app (`docs/DESIGN.md`). |
-| Languages | English, Hindi, Gujarati, Marathi, Telugu, Tamil, Bengali. |
-| Features on Android | Habits (with Pranayam and Heartfulness videos, and an own YouTube video on any habit), vitals (BP, weight, sleep, water), steps from Health Connect, reminders with a description and photo, sharing an event on WhatsApp, six languages. |
+| Languages | Seven: English plus six Indian languages (Hindi, Gujarati, Marathi, Telugu, Tamil, Bengali). `LOCALES` in `src/lib/i18n.ts`. |
+| Features on Android | Habits (with Pranayam and Heartfulness videos, and an own YouTube video on any habit), vitals (BP, weight, sleep, water), steps from Health Connect, reminders with a description and photo, sharing an event on WhatsApp, seven languages. |
 | Not on Android | Medicines (web only for now, `MEDICINES_ENABLED`). |
 
 ## How to use this file
@@ -26,7 +26,7 @@ Four milestones. M1 first. M2 (videos) and M3 (site) can run side by side once M
 - **The privacy promise is true word for word.** It matches the privacy page: no ads, no selling data, steps stay on the phone.
 - **Fast.** The page is readable in under a second on a mid-range Android phone on 4G. The hero video is at most 3 MB with a still poster image, and does not play when the phone asks for reduced motion.
 - **Captions on every video.** Many people watch with the sound off.
-- **Languages ship in pairs.** English and Hindi first, then Gujarati, Marathi, Telugu, and Tamil.
+- **Languages ship in pairs.** English and Hindi first, then Gujarati, Marathi, Telugu, Tamil, and Bengali.
 
 ## Recommended order
 
@@ -100,7 +100,7 @@ One long page, in this order:
 3. **Habits.** Built-in habits with follow-along Pranayam and Heartfulness videos, or any YouTube video of your own.
 4. **Reminders.** Bills, doctor visits, weddings, with a photo of the card. Share an event on WhatsApp, and family adds it in one tap.
 5. **Vitals and steps.** BP, weight, sleep, water. Steps from Health Connect, kept on the phone.
-6. **Your language.** Six languages, shown in their own scripts.
+6. **Your language.** Seven languages, shown in their own scripts.
 7. **Try it here.** The interactive Today card (P14-08).
 8. **Video 2.** Embedded from YouTube, loaded only when tapped.
 9. **Privacy promise.** No ads. We don't sell your data. Steps stay on your phone. Link to the privacy page on resuming.me.
@@ -116,7 +116,7 @@ One long page, in this order:
 
 ### P14-09 — Languages
 
-- Pages at `/` (English), `/hi/`, then `/gu/`, `/mr/`, `/te/`, `/ta/`, each with language tags that tell search engines about the other versions.
+- Pages at `/` (English), `/hi/`, then `/gu/`, `/mr/`, `/te/`, `/ta/`, `/bn/`, each with language tags that tell search engines about the other versions.
 - The Play and web app buttons open the app in the same language.
 - Done when English and Hindi are live. The other four follow in pairs.
 
@@ -183,7 +183,7 @@ Presenter: a warm, friendly avatar, about 35 to 45, at home or in a calm room. S
 | 27–37 s | "Missed a few days? No guilt and no broken streak. Just tap Resume and start again. That still counts." | B3 |
 | 37–50 s | "Reminders work the same gentle way. The doctor's visit, the electricity bill, a cousin's wedding. Add a photo of the invitation card, share it on WhatsApp, and your family adds it to their reminders in one tap." | B4, B7 |
 | 50–60 s | "Log your blood pressure, weight and sleep when you want to. Your steps come from Health Connect, and they stay on your phone." | B8 |
-| 60–68 s | "It speaks your language: English, Hindi, Gujarati, Marathi, Telugu and Tamil. No ads, and we never sell your data." | B9 |
+| 60–68 s | "It speaks your language: English, Hindi, Gujarati, Marathi, Telugu, Tamil and Bengali. No ads, and we never sell your data." | B9 |
 | 68–75 s | "Resuming. Track your day, gently. Get it free on Google Play, or try it in your browser at resuming dot me." | Presenter, then logo with the Play badge and resuming.me |
 
 ### Video 2 — Explainer, Hindi (about 75 seconds)
@@ -198,7 +198,7 @@ Same presenter, same scenes, Hindi app in the B-roll.
 | 27–37 s | "कुछ दिन छूट गए? कोई बात नहीं। Resume दबाइए और फिर से शुरू कीजिए। वो भी गिना जाता है।" | B3 |
 | 37–50 s | "Reminders भी इतने ही आसान हैं। डॉक्टर के पास जाना, बिजली का बिल, किसी की शादी। निमंत्रण कार्ड की फ़ोटो लगाइए, WhatsApp पर शेयर कीजिए, और परिवार एक टैप में उसे अपने reminders में जोड़ लेता है।" | B4, B7 |
 | 50–60 s | "जब चाहें, BP, वज़न और नींद लिखिए। आपके कदम Health Connect से आते हैं, और आपके फ़ोन पर ही रहते हैं।" | B8 |
-| 60–68 s | "यह आपकी भाषा बोलता है: हिंदी, अंग्रेज़ी, गुजराती, मराठी, तेलुगु और तमिल। कोई विज्ञापन नहीं, और हम आपका डेटा कभी नहीं बेचते।" | B9 |
+| 60–68 s | "यह आपकी भाषा बोलता है: हिंदी, अंग्रेज़ी, गुजराती, मराठी, तेलुगु, तमिल और बंगाली। कोई विज्ञापन नहीं, और हम आपका डेटा कभी नहीं बेचते।" | B9 |
 | 68–75 s | "Resuming. अपना दिन, आराम से। Google Play पर मुफ़्त पाइए, या browser में resuming dot me पर आज़माइए।" | Presenter, then logo with the Play badge and resuming.me |
 
 ### Video 3 — Vertical short (30 seconds, 9:16)

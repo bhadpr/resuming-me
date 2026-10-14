@@ -668,6 +668,12 @@ export const te: DeepString<typeof en> = {
     sky: 'ఆకాశం',
     skyDesc: 'ప్రకాశవంతమైన ఆకాశ నీలం, ఎండలాంటి పసుపు బటన్లు.',
   },
+  vitalChart: {
+    withinTarget: '{total}లో {met} రీడింగ్‌లు లక్ష్యంలో ఉన్నాయి',
+    on: 'లక్ష్యంలో',
+    off: 'లక్ష్యం బయట',
+    tap: 'తేదీ, విలువ చూడడానికి చుక్కను తాకండి.',
+  },
   toast: {
     undo: 'వెనక్కి తీసుకో',
     logged: '{name} నమోదైంది',

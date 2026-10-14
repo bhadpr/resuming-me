@@ -20,7 +20,8 @@ import { habitTemplateId } from '../data/habitArt'
 import { useLocale } from '../hooks/useLocale'
 import { ActivityInsightChart } from './ActivityInsightChart'
 import { HabitMark } from './HabitMark'
-import { MetricTrendChart } from './MetricTrendChart'
+import { VitalTrend } from './VitalTrend'
+import { formatPair, formatPairDelta } from '../lib/vitalChart'
 import { Icon } from './Icon'
 
 function chartTarget(activity: Activity | undefined): number | null {
@@ -404,7 +405,7 @@ export function InsightsScreen({
                           <span className="activity-desc">
                             {latest
                               ? t('insights.latest', {
-                                  value: latest.value,
+                                  value: formatPair(latest.value, latest.secondary),
                                   unit: m.unit,
                                   count: trend.values.length,
                                 })
@@ -412,18 +413,16 @@ export function InsightsScreen({
                           </span>
                         </span>
                         <span className="insights-rate">
-                          {trend.delta == null
-                            ? '—'
-                            : `${trend.delta > 0 ? '+' : ''}${formatNum(trend.delta)}`}
+                          {formatPairDelta(trend.delta, trend.secondaryDelta)}
                         </span>
                       </button>
                       {open && (
                         <div className="insights-row-chart">
-                          <MetricTrendChart
+                          <VitalTrend
+                            metric={m}
+                            entries={rows}
+                            activities={activities}
                             values={trend.values}
-                            unit={m.unit}
-                            min={trend.min}
-                            max={trend.max}
                             windowDays={windowDays}
                             today={today}
                           />
@@ -555,8 +554,4 @@ export function InsightsScreen({
 function barHeight(count: number, all: Array<{ count: number }>): number {
   const max = Math.max(...all.map((x) => x.count), 1)
   return Math.round((count / max) * 100)
-}
-
-function formatNum(n: number): string {
-  return Number.isInteger(n) ? String(n) : n.toFixed(1)
 }

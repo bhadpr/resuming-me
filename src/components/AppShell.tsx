@@ -2447,6 +2447,7 @@ export function AppShell() {
               <MetricDetail
                 metric={selectedMetric}
                 entries={detailMetricEntries}
+                activities={activities}
                 loadingEntries={loadingDetailEntries}
                 busy={saving}
                 error={error}

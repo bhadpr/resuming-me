@@ -1,4 +1,7 @@
 const STORAGE_KEY = 'resuming-vital-targets'
+const DIRECTION_KEY = 'resuming-vital-directions'
+
+export type VitalDirection = 'down' | 'up'
 
 function storage(): Storage | null {
   try {
@@ -22,6 +25,19 @@ function loadTargets(): Record<string, number> {
   }
 }
 
+function loadDirections(): Record<string, VitalDirection> {
+  try {
+    const parsed = JSON.parse(storage()?.getItem(DIRECTION_KEY) ?? '{}') as Record<string, unknown>
+    const out: Record<string, VitalDirection> = {}
+    for (const [id, value] of Object.entries(parsed)) {
+      if (value === 'down' || value === 'up') out[id] = value
+    }
+    return out
+  } catch {
+    return {}
+  }
+}
+
 /** Vitals have no server field for a target, so it stays on this device. */
 export function vitalTarget(metricId: string): number | null {
   return loadTargets()[metricId] ?? null
@@ -30,12 +46,33 @@ export function vitalTarget(metricId: string): number | null {
 export function setVitalTarget(metricId: string, value: number | null): void {
   const store = storage()
   if (!store) return
-  const next = loadTargets()
+  const current = loadTargets()
+  const next = { ...current }
   if (value == null) delete next[metricId]
   else next[metricId] = value
   try {
     store.setItem(STORAGE_KEY, JSON.stringify(next))
+    // A new target can point the other way, so the direction is worked out again.
+    if (current[metricId] !== next[metricId]) setVitalDirection(metricId, null)
   } catch {
     // Storage full or blocked: the vital still works without a target.
+  }
+}
+
+/** Weight only: whether the goal is to come down to the target or go up to it. */
+export function vitalDirection(metricId: string): VitalDirection | null {
+  return loadDirections()[metricId] ?? null
+}
+
+export function setVitalDirection(metricId: string, direction: VitalDirection | null): void {
+  const store = storage()
+  if (!store) return
+  const next = loadDirections()
+  if (direction == null) delete next[metricId]
+  else next[metricId] = direction
+  try {
+    store.setItem(DIRECTION_KEY, JSON.stringify(next))
+  } catch {
+    // Without a stored direction the chart works it out again from the readings.
   }
 }

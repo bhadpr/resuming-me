@@ -1,6 +1,7 @@
 import { useMemo, useState } from 'react'
 import { describeMetric, type Metric } from '../lib/metrics'
 import type { MetricEntry } from '../lib/metricEntries'
+import type { Activity } from '../lib/activities'
 import {
   computeMetricTrendStats,
   type MetricWindowDays,
@@ -10,12 +11,16 @@ import { visibleName } from '../lib/catalogName'
 import { habitTemplateId } from '../data/habitArt'
 import { standardVitalTarget } from '../lib/onboardingFlow'
 import { useLocale } from '../hooks/useLocale'
-import { MetricTrendChart } from './MetricTrendChart'
+import { VitalTrend } from './VitalTrend'
+import { formatPair, formatPairDelta } from '../lib/vitalChart'
+import { todayLocalDate } from '../lib/dates'
 import { Icon } from './Icon'
 
 interface MetricDetailProps {
   metric: Metric
   entries: MetricEntry[]
+  /** Habits, for the goal of water, protein, fasting and steps. */
+  activities: Activity[]
   loadingEntries?: boolean
   busy?: boolean
   error?: string | null
@@ -28,6 +33,7 @@ interface MetricDetailProps {
 export function MetricDetail({
   metric,
   entries,
+  activities,
   loadingEntries = false,
   busy = false,
   error = null,
@@ -87,32 +93,46 @@ export function MetricDetail({
         <p className="muted-center">Loading trend…</p>
       ) : (
         <>
-          <MetricTrendChart
+          <VitalTrend
+            metric={metric}
+            entries={entries}
+            activities={activities}
             values={trend.values}
-            unit={metric.unit}
-            min={trend.min}
-            max={trend.max}
+            windowDays={windowDays}
+            today={todayLocalDate()}
           />
 
           <dl className="detail-facts">
             <div>
               <dt>Min</dt>
-              <dd>{trend.min == null ? '—' : `${formatNum(trend.min)} ${metric.unit}`}</dd>
+              <dd>
+                {trend.min == null
+                  ? '—'
+                  : `${formatPair(trend.min, trend.secondaryMin)} ${metric.unit}`}
+              </dd>
             </div>
             <div>
               <dt>Max</dt>
-              <dd>{trend.max == null ? '—' : `${formatNum(trend.max)} ${metric.unit}`}</dd>
+              <dd>
+                {trend.max == null
+                  ? '—'
+                  : `${formatPair(trend.max, trend.secondaryMax)} ${metric.unit}`}
+              </dd>
             </div>
             <div>
               <dt>Avg</dt>
-              <dd>{trend.avg == null ? '—' : `${formatNum(trend.avg)} ${metric.unit}`}</dd>
+              <dd>
+                {trend.avg == null
+                  ? '—'
+                  : `${formatPair(roundOne(trend.avg), trend.secondaryAvg == null ? null : roundOne(trend.secondaryAvg))} ${metric.unit}`}
+              </dd>
             </div>
             <div>
               <dt>Delta</dt>
               <dd>
                 {trend.delta == null
                   ? '—'
-                  : `${trend.delta > 0 ? '+' : ''}${formatNum(trend.delta)} ${metric.unit}`}
+                  : `${formatPairDelta(trend.delta, trend.secondaryDelta)} ${metric.unit}`}
               </dd>
             </div>
             <div>
@@ -180,6 +200,6 @@ export function MetricDetail({
   )
 }
 
-function formatNum(n: number): string {
-  return Number.isInteger(n) ? String(n) : n.toFixed(1)
+function roundOne(n: number): number {
+  return Math.round(n * 10) / 10
 }

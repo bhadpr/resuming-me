@@ -6098,9 +6098,96 @@ select.field-input.language-select {
 }
 
 .trend-target-line {
-  stroke: var(--color-accent);
+  stroke: var(--color-info);
   stroke-dasharray: 4 3;
   stroke-width: 1;
+}
+
+.vital-band {
+  fill: color-mix(in srgb, var(--color-info) 14%, transparent);
+}
+
+.vital-target-label {
+  fill: var(--color-info);
+  font-size: 8px;
+}
+
+.vital-bp-stem {
+  stroke: var(--color-text-muted);
+  stroke-width: 2;
+  stroke-linecap: round;
+  opacity: 0.55;
+}
+
+/* Within target is green. Off target is red with a soft ring, so it shows without colour too. */
+.vital-dot-ok {
+  fill: var(--color-success);
+}
+
+.vital-dot-off {
+  fill: var(--color-danger);
+  stroke: var(--color-danger);
+  stroke-opacity: 0.35;
+  stroke-width: 5;
+  paint-order: stroke;
+}
+
+.vital-point-label {
+  fill: var(--color-text);
+  font-size: 8px;
+  font-weight: 600;
+  stroke: var(--color-surface-raised);
+  stroke-width: 3px;
+  paint-order: stroke;
+}
+
+.vital-point-selected .vital-point-label {
+  fill: var(--color-primary);
+}
+
+.vital-hit {
+  fill: transparent;
+  cursor: pointer;
+}
+
+.vital-hit:focus-visible {
+  outline: 2px solid var(--color-primary);
+}
+
+.vital-summary {
+  margin-top: 0.5rem;
+  font-size: var(--text-sm);
+}
+
+.vital-summary p {
+  margin: 0;
+}
+
+.vital-legend {
+  display: flex;
+  align-items: center;
+  flex-wrap: wrap;
+  gap: 0.25rem 0.5rem;
+  margin-top: 0.25rem;
+  font-size: var(--text-xs);
+  color: var(--color-text-muted);
+}
+
+.vital-legend-dot {
+  display: inline-block;
+  width: 0.6rem;
+  height: 0.6rem;
+  border-radius: 50%;
+}
+
+.vital-legend-ok {
+  background: var(--color-success);
+}
+
+.vital-legend-off {
+  background: var(--color-danger);
+  box-shadow: 0 0 0 3px color-mix(in srgb, var(--color-danger) 35%, transparent);
+  margin-left: 0.75rem;
 }
 
 .detail-top-actions {

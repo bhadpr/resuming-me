@@ -669,6 +669,12 @@ export const bn: DeepString<typeof en> = {
     sky: 'আকাশ',
     skyDesc: 'উজ্জ্বল আকাশি নীল আর রোদেলা হলুদ বোতাম।',
   },
+  vitalChart: {
+    withinTarget: '{total}টির মধ্যে {met}টি রিডিং লক্ষ্যের মধ্যে',
+    on: 'লক্ষ্যের মধ্যে',
+    off: 'লক্ষ্যের বাইরে',
+    tap: 'তারিখ ও মান দেখতে বিন্দুতে ট্যাপ করুন।',
+  },
   toast: {
     undo: 'ফিরিয়ে আনুন',
     logged: '{name} লেখা হলো',
