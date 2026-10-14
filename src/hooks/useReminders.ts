@@ -2,6 +2,7 @@ import { useCallback, useEffect, useMemo, useState } from 'react'
 import { Capacitor } from '@capacitor/core'
 import { useLocale } from './useLocale'
 import { todayLocalDate } from '../lib/dates'
+import { completeOccurrence, effectiveReminder, isRepeating, reopenOccurrence } from '../lib/reminderRepeat'
 import {
   listenForReminderNotificationActions,
   reminderAlertText,
@@ -165,6 +166,7 @@ export function useReminders(userId: string | undefined) {
         day_before: input.remindBefore === true,
         kind: saved.kind,
         every_year: saved.everyYear,
+        repeat: saved.repeat ?? 'none',
         signed_in: true,
         photo: saved.photoPath != null,
       })
@@ -185,7 +187,11 @@ export function useReminders(userId: string | undefined) {
       minute: input.hour == null ? null : input.minute,
       remindBefore: input.remindBefore === true,
       kind: reminderKindOf(input.kind),
-      everyYear: input.everyYear === true,
+      everyYear: input.everyYear === true && !input.repeat,
+      repeat: input.repeat ?? null,
+      repeatUntil: input.repeat ? (input.repeatUntil ?? null) : null,
+      repeatFrom: input.repeat ? (input.repeatFrom ?? input.day) : null,
+      lastDoneOn: input.repeat ? (input.lastDoneOn ?? null) : null,
       ...(photo ?? {}),
     })
   }
@@ -208,15 +214,18 @@ export function useReminders(userId: string | undefined) {
   async function markDone(reminder: Reminder): Promise<boolean> {
     const doneAt = new Date().toISOString()
     if (!userId) return false
-    const ok = await run(reminder.id, { doneAt }, () => completeReminder(userId, reminder, doneAt))
+    const current = effectiveReminder(reminder, todayLocalDate(new Date(doneAt)))
+    const patch: Partial<Reminder> = isRepeating(current) ? completeOccurrence(current, doneAt) : { doneAt }
+    const ok = await run(reminder.id, patch, () => completeReminder(userId, reminder, doneAt))
     if (!ok) return false
-    track('reminder_done', { signed_in: true, every_year: reminder.everyYear })
+    track('reminder_done', { signed_in: true, every_year: reminder.everyYear, repeat: reminder.repeat ?? 'none' })
     if (reminder.everyYear) await reload(true)
     return true
   }
 
   async function markNotDone(reminder: Reminder): Promise<boolean> {
-    const ok = await run(reminder.id, { doneAt: null }, () => reopenReminder(reminder))
+    const patch: Partial<Reminder> = isRepeating(reminder) ? reopenOccurrence(reminder) : { doneAt: null }
+    const ok = await run(reminder.id, patch, () => reopenReminder(reminder))
     if (ok && reminder.everyYear) {
       setReminders((current) => current.filter((item) => !isNextYearCopyOf(item, reminder)))
     }

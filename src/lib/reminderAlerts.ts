@@ -1,4 +1,5 @@
-import { addDays, parseLocalDate } from './dates'
+import { addDays, parseLocalDate, todayLocalDate } from './dates'
+import { effectiveReminder, isRepeating, upcomingOccurrences } from './reminderRepeat'
 import { announceRemindersChanged, reminderAlerts, remindersForToday, type Reminder } from './reminderSchedule'
 
 export const REMINDER_NOTIFICATION_ID_BASE = 9000
@@ -45,11 +46,24 @@ export function planReminderAlerts(
   evening: { hour: number; minute: number },
   copy: ReminderAlertCopy,
 ): ReminderAlert[] {
-  const open = reminders.filter(reminderAlerts)
+  const today = todayLocalDate(now)
+  const open = reminders.map((item) => effectiveReminder(item, today)).filter(reminderAlerts)
   const byId = new Map(open.map((item) => [item.id, item]))
   const alerts: Array<Omit<ReminderAlert, 'id'>> = []
 
   for (const reminder of open) {
+    if (isRepeating(reminder)) {
+      // A repeat rings at its time on each of its next few days, and has no evening-before alert.
+      if (reminder.hour != null && reminder.minute != null) {
+        for (const day of upcomingOccurrences(reminder)) {
+          const at = atClock(day, reminder.hour, reminder.minute)
+          if (at > now) {
+            alerts.push({ reminderId: reminder.id, kind: 'time', at, title: reminder.text, body: copy.now })
+          }
+        }
+      }
+      continue
+    }
     if (reminder.hour != null && reminder.minute != null) {
       const at = atClock(reminder.day, reminder.hour, reminder.minute)
       if (at > now) {

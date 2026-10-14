@@ -207,7 +207,7 @@ export function GuestTodayPage() {
     const latest = draftRef.current
     if (!latest) return
     setDraft(completeGuestReminder(latest, reminder.id, new Date().toISOString()))
-    track('reminder_done', { signed_in: false, every_year: reminder.everyYear })
+    track('reminder_done', { signed_in: false, every_year: reminder.everyYear, repeat: reminder.repeat ?? 'none' })
     undoToast.show(t('reminders.doneToast', { text: reminder.text }), () => reopenReminder(reminder))
   }
 

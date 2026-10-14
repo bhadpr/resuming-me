@@ -111,6 +111,33 @@ begin
   assert (rem_a#>>'{shared,installs}')::int - (rem_b#>>'{shared,installs}')::int = 1, 'shared: installs';
   assert (rem_a#>>'{shared,reported}')::int - (rem_b#>>'{shared,reported}')::int = 1, 'shared: reported';
 
+  -- Reminders added and done per day, and repeats (migration 20261023120000_reminder_analytics_days.sql).
+  rem_b := public.reminder_analytics_summary(7);
+  insert into public.events (anon_id, user_id, name, props, created_at) values
+    ('t-rem-r1aaaa', ua, 'reminder_added', '{"repeat": "day", "signed_in": true}', d3),
+    ('t-rem-r1aaaa', ua, 'reminder_added', '{"repeat": "week", "signed_in": true}', d3),
+    ('t-rem-r1aaaa', ua, 'reminder_added', '{"repeat": "none"}', d3),
+    ('t-rem-r1aaaa', ua, 'reminder_done', '{"repeat": "day"}', d3 + interval '1 hour'),
+    ('t-rem-r1aaaa', ua, 'reminder_done', '{"repeat": "day"}', today + interval '1 hour'),
+    ('t-rem-r1aaaa', ua, 'reminder_done', '{"repeat": "none"}', today + interval '2 hours'),
+    ('t-rem-r1aaaa', ua, 'reminder_done', '{}', today + interval '3 hours');
+  rem_a := public.reminder_analytics_summary(7);
+  assert (rem_a#>>'{repeatAdded,day}')::int - (rem_b#>>'{repeatAdded,day}')::int = 1, 'repeats: added every day';
+  assert (rem_a#>>'{repeatAdded,week}')::int - (rem_b#>>'{repeatAdded,week}')::int = 1, 'repeats: added every week';
+  assert (rem_a->>'repeatDone')::int - (rem_b->>'repeatDone')::int = 2, 'repeats: done (none and missing do not count)';
+  assert (select (e->>'added')::int from jsonb_array_elements(rem_a->'perDay') e where e->>'day' = (d3 at time zone 'utc')::date::text)
+       - (select (e->>'added')::int from jsonb_array_elements(rem_b->'perDay') e where e->>'day' = (d3 at time zone 'utc')::date::text) = 3,
+    'per day: added on day 3 ago';
+  assert (select (e->>'done')::int from jsonb_array_elements(rem_a->'perDay') e where e->>'day' = (d3 at time zone 'utc')::date::text)
+       - (select (e->>'done')::int from jsonb_array_elements(rem_b->'perDay') e where e->>'day' = (d3 at time zone 'utc')::date::text) = 1,
+    'per day: done on day 3 ago';
+  assert (select (e->>'done')::int from jsonb_array_elements(rem_a->'perDay') e where e->>'day' = (today at time zone 'utc')::date::text)
+       - (select (e->>'done')::int from jsonb_array_elements(rem_b->'perDay') e where e->>'day' = (today at time zone 'utc')::date::text) = 3,
+    'per day: done today';
+  assert jsonb_array_length(public.reminder_analytics_summary(90)->'perDay') = 14, 'per day: 14 days, zero days included';
+  assert jsonb_array_length(rem_a->'perDay') between 7 and 8, 'per day: follows a 7-day window';
+  assert (rem_a->'perDay'->-1->>'day')::date = (today at time zone 'utc')::date, 'per day: ends today, oldest first';
+
   lp_b := public.loop_analytics_summary(90);
   -- Comeback loop: a returns twice and saw the welcome card, b returns without it.
   insert into public.events (anon_id, user_id, name, props, created_at) values

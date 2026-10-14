@@ -25,7 +25,14 @@ import {
 import { isEventPhotoPath, isReminderPhotoData } from './eventPhotoUrl'
 import { getLocale, t } from './i18n'
 import { canLogPastGoal, countPortion, countProgressLabel } from './dayStatus'
-import { endOfWeekSunday, startOfWeekMonday } from './dates'
+import { endOfWeekSunday, startOfWeekMonday, todayLocalDate } from './dates'
+import {
+  completeOccurrence,
+  effectiveReminder,
+  isReminderRepeat,
+  isRepeating,
+  reopenOccurrence,
+} from './reminderRepeat'
 import { sessionProgressLabel } from './timer'
 import type { HabitMeasure } from './habitKind'
 import type { ActivityType, TrackingMode } from '../types/database'
@@ -495,13 +502,10 @@ function normalizeGuestReminders(list: unknown, now = Date.now()): Reminder[] {
       item.minute! >= 0 &&
       item.minute! <= 59
     const doneAt = typeof item.doneAt === 'string' && Number.isFinite(Date.parse(item.doneAt)) ? item.doneAt : null
-    if (doneAt && now - Date.parse(doneAt) > REMINDER_DONE_KEEP_MS) continue
-    if (!doneAt) {
-      if (open >= REMINDER_OPEN_MAX) continue
-      open += 1
-    }
     const description = cleanReminderDescription(item.description)
-    reminders.push({
+    const repeating =
+      isReminderRepeat(item.repeat) && isDay(item.repeatUntil) && !item.sharedEventId && item.everyYear !== true
+    const candidate: Reminder = {
       id: item.id,
       text,
       ...(description ? { description } : {}),
@@ -519,7 +523,23 @@ function normalizeGuestReminders(list: unknown, now = Date.now()): Reminder[] {
         ? { sharedStatus: item.sharedStatus }
         : {}),
       ...(isEventPhotoPath(item.sharedPhotoPath) ? { sharedPhotoPath: item.sharedPhotoPath } : {}),
-    })
+      ...(repeating
+        ? {
+            repeat: item.repeat,
+            repeatUntil: item.repeatUntil,
+            repeatFrom: isDay(item.repeatFrom) ? item.repeatFrom : item.day,
+            lastDoneOn: isDay(item.lastDoneOn) ? item.lastDoneOn : null,
+          }
+        : {}),
+    }
+    // A repeat moves to its next day, and one past its end date is done.
+    const current = effectiveReminder(candidate, todayLocalDate(new Date(now)))
+    if (current.doneAt && now - Date.parse(current.doneAt) > REMINDER_DONE_KEEP_MS) continue
+    if (!current.doneAt) {
+      if (open >= REMINDER_OPEN_MAX) continue
+      open += 1
+    }
+    reminders.push(current)
   }
   return reminders
 }
@@ -535,7 +555,15 @@ function newGuestReminder(input: ReminderInput): Reminder {
     minute: input.hour == null ? null : input.minute,
     remindBefore: input.remindBefore === true,
     kind: reminderKindOf(input.kind),
-    everyYear: input.everyYear === true,
+    everyYear: input.everyYear === true && !input.repeat,
+    ...(isReminderRepeat(input.repeat) && input.repeatUntil
+      ? {
+          repeat: input.repeat,
+          repeatUntil: input.repeatUntil,
+          repeatFrom: input.repeatFrom ?? input.day,
+          lastDoneOn: input.lastDoneOn ?? null,
+        }
+      : {}),
     doneAt: null,
     sharedEventId: input.sharedEventId ?? null,
   }
@@ -553,6 +581,17 @@ export function addGuestReminder(draft: GuestDraft, input: ReminderInput): Guest
 export function completeGuestReminder(draft: GuestDraft, id: string, doneAt: string): GuestDraft {
   const reminder = draft.reminders.find((item) => item.id === id)
   if (!reminder) return draft
+  const current = effectiveReminder(reminder, todayLocalDate(new Date(doneAt)))
+  if (isRepeating(current)) {
+    // One occurrence is done. The same reminder moves on to its next day.
+    const moved = completeOccurrence(current, doneAt)
+    const next = saveGuestDraft({
+      ...draft,
+      reminders: draft.reminders.map((item) => (item.id === id ? { ...item, ...moved } : item)),
+    })
+    announceRemindersChanged()
+    return next
+  }
   let reminders = draft.reminders.map((item) => (item.id === id ? { ...item, doneAt } : item))
   if (reminder.everyYear && openReminderCount(reminders) < REMINDER_OPEN_MAX) {
     reminders = [...reminders, newGuestReminder(nextYearCopy(reminder))]
@@ -566,6 +605,15 @@ export function completeGuestReminder(draft: GuestDraft, id: string, doneAt: str
 export function reopenGuestReminder(draft: GuestDraft, id: string): GuestDraft {
   const reminder = draft.reminders.find((item) => item.id === id)
   if (!reminder) return draft
+  if (isRepeating(reminder)) {
+    const back = reopenOccurrence(reminder)
+    const next = saveGuestDraft({
+      ...draft,
+      reminders: draft.reminders.map((item) => (item.id === id ? { ...item, ...back } : item)),
+    })
+    announceRemindersChanged()
+    return next
+  }
   const reminders = draft.reminders
     .filter((item) => !(reminder.everyYear && isNextYearCopyOf(item, reminder)))
     .map((item) => (item.id === id ? { ...item, doneAt: null } : item))

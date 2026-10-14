@@ -349,6 +349,10 @@ export interface Database {
           remind_before: boolean
           kind: string
           every_year: boolean
+          repeat_every: string | null
+          repeat_until: string | null
+          repeat_from: string | null
+          last_done_on: string | null
           done_at: string | null
           shared_event_id: string | null
           alert_off: boolean
@@ -367,6 +371,10 @@ export interface Database {
           remind_before?: boolean
           kind?: string
           every_year?: boolean
+          repeat_every?: string | null
+          repeat_until?: string | null
+          repeat_from?: string | null
+          last_done_on?: string | null
           done_at?: string | null
           shared_event_id?: string | null
           alert_off?: boolean
@@ -383,6 +391,10 @@ export interface Database {
           remind_before?: boolean
           kind?: string
           every_year?: boolean
+          repeat_every?: string | null
+          repeat_until?: string | null
+          repeat_from?: string | null
+          last_done_on?: string | null
           done_at?: string | null
           shared_event_id?: string | null
           alert_off?: boolean

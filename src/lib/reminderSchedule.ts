@@ -1,5 +1,6 @@
 import { addDays, daysBetween, parseLocalDate, todayLocalDate } from './dates'
 import { localeTag, type Locale } from './i18n'
+import { effectiveReminder, repeatDoneOn, repeatIssue, type ReminderRepeat } from './reminderRepeat'
 
 export const REMINDER_TEXT_MAX = 120
 export const REMINDER_DESCRIPTION_MAX = 500
@@ -28,6 +29,14 @@ export interface Reminder {
   kind: ReminderKind
   /** Done makes next year's copy. */
   everyYear: boolean
+  /** Comes back every day or every week until repeatUntil. Not with everyYear, and never shared. */
+  repeat?: ReminderRepeat | null
+  /** Last day it comes back. At most two months after repeatFrom. */
+  repeatUntil?: string | null
+  /** The first day of the repeat. The two-month limit counts from here. */
+  repeatFrom?: string | null
+  /** The day the current repeat was last marked done. Today shows it as done until tomorrow. */
+  lastDoneOn?: string | null
   doneAt: string | null
   /** Set on the organizer's reminder and on every copy of a shared event. Such a reminder is not edited. */
   sharedEventId?: string | null
@@ -73,6 +82,10 @@ export interface ReminderInput {
   remindBefore?: boolean
   kind?: ReminderKind
   everyYear?: boolean
+  repeat?: ReminderRepeat | null
+  repeatUntil?: string | null
+  repeatFrom?: string | null
+  lastDoneOn?: string | null
   sharedEventId?: string | null
   alertOff?: boolean
 }
@@ -119,7 +132,7 @@ export function isNextYearCopyOf(candidate: Reminder, reminder: Reminder): boole
   )
 }
 
-export type ReminderIssue = 'text' | 'day' | 'full'
+export type ReminderIssue = 'text' | 'day' | 'repeat' | 'full'
 
 export const REMINDER_PARTS = ['morning', 'afternoon', 'evening'] as const
 export type ReminderPart = (typeof REMINDER_PARTS)[number]
@@ -186,6 +199,7 @@ export function reminderShareRequested(state: unknown): boolean {
 export function validateReminder(input: ReminderInput): ReminderIssue | null {
   if (!cleanReminderText(input.text)) return 'text'
   if (!isDay(input.day)) return 'day'
+  if (repeatIssue(input)) return 'repeat'
   return null
 }
 
@@ -207,6 +221,7 @@ function byDayThenTime(a: Reminder, b: Reminder): number {
 /** Open reminders for today, including earlier days that are still open. A cancelled event leaves after its day. */
 export function remindersForToday(list: readonly Reminder[], today: string): Reminder[] {
   return list
+    .map((item) => effectiveReminder(item, today))
     .filter((item) => !item.doneAt && item.day <= today && !(item.day < today && isSharedEventGone(item)))
     .sort(byDayThenTime)
 }
@@ -214,13 +229,17 @@ export function remindersForToday(list: readonly Reminder[], today: string): Rem
 /** Reminders marked done today, newest first. */
 export function remindersDoneToday(list: readonly Reminder[], today: string): Reminder[] {
   return list
-    .filter((item) => doneDay(item) === today)
+    .map((item) => effectiveReminder(item, today))
+    .filter((item) => doneDay(item) === today || (!item.doneAt && repeatDoneOn(item, today)))
     .sort((a, b) => (b.doneAt ?? '').localeCompare(a.doneAt ?? ''))
 }
 
 /** Open reminders after today, by date. */
 export function remindersComingUp(list: readonly Reminder[], today: string): Reminder[] {
-  return list.filter((item) => !item.doneAt && item.day > today).sort(byDayThenTime)
+  return list
+    .map((item) => effectiveReminder(item, today))
+    .filter((item) => !item.doneAt && item.day > today)
+    .sort(byDayThenTime)
 }
 
 export function openReminderCount(list: readonly Reminder[]): number {

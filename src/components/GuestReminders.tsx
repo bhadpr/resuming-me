@@ -42,6 +42,10 @@ export function GuestReminderEditor({ reminderId, editing = false }: { reminderI
           setDraft(
             updateGuestReminder(current, reminderId, {
               ...fields,
+              repeat: input.repeat ?? null,
+              repeatUntil: input.repeat ? (input.repeatUntil ?? null) : null,
+              repeatFrom: input.repeat ? (input.repeatFrom ?? input.day) : null,
+              lastDoneOn: input.repeat ? (input.lastDoneOn ?? null) : null,
               ...(photo !== undefined ? { photoData: photo?.dataUrl ?? null } : {}),
             }),
           )
@@ -52,6 +56,7 @@ export function GuestReminderEditor({ reminderId, editing = false }: { reminderI
             day_before: input.remindBefore === true,
             kind: input.kind ?? 'other',
             every_year: input.everyYear === true,
+            repeat: input.repeat ?? 'none',
             signed_in: false,
             photo: input.photo != null,
           })

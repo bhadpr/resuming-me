@@ -27,6 +27,8 @@ import { track } from './track'
 
 const CHANNEL_ID = 'reminder'
 const ACTION_TYPE = 'reminder-due'
+/** A repeating reminder has Done and In 1 hour, but no Tomorrow: its next day is already set. */
+const REPEAT_ACTION_TYPE = 'reminder-repeat-due'
 const ACTION_DONE = 'reminder-done'
 const ACTION_TOMORROW = 'reminder-tomorrow'
 const ACTION_LATER = 'reminder-later'
@@ -99,6 +101,13 @@ export async function syncReminderNotifications(
           { id: ACTION_LATER, title: labels.later },
         ],
       },
+      {
+        id: REPEAT_ACTION_TYPE,
+        actions: [
+          { id: ACTION_DONE, title: labels.done },
+          { id: ACTION_LATER, title: labels.later },
+        ],
+      },
     ],
   })
   await LocalNotifications.cancel({ notifications: reminderNotificationIds().map((id) => ({ id })) })
@@ -109,6 +118,7 @@ export async function syncReminderNotifications(
     return
   }
   const sharedEventIds = new Map(reminders.map((item) => [item.id, item.sharedEventId ?? null]))
+  const repeating = new Set(reminders.filter((item) => item.repeat).map((item) => item.id))
   await ensureReminderChannel()
   await LocalNotifications.schedule({
     notifications: alerts.map((alert) => ({
@@ -124,7 +134,8 @@ export async function syncReminderNotifications(
         sharedEventId: sharedEventIds.get(alert.reminderId) ?? null,
       },
       channelId: CHANNEL_ID,
-      actionTypeId: alert.kind === 'before' ? undefined : ACTION_TYPE,
+      actionTypeId:
+        alert.kind === 'before' ? undefined : repeating.has(alert.reminderId) ? REPEAT_ACTION_TYPE : ACTION_TYPE,
       autoCancel: true,
     })),
   })

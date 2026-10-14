@@ -1,7 +1,9 @@
 import { useEffect, useMemo, useRef } from 'react'
+import { usesKapalabhatiClips } from '../data/kapalbhatiVideos'
 import { habitVideoFor, habitYoutubeEmbedUrl, youtubeWatchUrl, type HabitVideo } from '../data/habitVideos'
 import { useLocale } from '../hooks/useLocale'
 import { habitVideoCaption } from '../lib/onboardingFlow'
+import { KapalabhatiVideos } from './KapalabhatiVideos'
 
 function postYoutubeCommand(iframe: HTMLIFrameElement | null, func: 'playVideo' | 'pauseVideo') {
   iframe?.contentWindow?.postMessage(
@@ -73,6 +75,12 @@ export function HabitVideoPlaceholder({
   ]
     .filter(Boolean)
     .join(' ')
+
+  // Kapalabhati has its own three clips, one for each speed. They show even where other habits
+  // keep an empty frame, such as while choosing the length.
+  if (usesKapalabhatiClips(templateId, own)) {
+    return <KapalabhatiVideos name={name} playing={playing} paused={paused} />
+  }
 
   if (video && !placeholder) {
     return (

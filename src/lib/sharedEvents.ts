@@ -77,7 +77,7 @@ export function replacementReminder(reminder: Reminder): ReminderInput {
 
 /** Only a one-day reminder that has not passed or been done. */
 export function isShareableReminder(reminder: Reminder, today: string): boolean {
-  return !reminder.everyYear && !reminder.doneAt && reminder.day >= today
+  return !reminder.everyYear && !reminder.repeat && !reminder.doneAt && reminder.day >= today
 }
 
 export function isSharedEventCode(value: string): boolean {

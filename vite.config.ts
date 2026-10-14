@@ -1,4 +1,7 @@
 import { execSync } from 'node:child_process'
+import { createReadStream, statSync } from 'node:fs'
+import { join } from 'node:path'
+import type { Plugin } from 'vite'
 import { defineConfig } from 'vitest/config'
 import react from '@vitejs/plugin-react'
 import { VitePWA } from 'vite-plugin-pwa'
@@ -16,6 +19,47 @@ function webBuildVersion(): string {
   }
 }
 
+/**
+ * The marketing site serves /media in production. While developing, serve the same files here
+ * (with byte ranges, which video seeking needs) so the clips play without a deploy.
+ */
+function devMedia(): Plugin {
+  const dir = join(process.cwd(), 'marketing', 'public', 'media')
+  return {
+    name: 'dev-media',
+    apply: 'serve',
+    configureServer(server) {
+      server.middlewares.use('/media', (req, res, next) => {
+        const name = decodeURIComponent((req.url ?? '').split('?')[0]).replace(/^\/+/, '')
+        if (!/^[\w.-]+\.(mp4|webp)$/.test(name)) return next()
+        const file = join(dir, name)
+        let size: number
+        try {
+          size = statSync(file).size
+        } catch {
+          return next()
+        }
+        const type = name.endsWith('.mp4') ? 'video/mp4' : 'image/webp'
+        const range = /^bytes=(\d*)-(\d*)$/.exec(req.headers.range ?? '')
+        if (!range) {
+          res.writeHead(200, { 'Content-Type': type, 'Content-Length': size, 'Accept-Ranges': 'bytes' })
+          createReadStream(file).pipe(res)
+          return
+        }
+        const start = range[1] ? Number(range[1]) : Math.max(0, size - Number(range[2]))
+        const end = range[1] && range[2] ? Math.min(Number(range[2]), size - 1) : size - 1
+        res.writeHead(206, {
+          'Content-Type': type,
+          'Content-Length': end - start + 1,
+          'Content-Range': `bytes ${start}-${end}/${size}`,
+          'Accept-Ranges': 'bytes',
+        })
+        createReadStream(file, { start, end }).pipe(res)
+      })
+    },
+  }
+}
+
 export default defineConfig({
   define: {
     __APP_VERSION__: JSON.stringify(webBuildVersion()),
@@ -28,6 +72,7 @@ export default defineConfig({
   },
   plugins: [
     react(),
+    devMedia(),
     VitePWA({
       registerType: 'autoUpdate',
       injectRegister: false,

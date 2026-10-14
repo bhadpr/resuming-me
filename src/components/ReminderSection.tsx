@@ -9,6 +9,7 @@ import {
   type Reminder,
 } from '../lib/reminderSchedule'
 import { reminderPhotoSrc } from '../lib/eventPhotoUrl'
+import { repeatSummary } from '../lib/reminderRepeat'
 import { isShareableReminder } from '../lib/sharedEvents'
 import { Icon } from './Icon'
 import { ReminderKindMark } from './ReminderKindIcon'
@@ -28,6 +29,8 @@ function reminderWhen(
   ]
   if (reminder.day < today) parts.push(t('reminders.from', { day: formatReminderDay(reminder.day, today, locale) }))
   if (reminder.everyYear) parts.push(t('reminders.everyYear'))
+  const repeats = repeatSummary(reminder, locale, t)
+  if (repeats) parts.push(repeats)
   if (reminder.sharedStatus === 'cancelled') parts.push(t('sharedEvent.cancelledLine'))
   else if (reminder.sharedStatus === 'switched_off') parts.push(t('sharedEvent.switchedOffLine'))
   return parts.join(' · ')
@@ -65,7 +68,7 @@ export function ReminderRow({ reminder, today, busy, onDone, onSkip, onMove, onC
         </span>
       </div>
       <div className="today-extra">
-        {!reminder.sharedEventId && (
+        {!reminder.sharedEventId && !reminder.repeat && (
           <button type="button" className="today-extra-btn" disabled={busy} onClick={() => onMove(tomorrowOf(today))}>
             {t('reminders.moveTomorrow')}
           </button>

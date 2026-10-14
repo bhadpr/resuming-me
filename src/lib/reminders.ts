@@ -1,4 +1,12 @@
+import { todayLocalDate } from './dates'
 import { isEventPhotoPath, isReminderPhotoData } from './eventPhotoUrl'
+import {
+  completeOccurrence,
+  effectiveReminder,
+  isReminderRepeat,
+  isRepeating,
+  reopenOccurrence,
+} from './reminderRepeat'
 import {
   dataUrlToBlob,
   rememberReminderPhoto,
@@ -41,6 +49,10 @@ function fromRow(row: ReminderRow): Reminder {
     remindBefore: row.remind_before ?? false,
     kind: reminderKindOf(row.kind),
     everyYear: row.every_year ?? false,
+    repeat: isReminderRepeat(row.repeat_every) ? row.repeat_every : null,
+    repeatUntil: row.repeat_until ?? null,
+    repeatFrom: row.repeat_from ?? null,
+    lastDoneOn: row.last_done_on ?? null,
     doneAt: row.done_at,
     sharedEventId: row.shared_event_id ?? null,
     alertOff: row.alert_off ?? false,
@@ -85,6 +97,24 @@ export async function withSharedStatuses<T extends Reminder>(list: readonly T[])
   }
 }
 
+/** The repeat columns for a save. They are all set together, or all cleared. */
+function repeatColumns(input: ReminderInput): {
+  repeat_every: string | null
+  repeat_until: string | null
+  repeat_from: string | null
+  last_done_on: string | null
+} {
+  if (!isReminderRepeat(input.repeat) || !input.repeatUntil) {
+    return { repeat_every: null, repeat_until: null, repeat_from: null, last_done_on: null }
+  }
+  return {
+    repeat_every: input.repeat,
+    repeat_until: input.repeatUntil,
+    repeat_from: input.repeatFrom ?? input.day,
+    last_done_on: input.lastDoneOn ?? null,
+  }
+}
+
 function capError(error: { code?: string; message?: string }): boolean {
   return error.code === 'P0001' && (error.message ?? '').includes('reminders_open_cap')
 }
@@ -99,7 +129,22 @@ export async function listReminders(now = new Date()): Promise<Reminder[]> {
     .or(`done_at.is.null,done_at.gte.${since}`)
     .order('day', { ascending: true })
   if (error) throw error
-  return withReminderPhotoUrls(await withSharedStatuses((data ?? []).map(fromRow)))
+  const list = settleEndedRepeats((data ?? []).map(fromRow), now)
+  return withReminderPhotoUrls(await withSharedStatuses(list))
+}
+
+/**
+ * A repeat whose end date has passed is done. Mark it so, so it stops counting toward the open limit.
+ * The write is not awaited; the list is right either way.
+ */
+function settleEndedRepeats(list: Reminder[], now: Date): Reminder[] {
+  const today = todayLocalDate(now)
+  return list.map((item) => {
+    const current = effectiveReminder(item, today)
+    if (current === item || !current.doneAt) return current
+    void setReminderDone(item.id, current.doneAt).catch(() => {})
+    return current
+  })
 }
 
 /** The photo to store for a new reminder: a picked one must upload; a guest's moves over if it can. */
@@ -145,7 +190,8 @@ export async function addReminder(
       minute: input.hour == null ? null : input.minute,
       remind_before: input.remindBefore === true,
       kind: reminderKindOf(input.kind),
-      every_year: input.everyYear === true,
+      every_year: input.everyYear === true && !input.repeat,
+      ...repeatColumns(input),
       done_at: input.doneAt ?? null,
       shared_event_id: input.sharedEventId ?? null,
       alert_off: input.alertOff === true,
@@ -196,7 +242,8 @@ export async function updateReminder(
       minute: input.hour == null ? null : input.minute,
       remind_before: input.remindBefore === true,
       kind: reminderKindOf(input.kind),
-      every_year: input.everyYear === true,
+      every_year: input.everyYear === true && !input.repeat,
+      ...repeatColumns(input),
     })
     .eq('id', id)
   if (error) {
@@ -234,6 +281,17 @@ export async function setReminderDone(id: string, doneAt: string | null): Promis
 
 /** Marks done. An every-year reminder also gets next year's copy, unless the list is full. */
 export async function completeReminder(userId: string, reminder: Reminder, doneAt: string): Promise<void> {
+  const current = effectiveReminder(reminder, todayLocalDate(new Date(doneAt)))
+  if (isRepeating(current)) {
+    // One occurrence is done. The same reminder moves on to its next day.
+    const next = completeOccurrence(current, doneAt)
+    const { error } = await createSupabaseClient()
+      .from('reminders')
+      .update({ day: next.day, done_at: next.doneAt, last_done_on: next.lastDoneOn })
+      .eq('id', reminder.id)
+    if (error) throw error
+    return
+  }
   await setReminderDone(reminder.id, doneAt)
   if (!reminder.everyYear) return
   try {
@@ -245,6 +303,15 @@ export async function completeReminder(userId: string, reminder: Reminder, doneA
 
 /** Puts a done reminder back, and removes the next-year copy that Done made. */
 export async function reopenReminder(reminder: Reminder): Promise<void> {
+  if (isRepeating(reminder)) {
+    const back = reopenOccurrence(reminder)
+    const { error } = await createSupabaseClient()
+      .from('reminders')
+      .update({ day: back.day, done_at: back.doneAt, last_done_on: back.lastDoneOn })
+      .eq('id', reminder.id)
+    if (error) throw error
+    return
+  }
   await setReminderDone(reminder.id, null)
   if (!reminder.everyYear) return
   const client = createSupabaseClient()

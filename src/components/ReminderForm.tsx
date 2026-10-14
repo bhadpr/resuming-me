@@ -3,6 +3,15 @@ import { reminderPhotoSrc } from '../lib/eventPhotoUrl'
 import { prepareReminderPhoto } from '../lib/reminderPhotos'
 import { useLocale } from '../hooks/useLocale'
 import {
+  REMINDER_REPEATS,
+  clampRepeatUntil,
+  defaultRepeatUntil,
+  effectiveReminder,
+  repeatLimit,
+  repeatSummary,
+  type ReminderRepeat,
+} from '../lib/reminderRepeat'
+import {
   REMINDER_KINDS,
   REMINDER_DESCRIPTION_MAX,
   REMINDER_PARTS,
@@ -87,9 +96,16 @@ export function ReminderForm({
   const [remindBefore, setRemindBefore] = useState(seed?.remindBefore ?? false)
   const [kind, setKind] = useState<ReminderKind | null>(seed?.kind ?? null)
   const [everyYear, setEveryYear] = useState(initial?.everyYear ?? false)
+  const [repeat, setRepeat] = useState<ReminderRepeat | null>(initial?.repeat ?? null)
+  /** Missing until the person picks an end date, so it follows the first day until then. */
+  const [pickedUntil, setPickedUntil] = useState<string | null>(initial?.repeatUntil ?? null)
   const [issue, setIssue] = useState<ReminderIssue | null>(null)
-  const canRemindBefore = resolvedDay() > today
+  const repeating = repeat !== null
+  const canRemindBefore = resolvedDay() > today && !repeating
   const dayBeforeOn = canRemindBefore && remindBefore
+  /** Keeps the original first day, so editing a repeat cannot stretch its two months. */
+  const repeatFrom = initial?.repeat && initial.repeatFrom && resolvedDay() === initial.day ? initial.repeatFrom : resolvedDay()
+  const repeatUntil = clampRepeatUntil(repeatFrom, pickedUntil ?? defaultRepeatUntil(repeatFrom))
 
   function resolvedDay(): string {
     if (dayChoice === 'today') return today
@@ -117,7 +133,15 @@ export function ReminderForm({
       ...resolvedTime(),
       remindBefore: dayBeforeOn,
       kind: kind ?? 'other',
-      everyYear,
+      everyYear: everyYear && !repeating,
+      ...(repeat
+        ? {
+            repeat,
+            repeatUntil,
+            repeatFrom,
+            lastDoneOn: initial?.lastDoneOn ?? null,
+          }
+        : {}),
     }
     const nextIssue = validateReminder(input)
     setIssue(nextIssue)
@@ -131,9 +155,11 @@ export function ReminderForm({
       ? t('reminders.needText')
       : issue === 'day'
         ? t('reminders.needDay')
-        : issue === 'full'
-          ? t('reminders.full')
-          : null
+        : issue === 'repeat'
+          ? t('reminders.needRepeatEnd')
+          : issue === 'full'
+            ? t('reminders.full')
+            : null
 
   return (
     <form className="activity-form reminder-form" noValidate onSubmit={(event) => void submit(event)}>
@@ -233,13 +259,59 @@ export function ReminderForm({
           />
         )}
 
-        <label className="reminder-switch">
-          <input type="checkbox" checked={everyYear} onChange={(event) => setEveryYear(event.target.checked)} />
-          <span>
-            {t('reminders.everyYear')}
-            <span className="reminder-switch-hint">{t('reminders.everyYearHint')}</span>
-          </span>
-        </label>
+        {!repeating && (
+          <label className="reminder-switch">
+            <input type="checkbox" checked={everyYear} onChange={(event) => setEveryYear(event.target.checked)} />
+            <span>
+              {t('reminders.everyYear')}
+              <span className="reminder-switch-hint">{t('reminders.everyYearHint')}</span>
+            </span>
+          </label>
+        )}
+
+        {!everyYear && (
+          <>
+            <p className="reminder-question">{t('reminders.repeat')}</p>
+            <div className="reminder-choices">
+              <button
+                type="button"
+                className={choiceClass(repeat === null)}
+                aria-pressed={repeat === null}
+                onClick={() => setRepeat(null)}
+              >
+                {t('reminders.repeatNone')}
+              </button>
+              {REMINDER_REPEATS.map((choice) => (
+                <button
+                  key={choice}
+                  type="button"
+                  className={choiceClass(repeat === choice)}
+                  aria-pressed={repeat === choice}
+                  onClick={() => setRepeat(choice)}
+                >
+                  {t(choice === 'week' ? 'reminders.repeatWeek' : 'reminders.repeatDay')}
+                </button>
+              ))}
+            </div>
+            {repeat && (
+              <label className="field">
+                <span className="reminder-question">{t('reminders.repeatUntil')}</span>
+                <input
+                  className="field-input"
+                  type="date"
+                  min={repeatFrom}
+                  max={repeatLimit(repeatFrom)}
+                  value={repeatUntil}
+                  onChange={(event) => {
+                    setPickedUntil(event.target.value || null)
+                    if (issue === 'repeat') setIssue(null)
+                  }}
+                />
+                <span className="reminder-switch-hint">{t('reminders.repeatUntilHint')}</span>
+              </label>
+            )}
+          </>
+        )}
 
         <p className="reminder-question">{t('reminders.time')}</p>
         <div className="reminder-choices">
@@ -414,6 +486,7 @@ function ReminderView({ reminder, saving, error, onDelete, onCancel, onEdit, sha
   const when = [
     formatSharedWhen(reminder, locale),
     reminder.everyYear ? t('reminders.everyYear') : null,
+    repeatSummary(reminder, locale, t),
     reminder.remindBefore ? t('reminders.dayBeforeShort') : null,
   ]
     .filter(Boolean)
@@ -514,7 +587,8 @@ export function ReminderEditor({
   onEdit,
 }: ReminderEditorProps) {
   const { t } = useLocale()
-  const reminder = reminderId ? (reminders.find((item) => item.id === reminderId) ?? null) : null
+  const stored = reminderId ? (reminders.find((item) => item.id === reminderId) ?? null) : null
+  const reminder = stored ? effectiveReminder(stored, today) : null
 
   if (reminderId && !reminder) {
     if (loading) return <p className="muted-center">{t('reminders.loading')}</p>

@@ -29,6 +29,7 @@ import {
   upsertGuestReading,
   type GuestDraft,
 } from './guestDraft'
+import { addDays, todayLocalDate } from './dates'
 
 function memoryStorage() {
   const store = new Map<string, string>()
@@ -468,6 +469,77 @@ describe('guest reminders', () => {
 
     draft = removeGuestReminder(draft, id)
     expect(loadGuestDraft()?.reminders).toEqual([])
+  })
+
+  it('keeps a repeat, moves it on when done, and puts it back', () => {
+    memoryStorage()
+    const today = todayLocalDate()
+    let draft = addGuestReminder(ensureGuestDraft('UTC'), {
+      text: 'Take the stairs',
+      day: today,
+      hour: null,
+      minute: null,
+      repeat: 'day',
+      repeatUntil: addDays(today, 30),
+    })!
+    expect(loadGuestDraft()?.reminders[0]).toMatchObject({ repeat: 'day', repeatFrom: today, repeatUntil: addDays(today, 30) })
+    const id = draft.reminders[0].id
+
+    draft = completeGuestReminder(draft, id, new Date().toISOString())
+    expect(loadGuestDraft()?.reminders[0]).toMatchObject({ day: addDays(today, 1), doneAt: null, lastDoneOn: today })
+
+    draft = reopenGuestReminder(draft, id)
+    expect(loadGuestDraft()?.reminders[0]).toMatchObject({ day: today, doneAt: null, lastDoneOn: null })
+  })
+
+  it('finishes a repeat on its last day, and moves a missed one to today', () => {
+    memoryStorage()
+    const today = todayLocalDate()
+    const draft = addGuestReminder(ensureGuestDraft('UTC'), {
+      text: 'Last one',
+      day: today,
+      hour: null,
+      minute: null,
+      repeat: 'week',
+      repeatUntil: today,
+    })!
+    completeGuestReminder(draft, draft.reminders[0].id, new Date().toISOString())
+    expect(loadGuestDraft()?.reminders[0].doneAt).not.toBeNull()
+
+    memoryStorage()
+    const missed = saveGuestDraft({
+      ...ensureGuestDraft('UTC'),
+      reminders: [
+        {
+          ...stored('daily', 'Daily'),
+          day: addDays(today, -5),
+          repeat: 'day',
+          repeatFrom: addDays(today, -5),
+          repeatUntil: addDays(today, 20),
+        },
+      ],
+    })
+    expect(missed.reminders[0].day).toBe(today)
+  })
+
+  it('forgets a repeat that ended before today, and ignores a repeat on an every-year reminder', () => {
+    memoryStorage()
+    const today = todayLocalDate()
+    const saved = saveGuestDraft({
+      ...ensureGuestDraft('UTC'),
+      reminders: [
+        {
+          ...stored('old', 'Old'),
+          day: addDays(today, -40),
+          repeat: 'day',
+          repeatFrom: addDays(today, -40),
+          repeatUntil: addDays(today, -10),
+        },
+        { ...stored('yearly', 'Yearly'), everyYear: true, repeat: 'day', repeatUntil: addDays(today, 5) },
+      ],
+    })
+    expect(saved.reminders.map((item) => item.id)).toEqual(['yearly'])
+    expect(saved.reminders[0].repeat).toBeUndefined()
   })
 
   it('stops at 100 open reminders', () => {

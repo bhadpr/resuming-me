@@ -2522,6 +2522,89 @@ select.field-input.language-select {
   margin-top: var(--space-2);
 }
 
+/* Kapalabhati's three clips: the chosen speed in the middle, the other two on either side. */
+.kapal-row {
+  display: flex;
+  align-items: flex-start;
+  justify-content: center;
+  gap: var(--space-2);
+  width: 100%;
+}
+
+.kapal-item {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: var(--space-1);
+  min-width: 0;
+}
+
+.kapal-item-middle {
+  flex: 0 0 52%;
+}
+
+.kapal-item-side {
+  flex: 0 0 22%;
+  margin-top: 16%;
+}
+
+.kapal-frame {
+  position: relative;
+  width: 100%;
+  aspect-ratio: 4 / 5;
+}
+
+.kapal-video {
+  display: block;
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+  border: 1px solid var(--color-border);
+  border-radius: var(--radius);
+  background: #000;
+}
+
+.kapal-item-side .kapal-video {
+  opacity: 0.8;
+}
+
+.kapal-pick {
+  position: absolute;
+  inset: 0;
+  padding: 0;
+  border: 0;
+  border-radius: var(--radius);
+  background: transparent;
+  cursor: pointer;
+}
+
+.kapal-pick::before {
+  content: '';
+  position: absolute;
+  top: 50%;
+  left: 54%;
+  transform: translate(-50%, -50%);
+  border-style: solid;
+  border-width: 0.4rem 0 0.4rem 0.65rem;
+  border-color: transparent transparent transparent var(--color-surface);
+  filter: drop-shadow(0 0 2px rgb(0 0 0 / 45%));
+}
+
+.kapal-pick:focus-visible {
+  outline: 2px solid var(--color-primary);
+  outline-offset: 2px;
+}
+
+.kapal-label {
+  font-size: var(--text-sm);
+  color: var(--color-text-muted, var(--color-text));
+}
+
+.kapal-item-middle .kapal-label {
+  font-weight: var(--weight-semibold);
+  color: var(--color-text);
+}
+
 .habit-group-title {
   margin: 0 0 var(--space-2);
   font-size: var(--text-xl);

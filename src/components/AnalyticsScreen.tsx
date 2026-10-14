@@ -16,7 +16,7 @@ import { fetchOnboardingFunnel, type OnboardingFunnel } from '../lib/onboardingF
 import { fetchGuestJourney, type CreateCounts, type GuestJourney } from '../lib/guestJourney'
 import { templateLabel } from '../lib/catalogName'
 import { fetchLoopAnalytics, type CohortRow, type ComebackLoopSummary } from '../lib/loopAnalytics'
-import { fetchReminderSummary, type ReminderSummary } from '../lib/reminderAnalytics'
+import { fetchReminderSummary, oneTimeDoneRate, type ReminderSummary } from '../lib/reminderAnalytics'
 import { fetchSiteEvents, summarizeSiteEvents, type SiteSummary } from '../lib/siteAnalytics'
 
 export function AnalyticsScreen() {
@@ -467,6 +467,15 @@ export function AnalyticsScreen() {
             <li className="analytics-rank-row">
               Done · {reminders.done} · from a notification {reminders.doneFromNotification}
             </li>
+            {oneTimeDoneRate(reminders) != null && (
+              <li className="analytics-rank-row">
+                One-time reminders done per added · {oneTimeDoneRate(reminders)}%
+              </li>
+            )}
+            <li className="analytics-rank-row">
+              Repeats · every day {reminders.repeatAdded.day} · every week {reminders.repeatAdded.week} · marked done{' '}
+              {reminders.repeatDone}
+            </li>
             <li className="analytics-rank-row">
               With a time {reminders.withTime} · day before {reminders.dayBefore} · every year{' '}
               {reminders.everyYear}
@@ -474,6 +483,11 @@ export function AnalyticsScreen() {
             <li className="analytics-rank-row">
               Signed in {reminders.signedIn} · guests {reminders.added - reminders.signedIn}
             </li>
+            {[...reminders.perDay].reverse().map((row) => (
+              <li key={`reminder-day-${row.day}`} className="analytics-rank-row">
+                {row.day} · added {row.added} · done {row.done}
+              </li>
+            ))}
             {reminders.kinds.length > 0 && (
               <li className="analytics-rank-row">
                 {reminders.kinds.map((row) => `${row.kind} ${row.count}`).join(' · ')}
