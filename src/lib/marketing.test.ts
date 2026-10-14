@@ -39,56 +39,74 @@ describe('retentionBucket', () => {
 })
 
 describe('earnedRupees', () => {
-  it('pays the install rate plus the five-day rate, inside the cap', () => {
-    expect(earnedRupees(1000, 100, 5, 50, 20000)).toBe(10000)
-    expect(earnedRupees(1000, 200, 5, 50, 20000)).toBe(15000)
-    expect(earnedRupees(1000, 400, 5, 50, 20000)).toBe(20000)
-    expect(earnedRupees(10, 1, 5, 50, null, 0)).toBe(100)
+  it('pays only for five-day people, inside the cap', () => {
+    expect(earnedRupees(2000, 500, 0, 20, 20000)).toBe(10000)
+    expect(earnedRupees(2000, 700, 0, 20, 20000)).toBe(14000)
+    expect(earnedRupees(2000, 1000, 0, 20, 20000)).toBe(20000)
+    expect(earnedRupees(5000, 2500, 0, 20, 20000)).toBe(20000)
+    expect(earnedRupees(2000, 2000, 0, 20, null)).toBe(40000)
   })
 
-  it('pays nothing until the group reaches the minimum installs', () => {
-    expect(earnedRupees(10, 5, 5, 50, null)).toBe(0)
-    expect(earnedRupees(499, 40, 5, 50, null)).toBe(0)
-    expect(earnedRupees(500, 40, 5, 50, null)).toBe(4500)
+  it('pays nothing until the group has the minimum five-day people', () => {
+    expect(earnedRupees(5000, 499, 0, 20, 20000)).toBe(0)
+    expect(earnedRupees(5000, 0, 0, 20, 20000)).toBe(0)
+    expect(earnedRupees(10, 1, 0, 20, null, 0)).toBe(20)
+  })
+
+  it('does not count installs toward the minimum', () => {
+    expect(earnedRupees(600, 40, 5, 50, null)).toBe(0)
+  })
+
+  it('still adds an install rate when a group has one', () => {
+    expect(earnedRupees(1000, 500, 5, 20, null)).toBe(15000)
   })
 })
 
 describe('payableNow', () => {
   const base = {
-    installs: 1000,
-    settledInstalls: 800,
-    settledRetained: 100,
-    playInstalls: 1000,
-    installRate: 5,
-    retainedRate: 50,
-    cap: null,
-    minInstalls: 500,
+    installs: 1500,
+    settledInstalls: 1200,
+    settledRetained: 600,
+    playInstalls: 1500,
+    installRate: 0,
+    retainedRate: 20,
+    cap: 20000,
+    minRetained: 500,
   }
 
   it('waits for the Play Console number', () => {
     expect(payableNow({ ...base, playInstalls: null })).toBeNull()
   })
 
-  it('pays only settled installs when Google Play agrees', () => {
-    expect(payableNow(base)).toEqual({ installs: 800, retained: 100, rupees: 9000 })
+  it('pays only settled five-day people when Google Play agrees', () => {
+    expect(payableNow(base)).toEqual({ installs: 1200, retained: 600, rupees: 12000 })
   })
 
   it('scales down to the lower number when Google Play shows fewer installs', () => {
-    expect(payableNow({ ...base, playInstalls: 500 })).toEqual({ installs: 400, retained: 50, rupees: 0 })
-    expect(payableNow({ ...base, playInstalls: 900, minInstalls: 0 })).toEqual({
-      installs: 720,
-      retained: 90,
-      rupees: 8100,
+    expect(payableNow({ ...base, playInstalls: 750 })).toEqual({ installs: 600, retained: 300, rupees: 0 })
+    expect(payableNow({ ...base, playInstalls: 1200, minRetained: 0 })).toEqual({
+      installs: 960,
+      retained: 480,
+      rupees: 9600,
     })
   })
 
   it('never pays more than we counted when Google Play shows more', () => {
-    expect(payableNow({ ...base, playInstalls: 5000 })?.installs).toBe(800)
+    expect(payableNow({ ...base, playInstalls: 5000 })?.installs).toBe(1200)
   })
 
   it('keeps the cap and the minimum', () => {
+    expect(payableNow({ ...base, settledRetained: 1500 })?.rupees).toBe(20000)
     expect(payableNow({ ...base, cap: 5000 })?.rupees).toBe(5000)
-    expect(payableNow({ ...base, settledInstalls: 499 })?.rupees).toBe(0)
+    expect(payableNow({ ...base, settledRetained: 499 })?.rupees).toBe(0)
+  })
+
+  it('never counts more five-day people than installs', () => {
+    expect(payableNow({ ...base, settledInstalls: 500, settledRetained: 900 })).toEqual({
+      installs: 500,
+      retained: 500,
+      rupees: 10000,
+    })
   })
 
   it('pays nothing when we counted no installs', () => {

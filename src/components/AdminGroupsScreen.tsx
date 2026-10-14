@@ -3,7 +3,16 @@ import { useNavigate } from 'react-router-dom'
 import { useAuth } from '../hooks/useAuth'
 import { MarketingLink } from './MarketingLink'
 import { todayLocalDate } from '../lib/dates'
-import { HOLD_DAYS, formatRupees, payableNow, playGap } from '../lib/marketing'
+import {
+  DEFAULT_CAP,
+  DEFAULT_INSTALL_RATE,
+  DEFAULT_MIN_RETAINED,
+  DEFAULT_RETAINED_RATE,
+  HOLD_DAYS,
+  formatRupees,
+  payableNow,
+  playGap,
+} from '../lib/marketing'
 import {
   addMarketingMember,
   countKey,
@@ -41,10 +50,12 @@ function EarnedMath({ group, counts }: { group: MarketingGroup; counts: Marketin
   const count = (value: number) => value.toLocaleString('en-IN')
   return (
     <div className="earned-math">
-      <p>
-        {count(counts.installs)} installs × {formatRupees(group.install_rate_rupees)} ={' '}
-        {formatRupees(installAmount)}
-      </p>
+      {group.install_rate_rupees > 0 ? (
+        <p>
+          {count(counts.installs)} installs × {formatRupees(group.install_rate_rupees)} ={' '}
+          {formatRupees(installAmount)}
+        </p>
+      ) : null}
       <p>
         {count(counts.retained)} five-day people × {formatRupees(group.retained_rate_rupees)} ={' '}
         {formatRupees(retainedAmount)}
@@ -55,14 +66,14 @@ function EarnedMath({ group, counts }: { group: MarketingGroup; counts: Marketin
 
 function EarnedTotal({ group, counts }: { group: MarketingGroup; counts: MarketingCounts }) {
   const earned = formatRupees(memberEarned(group, counts))
-  const waiting = counts.installs < group.min_payout_installs
+  const waiting = counts.retained < group.min_payout_installs
   return (
     <p className="earned-total">
       <span className="earned-total-label">Earned</span>{' '}
       <span className="earned-total-amount">{earned}</span>
       {waiting ? (
         <span className="earned-total-note">
-          until {group.min_payout_installs.toLocaleString('en-IN')} installs
+          until {group.min_payout_installs.toLocaleString('en-IN')} five-day people
         </span>
       ) : null}
     </p>
@@ -307,7 +318,7 @@ function BeforePaying({
     installRate: group.install_rate_rupees,
     retainedRate: group.retained_rate_rupees,
     cap: group.cap_rupees,
-    minInstalls: group.min_payout_installs,
+    minRetained: group.min_payout_installs,
   })
   const gap = playGap(installs, group.play_console_installs)
   const stillToPay = payable ? Math.max(0, payable.rupees - markedPaid) : null
@@ -366,8 +377,8 @@ function BeforePaying({
               <span className="analytics-stat-label">Safe to pay now</span>
               <span className="analytics-stat-value">{formatRupees(payable.rupees)}</span>
               <span className="analytics-stat-hint">
-                {payable.installs === 0 && settled.installs < group.min_payout_installs
-                  ? `Starts at ${count(group.min_payout_installs)} settled installs`
+                {payable.rupees === 0 && payable.retained < group.min_payout_installs
+                  ? `Starts at ${count(group.min_payout_installs)} settled five-day people`
                   : 'Settled, and no more than Google Play shows'}
               </span>
             </div>
@@ -448,17 +459,17 @@ function GroupList({
 }) {
   const [name, setName] = useState('')
   const [goal, setGoal] = useState('1000')
-  const [installRate, setInstallRate] = useState('5')
-  const [retainedRate, setRetainedRate] = useState('50')
-  const [cap, setCap] = useState('')
-  const [minInstalls, setMinInstalls] = useState('500')
+  const [installRate, setInstallRate] = useState(String(DEFAULT_INSTALL_RATE))
+  const [retainedRate, setRetainedRate] = useState(String(DEFAULT_RETAINED_RATE))
+  const [cap, setCap] = useState(String(DEFAULT_CAP))
+  const [minRetained, setMinRetained] = useState(String(DEFAULT_MIN_RETAINED))
 
   function submit(event: FormEvent) {
     event.preventDefault()
     const installGoal = Number(goal)
     const install = Number(installRate)
     const retained = Number(retainedRate)
-    const minimum = Number(minInstalls)
+    const minimum = Number(minRetained)
     if (!name.trim() || !Number.isInteger(installGoal) || installGoal < 1) return
     if (!Number.isInteger(install) || install < 0) return
     if (!Number.isInteger(retained) || retained < 0) return
@@ -514,11 +525,11 @@ function GroupList({
           <input className="field-input" inputMode="numeric" value={goal} onChange={(event) => setGoal(event.target.value)} />
         </label>
         <label className="field">
-          <span className="field-label">Minimum installs before pay</span>
-          <input className="field-input" inputMode="numeric" value={minInstalls} onChange={(event) => setMinInstalls(event.target.value)} />
+          <span className="field-label">Minimum five-day people before pay</span>
+          <input className="field-input" inputMode="numeric" value={minRetained} onChange={(event) => setMinRetained(event.target.value)} />
         </label>
         <label className="field">
-          <span className="field-label">Rupees per install</span>
+          <span className="field-label">Rupees per install (leave 0 to pay only for five-day people)</span>
           <input className="field-input" inputMode="numeric" value={installRate} onChange={(event) => setInstallRate(event.target.value)} />
         </label>
         <label className="field">
@@ -526,7 +537,7 @@ function GroupList({
           <input className="field-input" inputMode="numeric" value={retainedRate} onChange={(event) => setRetainedRate(event.target.value)} />
         </label>
         <label className="field">
-          <span className="field-label">Cap in rupees, optional</span>
+          <span className="field-label">Most the group can earn, in rupees (empty for no limit)</span>
           <input className="field-input" inputMode="numeric" value={cap} onChange={(event) => setCap(event.target.value)} />
         </label>
         <button type="submit" className="btn btn-primary">
@@ -579,8 +590,9 @@ function GroupDetail({
       <h2 className="activity-name">{group.name}</h2>
       <p className="activity-desc">
         Goal {group.install_goal.toLocaleString('en-IN')} installs. Pay starts at{' '}
-        {group.min_payout_installs.toLocaleString('en-IN')} installs. {formatRupees(group.install_rate_rupees)}{' '}
-        per install, {formatRupees(group.retained_rate_rupees)} per five-day return
+        {group.min_payout_installs.toLocaleString('en-IN')} five-day people.{' '}
+        {group.install_rate_rupees > 0 ? `${formatRupees(group.install_rate_rupees)} per install, ` : ''}
+        {formatRupees(group.retained_rate_rupees)} per five-day return
         {group.cap_rupees == null ? '' : `, cap ${formatRupees(group.cap_rupees)}`}.
       </p>
       <CountBoard counts={tally} />
@@ -590,8 +602,8 @@ function GroupDetail({
           <span className="analytics-stat-label">Earned</span>
           <span className="analytics-stat-value">{formatRupees(earned)}</span>
           <span className="analytics-stat-hint">
-            {tally.installs < group.min_payout_installs
-              ? `Starts at ${group.min_payout_installs.toLocaleString('en-IN')} installs`
+            {tally.retained < group.min_payout_installs
+              ? `Starts at ${group.min_payout_installs.toLocaleString('en-IN')} five-day people`
               : 'From the rates above'}
           </span>
         </div>

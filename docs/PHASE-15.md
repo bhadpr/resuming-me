@@ -58,7 +58,7 @@ These costs are estimates for Android in India and need checking against the fir
 4. **Influencer terms.** Free use of the app is no reason for a creator to post. Suggested: pay a flat fee per Reel with a short written brief and the disclosure label, and no promises about results.
 5. **Who records Hindi and regional voice-overs.** HeyGen covers English and Hindi. Gujarati, Marathi, Telugu, Tamil and Bengali need captions at least, and ideally a native check.
 6. **In-app review prompt.** Check whether the app asks for a Play review after a good moment. If not, add it (P15-12).
-7. **Referral group numbers and budget.** Suggested: ₹5 per install, ₹10 per five-day return, a cap of ₹15,000 per 1,000 installs (at most ₹5,000 + ₹10,000), and no pay until 500 installs. The form defaults to ₹50 for a return and has no cap, so both must be set by hand. If 15% to 30% of people return, 1,000 installs cost about ₹6,500 to ₹8,000. Decide whether this comes out of the $500 (suggested: yes, about $175 at the most, at roughly ₹85 per dollar), so the paid split shrinks accordingly.
+7. **Referral group numbers and budget.** Decided: pay only for retained people (five different days within 30 days of installing). ₹20 per retained person, nothing until the group has 500 retained people (₹10,000), and a cap of ₹20,000 per group (reached at 1,000 retained people). Installs earn nothing. The new-group form now defaults to these numbers. Decide whether this comes out of the $500 (about $235 at the most per group, at roughly ₹85 per dollar), so the paid split shrinks accordingly.
 8. **What "returned" means.** Today it is five different days opening the app in 30 days, even if nothing is logged. Suggested: keep it for the first group, and review the numbers by hand before paying.
 
 ## Recommended order
@@ -230,7 +230,7 @@ Cadence:
 
 The referral system works, but these must be done before anyone is paid on its numbers.
 
-- **Set the numbers** on each group: ₹5 per install, ₹10 per five-day return, a cap of ₹15,000 per 1,000 installs, and a 500-install minimum (decision 7). The goal is only displayed and does not stop pay, so the cap is what limits spending.
+- **Set the numbers** on each group: ₹20 per five-day return, no install rate, a ₹20,000 cap, and a minimum of 500 five-day people (decision 7). The new-group form defaults to these. The goal is only displayed and does not stop pay, so the cap is what limits spending. The column `min_payout_installs` now holds the five-day minimum.
 - **Close the fake-install hole (checks built 13 Oct 2026, not yet deployed).** `marketing_record_open` is open to anyone (`anon`) and trusts what the phone sends. The member code is visible in the Play link, so a script could send unlimited fake device keys and, over five days, make them count as returned. Until installs are verified with Play Integrity, pay only through these checks, all on the group page in `/admin/groups` under "Before you pay" (migration `20261021120000_marketing_pay_checks.sql`):
   1. **Check Google Play.** Type in the installs Play Console shows for the group's source tag. The page shows "Safe to pay now", based on the lower of our count and Google's, and warns when ours is at least 20% (and at least 10) higher.
   2. **Wait.** Only installs whose 30 days ended at least 7 days ago count as payable. Members are told this on their own page.

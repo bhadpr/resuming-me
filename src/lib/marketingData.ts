@@ -10,6 +10,7 @@ export interface MarketingGroup {
   install_rate_rupees: number
   retained_rate_rupees: number
   cap_rupees: number | null
+  /** Despite the column name, this is the minimum five-day (retained) people before pay starts. */
   min_payout_installs: number
   /** Installs Google Play Console shows for this group, typed in by an admin. */
   play_console_installs: number | null

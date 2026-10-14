@@ -62,7 +62,50 @@ const QUEUE_KEY = 'resuming.offlineEventsQueue'
 const LAST_OPEN_KEY = 'resuming-last-app-open'
 const FLUSH_MS = 10_000
 const MAX_QUEUE = 200
-const APP_VERSION = '0.1.0'
+
+/** Web: build date and commit, set by vite.config.ts. Android: the store version, read once from the app. */
+const WEB_VERSION = typeof __APP_VERSION__ === 'string' ? __APP_VERSION__ : 'web-unknown'
+/** Stands in for the Android version until the app has told us, which takes a moment after start. */
+const VERSION_PENDING = 'pending'
+const VERSION_UNKNOWN = 'unknown'
+const MAX_VERSION_LENGTH = 40
+
+let nativeVersion: string | null = null
+let nativeVersionLoad: Promise<string> | null = null
+
+/** "1.0.4" with build 7 becomes "1.0.4+7", so two builds of one version can still be told apart. */
+export function formatNativeVersion(version: string | null | undefined, build: string | null | undefined): string {
+  const name = (version ?? '').trim()
+  if (!name) return VERSION_UNKNOWN
+  const code = (build ?? '').trim()
+  return (code ? `${name}+${code}` : name).slice(0, MAX_VERSION_LENGTH)
+}
+
+function isNativeApp(): boolean {
+  try {
+    return Capacitor.isNativePlatform()
+  } catch {
+    return false
+  }
+}
+
+function loadNativeVersion(): Promise<string> {
+  if (nativeVersion) return Promise.resolve(nativeVersion)
+  nativeVersionLoad ??= import('@capacitor/app')
+    .then(({ App }) => App.getInfo())
+    .then((info) => formatNativeVersion(info.version, info.build))
+    .catch(() => VERSION_UNKNOWN)
+    .then((value) => {
+      nativeVersion = value
+      return value
+    })
+  return nativeVersionLoad
+}
+
+function currentAppVersion(): string {
+  if (!isNativeApp()) return WEB_VERSION
+  return nativeVersion ?? VERSION_PENDING
+}
 
 type QueuedEvent = {
   id: string
@@ -189,6 +232,7 @@ function scheduleFlush(): void {
 function ensureListeners(): void {
   if (listenersAttached || typeof document === 'undefined') return
   listenersAttached = true
+  if (isNativeApp()) void loadNativeVersion()
 
   document.addEventListener('visibilitychange', () => {
     if (document.visibilityState === 'hidden') {
@@ -259,7 +303,7 @@ export function track(name: TrackedEventName | string, props?: EventProps): void
       typeof window !== 'undefined' ? window.location.pathname || '/' : '/',
       500,
     ),
-    app_version: APP_VERSION,
+    app_version: currentAppVersion(),
     platform: detectPlatform(),
     anon_id: getOrCreateAnonId(),
     user_id: null,
@@ -298,6 +342,10 @@ export async function flushEvents(): Promise<void> {
   flushing = true
 
   try {
+    // Events tracked in the first moments of an Android session wait for the real version.
+    const version = pending.some((e) => e.app_version === VERSION_PENDING)
+      ? await loadNativeVersion()
+      : null
     const client = createSupabaseClient()
     const { data: sessionData } = await client.auth.getSession()
     const userId = sessionData.session?.user?.id ?? null
@@ -311,7 +359,7 @@ export async function flushEvents(): Promise<void> {
         name: e.name,
         props: e.props as Json,
         path: e.path,
-        app_version: e.app_version,
+        app_version: e.app_version === VERSION_PENDING ? (version ?? VERSION_UNKNOWN) : e.app_version,
         platform: e.platform,
       }))
 

@@ -1,8 +1,25 @@
+import { execSync } from 'node:child_process'
 import { defineConfig } from 'vitest/config'
 import react from '@vitejs/plugin-react'
 import { VitePWA } from 'vite-plugin-pwa'
 
+/** Web builds have no store version, so events carry the build date and commit instead. */
+function webBuildVersion(): string {
+  const day = new Date().toISOString().slice(0, 10)
+  try {
+    const sha = execSync('git rev-parse --short HEAD', { stdio: ['ignore', 'pipe', 'ignore'] })
+      .toString()
+      .trim()
+    return sha ? `web-${day}-${sha}` : `web-${day}`
+  } catch {
+    return `web-${day}`
+  }
+}
+
 export default defineConfig({
+  define: {
+    __APP_VERSION__: JSON.stringify(webBuildVersion()),
+  },
   // Avoid clashing with other local Vite apps on 5173 (IPv4 vs IPv6 localhost).
   server: {
     host: '127.0.0.1',

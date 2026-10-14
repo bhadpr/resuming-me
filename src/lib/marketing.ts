@@ -34,15 +34,25 @@ export function retentionBucket(
   return 'ended_short'
 }
 
+/** Default terms for a new group: pay only for people who stayed, nothing below 500 of them. */
+export const DEFAULT_INSTALL_RATE = 0
+export const DEFAULT_RETAINED_RATE = 20
+export const DEFAULT_MIN_RETAINED = 500
+export const DEFAULT_CAP = 20000
+
+/**
+ * Nothing is paid until the group has `minRetained` five-day people. After that every
+ * five-day person earns `retainedRate`, plus `installRate` for each install when that is set.
+ */
 export function earnedRupees(
   installs: number,
   retained: number,
   installRate: number,
   retainedRate: number,
   cap: number | null,
-  minInstalls = 500,
+  minRetained = DEFAULT_MIN_RETAINED,
 ): number {
-  if (installs < minInstalls) return 0
+  if (retained < minRetained) return 0
   const raw = installs * installRate + retained * retainedRate
   if (cap == null) return raw
   return Math.min(cap, raw)
@@ -77,7 +87,8 @@ export interface PayableInput {
   installRate: number
   retainedRate: number
   cap: number | null
-  minInstalls: number
+  /** Minimum five-day people before anything is paid. */
+  minRetained: number
 }
 
 export interface Payable {
@@ -101,7 +112,7 @@ export function payableNow(input: PayableInput): Payable | null {
     input.installRate,
     input.retainedRate,
     input.cap,
-    input.minInstalls,
+    input.minRetained,
   )
   return { installs, retained, rupees }
 }

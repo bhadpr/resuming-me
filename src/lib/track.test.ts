@@ -16,6 +16,7 @@ import {
   _resetTrackStateForTests,
   comebackGapDays,
   flushEvents,
+  formatNativeVersion,
   sanitizeEventProps,
   smallerChoiceProp,
   track,
@@ -140,6 +141,39 @@ describe('track queue', () => {
     track('skip_today', { reason: 'too_tired', name: 'Walk' })
     const skip = _peekQueueForTests().find((e) => e.name === 'skip_today')
     expect(skip?.props).toEqual({ reason: 'too_tired' })
+  })
+})
+
+describe('formatNativeVersion', () => {
+  it('joins the version name and the build number', () => {
+    expect(formatNativeVersion('1.0.4', '7')).toBe('1.0.4+7')
+    expect(formatNativeVersion('1.0.4', '')).toBe('1.0.4')
+    expect(formatNativeVersion(' 1.0.4 ', null)).toBe('1.0.4')
+  })
+
+  it('falls back to unknown and stays inside the database limit', () => {
+    expect(formatNativeVersion('', '7')).toBe('unknown')
+    expect(formatNativeVersion(undefined, undefined)).toBe('unknown')
+    expect(formatNativeVersion('x'.repeat(60), '7').length).toBe(40)
+  })
+})
+
+describe('web app version', () => {
+  beforeEach(() => {
+    installMemoryStorage()
+    _resetTrackStateForTests()
+  })
+
+  afterEach(() => {
+    _resetTrackStateForTests()
+    vi.unstubAllGlobals()
+  })
+
+  it('tags events with the build, not a fixed number', () => {
+    track('log_created')
+    const version = _peekQueueForTests().find((e) => e.name === 'log_created')?.app_version
+    expect(version).toMatch(/^web-\d{4}-\d{2}-\d{2}/)
+    expect(version).not.toBe('0.1.0')
   })
 })
 
