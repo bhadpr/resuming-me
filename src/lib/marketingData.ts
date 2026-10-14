@@ -1,5 +1,5 @@
 import { todayLocalDate } from './dates'
-import { earnedRupees } from './marketing'
+import { HOLD_DAYS, earnedRupees } from './marketing'
 import { createSupabaseClient } from './supabase'
 
 export interface MarketingGroup {
@@ -11,6 +11,9 @@ export interface MarketingGroup {
   retained_rate_rupees: number
   cap_rupees: number | null
   min_payout_installs: number
+  /** Installs Google Play Console shows for this group, typed in by an admin. */
+  play_console_installs: number | null
+  play_console_checked_on: string | null
 }
 
 export interface MarketingMember {
@@ -29,6 +32,19 @@ export interface MarketingPayment {
   amount_rupees: number
   note: string
   paid: boolean
+}
+
+export interface SettledCounts {
+  installs: number
+  retained: number
+}
+
+export interface MarketingFlag {
+  groupId: string
+  memberId: string | null
+  kind: string
+  detail: string
+  flaggedOn: string | null
 }
 
 export interface MarketingCounts {
@@ -63,6 +79,8 @@ export async function fetchMarketingAdmin(): Promise<{
   members: MarketingMember[]
   payments: MarketingPayment[]
   counts: Map<string, MarketingCounts>
+  settled: Map<string, SettledCounts>
+  flags: MarketingFlag[]
   warning: string | null
 }> {
   const client = createSupabaseClient()
@@ -74,12 +92,12 @@ export async function fetchMarketingAdmin(): Promise<{
   const groupsRes = await client
     .from('marketing_groups')
     .select(
-      'id, name, code, install_goal, install_rate_rupees, retained_rate_rupees, cap_rupees, min_payout_installs',
+      'id, name, code, install_goal, install_rate_rupees, retained_rate_rupees, cap_rupees, min_payout_installs, play_console_installs, play_console_checked_on',
     )
     .order('name')
   if (groupsRes.error) throw groupsRes.error
 
-  const [membersRes, paymentsRes, countsRes] = await Promise.all([
+  const [membersRes, paymentsRes, countsRes, settledRes, flagsRes] = await Promise.all([
     client
       .from('marketing_members')
       .select('id, group_id, email, code, removed_at')
@@ -89,6 +107,8 @@ export async function fetchMarketingAdmin(): Promise<{
       .select('id, group_id, member_id, paid_on, amount_rupees, note, paid')
       .order('paid_on', { ascending: false }),
     client.rpc('marketing_admin_counts', { p_as_of: asOf }),
+    client.rpc('marketing_admin_settled', { p_as_of: asOf, p_hold_days: HOLD_DAYS }),
+    client.rpc('marketing_admin_flags', { p_as_of: asOf }),
   ])
 
   const counts = new Map<string, MarketingCounts>()
@@ -102,14 +122,37 @@ export async function fetchMarketingAdmin(): Promise<{
     })
   }
 
+  const settled = new Map<string, SettledCounts>()
+  for (const row of Array.isArray(settledRes.data) ? settledRes.data : []) {
+    settled.set(row.group_id, {
+      installs: Number(row.installs) || 0,
+      retained: Number(row.retained) || 0,
+    })
+  }
+
+  const flags: MarketingFlag[] = (Array.isArray(flagsRes.data) ? flagsRes.data : []).map((row) => ({
+    groupId: row.group_id,
+    memberId: row.member_id,
+    kind: row.kind,
+    detail: row.detail,
+    flaggedOn: row.flagged_on,
+  }))
+
   const warning =
-    membersRes.error?.message ?? paymentsRes.error?.message ?? countsRes.error?.message ?? null
+    membersRes.error?.message ??
+    paymentsRes.error?.message ??
+    countsRes.error?.message ??
+    settledRes.error?.message ??
+    flagsRes.error?.message ??
+    null
 
   return {
     groups: groupsRes.data ?? [],
     members: membersRes.error ? [] : (membersRes.data ?? []),
     payments: paymentsRes.error ? [] : (paymentsRes.data ?? []),
     counts,
+    settled,
+    flags,
     warning,
   }
 }
@@ -153,6 +196,8 @@ export async function fetchMyMarketingGroups(): Promise<MyMarketingGroup[]> {
       retained_rate_rupees: row.retained_rate_rupees,
       cap_rupees: row.cap_rupees,
       min_payout_installs: row.min_payout_installs,
+      play_console_installs: null,
+      play_console_checked_on: null,
     },
     memberCode: row.member_code,
     counts: {
@@ -241,5 +286,18 @@ export async function setMarketingPaymentPaid(paymentId: string, paid: boolean):
     .from('marketing_payments')
     .update({ paid })
     .eq('id', paymentId)
+  if (error) throw error
+}
+
+/** The installs Google Play Console shows for a group. Null clears it. */
+export async function savePlayConsoleInstalls(
+  groupId: string,
+  installs: number | null,
+  checkedOn: string | null,
+): Promise<void> {
+  const { error } = await createSupabaseClient()
+    .from('marketing_groups')
+    .update({ play_console_installs: installs, play_console_checked_on: installs == null ? null : checkedOn })
+    .eq('id', groupId)
   if (error) throw error
 }

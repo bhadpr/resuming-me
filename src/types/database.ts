@@ -632,6 +632,8 @@ export interface Database {
           retained_rate_rupees: number
           cap_rupees: number | null
           min_payout_installs: number
+          play_console_installs: number | null
+          play_console_checked_on: string | null
           created_at: string
         }
         Insert: {
@@ -643,6 +645,8 @@ export interface Database {
           retained_rate_rupees?: number
           cap_rupees?: number | null
           min_payout_installs?: number
+          play_console_installs?: number | null
+          play_console_checked_on?: string | null
           created_at?: string
         }
         Update: {
@@ -653,6 +657,8 @@ export interface Database {
           retained_rate_rupees?: number
           cap_rupees?: number | null
           min_payout_installs?: number
+          play_console_installs?: number | null
+          play_console_checked_on?: string | null
         }
         Relationships: []
       }
@@ -866,6 +872,24 @@ export interface Database {
           in_progress: number
           retained: number
           ended_short: number
+        }[]
+      }
+      marketing_admin_settled: {
+        Args: { p_as_of: string; p_hold_days?: number }
+        Returns: {
+          group_id: string
+          installs: number
+          retained: number
+        }[]
+      }
+      marketing_admin_flags: {
+        Args: { p_as_of: string }
+        Returns: {
+          group_id: string
+          member_id: string | null
+          kind: string
+          detail: string
+          flagged_on: string | null
         }[]
       }
       get_shared_event: {

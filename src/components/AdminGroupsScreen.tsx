@@ -3,7 +3,7 @@ import { useNavigate } from 'react-router-dom'
 import { useAuth } from '../hooks/useAuth'
 import { MarketingLink } from './MarketingLink'
 import { todayLocalDate } from '../lib/dates'
-import { formatRupees } from '../lib/marketing'
+import { HOLD_DAYS, formatRupees, payableNow, playGap } from '../lib/marketing'
 import {
   addMarketingMember,
   countKey,
@@ -16,11 +16,14 @@ import {
   type MyMarketingGroup,
   removeMarketingMember,
   saveMarketingPayment,
+  savePlayConsoleInstalls,
   setMarketingPaymentPaid,
   type MarketingCounts,
+  type MarketingFlag,
   type MarketingGroup,
   type MarketingMember,
   type MarketingPayment,
+  type SettledCounts,
 } from '../lib/marketingData'
 import { Icon } from './Icon'
 
@@ -93,6 +96,8 @@ export function AdminGroupsScreen({ groupId }: { groupId?: string }) {
   const [members, setMembers] = useState<MarketingMember[]>([])
   const [payments, setPayments] = useState<MarketingPayment[]>([])
   const [counts, setCounts] = useState<Map<string, MarketingCounts>>(new Map())
+  const [settled, setSettled] = useState<Map<string, SettledCounts>>(new Map())
+  const [flags, setFlags] = useState<MarketingFlag[]>([])
   const [mine, setMine] = useState<MyMarketingGroup[]>([])
   const [loading, setLoading] = useState(true)
   const [error, setError] = useState<string | null>(null)
@@ -103,6 +108,8 @@ export function AdminGroupsScreen({ groupId }: { groupId?: string }) {
     setMembers(board.members)
     setPayments(board.payments)
     setCounts(board.counts)
+    setSettled(board.settled)
+    setFlags(board.flags)
     setError(board.warning)
     if (board.groups.length > 0) {
       setMine([])
@@ -169,6 +176,8 @@ export function AdminGroupsScreen({ groupId }: { groupId?: string }) {
           members={members.filter((member) => member.group_id === selected.id)}
           payments={payments.filter((payment) => payment.group_id === selected.id)}
           counts={counts}
+          settled={settled.get(selected.id) ?? { installs: 0, retained: 0 }}
+          flags={flags.filter((flag) => flag.groupId === selected.id)}
           onBack={() => navigate('/admin/groups')}
           onRun={run}
         />
@@ -180,6 +189,7 @@ export function AdminGroupsScreen({ groupId }: { groupId?: string }) {
             groups={groups}
             members={members}
             counts={counts}
+            flags={flags}
             onOpen={(id) => navigate(`/admin/groups/${id}`)}
             onCreate={(input) => void run(() => createMarketingGroup(input))}
           />
@@ -196,6 +206,10 @@ function MemberNumbers({ row }: { row: MyMarketingGroup }) {
       <CountBoard counts={row.counts} />
       <EarnedMath group={row.group} counts={row.counts} />
       <EarnedTotal group={row.group} counts={row.counts} />
+      <p className="activity-desc">
+        These are our own counts. Before anything is paid they are checked against Google Play, and
+        only installs older than {30 + HOLD_DAYS} days are paid.
+      </p>
       <h3 className="section-label">Your link</h3>
       <MarketingLink groupCode={row.group.code} memberCode={row.memberCode} />
     </>
@@ -235,6 +249,163 @@ function MemberGroupDetail({ row, onBack }: { row: MyMarketingGroup; onBack: () 
   )
 }
 
+function flagText(flag: MarketingFlag, members: MarketingMember[]): string {
+  const who = flag.memberId ? (members.find((member) => member.id === flag.memberId)?.email ?? 'A member') : 'A removed member'
+  const day = flag.flaggedOn ? ` (${flag.flaggedOn})` : ''
+  return `${who}: ${flag.detail}${day}`
+}
+
+/** Short warnings on the group list, so an odd group is noticed before anyone opens it. */
+function GroupAlerts({
+  group,
+  installs,
+  flags,
+}: {
+  group: MarketingGroup
+  installs: number
+  flags: MarketingFlag[]
+}) {
+  const gap = playGap(installs, group.play_console_installs)
+  if (flags.length === 0 && !gap) return null
+  return (
+    <p className="error">
+      {flags.length > 0 ? `${flags.length} ${flags.length === 1 ? 'thing' : 'things'} to check. ` : ''}
+      {gap ? 'Our count is well above Google Play. ' : ''}
+      Open the group before paying.
+    </p>
+  )
+}
+
+/** The checks to run before paying: Google Play's number, a waiting period, and odd patterns. */
+function BeforePaying({
+  group,
+  installs,
+  settled,
+  flags,
+  members,
+  markedPaid,
+  onRun,
+}: {
+  group: MarketingGroup
+  installs: number
+  settled: SettledCounts
+  flags: MarketingFlag[]
+  members: MarketingMember[]
+  markedPaid: number
+  onRun: (action: () => Promise<void>) => Promise<boolean>
+}) {
+  const [playInstalls, setPlayInstalls] = useState(
+    group.play_console_installs == null ? '' : String(group.play_console_installs),
+  )
+  const [checkedOn, setCheckedOn] = useState(group.play_console_checked_on ?? todayLocalDate())
+  const count = (value: number) => value.toLocaleString('en-IN')
+  const payable = payableNow({
+    installs,
+    settledInstalls: settled.installs,
+    settledRetained: settled.retained,
+    playInstalls: group.play_console_installs,
+    installRate: group.install_rate_rupees,
+    retainedRate: group.retained_rate_rupees,
+    cap: group.cap_rupees,
+    minInstalls: group.min_payout_installs,
+  })
+  const gap = playGap(installs, group.play_console_installs)
+  const stillToPay = payable ? Math.max(0, payable.rupees - markedPaid) : null
+
+  return (
+    <section className="today-section">
+      <h3 className="section-label">Before you pay</h3>
+      <p className="activity-desc">
+        Anyone can send fake installs, so pay only what passes these checks. Pay the amount under
+        &ldquo;Safe to pay now&rdquo;, not the Earned figure above.
+      </p>
+
+      <form
+        className="stacked-form"
+        onSubmit={(event) => {
+          event.preventDefault()
+          const trimmed = playInstalls.trim()
+          const value = trimmed === '' ? null : Number(trimmed)
+          if (value != null && (!Number.isInteger(value) || value < 0)) return
+          void onRun(() => savePlayConsoleInstalls(group.id, value, checkedOn))
+        }}
+      >
+        <label className="field">
+          <span className="field-label">Installs Google Play Console shows for source {group.code}</span>
+          <input
+            className="field-input"
+            inputMode="numeric"
+            value={playInstalls}
+            onChange={(event) => setPlayInstalls(event.target.value)}
+          />
+        </label>
+        <label className="field">
+          <span className="field-label">Date you read it</span>
+          <input className="field-input" type="date" value={checkedOn} onChange={(event) => setCheckedOn(event.target.value)} />
+        </label>
+        <p className="activity-desc">
+          In Play Console, open the install reports, split by the UTM source, and look for {group.code}.
+          Menu names change, so search the help for &ldquo;acquisition reports&rdquo; if you cannot find it.
+        </p>
+        <button type="submit" className="btn btn-primary">
+          Save Play Console number
+        </button>
+      </form>
+
+      {gap ? (
+        <p className="error">
+          We count {count(gap.missing)} more installs than Google Play ({gap.percent}% of ours). Pay on
+          the lower number and look at the flags below.
+        </p>
+      ) : null}
+
+      {payable ? (
+        <>
+          <div className="analytics-overview money-board">
+            <div className="analytics-stat">
+              <span className="analytics-stat-label">Safe to pay now</span>
+              <span className="analytics-stat-value">{formatRupees(payable.rupees)}</span>
+              <span className="analytics-stat-hint">
+                {payable.installs === 0 && settled.installs < group.min_payout_installs
+                  ? `Starts at ${count(group.min_payout_installs)} settled installs`
+                  : 'Settled, and no more than Google Play shows'}
+              </span>
+            </div>
+            <div className="analytics-stat">
+              <span className="analytics-stat-label">Still to pay</span>
+              <span className="analytics-stat-value">{formatRupees(stillToPay ?? 0)}</span>
+              <span className="analytics-stat-hint">After {formatRupees(markedPaid)} marked paid</span>
+            </div>
+          </div>
+          <p className="activity-desc">
+            {count(payable.installs)} installs and {count(payable.retained)} five-day people count. Only
+            installs whose 30 days ended at least {HOLD_DAYS} days ago are included: {count(settled.installs)} of{' '}
+            {count(installs)}.
+          </p>
+        </>
+      ) : (
+        <p className="activity-desc">Enter the Play Console number to see what is safe to pay.</p>
+      )}
+
+      <h3 className="section-label">Things to check</h3>
+      {flags.length === 0 ? (
+        <p className="activity-desc">Nothing unusual found.</p>
+      ) : (
+        <ul className="admin-feedback-list">
+          {flags.map((flag, index) => (
+            <li key={`${flag.memberId ?? 'none'}-${flag.kind}-${flag.flaggedOn ?? index}`} className="admin-feedback-card">
+              <p className="activity-desc">{flagText(flag, members)}</p>
+            </li>
+          ))}
+        </ul>
+      )}
+      <p className="activity-desc">
+        A flag is a reason to look, not proof. Ask the member what they posted that day before you decide.
+      </p>
+    </section>
+  )
+}
+
 function MemberRoster({ members }: { members: MarketingMember[] }) {
   const people = members.filter((member) => !member.removed_at)
   return (
@@ -257,12 +428,14 @@ function GroupList({
   groups,
   members,
   counts,
+  flags,
   onOpen,
   onCreate,
 }: {
   groups: MarketingGroup[]
   members: MarketingMember[]
   counts: Map<string, MarketingCounts>
+  flags: MarketingFlag[]
   onOpen: (id: string) => void
   onCreate: (input: {
     name: string
@@ -320,6 +493,7 @@ function GroupList({
                 <CountBoard counts={tally} />
                 <EarnedMath group={group} counts={tally} />
                 <EarnedTotal group={group} counts={tally} />
+                <GroupAlerts group={group} installs={tally.installs} flags={flags.filter((flag) => flag.groupId === group.id)} />
                 <MemberRoster members={members.filter((member) => member.group_id === group.id)} />
                 <button type="button" className="btn btn-primary btn-sm" onClick={() => onOpen(group.id)}>
                   Open {group.name}
@@ -368,6 +542,8 @@ function GroupDetail({
   members,
   payments,
   counts,
+  settled,
+  flags,
   onBack,
   onRun,
 }: {
@@ -375,6 +551,8 @@ function GroupDetail({
   members: MarketingMember[]
   payments: MarketingPayment[]
   counts: Map<string, MarketingCounts>
+  settled: SettledCounts
+  flags: MarketingFlag[]
   onBack: () => void
   onRun: (action: () => Promise<void>) => Promise<boolean>
 }) {
@@ -423,6 +601,16 @@ function GroupDetail({
           <span className="analytics-stat-hint">Payments you ticked</span>
         </div>
       </div>
+
+      <BeforePaying
+        group={group}
+        installs={tally.installs}
+        settled={settled}
+        flags={flags}
+        members={members}
+        markedPaid={markedPaid}
+        onRun={onRun}
+      />
 
       <section className="today-section">
         <h3 className="section-label">Members</h3>

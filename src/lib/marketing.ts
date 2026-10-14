@@ -62,3 +62,54 @@ function addDays(iso: string, days: number): string {
   date.setDate(date.getDate() + days)
   return todayLocalDate(date)
 }
+
+/** Days to wait after an install's 30-day window closes before paying for it. */
+export const HOLD_DAYS = 7
+
+export interface PayableInput {
+  /** Installs we counted, including ones still inside their 30 days. */
+  installs: number
+  /** Installs whose 30-day window closed at least HOLD_DAYS ago. */
+  settledInstalls: number
+  settledRetained: number
+  /** What Google Play Console shows for the group. Null until someone types it in. */
+  playInstalls: number | null
+  installRate: number
+  retainedRate: number
+  cap: number | null
+  minInstalls: number
+}
+
+export interface Payable {
+  installs: number
+  retained: number
+  rupees: number
+}
+
+/**
+ * What is safe to pay now: only settled installs, scaled down if Play Console shows fewer
+ * installs than we counted. Null until the Play Console number has been entered.
+ */
+export function payableNow(input: PayableInput): Payable | null {
+  if (input.playInstalls == null) return null
+  const factor = input.installs > 0 ? Math.min(1, input.playInstalls / input.installs) : 0
+  const installs = Math.floor(input.settledInstalls * factor)
+  const retained = Math.min(Math.floor(input.settledRetained * factor), installs)
+  const rupees = earnedRupees(
+    installs,
+    retained,
+    input.installRate,
+    input.retainedRate,
+    input.cap,
+    input.minInstalls,
+  )
+  return { installs, retained, rupees }
+}
+
+/** Warns when we count clearly more installs than Google Play Console does. */
+export function playGap(ours: number, play: number | null): { missing: number; percent: number } | null {
+  if (play == null || ours <= play) return null
+  const missing = ours - play
+  if (missing < 10 || missing / ours < 0.2) return null
+  return { missing, percent: Math.round((100 * missing) / ours) }
+}
