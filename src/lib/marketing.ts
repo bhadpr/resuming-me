@@ -22,13 +22,18 @@ export function codesFromReferrer(referrer: string): { groupCode: string; member
 
 export type RetentionBucket = 'retained' | 'in_progress' | 'ended_short'
 
-/** Day one is startedOn. Five different days inside that 30-day window count as retained. */
+/**
+ * Day one is startedOn. Retained means a signed-in account that opened the app on five different
+ * days inside that 30-day window. Five days without an account is not retained (it stays in
+ * progress until the window ends). Mirrors `marketing_is_retained` in the database.
+ */
 export function retentionBucket(
   startedOn: string,
   openDayCount: number,
   asOf: string,
+  hasAccount: boolean,
 ): RetentionBucket {
-  if (openDayCount >= RETENTION_VISITS) return 'retained'
+  if (hasAccount && openDayCount >= RETENTION_VISITS) return 'retained'
   const last = addDays(startedOn, RETENTION_DAYS - 1)
   if (asOf <= last) return 'in_progress'
   return 'ended_short'

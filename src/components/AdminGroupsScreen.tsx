@@ -83,9 +83,9 @@ function EarnedTotal({ group, counts }: { group: MarketingGroup; counts: Marketi
 function CountBoard({ counts }: { counts: MarketingCounts }) {
   const cards = [
     ['Installs', counts.installs, 'First opens'],
-    ['In 30 days', counts.in_progress, 'Under five days so far'],
-    ['Five days', counts.retained, 'Five different days'],
-    ['Ended short', counts.ended_short, 'Window closed early'],
+    ['In 30 days', counts.in_progress, 'Not retained yet, window still open'],
+    ['Five days', counts.retained, 'Has an account and opened on five days'],
+    ['Ended short', counts.ended_short, 'Window closed without both'],
   ] as const
   return (
     <div className="analytics-overview count-board">

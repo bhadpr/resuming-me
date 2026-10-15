@@ -78,6 +78,8 @@ export function LandingPage({
     trackPageView('/', 'Landing')
     track('landing_viewed', {
       referrer: document.referrer ? document.referrer.slice(0, 200) : null,
+      // A link tagged ?utm_source=name shows up as that channel in the growth numbers.
+      utm_source: new URLSearchParams(window.location.search).get('utm_source')?.slice(0, 60) ?? null,
     })
   }, [])
 

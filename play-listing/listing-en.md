@@ -30,7 +30,7 @@ REMINDERS FOR EVERYTHING ELSE
 • Share an event, like a puja or a garba night, on WhatsApp. Family adds it to their reminders in one tap.
 
 MADE FOR INDIA
-• English, हिन्दी, ગુજરાતી, मराठी, తెలుగు and தமிழ்
+• English, हिन्दी, ગુજરાતી, मराठी, తెలుగు, தமிழ் and বাংলা
 • Try it without an account. Sign in with Google to keep your data safe.
 • Free. No ads. Your data stays yours.
 
@@ -42,10 +42,12 @@ Files are in `screenshots/`.
 
 1. One list for your whole day
 2. Small steps count
-3. Blood pressure, weight, and water
-4. Bills, visits, birthdays: never forget
-5. A shared event, on their phone
-6. Set up in a minute
+3. Follow along, one breath at a time
+4. Blood pressure, weight, and water
+5. Bills, visits, birthdays: never forget
+6. Add Diwali in one tap
+7. Meet friends at Inorbit Mall
+8. Set up in a minute
 
 ## Tags / category
 

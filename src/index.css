@@ -4835,7 +4835,7 @@ select.field-input.language-select {
 
 .today-row .habit-video,
 .today-habit-block .habit-video {
-  margin: 0;
+  margin-block: 0;
 }
 
 .today-guest-list .activity-emoji,

@@ -16,12 +16,12 @@ import {
   followSharedEvent,
   formatSharedWhen,
   getSharedEvent,
-  hasSharedEventReminder,
   isSharedEventCode,
   localEventTime,
   reportSharedEvent,
   sharedEventBlock,
   sharedEventInstallLink,
+  sharedEventReminderId,
   type SharedEvent,
   type SharedEventIssue,
   type SharedReportReason,
@@ -46,6 +46,10 @@ function isIphone(): boolean {
   return typeof navigator !== 'undefined' && /iPad|iPhone|iPod/.test(navigator.userAgent)
 }
 
+function isAndroidDevice(): boolean {
+  return typeof navigator !== 'undefined' && /Android/i.test(navigator.userAgent)
+}
+
 /** resuming.me/e/<code>: the event, and one tap to add it. */
 export function SharedEventPage({ code }: { code: string }) {
   const navigate = useNavigate()
@@ -55,6 +59,8 @@ export function SharedEventPage({ code }: { code: string }) {
   const [load, setLoad] = useState<Load>({ state: 'loading' })
   const [attempt, setAttempt] = useState(0)
   const [already, setAlready] = useState(false)
+  const [savedReminderId, setSavedReminderId] = useState<string | null>(null)
+  const openingPlay = !native && isAndroidDevice() && isSharedEventCode(code)
   const [adding, setAdding] = useState(false)
   const [issueKey, setIssueKey] = useState<string | null>(null)
   const event = load.state === 'ready' ? load.event : null
@@ -68,6 +74,13 @@ export function SharedEventPage({ code }: { code: string }) {
   })
 
   useEffect(() => {
+    if (!openingPlay) return
+    track('get_app_clicked', { source: 'shared_event' })
+    window.location.replace(sharedEventInstallLink(code))
+  }, [openingPlay, code])
+
+  useEffect(() => {
+    if (openingPlay) return
     if (!isSharedEventCode(code)) {
       setLoad({ state: 'ready', event: null })
       return
@@ -86,24 +99,28 @@ export function SharedEventPage({ code }: { code: string }) {
     return () => {
       live = false
     }
-  }, [code, attempt, native])
+  }, [code, attempt, native, openingPlay])
 
   useEffect(() => {
-    if (!event || authLoading) return
+    if (!event || authLoading || openingPlay) return
     if (!user) {
-      setAlready(Boolean(loadGuestDraft()?.reminders.some((item) => item.sharedEventId === event.id)))
+      const match = loadGuestDraft()?.reminders.find((item) => item.sharedEventId === event.id)
+      setAlready(Boolean(match))
+      setSavedReminderId(match?.id ?? null)
       return
     }
     let live = true
-    hasSharedEventReminder(event.id)
-      .then((has) => {
-        if (live) setAlready(has)
+    sharedEventReminderId(event.id)
+      .then((id) => {
+        if (!live) return
+        setSavedReminderId(id)
+        setAlready(Boolean(id))
       })
       .catch(() => {})
     return () => {
       live = false
     }
-  }, [event, user, authLoading])
+  }, [event, user, authLoading, openingPlay])
 
   async function add(found: SharedEvent & { text: string }) {
     setIssueKey(null)
@@ -118,25 +135,35 @@ export function SharedEventPage({ code }: { code: string }) {
       kind: found.kind,
       sharedEventId: found.id,
     }
+    let destination: string | null = null
+    let created = false
     try {
       await followSharedEvent(found.id)
       if (user) {
         try {
-          await addReminder(user.id, input)
+          destination = (await addReminder(user.id, input)).id
+          created = true
         } catch (err) {
           if (err instanceof ReminderCapError) {
             setIssueKey('reminders.full')
             return
           }
           if (isDuplicate(err)) {
-            setAlready(true)
-            return
+            destination = await sharedEventReminderId(found.id).catch(() => null)
+            if (!destination) {
+              setAlready(true)
+              return
+            }
+          } else {
+            throw err
           }
-          throw err
         }
       } else {
         const draft = ensureGuestDraft()
-        if (!draft.reminders.some((item) => item.sharedEventId === found.id)) {
+        const existing = draft.reminders.find((item) => item.sharedEventId === found.id)
+        if (existing) {
+          destination = existing.id
+        } else {
           const next = addGuestReminder(draft, input)
           if (!next) {
             setIssueKey('reminders.full')
@@ -144,16 +171,32 @@ export function SharedEventPage({ code }: { code: string }) {
           }
           const added = next.reminders.find((item) => item.sharedEventId === found.id)
           if (added && found.photoPath) updateGuestReminder(next, added.id, { sharedPhotoPath: found.photoPath })
+          destination = added?.id ?? null
+          created = true
         }
       }
-      track('shared_event_added', { signed_in: Boolean(user), native })
-      void askForReminderAlerts(input)
-      navigate('/today')
+      setSavedReminderId(destination)
+      if (created) {
+        track('shared_event_added', { signed_in: Boolean(user), native })
+        void askForReminderAlerts(input)
+      }
+      navigate(destination ? `/reminders/${destination}` : '/reminders')
     } catch (err) {
       setIssueKey(addIssueKey(err instanceof SharedEventError ? err.issue : 'failed'))
     } finally {
       setAdding(false)
     }
+  }
+
+  if (openingPlay) {
+    return (
+      <section className="shared-event">
+        <p className="shared-event-status">{t('sharedEvent.openingPlay')}</p>
+        <a className="btn btn-primary" href={sharedEventInstallLink(code)}>
+          {t('sharedEvent.getPlay')}
+        </a>
+      </section>
+    )
   }
 
   if (load.state === 'loading') return <p className="muted-center">{t('sharedEvent.loading')}</p>
@@ -207,7 +250,11 @@ export function SharedEventPage({ code }: { code: string }) {
       ) : already ? (
         <>
           <p className="shared-event-status">{t('sharedEvent.already')}</p>
-          <button type="button" className="btn btn-primary" onClick={() => navigate('/today')}>
+          <button
+            type="button"
+            className="btn btn-primary"
+            onClick={() => navigate(savedReminderId ? `/reminders/${savedReminderId}` : '/reminders')}
+          >
             {t('sharedEvent.openToday')}
           </button>
         </>

@@ -809,6 +809,23 @@ export interface Database {
         }
         Relationships: []
       }
+      growth_snapshots: {
+        Row: {
+          snapshot_date: string
+          taken_at: string
+          metrics: Json
+        }
+        Insert: {
+          snapshot_date: string
+          taken_at?: string
+          metrics: Json
+        }
+        Update: {
+          taken_at?: string
+          metrics?: Json
+        }
+        Relationships: []
+      }
     }
     Views: Record<string, never>
     Functions: {
@@ -885,6 +902,14 @@ export interface Database {
       loop_analytics_summary: {
         Args: { p_days?: number }
         Returns: Json
+      }
+      growth_metrics_summary: {
+        Args: { p_weeks?: number }
+        Returns: Json
+      }
+      save_growth_snapshot: {
+        Args: Record<string, never>
+        Returns: string
       }
       marketing_record_open: {
         Args: {

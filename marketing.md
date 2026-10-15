@@ -34,7 +34,7 @@ Goal: after the 14-day closed test, launch on Google Play and bring in the first
 
 | Part | State |
 |------|-------|
-| Android | Day 12 of the 14-day closed test. Launch (production access) follows day 14. |
+| Android | The closed test reached day 14 on 14 Oct. Build 1.0.5 (version code 8) is the release. Production access still has to be applied for, and then Google reviews it, which can take a few days. The public date is not in our hands. The steps are in `docs/LAUNCH.md`. |
 | Price | Free, no ads, no selling data. An install earns nothing, so retention is the real measure. |
 | Audience | Indian adults of about 30 to 60 who want small daily routines (a walk, water, Pranayam, BP) and keep the family's dates (bills, doctor visits, weddings). See P14-01. |
 | Languages | Seven: English plus Hindi, Gujarati, Marathi, Telugu, Tamil, Bengali. |
@@ -42,7 +42,7 @@ Goal: after the 14-day closed test, launch on Google Play and bring in the first
 | Assets | Play listing, feature graphic and six screenshots in `play-listing/`. English and Hindi screen recordings (B1 to B9) made for Phase 14. The hero loop (English and Hindi) is on the site. The 75-second explainer and the vertical short are not made yet. |
 | Site | resuming.app is built (Astro, in `marketing/`, its own Cloudflare worker). The Play buttons were meant to stay off until the listing is public, but `PLAY_LIVE` is already `true` in `marketing/src/site.ts` (see LAUNCH.md), so they may point at a missing page until the listing is live. It has no blog yet. |
 | Own analytics | The app already records its own events and page views on our server (`track.ts`, `analytics.ts`). The admin Analytics screen shows sign-ups, day-1 and day-7 return, and weekly cohorts. Nothing is sent to Google or Meta. |
-| Referral groups | Built. An admin makes a group (a community or a set of people), adds members, and each member gets a Play link with their own code. The app reads Google's install referrer and counts each install and each person who opens the app on five different days within 30 (`marketing_*` tables, `marketing_record_open`, the `/admin/groups` screen). The app records payments but does not send money. The problems to fix before paying anyone, and the data retention gaps, are listed in P15-15. |
+| Referral groups | Built. An admin makes a group (a community or a set of people), adds members, and each member gets a Play link with their own code. The app reads Google's install referrer and counts each install and each signed-in person who opens the app on five different days within 30 (`marketing_*` tables, `marketing_record_open`, the `/admin/groups` screen). The app records payments but does not send money. The problems to fix before paying anyone, and the data retention gaps, are listed in P15-15. |
 | Built-in growth loop | A shared reminder opens a page with "Get it on Google Play". Every wedding or event someone shares reaches new people. |
 | Not shipped | Medicines (web only), widgets, circles. None appear in ads or posts. |
 
@@ -57,6 +57,7 @@ An install is not a user. Paid installs often leave quickly, so the targets are 
 | Day-30 return | 6% |
 | Play rating | 4.5 or better, with at least 25 reviews in the first month |
 | Cost per install (paid) | Stretch $0.10, expected $0.20 to $0.30, stop above $0.50 |
+| Cost per retained user (referral groups) | ₹20 (about $0.24), paid only for people who made an account and opened the app on five days. Nothing until a group has 500, and a ₹20,000 cap (decisions 1 and 7) |
 
 These costs are estimates for Android in India and need checking against the first week's real numbers.
 
@@ -68,14 +69,14 @@ These costs are estimates for Android in India and need checking against the fir
 
 ## Decisions to make
 
-1. **What "10,000 per 1000" means.** Read here as 10,000 installs per $1,000 ($0.10 each). Confirm, or correct this file.
-2. **Install-only ads, or add Google's or Meta's code.** The app already measures itself, and that stays on our server. The question is whether ad platforms get to see what each person does. For that, their code (an SDK, such as Firebase) must sit inside the app and report to them, which shares user data and changes the privacy page and Data safety form. Suggested: no. Run ads that aim for installs only, judge quality with our own day-1 and day-7 numbers, and accept a somewhat higher cost per install.
-3. **Which stores beyond Google Play.** Suggested: Indus Appstore (PhonePe's, built for India) after the Play launch. Skip Samsung Galaxy Store and Xiaomi GetApps for now. Each needs its own uploads and updates. A shared link such as `resuming.me/e/abc` opens inside the app only if the app's signing key is listed in `assetlinks.json`, which has two keys today, including Play's. An app from another store with a different key would open the web page instead. Add that store's key to the file before using it, including for Indus.
+1. **What "10,000 per 1000" means.** Decided 15 Oct 2026: it is about **retained users, not installs**. A retained user is someone who **creates an account and then opens the app on five different days** (within 30 days of installing). A group is paid ₹20 for each one, nothing until it has 500 (₹10,000), and never more than ₹20,000 (reached at 1,000). An install on its own earns nothing. This replaces the earlier reading of 10,000 installs per $1,000, and the ₹10-each reading (₹10,000 for 1,000 people), which was set aside in favour of the ₹20 already built.
+2. **Install-only ads, or add Google's or Meta's code.** Decided 15 Oct 2026: **no.** No Google or Meta code goes inside the app, and ads aim for installs only. The app keeps measuring itself on our own server, and quality is judged with our own day-1 and day-7 numbers, at a somewhat higher cost per install. Adding their code later would share user data and change the privacy page and the Data safety form.
+3. **Which stores beyond Google Play.** Decided 15 Oct 2026: **yes to Indus Appstore** (PhonePe's, built for India), **after the Play launch** is stable. It is not part of launch week. Skip Samsung Galaxy Store and Xiaomi GetApps for now, because each needs its own uploads and updates. A shared link such as `resuming.me/e/abc` opens inside the app only if the app's signing key is listed in `assetlinks.json`, which has two keys today, including Play's. An app from another store with a different key would open the web page instead. Add Indus's key to the file before listing the app there.
 4. **Influencer terms.** Free use of the app is no reason for a creator to post. Suggested: pay a flat fee per Reel with a short written brief and the disclosure label, and no promises about results.
 5. **Who records Hindi and regional voice-overs.** HeyGen covers English and Hindi. Gujarati, Marathi, Telugu, Tamil and Bengali need captions at least, and ideally a native check.
-6. **In-app review prompt.** Checked on 15 Oct 2026: the app source has no call to Play's in-app review. Add it (P15-12). The review target (25 reviews at 4.5 or better) depends on it. Never offer anything in return for a review, because Play forbids it.
-7. **Referral group numbers and budget.** Decided: pay only for retained people (five different days within 30 days of installing). ₹20 per retained person, nothing until the group has 500 retained people (₹10,000), and a cap of ₹20,000 per group (reached at 1,000 retained people). Installs earn nothing. The new-group form now defaults to these numbers. Decide whether this comes out of the $500 (about $235 at the most per group, at roughly ₹85 per dollar), so the paid split shrinks accordingly.
-8. **What "returned" means.** Today it is five different days opening the app in 30 days, even if nothing is logged. Suggested: keep it for the first group, and review the numbers by hand before paying.
+6. **In-app review prompt.** Checked on 15 Oct 2026: the app source has no call to Play's in-app review. Add it (P15-12). `docs/LAUNCH.md` says to ask by hand in the first week until then. The review target (25 reviews at 4.5 or better) depends on it. Never offer anything in return for a review, because Play forbids it.
+7. **Referral group numbers and budget.** Decided: pay only for retained people (five different days within 30 days of installing). ₹20 per retained person, nothing until the group has 500 retained people (₹10,000), and a cap of ₹20,000 per group (reached at 1,000 retained people). Installs earn nothing. The new-group form now defaults to these numbers. Decide whether this comes out of the $500 (about $235 at the most per group, at roughly ₹85 per dollar), so the paid split shrinks accordingly. Confirmed 15 Oct 2026 (decision 1): ₹20 each, a minimum of 500 and a cap of ₹20,000. The rate, cap and minimum are per-group settings (`retained_rate_rupees`, `cap_rupees`, `min_payout_installs`).
+8. **What "retained" means.** Decided 15 Oct 2026: someone who **creates an account and opens the app on five different days** (opening is enough, nothing has to be logged). The 30-day window stays as built. **Built and applied 15 Oct 2026** (migration `20261027120000_marketing_retained_accounts.sql`). Each install record now has a `user_id`. The app's daily `marketing_record_open` call links it to the signed-in account, taken from the login token on the server, never from a value the phone sends. A first open is usually signed out, so the link is made on the next day's open after sign-in, inside the 30-day window. A retained person is an install with an account **and** five open days. One account links to one install only (a second phone or a reinstall is paid once), and the link is removed when the account is deleted. A device with five days and no account stays "in progress" until its window ends, then "ended short". That also makes fake installs harder, because a script now needs a real signed-in account for every payout, not just made-up device keys. Opening the app on five days is still easy to fake with real accounts, so keep reading the spike flags (P15-15).
 
 ## Rules for every post
 
@@ -121,6 +122,8 @@ https://play.google.com/store/apps/details?id=com.cheerfulgames.resuming&referre
 | Product Hunt | `producthunt` | `listing` |
 | Peerlist | `peerlist` | `post` |
 | Indie Hackers | `indiehackers` | `post` |
+| People you know (early reviews) | `friends` | `message` |
+| Instagram and Facebook ads | `meta` | `paid` |
 
 People on iPhone or a computer cannot install from Play. Send them to [https://resuming.me/start](https://resuming.me/start). No account is needed to try it.
 
@@ -211,7 +214,7 @@ Four themes. Every post is one of these. Do not invent a fifth for launch week.
 3. **Family dates.** A wedding, a puja, a doctor visit, a bill. Photo on the reminder. One WhatsApp link, and each person adds it.
 4. **The day itself.** One Today list: walk, water, BP, the bill. This is the product demo.
 
-Diwali is 8 Nov 2026. That is a theme-3 post in week 3 (share the date, add it from the community calendar), not the launch post.
+Diwali is 8 Nov 2026. That is a theme-3 post in week 3 (share the date, add it from the community calendar under Reminders), not the launch post. Check on the 1.0.5 build that Diwali shows in that list before you film it.
 
 ## What to record this week
 
@@ -252,7 +255,7 @@ Launch day is the day a signed-out phone can open the Play page. Not the day you
 | **8–10** | One Reel a day, repeating the theme that was watched. New caption, same clip is fine | One page post every other day. Groups only if someone asked a question | One Short every other day | r/androidapps once, if you have not posted there |
 | **11–14** | One carousel (how Resume works) and two Reels | One Hindi page post, one English | The Hindi and English Shorts that are still missing from R1–R4 | Hindi Play listing. Outline article 2 |
 
-After day 14, if you are still posting: four Instagram Reels a week, stories on the other days, one carousel a week, three YouTube Shorts a week. One new article a week, Hindi versions of articles 1 and 2 first.
+After the first 14 days, if you are still posting: four Instagram Reels a week, stories on the other days, one carousel a week, three YouTube Shorts a week. One new article a week, Hindi versions of articles 1 and 2 first.
 
 ---
 
@@ -312,9 +315,9 @@ Six slides, one idea each. Use the screenshots.
 
 1. One list for your whole day
 2. Small steps count. Two minutes is enough
-3. BP and weight, week by week. Not medical advice
-4. Bills, visits, birthdays
-5. Share an event with family
+3. Blood pressure, weight, and water. Not medical advice
+4. Bills, visits, birthdays: never forget
+5. A shared event, on their phone
 6. Free. No ads. English, हिन्दी, ગુજરાતી, मराठी, తెలుగు, தமிழ், বাংলা
 
 Caption: “Today holds the walk, the water, the BP reading, and the bill. Missed a day? Just resume.”
@@ -539,12 +542,13 @@ The posts wait. The preparation does not.
 3. Write the English launch posts above into drafts. Schedule nothing. Publish when the Play page loads for a signed-out phone.
 4. Draft Medium article 1 and the LinkedIn note, with the bracket filled in.
 5. List ten groups you are actually in, and which clip each one gets. Drop any group whose rules forbid apps.
-6. Install the public build on a phone that has never had the app. Sign in, open a shared WhatsApp link, switch Today to Hindi. Then post.
+6. Install the 1.0.5 build from closed testing on a phone that is not your daily one. Sign in, open a shared WhatsApp link, switch Today to Hindi. On launch day, do it once more from the public link on a phone that has never had the app. Then post.
+
 ---
 
 # Part 4 — Task plan
 
-The tasks below keep their Phase 15 numbers. M1 can start now, while the test finishes. M3 starts only after the listing is public. Phase 14's videos and site feed this plan, and M1 does not wait for the site.
+The tasks below keep their Phase 15 numbers. M1 can be done now, while Google reviews production access. M3 starts only after the listing is public. Phase 14's videos and site feed this plan, and M1 does not wait for the site.
 
 ## Recommended order
 
@@ -566,9 +570,9 @@ The tasks below keep their Phase 15 numbers. M1 can start now, while the test fi
 | | P15-13 Weekly review | S |
 | M5 Content engine | P15-14 YouTube and Instagram, weeks 2 to 8 | L |
 
-M1 can start now, while the test finishes. M3 starts only after the listing is public. Phase 14's videos and site feed this phase, and M1 does not wait for the site.
+M1 can be done now, while Google reviews production access. M3 starts only after the listing is public. Phase 14's videos and site feed this plan, and M1 does not wait for the site.
 
-## Milestone 1 — Ready (now to the end of the test)
+## Milestone 1 — Ready (now, while Google reviews)
 
 ### P15-01 — Play listing in seven languages
 
@@ -625,7 +629,7 @@ From week 2, one new article a week, with the Hindi versions of articles 1 and 2
 
 ### P15-06 — Production access and go-live
 
-- Apply for production access as soon as day 14 of the test is complete. Review can take a few days, so ads wait until the listing is public.
+- Apply for production access (day 14 of the test was 14 Oct, so it can be done now). Review can take a few days, so ads wait until the listing is public. The order is: apply, put 1.0.5 on closed testing, and after approval create the production release (`docs/LAUNCH.md`).
 - Check the first public build once more: sign-in, a shared link opened from WhatsApp, Health Connect, and a Hindi run through Today.
 - Done when the listing is live and the tagged links open the public page.
 
@@ -722,18 +726,19 @@ The referral system works, but these must be done before anyone is paid on its n
   2. **Wait.** Only installs whose 30 days ended at least 7 days ago count as payable. Members are told this on their own page.
   3. **Look at the flags.** A day with at least 25 installs and at least five times the member's usual day, or at least 70% of 20 or more closed installs opening on five days. A flag is a reason to ask the member what they posted, not proof.
   Pay the "Safe to pay now" figure, not the "Earned" one. `supabase/scripts/test_marketing_pay_checks.sql` keeps the rules under test.
+  The pay checks and flags now count a retained person as an account with five days (15 Oct 2026, migration `20261027120000_marketing_retained_accounts.sql`). The same script tests the account link, the one-account-one-install rule and what deletion does.
   **Still to build before paying at scale:** a server function that checks Google's Play Integrity token, so only real installs of the real app count. It needs a Google Cloud setup, an Edge Function and a new app release.
 - **Say it in the privacy policy and Data safety form.** The app stores a hash of the device's Android ID and reads Google's install referrer (`InstallReferrerPlugin.java`). The policy mentions neither, and `release-1.0.4.md` mentions an anonymous device ID only for shared events. The policy also does not mention the in-app usage events (the `events` table: event name, a per-device anonymous id, page, app version, platform). It names only page views. List all three.
 - **Data retention and deletion (checked on 12 Oct 2026).** The policy says data is kept while an account is active and gives no period. What the code and database do today:
   - **Nothing expires.** The database has no scheduled cleanup jobs. Inactive accounts are never removed. Usage events (about 6,600 rows), page views (about 4,100) and install records (about 610) are kept indefinitely.
   - **Account deletion** (the `delete-account` function) removes the profile, habits, logs, vitals, medicines, reminders, shared events, the medicine, reminder and event photos, feedback and page views.
-  - **Account deletion leaves these behind.** Usage events keep their rows with only the user id blanked, and each still carries the anonymous device id. Install records (`marketing_installs`) hold a hashed device id and the referral group, are not linked to an account, and are never touched. The policy's "deleting your account removes it" is slightly too strong for these two.
+  - **Account deletion leaves these behind.** Usage events keep their rows with only the user id blanked, and each still carries the anonymous device id. Install records (`marketing_installs`) hold a hashed device id and the referral group, were not linked to an account at the time, and were never touched. (Since 15 Oct 2026 they carry an account link, and deleting the account removes it.) The policy's "deleting your account removes it" is slightly too strong for these two.
   - **Export** leaves out medicines (the policy says so). Backups: the project is on the Pro plan, which keeps daily backups for 7 days, and the policy now says deleted data can remain in backups for up to 7 days (13 Oct 2026).
   - **To do:** (1) delete a user's usage events when their account is deleted, or say in the policy that they are kept anonymously. (2) Say in the policy what happens to install records. (3) Pick and state a plain period for events, page views and install records, for example 13 months, and add a scheduled cleanup to match. (4) Look up the backup period on the Supabase plan and put it in the policy. (5) Move the "Last updated" date.
   - **Decision (13 Oct 2026).** Build (1) to (3) with a period of 13 months. Written and tested, **not yet deployed**:
     - `supabase/migrations/20261019120000_data_retention.sql` adds `erase_user_usage` (deletes a deleted account's events, including those its device sent before sign-in, and takes the email off any referral seat) and `enforce_data_retention` (daily at 03:30 UTC through pg_cron: deletes events and page views older than 13 months, and replaces the device id of install records older than 13 months with a random value so the totals stay).
     - The `delete-account` function calls `erase_user_usage` before deleting the user.
-    - Install records are not linked to an account, so account deletion cannot find them. The 13-month rule is what removes the device id. The policy says so.
+    - Install records were not linked to an account when this was written, so account deletion could not find them. The 13-month rule removes the device id. Since 15 Oct 2026 they hold an account link (for the retained count), and `erase_user_usage` removes it on deletion. The policy says so.
     - The policy has a new "usage data" paragraph in the Retention section (three copies).
     - Tried in a rolled-back transaction on production: events, page views and installs behaved as above, and anon and signed-in users cannot run either function. At the moment nothing is older than 13 months, so the first run deletes nothing.
     - To go live: apply the migration, deploy `delete-account`, then deploy the app so the policy matches.
@@ -750,7 +755,7 @@ The working lists, with the release order and the pay checks, are in [LAUNCH.md]
 2. Add the privacy-policy and Data safety lines.
 3. Finish the Play listing in English and Hindi at least.
 4. Finish the pending release steps: push the commits, deploy `delete-account`, deploy the website, and build the release app.
-5. On day 14 of the test, apply for production access. Review can take a few days.
+5. Apply for production access now, and put 1.0.5 on closed testing while Google reviews. Review can take a few days.
 
 **Launch day (when the Play page is public)**
 1. Install from the public link on a clean phone. Check sign-in, a shared WhatsApp link, and Hindi.
@@ -768,8 +773,7 @@ The working lists, with the release order and the pay checks, are in [LAUNCH.md]
 
 | When | What |
 |------|------|
-| Now to day 14 of the test | M1: listing, tracking links, creative pack, articles, influencer shortlist, referral groups ready to pay (P15-15) |
-| After day 14 | Apply for production access (P15-06). No ads until live |
+| Now, while Google reviews | Apply for production access (P15-06). M1: listing, tracking links, creative pack, articles, influencer shortlist, referral groups ready to pay (P15-15). No ads until live |
 | Launch week | Free posting (P15-07). Credibility channels (P15-08), with Product Hunt on day 3 to 5. Start the Google and Instagram tests at about $10 a day each |
 | Weeks 2 to 3 | Read the numbers against the gates. Move money to the best channel. Influencer Reels go live |
 | Weeks 4 to 8 | Content cadence (P15-14), one article a week, and fix onboarding from the day-7 and day-30 numbers |
@@ -778,7 +782,7 @@ The working lists, with the release order and the pay checks, are in [LAUNCH.md]
 
 # Part 5 — Launch risks and gaps
 
-A second pass over the plan, checked against the repo (`marketing/src/site.ts`, `docs/LAUNCH.md`, the app source). It lists the problems to fix before you post and the things the plan had not covered. The ideas that came out of the same review are in [newIdeas.md](./newIdeas.md).
+A second pass over the plan, checked against the repo (`marketing/src/site.ts`, `docs/LAUNCH.md`, the app source). It lists the problems to fix before you post and the things the plan had not covered. The ideas that came out of the same review are in [newIdeas.md](./newIdeas.md). Each problem here has a matching checkbox in `docs/LAUNCH.md`.
 
 ## A. Problems to fix before you post
 
@@ -873,12 +877,12 @@ Task P15-03 asks for one. Put these in a shared folder, and link it from the Lin
 - One paragraph about the app, one about why you built it, and your photo.
 - The two links (Play and `resuming.me/start`) and the contact email.
 
-## D. What to do this afternoon
+## C. What to do this afternoon
 
-In order, about three hours:
+In order, about three hours. The Play steps come first because Google’s review is the only part you cannot speed up.
 
-1. Open the Play page and the live site on a signed-out phone and see what a visitor sees today (A2).
-2. Decide whether to set `PLAY_LIVE` to false until the listing is public.
+1. Do the “Today” list in `docs/LAUNCH.md`: apply for production, put 1.0.5 on closed testing, refresh the listing screenshots and description.
+2. Open the live resuming.app on a signed-out phone and see what a visitor sees today (A2), then decide whether to set `PLAY_LIVE` to false until the listing is public.
 3. Record R1 and R2 in Hindi. That is enough to launch.
 4. Write the three captions you will actually post (Instagram Hindi, Facebook English, LinkedIn).
 5. Message ten group admins and ten organizers (ideas 1 and 2 in [newIdeas.md](./newIdeas.md)). They answer in hours or days, not minutes, so ask first.
@@ -890,7 +894,7 @@ In order, about three hours:
 # Out of scope
 
 - Medicine reminders, widgets, circles, and any other unshipped feature in public material.
-- TikTok, APK sharing, and other app stores until decision 3 is settled.
+- TikTok, APK sharing, and any app store other than Google Play and, after the Play launch, Indus Appstore (decision 3).
 - Google's or Meta's code inside the app, to feed their ad platforms (decision 2).
 - Paid ads in the other five languages until Hindi and English show a result.
 - Any claim about health outcomes.

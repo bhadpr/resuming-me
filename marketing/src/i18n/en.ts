@@ -75,7 +75,7 @@ export const en = {
       'Walking, water, prayer, reading, meditation and more',
       'Short sessions add up through the day',
     ],
-    shotAlt: 'A Kapalabhati timer running on the Today screen, with the follow-along video below it.',
+    shotAlt: 'An Anulom Vilom timer running on the Today screen, with the follow-along video centered below it.',
     chips: ['Walking', 'Water', 'Kapalabhati', 'Anulom Vilom', 'Bhramari', 'Prayer', 'Reading', 'Meditation'],
   },
   progress: {

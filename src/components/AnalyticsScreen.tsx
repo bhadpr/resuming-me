@@ -17,6 +17,7 @@ import { fetchGuestJourney, type CreateCounts, type GuestJourney } from '../lib/
 import { templateLabel } from '../lib/catalogName'
 import { fetchLoopAnalytics, type CohortRow, type ComebackLoopSummary } from '../lib/loopAnalytics'
 import { fetchReminderSummary, oneTimeDoneRate, type ReminderSummary } from '../lib/reminderAnalytics'
+import { GrowthSection } from './GrowthSection'
 import { fetchSiteEvents, summarizeSiteEvents, type SiteSummary } from '../lib/siteAnalytics'
 
 export function AnalyticsScreen() {
@@ -270,6 +271,8 @@ export function AnalyticsScreen() {
           </section>
         )}
       </section>
+
+      <GrowthSection />
 
       <section className="today-section">
         <h3 className="section-label">Comeback loop</h3>

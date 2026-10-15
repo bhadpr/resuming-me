@@ -2,6 +2,15 @@ import { createSupabaseClient } from './supabase'
 
 /** The SQL that counts these numbers. Shown if the functions are not in the database yet. */
 const MIGRATION = 'supabase/migrations/20261020120000_analytics_summaries.sql'
+const GROWTH_MIGRATION = 'supabase/migrations/20261027140000_growth_metrics.sql'
+
+const GROWTH_FUNCTIONS = ['growth_metrics_summary', 'save_growth_snapshot']
+
+/** Tells the admin which migration to apply when a database function is missing. */
+export function missingFunctionMessage(fn: string): string {
+  const file = GROWTH_FUNCTIONS.includes(fn) ? GROWTH_MIGRATION : MIGRATION
+  return `Apply ${file} in the Supabase SQL Editor.`
+}
 
 export type AnalyticsSummaryFunction =
   | 'onboarding_funnel_summary'
@@ -14,7 +23,7 @@ export async function fetchAnalyticsSummary(fn: AnalyticsSummaryFunction, days: 
   const { data, error } = await createSupabaseClient().rpc(fn, { p_days: days })
   if (error) {
     if (error.code === '42883' || error.message.includes(fn)) {
-      throw new Error(`Apply ${MIGRATION} in the Supabase SQL Editor.`)
+      throw new Error(missingFunctionMessage(fn))
     }
     throw error
   }

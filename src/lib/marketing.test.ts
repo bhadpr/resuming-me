@@ -30,11 +30,16 @@ describe('marketingInstallLink', () => {
 })
 
 describe('retentionBucket', () => {
-  it('counts five different days inside the first 30 as retained', () => {
-    expect(retentionBucket('2026-10-01', 5, '2026-10-10')).toBe('retained')
-    expect(retentionBucket('2026-10-01', 4, '2026-10-30')).toBe('in_progress')
-    expect(retentionBucket('2026-10-01', 4, '2026-10-31')).toBe('ended_short')
-    expect(retentionBucket('2026-10-01', 1, '2026-10-01')).toBe('in_progress')
+  it('counts an account with five different days inside the first 30 as retained', () => {
+    expect(retentionBucket('2026-10-01', 5, '2026-10-10', true)).toBe('retained')
+    expect(retentionBucket('2026-10-01', 4, '2026-10-30', true)).toBe('in_progress')
+    expect(retentionBucket('2026-10-01', 4, '2026-10-31', true)).toBe('ended_short')
+    expect(retentionBucket('2026-10-01', 1, '2026-10-01', true)).toBe('in_progress')
+  })
+
+  it('does not count five days without an account', () => {
+    expect(retentionBucket('2026-10-01', 5, '2026-10-10', false)).toBe('in_progress')
+    expect(retentionBucket('2026-10-01', 9, '2026-10-31', false)).toBe('ended_short')
   })
 })
 

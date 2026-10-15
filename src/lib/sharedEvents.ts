@@ -436,14 +436,16 @@ export async function followSharedEvent(eventId: string): Promise<void> {
   if (error) throw new SharedEventError(issueFromError(error))
 }
 
-/** Whether this account already has a reminder for the event, as organizer or follower. */
-export async function hasSharedEventReminder(eventId: string): Promise<boolean> {
-  const { count, error } = await createSupabaseClient()
+/** The reminder this account already has for the event, as organizer or follower. */
+export async function sharedEventReminderId(eventId: string): Promise<string | null> {
+  const { data, error } = await createSupabaseClient()
     .from('reminders')
-    .select('id', { count: 'exact', head: true })
+    .select('id')
     .eq('shared_event_id', eventId)
+    .limit(1)
+    .maybeSingle()
   if (error) throw error
-  return (count ?? 0) > 0
+  return data?.id ?? null
 }
 
 /** Why the event cannot be added now, or null when it can. */

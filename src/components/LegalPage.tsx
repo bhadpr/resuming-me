@@ -180,6 +180,9 @@ function PrivacyContent() {
           we do not send them to third-party analytics vendors.
         </li>
         <li>
+          <strong>Install source (Android).</strong> When you install Resuming from Google Play, the app reads the install referrer that Google Play gives it: the campaign tag, if any, in the link you used. If that link came from a referral group, we store the tag with a hash of your Android device ID (not the ID itself) and, once you are signed in, a link to your account, so we can count installs, and the people with an account who go on to open the app on several days, for that group. Referral groups may be paid based on those counts. We do not use this for advertising and we do not share it with anyone else. Like other usage data, the device ID in it is replaced with a random value after 13 months.
+        </li>
+        <li>
           <strong>Website visits (resuming.app).</strong> On our website we count visits
           and button taps with first-party events: when a page is viewed (its language,
           whether you are on a phone or a computer, the website you came from, and any
@@ -329,10 +332,11 @@ function PrivacyContent() {
         Usage data is kept for a limited time. Anonymous usage events, website visit
         counts and page views are deleted automatically after 13 months. When you
         delete your account, we also delete your usage events, including those your
-        device sent before you signed in. Referral install records hold only a hashed
-        device ID and a referral group, and are not linked to an account. After 13
-        months the device ID in them is replaced with a random value, and only totals
-        are kept.
+        device sent before you signed in. Referral install records hold a hashed
+        device ID and a referral group, and, once you are signed in, a link to your
+        account, which is used only to count retained people for that group. When you
+        delete your account, that link is removed. After 13 months the device ID in
+        the record is replaced with a random value.
       </p>
 
       <h3>Security</h3>
