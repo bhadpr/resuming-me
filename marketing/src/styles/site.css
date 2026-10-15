@@ -1520,6 +1520,34 @@ p {
   gap: 1.25rem;
 }
 
+.footer-social {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.625rem;
+}
+
+.footer-social a {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 2.5rem;
+  height: 2.5rem;
+  border-radius: 999px;
+  border: 1px solid var(--border-strong);
+  background: var(--surface);
+  color: var(--ink);
+  line-height: 0;
+}
+
+.footer-social a:hover {
+  border-color: var(--primary);
+  color: var(--primary);
+}
+
+.footer-social svg {
+  display: block;
+}
+
 .footer-top {
   display: flex;
   flex-wrap: wrap;

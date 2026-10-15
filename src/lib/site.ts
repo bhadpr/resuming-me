@@ -82,18 +82,12 @@ export interface SocialLink {
   href: string
 }
 
-/** Placeholder social destinations — replace with real handles when ready (Phase 11, P11-06). */
-const PLACEHOLDER_SOCIAL_LINKS: SocialLink[] = [
-  { id: 'facebook', label: 'Facebook', href: 'https://www.facebook.com/cheerfulgames' },
-  { id: 'instagram', label: 'Instagram', href: 'https://www.instagram.com/cheerfulgames/' },
-  { id: 'tiktok', label: 'TikTok', href: 'https://www.tiktok.com/@cheerfulgames' },
-  { id: 'youtube', label: 'YouTube', href: 'https://www.youtube.com/@cheerfulgames' },
+/** Shown in the app footer. TikTok stays off until there is a Resuming account. */
+export const SOCIAL_LINKS: SocialLink[] = [
+  { id: 'facebook', label: 'Facebook', href: 'https://www.facebook.com/resumingme' },
+  { id: 'instagram', label: 'Instagram', href: 'https://www.instagram.com/resumingme/' },
+  { id: 'youtube', label: 'YouTube', href: 'https://www.youtube.com/@resumingme' },
 ]
-
-/** The footer hides the social row until the Resuming accounts exist. */
-export const SOCIAL_LINKS_LIVE = false
-
-export const SOCIAL_LINKS: SocialLink[] = SOCIAL_LINKS_LIVE ? PLACEHOLDER_SOCIAL_LINKS : []
 
 export const FOOTER_NAV: Array<{ id: SitePageId; label: string }> = [
   { id: 'about', label: 'About' },

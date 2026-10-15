@@ -29,6 +29,12 @@ export function playUrl(where: string): string {
 
 export const WEB_APP_URL = `${APP_URL}/start`
 
+export const SOCIAL_LINKS = [
+  { id: 'facebook', label: 'Facebook', href: 'https://www.facebook.com/resumingme' },
+  { id: 'instagram', label: 'Instagram', href: 'https://www.instagram.com/resumingme/' },
+  { id: 'youtube', label: 'YouTube', href: 'https://www.youtube.com/@resumingme' },
+] as const
+
 /** Shown in the language section in each language's own script. */
 export const LANGUAGES = [
   { code: 'en', name: 'English', line: 'Get back to what you put off.' },
