@@ -1,6 +1,6 @@
 # Resuming — Launch
 
-This is the go-live runbook for the first public Android release. The plan, budget, and channel rules stay in [PHASE-15.md](./PHASE-15.md). Tick the boxes here.
+This is the go-live runbook for the first public Android release. The plan, budget, and channel rules stay in [marketing.md](../marketing.md), which replaced `PHASE-15.md`. Unscheduled ideas are in [newIdeas.md](../newIdeas.md). Tick the boxes here.
 
 **As of 14 Oct 2026.** The closed test was on day 12 on 12 Oct, so day 14 is today. Production access can be applied for today. Google’s review can take a few days after that. Ads wait until the Play page is public.
 
@@ -104,7 +104,7 @@ Do not pay from the “Earned” number. The referral tables can be filled by a 
 ## Not in this launch
 
 - Listing copy in Gujarati, Marathi, Telugu, Tamil, and Bengali. Hindi first, then those, after English is live.
-- The in-app Play review prompt. It is not in the app. Ask for reviews by hand in the first week, and add the prompt after the third day someone logs something (P15-12).
+- The in-app Play review prompt. It is not in the app. Ask for reviews by hand in the first week, and add the prompt after the third day someone logs something (task P15-12 in `marketing.md`).
 - Indus Appstore and any other store.
 - Influencer Reels. Book them only after a paid channel clears the week-2 gates.
 - Community reminders. They are not in the build this listing describes.

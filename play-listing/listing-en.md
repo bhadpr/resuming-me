@@ -31,7 +31,7 @@ REMINDERS FOR EVERYTHING ELSE
 
 MADE FOR INDIA
 • English, हिन्दी, ગુજરાતી, मराठी, తెలుగు and தமிழ்
-• Try it without an account. Sign in with Google or email to keep your data safe.
+• Try it without an account. Sign in with Google to keep your data safe.
 • Free. No ads. Your data stays yours.
 
 Resuming is a wellness and habit app. It is not a medical device and does not give medical advice.
@@ -42,9 +42,9 @@ Files are in `screenshots/`.
 
 1. One list for your whole day
 2. Small steps count
-3. Your BP and weight, week by week
+3. Blood pressure, weight, and water
 4. Bills, visits, birthdays: never forget
-5. Share an event with family
+5. A shared event, on their phone
 6. Set up in a minute
 
 ## Tags / category
