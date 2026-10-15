@@ -680,6 +680,93 @@ p {
   }
 }
 
+/* A built screen inside the phone frame, used for the community calendar. */
+.phone-screen {
+  width: 100%;
+  aspect-ratio: 9 / 16;
+  border-radius: 30px;
+  background: var(--bg);
+  overflow: hidden;
+}
+
+.calendar-screen {
+  display: flex;
+  flex-direction: column;
+  padding: 0.85rem 0.6rem 0.7rem;
+}
+
+.calendar-screen-brand {
+  margin: 0;
+  font-family: var(--font-display);
+  font-size: 0.95rem;
+  font-weight: 600;
+  letter-spacing: -0.03em;
+}
+
+.calendar-screen-title {
+  margin: 0.7rem 0 0;
+  font-family: var(--font-display);
+  font-size: 1.05rem;
+  font-weight: 600;
+  letter-spacing: -0.03em;
+  line-height: 1.15;
+}
+
+.calendar-screen-sub {
+  margin: 0.35rem 0 0;
+  color: var(--muted);
+  font-size: 0.62rem;
+  line-height: 1.35;
+}
+
+.calendar-screen ul {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 0.4rem;
+  margin: 0.7rem 0 0;
+  padding: 0;
+  list-style: none;
+}
+
+.calendar-screen li {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  min-width: 0;
+  text-align: center;
+}
+
+.calendar-screen img {
+  width: 100%;
+  aspect-ratio: 1;
+  object-fit: cover;
+  border-radius: 0.7rem;
+}
+
+.calendar-screen-name {
+  margin: 0.35rem 0 0;
+  font-size: 0.68rem;
+  font-weight: 700;
+}
+
+.calendar-screen-day {
+  margin: 0.05rem 0 0;
+  color: var(--muted);
+  font-size: 0.58rem;
+  font-weight: 600;
+}
+
+.calendar-screen-add {
+  margin-top: 0.35rem;
+  width: 100%;
+  padding: 0.28rem 0.2rem;
+  border-radius: 999px;
+  background: var(--primary);
+  color: #fff;
+  font-size: 0.65rem;
+  font-weight: 700;
+}
+
 /* Feature rows */
 .feature {
   display: grid;
@@ -1553,7 +1640,27 @@ p {
   flex-wrap: wrap;
   justify-content: space-between;
   align-items: center;
-  gap: 1rem;
+  gap: 1.25rem 2rem;
+}
+
+.footer-aside {
+  display: flex;
+  flex-direction: column;
+  align-items: flex-end;
+  gap: 0.75rem;
+  margin-left: auto;
+}
+
+@media (max-width: 639px) {
+  .footer-top {
+    flex-direction: column;
+    align-items: flex-start;
+  }
+
+  .footer-aside {
+    align-items: flex-start;
+    margin-left: 0;
+  }
 }
 
 .footer-links {

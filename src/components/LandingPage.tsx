@@ -1,7 +1,6 @@
 import { useEffect, useState } from 'react'
 import { useNavigate } from 'react-router-dom'
 import { Capacitor } from '@capacitor/core'
-import { EmailSignInForm } from './EmailSignInForm'
 import { BrandTitle } from './BrandTitle'
 import { SiteFooter } from './SiteFooter'
 import { trackPageView } from '../lib/analytics'
@@ -206,6 +205,33 @@ export function LandingPage({
             {t('landing.getStarted')}
           </button>
           <p className="landing-actions-note">{t('landing.noAccount')}</p>
+          {!showSignIn ? (
+            <button
+              type="button"
+              className="btn btn-ghost landing-signin-toggle"
+              onClick={() => {
+                track('signin_reveal_clicked')
+                setShowSignIn(true)
+              }}
+            >
+              {t('landing.haveAccount')}
+            </button>
+          ) : (
+            <div className="landing-signin">
+              <p className="landing-signin-heading">{t('landing.signIn')}</p>
+              <button
+                type="button"
+                className="btn btn-secondary"
+                onClick={() => {
+                  track('signin_method_clicked', { method: 'google' })
+                  void handleSignIn()
+                }}
+                disabled={signingIn}
+              >
+                {signingIn ? t('landing.redirecting') : t('landing.google')}
+              </button>
+            </div>
+          )}
           {!native && (
             <a
               className="btn btn-ghost landing-get-app"
@@ -218,37 +244,6 @@ export function LandingPage({
             </a>
           )}
         </div>
-
-        {!showSignIn ? (
-          <button
-            type="button"
-            className="btn btn-ghost landing-signin-toggle"
-            onClick={() => {
-              track('signin_reveal_clicked')
-              setShowSignIn(true)
-            }}
-          >
-            {t('landing.haveAccount')}
-          </button>
-        ) : (
-          <div className="landing-signin">
-            <p className="landing-signin-heading">{t('landing.signIn')}</p>
-            <EmailSignInForm
-              onClick={() => track('signin_method_clicked', { method: 'email' })}
-            />
-            <button
-              type="button"
-              className="btn btn-secondary"
-              onClick={() => {
-                track('signin_method_clicked', { method: 'google' })
-                void handleSignIn()
-              }}
-              disabled={signingIn}
-            >
-              {signingIn ? t('landing.redirecting') : t('landing.google')}
-            </button>
-          </div>
-        )}
 
         <SiteFooter privacyOnly={native} />
       </div>

@@ -6,7 +6,6 @@ import { HabitIcon } from '../HabitIcon'
 import { HabitMark } from '../HabitMark'
 import { HabitVideoPlaceholder } from '../HabitVideoPlaceholder'
 import { GoalTargetPicker, StandardVitalTarget, WeightTargetField } from '../GoalTargetPicker'
-import { EmailSignInForm } from '../EmailSignInForm'
 import { AUTH_PROVIDERS } from '../../lib/authProviders'
 import { MEDICINES_ENABLED } from '../../config'
 import { formatReminderClock } from '../../lib/checkinPrefs'
@@ -2379,7 +2378,6 @@ export function StartFlow({
           >
             {AUTH_PROVIDERS[0].label}
           </button>
-          <EmailSignInForm onClick={() => track('signin_method_clicked', { method: 'email' })} />
           <p className="onboarding-hint">{t('start.free')}</p>
           <button type="button" className="btn btn-ghost" onClick={() => navigate('/today')}>
             {t('start.notNow')}

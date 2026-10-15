@@ -151,8 +151,37 @@ const stepArt = ['walking', 'water']
     </div>
   </section>
 
-  <section class="section" id="reminders">
+  <section class="section" id="calendar">
     <div class="wrap feature">
+      <div class="feature-shots">
+        <div class="phone phone-sm">
+          <div class="phone-screen calendar-screen" role="img" aria-label={copy.calendar.shotAlt}>
+            <p class="calendar-screen-brand">Resuming</p>
+            <p class="calendar-screen-title">{copy.calendar.screenTitle}</p>
+            <p class="calendar-screen-sub">{copy.calendar.screenSub}</p>
+            <ul>
+              {copy.calendar.days.map((day) => (
+                <li>
+                  <img src={day.image} alt="" width="800" height="800" />
+                  <p class="calendar-screen-name">{day.name}</p>
+                  <p class="calendar-screen-day">{day.date}</p>
+                  <span class="calendar-screen-add">{copy.calendar.add}</span>
+                </li>
+              ))}
+            </ul>
+          </div>
+        </div>
+      </div>
+      <div class="feature-text">
+        <span class="kicker">{copy.calendar.kicker}</span>
+        <h2>{copy.calendar.title}</h2>
+        <p class="lead" style="margin-top: 1rem">{copy.calendar.body}</p>
+      </div>
+    </div>
+  </section>
+
+  <section class="section" id="reminders">
+    <div class="wrap feature flip">
       <div class="feature-shots">
         <div class="phone phone-sm"><img src={`/media/reminder-${lang}.webp`} alt={copy.reminders.shotAlt} width="576" height="1024" loading="lazy" /></div>
       </div>
@@ -168,7 +197,7 @@ const stepArt = ['walking', 'water']
   </section>
 
   <section class="section" id="health">
-    <div class="wrap feature flip">
+    <div class="wrap feature">
       <div class="feature-shots lilac">
         <div class="phone phone-sm"><img src={`/media/bp-${lang}.webp`} alt={copy.health.shotAlt} width="576" height="1024" loading="lazy" /></div>
       </div>
@@ -182,7 +211,7 @@ const stepArt = ['walking', 'water']
   </section>
 
   <section class="section" id="steps">
-    <div class="wrap feature">
+    <div class="wrap feature flip">
       <div class="feature-shots sky">
         <StepsMock copy={copy.steps.mock} lang={lang} />
       </div>
@@ -199,7 +228,7 @@ const stepArt = ['walking', 'water']
   </section>
 
   <section class="section" id="progress">
-    <div class="wrap feature flip">
+    <div class="wrap feature">
       <div class="feature-shots mint">
         <InsightsMock copy={copy.progress.mock} lang={lang} />
       </div>

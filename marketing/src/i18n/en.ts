@@ -153,6 +153,29 @@ export const en = {
     sharedAlt: 'The page family members see when they open a shared wedding link, with the invitation card.',
     sharedMallAlt: 'The page friends see when they open a shared link to meet at Inorbit Mall, with an illustration of friends having coffee and an add button.',
   },
+  calendar: {
+    kicker: 'Community calendar',
+    title: 'Days the community already keeps',
+    body: 'Add Diwali or Christmas. They show up on Today, the same way a reminder you typed does.',
+    shotAlt: 'The community calendar on a phone, with Diwali on 8 Nov 2026 and Christmas on 25 Dec 2026, each with an Add button.',
+    screenTitle: 'Community calendar',
+    screenSub: 'Tap Add on a day you want to remember.',
+    add: 'Add',
+    days: [
+      {
+        name: 'Diwali',
+        date: '8 Nov 2026',
+        image: '/community/diwali.webp',
+        alt: 'Three lit diyas on a rangoli.',
+      },
+      {
+        name: 'Christmas',
+        date: '25 Dec 2026',
+        image: '/community/christmas.webp',
+        alt: 'A small Christmas tree with two gifts.',
+      },
+    ],
+  },
   health: {
     kicker: 'Health',
     title: 'Your BP and weight, week by week',

@@ -618,6 +618,15 @@ export function GuestTodayPage() {
             </div>
           )}
 
+          {timedItems.length === 0 && (
+            <div className="today-empty">
+              <p className="today-empty-title">{t('list.empty')}</p>
+              <p className="today-empty-copy">
+                {t('list.activityEmpty')} {t('reminders.empty')}
+              </p>
+            </div>
+          )}
+
           <TodayByTime items={timedItems} listClassName="today-list today-guest-list" />
 
           <div className="today-add-row">

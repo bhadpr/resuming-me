@@ -18,7 +18,6 @@ import { track } from '../lib/track'
 import { useDocumentMeta } from '../hooks/useDocumentMeta'
 import { BrandTitle } from './BrandTitle'
 import { BottomNav } from './BottomNav'
-import { EmailSignInForm } from './EmailSignInForm'
 import { GuestActivitiesPage, GuestVitalsPage } from './GuestLibrary'
 import { GuestReminderEditor, GuestReminderList } from './GuestReminders'
 import { InsightsHeaderButton } from './InsightsHeaderButton'
@@ -197,7 +196,6 @@ function GuestSignInPanel({ tab }: { tab: AppTab }) {
           </div>
         )}
         <div className="landing-signin guest-auth-signin">
-          <EmailSignInForm onClick={() => track('signin_method_clicked', { method: 'email' })} />
           <button
             type="button"
             className="btn btn-secondary"

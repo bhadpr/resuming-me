@@ -584,18 +584,35 @@ select.field-input {
 }
 
 .language-picker {
+  position: relative;
   display: block;
   width: fit-content;
   max-width: 100%;
   margin: 0;
 }
 
+.language-picker::after {
+  content: '';
+  position: absolute;
+  top: 50%;
+  right: 1rem;
+  width: 0.7rem;
+  height: 0.45rem;
+  transform: translateY(-50%);
+  background: var(--color-text);
+  pointer-events: none;
+  -webkit-mask: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 12 8'%3E%3Cpath fill='black' d='M1.2 1.1 6 5.9 10.8 1.1 9.7.1 6 3.8 2.3.1z'/%3E%3C/svg%3E") center / contain no-repeat;
+  mask: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 12 8'%3E%3Cpath fill='black' d='M1.2 1.1 6 5.9 10.8 1.1 9.7.1 6 3.8 2.3.1z'/%3E%3C/svg%3E") center / contain no-repeat;
+}
+
 select.field-input.language-select {
   width: auto;
   min-width: 9.5rem;
-  padding-right: 2rem;
+  padding-right: 2.6rem;
   font-weight: var(--weight-semibold);
   letter-spacing: 0;
+  appearance: none;
+  -webkit-appearance: none;
 }
 
 .visually-hidden {
@@ -1680,7 +1697,7 @@ select.field-input.language-select {
 
 .landing-signin-toggle {
   align-self: center;
-  font-size: var(--text-sm);
+  font-size: var(--text-md);
   margin-top: 0.15rem;
 }
 
@@ -1701,8 +1718,7 @@ select.field-input.language-select {
   text-transform: uppercase;
 }
 
-.landing-signin .btn,
-.landing-signin .email-sign-in .btn {
+.landing-signin .btn {
   align-self: stretch;
   width: 100%;
   justify-content: center;
@@ -1795,6 +1811,10 @@ select.field-input.language-select {
   padding-bottom: max(1.25rem, env(safe-area-inset-bottom, 0px));
 }
 
+.landing-centered {
+  align-items: center;
+}
+
 .landing-card-legal {
   border-color: var(--color-border);
 }
@@ -1832,7 +1852,7 @@ select.field-input.language-select {
 }
 
 .site-footer-link {
-  font-size: var(--text-sm);
+  font-size: var(--text-md);
   font-weight: var(--weight-semibold);
   color: var(--color-primary);
   padding: 0;
@@ -6530,8 +6550,7 @@ select.field-input.language-select {
   box-sizing: border-box;
 }
 
-.start-flow .btn,
-.email-sign-in .btn {
+.start-flow .btn {
   align-self: flex-start;
 }
 
@@ -6577,7 +6596,6 @@ select.field-input.language-select {
   margin: 0;
 }
 
-.email-sign-in,
 .guest-merge-banner {
   display: flex;
   flex-direction: column;

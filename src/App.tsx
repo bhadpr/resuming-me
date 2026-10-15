@@ -157,7 +157,13 @@ function publicBack(navigate: ReturnType<typeof useNavigate>) {
   navigateBack(navigate, '/')
 }
 
-function PublicPageFrame({ children }: { children: ReactNode }) {
+function PublicPageFrame({
+  children,
+  centered = false,
+}: {
+  children: ReactNode
+  centered?: boolean
+}) {
   const { user } = useAuth()
   const native = Capacitor.isNativePlatform()
   const home = user || loadGuestDraft() ? '/today' : '/'
@@ -178,7 +184,7 @@ function PublicPageFrame({ children }: { children: ReactNode }) {
   }
 
   return (
-    <div className="landing landing-legal">
+    <div className={`landing landing-legal${centered ? ' landing-centered' : ''}`}>
       <div className="landing-card landing-card-legal">
         <div className="brand-line">
           <BrandTitle className="app-title" homeTo={home} />
@@ -226,7 +232,7 @@ function PublicFeedbackRoute() {
   }, [])
 
   return (
-    <PublicPageFrame>
+    <PublicPageFrame centered>
       <FeedbackPage
         onBack={() => publicBack(navigate)}
         defaultName={user?.user_metadata?.full_name ?? user?.user_metadata?.name ?? ''}

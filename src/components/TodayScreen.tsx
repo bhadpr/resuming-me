@@ -472,9 +472,18 @@ export function TodayScreen({
             </div>
           )}
 
+          {emptyKind === 'setup' && timedItems.length === 0 && (
+            <div className="today-empty">
+              <p className="today-empty-title">{t('list.empty')}</p>
+              <p className="today-empty-copy">
+                {t('list.activityEmpty')} {t('reminders.empty')}
+              </p>
+            </div>
+          )}
+
           <TodayByTime items={timedItems} />
 
-          {emptyKind !== 'setup' && (onAddActivity || onAddReminder) && (
+          {(emptyKind !== 'setup' || timedItems.length === 0) && (onAddActivity || onAddReminder) && (
             <div className="today-add-row">
               {onAddActivity && (
                 <button type="button" className="btn btn-secondary today-add" onClick={onAddActivity}>
