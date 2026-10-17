@@ -22,6 +22,7 @@ export type AppView =
   | { name: 'medicines'; medicineId?: string }
   | { name: 'reminders'; reminderId?: string; edit?: boolean }
   | { name: 'reminderList' }
+  | { name: 'reminderCommunity' }
   | { name: 'insights' }
   | { name: 'review'; weekStart: string }
   | { name: 'settings'; page?: 'reminders' }
@@ -56,6 +57,7 @@ const APP_ROUTES: Array<{ pattern: string; parse: (params: Record<string, string
     parse: (p) => ({ name: 'medicines', medicineId: p.id }),
   },
   { pattern: '/reminders/new', parse: () => ({ name: 'reminders' }) },
+  { pattern: '/reminders/community', parse: () => ({ name: 'reminderCommunity' }) },
   {
     pattern: '/reminders/:id/edit',
     parse: (p) => ({ name: 'reminders', reminderId: p.id, edit: true }),
@@ -93,7 +95,9 @@ export function tabFromView(view: AppView | null): AppTab {
   if (!view) return 'today'
   if (view.name === 'numbers' || view.name === 'medicines') return 'metrics'
   if (view.name === 'activities') return 'activities'
-  if (view.name === 'reminders' || view.name === 'reminderList') return 'reminders'
+  if (view.name === 'reminders' || view.name === 'reminderList' || view.name === 'reminderCommunity') {
+    return 'reminders'
+  }
   if (view.name === 'insights') return 'insights'
   return 'today'
 }
@@ -112,6 +116,7 @@ export function showAppChrome(view: AppView | null): boolean {
     view.name === 'medicines' ||
     view.name === 'reminders' ||
     view.name === 'reminderList' ||
+    view.name === 'reminderCommunity' ||
     view.name === 'insights' ||
     view.name === 'review'
   )

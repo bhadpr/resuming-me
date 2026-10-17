@@ -16,8 +16,9 @@ import { withSharedStatuses } from '../lib/reminders'
 import { useDocumentMeta } from '../hooks/useDocumentMeta'
 import { BrandTitle } from './BrandTitle'
 import { BottomNav } from './BottomNav'
+import { GuestActivityScreen } from './GuestActivityScreen'
 import { GuestActivitiesPage, GuestVitalsPage } from './GuestLibrary'
-import { GuestReminderEditor, GuestReminderList } from './GuestReminders'
+import { GuestCommunityReminders, GuestReminderEditor, GuestReminderList } from './GuestReminders'
 import { InsightsHeaderButton } from './InsightsHeaderButton'
 import { GuestInsightsPage } from './GuestInsightsPage'
 import { GuestTodayPage } from './GuestTodayPage'
@@ -62,8 +63,15 @@ export function GuestAppShell() {
           <GuestReminderEditor key={view.reminderId ?? 'new'} reminderId={view.reminderId} editing={view.edit === true} />
         )}
         {view?.name === 'reminderList' && <GuestReminderList />}
+        {view?.name === 'reminderCommunity' && <GuestCommunityReminders />}
         {tab === 'today' && <GuestTodayPage />}
-        {tab === 'activities' && <GuestActivitiesPage />}
+        {view?.name === 'activities' && view.screen === 'list' && <GuestActivitiesPage />}
+        {view?.name === 'activities' && view.screen === 'detail' && (
+          <GuestActivityScreen mode="detail" activityId={view.activityId} />
+        )}
+        {view?.name === 'activities' && view.screen === 'form' && (
+          <GuestActivityScreen mode="form" activityId={view.activityId} />
+        )}
         {tab === 'metrics' && <GuestVitalsPage />}
         {tab === 'insights' && <GuestInsightsPage />}
       </main>

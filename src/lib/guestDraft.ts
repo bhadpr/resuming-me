@@ -72,6 +72,8 @@ export type GuestActivity = {
   recommended?: number | null
   /** Choices on the amount screen, such as 100, 150, 200, 250, 300. */
   goalSteps?: number[] | null
+  /** Hidden from Today. The habit stays in Activity. */
+  archived?: boolean
 }
 
 export type GuestLog = {
@@ -80,7 +82,8 @@ export type GuestLog = {
   durationSeconds: number
   date: string
   /** Count taps, such as protein portions. Sessions omit this. */
-  kind?: 'session' | 'count'
+  kind?: 'session' | 'count' | 'completed'
+  note?: string | null
 }
 
 export type GuestReading = {
@@ -717,7 +720,7 @@ function normalizeDraft(draft: GuestDraft): GuestDraft {
     ),
     logs: (draft.logs ?? []).filter((log) => {
       if (!ids.has(log.localActivityId)) return false
-      if (log.kind === 'count') return Boolean(log.date)
+      if (log.kind === 'count' || log.kind === 'completed') return Boolean(log.date)
       return log.durationSeconds >= 1
     }),
     timezone: draft.timezone || 'UTC',
@@ -761,6 +764,40 @@ export function upsertGuestActivity(draft: GuestDraft, activity: GuestActivity):
   return saveGuestDraft({ ...draft, activities })
 }
 
+export function setGuestActivityArchived(
+  draft: GuestDraft,
+  localId: string,
+  archived: boolean,
+): GuestDraft {
+  return saveGuestDraft({
+    ...draft,
+    activities: draft.activities.map((activity) =>
+      activity.localId === localId ? { ...activity, archived } : activity,
+    ),
+  })
+}
+
+export function updateGuestLog(
+  draft: GuestDraft,
+  index: number,
+  patch: { date?: string; durationSeconds?: number; note?: string | null },
+): GuestDraft {
+  const current = draft.logs[index]
+  if (!current) return draft
+  return saveGuestDraft({
+    ...draft,
+    logs: draft.logs.map((log, i) => (i === index ? { ...log, ...patch } : log)),
+  })
+}
+
+export function removeGuestLogAt(draft: GuestDraft, index: number): GuestDraft {
+  if (!draft.logs[index]) return draft
+  return saveGuestDraft({
+    ...draft,
+    logs: draft.logs.filter((_, i) => i !== index),
+  })
+}
+
 export function removeGuestActivity(draft: GuestDraft, localId: string): GuestDraft {
   return saveGuestDraft({
     ...draft,
@@ -775,8 +812,8 @@ export function appendGuestLog(draft: GuestDraft, log: GuestLog): GuestDraft {
   const activity = draft.activities.find((item) => item.localId === log.localActivityId)
   if (!activity) return draft
   // Match signed-in timer stops: keep any bout of at least one second.
-  const minimum = log.kind === 'count' ? 0 : 1
-  if (log.kind !== 'count' && log.durationSeconds < minimum) return draft
+  const minimum = log.kind === 'count' || log.kind === 'completed' ? 0 : 1
+  if (log.kind !== 'count' && log.kind !== 'completed' && log.durationSeconds < minimum) return draft
   return saveGuestDraft({ ...draft, logs: [...draft.logs, log] })
 }
 
@@ -936,7 +973,7 @@ export function guestDraftToPayload(draft: GuestDraft) {
       startedAt: log.startedAt,
       durationSeconds: log.durationSeconds,
       date: log.date,
-      kind: log.kind ?? 'session',
+      kind: log.kind === 'completed' ? 'count' : (log.kind ?? 'session'),
     })),
     readings: normalized.readings.map((reading) => ({
       localActivityId: reading.localActivityId,

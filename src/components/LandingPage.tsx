@@ -147,20 +147,24 @@ export function LandingPage({
               {signingIn ? t('landing.redirecting') : t('landing.signInGoogle')}
             </button>
           </div>
-          {!native && (
-            <a
-              className="btn btn-ghost landing-get-app"
-              href={PLAY_STORE_URL}
-              target="_blank"
-              rel="noopener noreferrer"
-              onClick={() => track('get_app_clicked', { where: 'landing' })}
-            >
-              {t('landing.getApp')}
-            </a>
-          )}
         </div>
 
-        <SiteFooter privacyOnly={native} />
+        <SiteFooter
+          privacyOnly={native}
+          leading={
+            native ? null : (
+              <a
+                className="landing-get-app"
+                href={PLAY_STORE_URL}
+                target="_blank"
+                rel="noopener noreferrer"
+                onClick={() => track('get_app_clicked', { where: 'landing' })}
+              >
+                {t('landing.getApp')}
+              </a>
+            )
+          }
+        />
       </div>
     </div>
   )

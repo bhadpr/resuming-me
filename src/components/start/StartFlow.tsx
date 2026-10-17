@@ -26,6 +26,7 @@ import {
   type GuestDraft,
   type StartPickPhase,
 } from '../../lib/guestDraft'
+import { navigateBack } from '../../lib/navigation'
 import {
   COUNT_STEPS,
   WEEK_CADENCE,
@@ -78,6 +79,7 @@ function newLocalId(): string {
 
 const START_VITALS: { id: string; label: string; caption?: string }[] = [
   { id: 'weight', label: 'Weight' },
+  { id: 'steps', label: 'Steps' },
   { id: 'water', label: 'Water' },
   { id: 'fasting', label: 'Fasting' },
   { id: 'protein', label: 'Protein' },
@@ -88,7 +90,7 @@ const START_VITALS: { id: string; label: string; caption?: string }[] = [
 /** Short first question. Explore more opens the rest of the catalog. */
 const PRANAYAM_IDS = ['anuloma_viloma', 'kapalabhati', 'bhastrika', 'bhramari'] as const
 const WORKOUT_IDS = ['walk', 'running', 'exercise', 'stretching'] as const
-const VITAL_IDS = ['blood_pressure', 'weight', 'heart_rate', 'steps'] as const
+const VITAL_IDS = ['weight', 'steps', 'protein', 'fasting', 'water', 'blood_pressure', 'heart_rate'] as const
 
 /** Pictures under each yes/no question, so people see what they would get. */
 const MEDICINE_PREVIEW = ['allopathic', 'ayurvedic', 'homeopathic'] as const
@@ -1904,6 +1906,14 @@ export function StartFlow({
         })
         return (
           <>
+            <button
+              type="button"
+              className="btn btn-ghost btn-sm back-btn"
+              onClick={() => navigateBack(navigate, '/numbers')}
+            >
+              <Icon name="back" />
+              {t('start.back')}
+            </button>
             <h1 className="screen-heading">{t('list.addVital')}</h1>
             <p className="screen-sub">
               {options.length > 0 ? t('start.addOneSub') : t('start.vitalsAllAdded')}
@@ -1928,7 +1938,16 @@ export function StartFlow({
 
       {draft.step === 1 && !trackName && (adding ? !addingVitals && !pending : draft.pickPhase === 'activities') && (
         <>
-          {!adding && (
+          {adding ? (
+            <button
+              type="button"
+              className="btn btn-ghost btn-sm back-btn"
+              onClick={() => navigateBack(navigate, '/activities')}
+            >
+              <Icon name="back" />
+              {t('start.back')}
+            </button>
+          ) : (
             <button
               type="button"
               className="btn btn-ghost start-back"
@@ -1966,7 +1985,7 @@ export function StartFlow({
             </div>
           )}
           <div className="start-featured">
-            {START_FEATURED.map((item) => {
+            {(adding ? START_FEATURED.filter((item) => !isVitalTemplate(item.id)) : START_FEATURED).map((item) => {
               const existing = draft.activities.find((activity) => activity.templateId === item.id)
               const kept = Boolean(existing && adding && keptIds.current?.has(existing.localId))
               if (kept) return null
@@ -2026,7 +2045,11 @@ export function StartFlow({
               </button>
             </form>
             {HABIT_GROUPS.map((group) => {
-              const ids = group.ids.filter((id) => !FEATURED_IDS.has(id))
+              const ids = group.ids.filter((id) => {
+                if (FEATURED_IDS.has(id)) return false
+                if (!adding) return true
+                return !draft.activities.some((activity) => activity.templateId === id)
+              })
               if (ids.length === 0) return null
               return (
               <section key={group.title} className="habit-group">
@@ -2065,6 +2088,7 @@ export function StartFlow({
               </section>
               )
             })}
+            {!adding && (
             <section className="habit-group">
               <h2 className="habit-group-title">{t('start.vitals')}</h2>
               <div className="onboarding-chips">
@@ -2100,6 +2124,7 @@ export function StartFlow({
                 })}
               </div>
             </section>
+            )}
           </div>
           )}
           {!adding && (
@@ -2435,7 +2460,7 @@ export function StartFlow({
               })),
               ...openReminders.map((reminder) => ({
                 id: `r-${reminder.id}`,
-                mark: <ReminderKindMark kind={reminder.kind} />,
+                mark: <ReminderKindMark kind={reminder.kind} photo={reminderPhotoSrc(reminder)} />,
                 label: reminder.text,
               })),
             ].slice(0, 8)}

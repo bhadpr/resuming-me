@@ -59,6 +59,7 @@ import { ShareReminder } from './ShareReminder'
 import { addedCommunityIds, communityReminderInput } from '../lib/communityReminders'
 import { askForReminderAlerts } from '../lib/reminderNotifications'
 import { untimedReminderNames } from '../lib/reminderAlerts'
+import { CommunityRemindersPage } from './CommunityRemindersPage'
 import { ReminderListSection } from './ReminderSection'
 import { OnboardingScreen } from './OnboardingScreen'
 import { InstallPrompt } from './InstallPrompt'
@@ -133,7 +134,7 @@ import {
 } from '../lib/activities'
 import { activityInputFromTemplate, templateById } from '../data/activityTemplates'
 import { setVitalTarget } from '../lib/vitalTargets'
-import { isDailyGoalHabit, isFixedVital, VITAL_GOAL_IDS } from '../lib/onboardingFlow'
+import { isFixedVital, VITAL_GOAL_IDS } from '../lib/onboardingFlow'
 import { habitTemplateId } from '../data/habitArt'
 import {
   createMetric,
@@ -346,7 +347,7 @@ export function AppShell() {
   const [loadingMetrics, setLoadingMetrics] = useState(!hadCache)
   const [loadingToday, setLoadingToday] = useState(!hadCache)
   const [saving, setSaving] = useState(false)
-  const [habitFormPhase, setHabitFormPhase] = useState<'pick' | 'details'>('pick')
+  const [habitFormPhase, setHabitFormPhase] = useState<'pick' | 'details' | 'simple'>('pick')
   const [vitalFormPhase, setVitalFormPhase] = useState<'pick' | 'setup' | 'details'>('pick')
   const [busyId, setBusyId] = useState<string | null>(null)
   const [error, setError] = useState<string | null>(null)
@@ -994,6 +995,10 @@ export function AppShell() {
         view.medicineId ? `/medicines/${view.medicineId}` : '/medicines/new',
         'Medicine',
       )
+      return
+    }
+    if (view?.name === 'reminderCommunity') {
+      trackPageView('/reminders/community', 'Community reminders')
       return
     }
     if (view?.name === 'reminders') {
@@ -2059,6 +2064,10 @@ export function AppShell() {
                       setError(null)
                       navigate('/reminders/new')
                     }}
+                    onAddCommunity={() => {
+                      setError(null)
+                      navigate('/reminders/community')
+                    }}
                     onOpen={(reminder) => {
                       setError(null)
                       navigate(`/reminders/${reminder.id}`)
@@ -2071,14 +2080,18 @@ export function AppShell() {
                           }
                         : undefined
                     }
-                    community={{
-                      addedIds: addedCommunityIds(reminderState.reminders),
-                      onAdd: async (item) => {
-                        const input = communityReminderInput(item, locale)
-                        const result = await reminderState.add(input)
-                        if (result === 'ok') void askForReminderAlerts(input)
-                        return result
-                      },
+                  />
+                )}
+
+                {view?.name === 'reminderCommunity' && (
+                  <CommunityRemindersPage
+                    today={reminderState.today}
+                    addedIds={addedCommunityIds(reminderState.reminders)}
+                    onAdd={async (item) => {
+                      const input = communityReminderInput(item, locale)
+                      const result = await reminderState.add(input)
+                      if (result === 'ok') void askForReminderAlerts(input)
+                      return result
                     }}
                   />
                 )}
@@ -2188,15 +2201,15 @@ export function AppShell() {
                   <Icon name="back" />
                   Back
                 </button>
-                <h2 className="form-title">
-                  {selectedActivity
-                    ? isDailyGoalHabit({ templateId: selectedActivity.template_id })
-                      ? visibleName(selectedActivity, locale)
-                      : 'Edit habit'
-                    : habitFormPhase === 'details'
-                      ? 'Create habit'
-                      : 'Add habit'}
-                </h2>
+                {!selectedActivity?.template_id && (
+                  <h2 className="form-title">
+                    {selectedActivity
+                      ? 'Edit habit'
+                      : habitFormPhase === 'details'
+                        ? 'Create habit'
+                        : 'Add habit'}
+                  </h2>
+                )}
                 <Suspense fallback={<ScreenChunkFallback />}>
                   <ActivityForm
                     initial={selectedActivity ?? null}

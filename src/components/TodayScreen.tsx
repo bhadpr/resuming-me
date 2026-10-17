@@ -42,6 +42,7 @@ import { activityPeriod, periodForHour } from '../lib/dayPeriod'
 import { isDoseFinished, type DueDose } from '../lib/medicineSchedule'
 import { habitTemplateId } from '../data/habitArt'
 import { WelcomeBackCard, type WelcomeBackModel } from './WelcomeBackCard'
+import { TabGuide } from './TabGuide'
 import type { Moment } from '../lib/moments'
 import type { PauseDuration } from '../lib/activityPauses'
 
@@ -368,7 +369,9 @@ export function TodayScreen({
       <div className="screen-heading today-heading">
         <h2>{t('nav.today')}</h2>
         <p className="screen-sub">{dateLabel}</p>
+        <p className="today-role">{t('today.role')}</p>
       </div>
+      <TabGuide />
       {timedItems.some((item) => !item.done && (item.kind === 'medicine' || item.kind === 'reminder')) && (
         <AppAlertsNote where="today" />
       )}

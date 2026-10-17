@@ -11,7 +11,7 @@ function vitalUnit(activity: GuestActivity): string {
   return activity.targetUnit || 'kg'
 }
 
-function guestActivityRow(activity: GuestActivity, createdAt: string): Activity {
+export function guestActivityRow(activity: GuestActivity, createdAt: string): Activity {
   return {
     id: activity.localId,
     user_id: 'guest',
@@ -28,7 +28,7 @@ function guestActivityRow(activity: GuestActivity, createdAt: string): Activity 
     usually_when: activity.usuallyWhen,
     off_weekdays: [],
     micro_steps: [],
-    archived: false,
+    archived: activity.archived === true,
     template_id: activity.templateId,
     name_overridden: false,
     video_youtube_id: null,
@@ -36,6 +36,28 @@ function guestActivityRow(activity: GuestActivity, createdAt: string): Activity 
     created_at: createdAt,
     updated_at: createdAt,
   }
+}
+
+/** Check-ins for one guest habit, shaped like signed-in log rows. The id is the log's place in the draft. */
+export function guestLogsForActivity(draft: GuestDraft, localId: string): LogEntry[] {
+  return draft.logs.flatMap((log, index) => {
+    if (log.localActivityId !== localId) return []
+    return [
+      {
+        id: String(index),
+        activity_id: log.localActivityId,
+        user_id: 'guest',
+        type: log.kind === 'count' || log.kind === 'completed' ? 'completed' : 'session',
+        source: null,
+        started_at: log.startedAt,
+        duration_seconds: log.durationSeconds,
+        date: log.date,
+        note: log.note ?? null,
+        created_at: log.startedAt,
+        updated_at: null,
+      },
+    ]
+  })
 }
 
 /** Habits and numbers a guest has logged, shaped for the Insights screen. */
@@ -56,7 +78,7 @@ export function guestDraftInsights(draft: GuestDraft): {
       id: `guest-log-${index}`,
       activity_id: log.localActivityId,
       user_id: 'guest',
-      type: log.kind === 'count' ? 'completed' : 'session',
+      type: log.kind === 'count' || log.kind === 'completed' ? 'completed' : 'session',
       source: null,
       started_at: log.startedAt,
       duration_seconds: log.durationSeconds,

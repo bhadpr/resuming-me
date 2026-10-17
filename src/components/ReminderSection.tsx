@@ -1,5 +1,4 @@
 import { useState } from 'react'
-import type { CommunityReminder } from '../lib/communityReminders'
 import { useLocale } from '../hooks/useLocale'
 import type { Locale } from '../lib/i18n'
 import {
@@ -12,7 +11,6 @@ import {
 import { reminderPhotoSrc } from '../lib/eventPhotoUrl'
 import { repeatSummary } from '../lib/reminderRepeat'
 import { isShareableReminder } from '../lib/sharedEvents'
-import { CommunityReminderPicker } from './CommunityReminderPicker'
 import { Icon } from './Icon'
 import { ReminderKindMark } from './ReminderKindIcon'
 import { SkipLink, UndoSkipButton } from './TodaySkip'
@@ -164,11 +162,8 @@ interface ReminderListSectionProps {
   onOpen: (reminder: Reminder) => void
   /** Signed in only: guests cannot make shared events. */
   onShare?: (reminder: Reminder) => void
-  /** Days many people keep, such as Diwali. Adding one makes an ordinary reminder. */
-  community?: {
-    addedIds: readonly string[]
-    onAdd: (item: CommunityReminder) => Promise<'ok' | 'full'>
-  }
+  /** Opens the page where several community days can be chosen together. */
+  onAddCommunity?: () => void
 }
 
 /** Not yet shared, or shared by this account and still on. Copies from others are not shared on. */
@@ -188,10 +183,9 @@ export function ReminderListSection({
   onAdd,
   onOpen,
   onShare,
-  community,
+  onAddCommunity,
 }: ReminderListSectionProps) {
   const { locale, t } = useLocale()
-  const [communityOpen, setCommunityOpen] = useState(false)
   const tomorrow = tomorrowOf(today)
   const groups: { key: string; label: string; items: Reminder[] }[] = []
   const todays = dueNow.filter((reminder) => reminder.day >= today)
@@ -216,29 +210,18 @@ export function ReminderListSection({
           <h2>{t('nav.reminders')}</h2>
           <p className="screen-sub">{t('reminders.sub')}</p>
         </div>
-        <button type="button" className="btn btn-primary btn-compact" aria-label={t('reminders.add')} onClick={onAdd}>
-          {t('list.add')}
-        </button>
       </div>
 
-      {community && (
-        <div className="reminder-community-toggle">
-          <button
-            type="button"
-            className="btn btn-secondary btn-compact"
-            aria-expanded={communityOpen}
-            onClick={() => setCommunityOpen((open) => !open)}
-          >
-            {communityOpen ? t('reminders.community.close') : t('reminders.community.open')}
+      <div className="reminder-add-actions">
+        <button type="button" className="btn btn-primary" onClick={onAdd}>
+          {t('reminders.add')}
+        </button>
+        {onAddCommunity && (
+          <button type="button" className="btn btn-secondary" onClick={onAddCommunity}>
+            {t('reminders.community.open')}
           </button>
-          {communityOpen && (
-            <>
-              <p className="screen-sub">{t('reminders.community.sub')}</p>
-              <CommunityReminderPicker today={today} addedIds={community.addedIds} onAdd={community.onAdd} />
-            </>
-          )}
-        </div>
-      )}
+        )}
+      </div>
 
       {error && <p className="error">{error}</p>}
 
@@ -248,9 +231,6 @@ export function ReminderListSection({
         <section className="empty-state">
           <span className="empty-state-icon"><Icon name="reminders" size={24} /></span>
           <p>{t('reminders.empty')}</p>
-          <button type="button" className="btn btn-primary" onClick={onAdd}>
-            {t('reminders.add')}
-          </button>
         </section>
       ) : (
         groups.map((group) => (

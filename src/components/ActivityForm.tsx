@@ -4,12 +4,31 @@ import { HABIT_ART } from '../data/habitArt'
 import { activityOwnVideo, habitVideoFor, parseYoutubeLink, youtubeWatchUrl } from '../data/habitVideos'
 import { HabitIcon } from './HabitIcon'
 import { DayPeriodPicker } from './DayPeriodPicker'
-import { GoalTargetPicker } from './GoalTargetPicker'
+import { GoalTargetPicker, StandardVitalTarget, WeightTargetField } from './GoalTargetPicker'
+import { HabitMark } from './HabitMark'
+import { HabitVideoPlaceholder } from './HabitVideoPlaceholder'
 import { activityPeriod } from '../lib/dayPeriod'
-import { VITAL_GOAL_IDS, gapHeading, isDailyGoalHabit, parseGoalText } from '../lib/onboardingFlow'
+import {
+  VITAL_GOAL_IDS,
+  WEEK_CADENCE,
+  activitySizeControl,
+  applyWeekCadence,
+  durationChipParts,
+  gapHeading,
+  gapOptionsFor,
+  habitSizeTagline,
+  isDailyGoalHabit,
+  isPranayamHabit,
+  parseGoalText,
+  standardVitalTarget,
+  weekCadenceOf,
+  weightUnitOf,
+  type WeekCadence,
+  type WeightUnit,
+} from '../lib/onboardingFlow'
 import { addDays, todayLocalDate } from '../lib/dates'
 import type { Activity, ActivityInput } from '../lib/activities'
-import { groupTitle, isCatalogLabel, templateLabel } from '../lib/catalogName'
+import { groupTitle, isCatalogLabel, templateLabel, visibleName } from '../lib/catalogName'
 import { useLocale } from '../hooks/useLocale'
 import { useThemedArt } from '../hooks/useThemedArt'
 import type { ActivityType, TrackingMode } from '../types/database'
@@ -70,6 +89,201 @@ function scrollFormTop() {
   document.querySelector('main')?.scrollTo?.(0, 0)
 }
 
+function goalOptionMatches(templateId: string, value: number): boolean {
+  return gapOptionsFor({ templateId }).some((option) => {
+    const record = option as { glasses?: number; grams?: number; hours?: number; count?: number }
+    return record.glasses === value || record.grams === value || record.hours === value || record.count === value
+  })
+}
+
+/** Edit for a catalog habit: the same amount and how-often choices as adding it. */
+function CatalogHabitEdit({
+  initial,
+  saving,
+  error,
+  onSubmit,
+}: {
+  initial: Activity
+  saving: boolean
+  error: string | null
+  onSubmit: (input: ActivityInput) => Promise<void> | void
+}) {
+  const { locale, t } = useLocale()
+  const themed = useThemedArt()
+  const templateId: string | null = initial.template_id ?? null
+  const base = fromActivity(initial)
+  const name = visibleName(initial, locale)
+  const goal = isDailyGoalHabit({ templateId })
+  const weight = templateId === 'weight'
+  const standard = standardVitalTarget(templateId)
+  const control = activitySizeControl({
+    templateId,
+    trackingMode: initial.tracking_mode,
+    type: initial.type,
+    targetUnit: initial.target_unit,
+  })
+  const [sizeValue, setSizeValue] = useState<number | null>(initial.target_value)
+  const [cadence, setCadence] = useState<WeekCadence>(
+    weekCadenceOf({ type: initial.type, weeklyTarget: initial.weekly_target }),
+  )
+  const [goalValue, setGoalValue] = useState<number | null>(initial.target_value)
+  const [goalText, setGoalText] = useState(() => {
+    if (!templateId || !goal || initial.target_value == null) return ''
+    return goalOptionMatches(templateId, initial.target_value) ? '' : String(initial.target_value)
+  })
+  const [weightUnit, setWeightUnit] = useState<WeightUnit>(weightUnitOf(initial.target_unit))
+  const [weightText, setWeightText] = useState(initial.target_value != null ? String(initial.target_value) : '')
+
+  const steps =
+    control == null
+      ? []
+      : [...control.steps, ...(sizeValue != null && !control.steps.includes(sizeValue) ? [sizeValue] : [])].sort(
+          (a, b) => a - b,
+        )
+  const art = templateId ? HABIT_ART[templateId] : undefined
+
+  async function save() {
+    if (weight) {
+      const typed = parseGoalText(templateId, weightText)
+      if (typed == null) return
+      await onSubmit({ ...base, targetValue: typed, targetUnit: weightUnit })
+      return
+    }
+    if (goal) {
+      const typed = goalText.trim() ? parseGoalText(templateId, goalText) : null
+      const value = typed ?? goalValue
+      if (value == null || value <= 0) return
+      await onSubmit({ ...base, targetValue: value })
+      return
+    }
+    if (standard) {
+      await onSubmit(base)
+      return
+    }
+    const paced = applyWeekCadence({ type: base.type, weeklyTarget: base.weeklyTarget }, cadence)
+    const next: ActivityInput = { ...base, type: paced.type, weeklyTarget: paced.weeklyTarget }
+    if (control) {
+      const value = sizeValue ?? control.steps[0] ?? 1
+      next.targetValue = value
+      next.targetUnit = base.trackingMode === 'count' ? null : 'minutes'
+    }
+    await onSubmit(next)
+  }
+
+  const goalReady = !goal || (goalText.trim() ? parseGoalText(templateId, goalText) != null : (goalValue ?? 0) > 0)
+  const weightReady = !weight || parseGoalText(templateId, weightText) != null
+
+  return (
+    <div className="catalog-habit-edit">
+      {weight ? (
+        <>
+          <h1 className="screen-heading">{t('start.targetWeight')}</h1>
+          <p className="screen-sub start-detail-name">
+            <HabitMark templateId={templateId} name={name} emoji={initial.emoji} />
+            {name}
+          </p>
+          <WeightTargetField text={weightText} unit={weightUnit} onText={setWeightText} onUnit={setWeightUnit} />
+        </>
+      ) : goal ? (
+        <>
+          <h1 className="screen-heading">{gapHeading({ templateId })}</h1>
+          <p className="screen-sub start-detail-name">
+            <HabitMark templateId={templateId} name={name} emoji={initial.emoji} />
+            {name}
+          </p>
+          <GoalTargetPicker
+            habit={{ templateId }}
+            value={goalValue}
+            text={goalText}
+            onPick={(value) => {
+              setGoalText('')
+              setGoalValue(value)
+            }}
+            onText={setGoalText}
+          />
+        </>
+      ) : standard ? (
+        <>
+          <h1 className="screen-heading">{name}</h1>
+          <StandardVitalTarget messageKey={standard} />
+        </>
+      ) : (
+        <>
+          <h1 className="screen-heading">{t('start.sizeTitle')}</h1>
+          <p className="screen-sub">{t('start.sizeSub')}</p>
+          <fieldset className="field habit-size-block">
+            <legend className="field-label habit-size-title">
+              <HabitMark templateId={templateId} name={name} emoji={initial.emoji} />
+              <span>{name}</span>
+            </legend>
+            <p className="habit-size-tagline">{habitSizeTagline({ templateId, name: initial.name })}</p>
+            {isPranayamHabit(templateId) ? (
+              <HabitVideoPlaceholder templateId={templateId} name={name} placeholder />
+            ) : art ? (
+              <img className="habit-size-art" src={themed(art)} alt="" />
+            ) : null}
+            {control ? (
+              <div className="choice-grid choice-grid-size" role="group" aria-label={t('start.length', { name })}>
+                {steps.map((step) => {
+                  const parts = control.label
+                    ? durationChipParts(step)
+                    : { primary: String(step), secondary: control.suffix.trim() || null }
+                  const aria = control.label?.(step) ?? `${step}${control.suffix}`
+                  return (
+                    <button
+                      key={step}
+                      type="button"
+                      className={`choice-tile choice-tile-stack ${sizeValue === step ? 'choice-tile-selected' : ''}`}
+                      aria-label={aria}
+                      aria-pressed={sizeValue === step}
+                      onClick={() => setSizeValue(step)}
+                    >
+                      <span className="choice-tile-primary">{parts.primary}</span>
+                      {parts.secondary ? <span className="choice-tile-secondary">{parts.secondary}</span> : null}
+                    </button>
+                  )
+                })}
+              </div>
+            ) : (
+              <p className="screen-sub">{t('start.checkOff')}</p>
+            )}
+            <span className="field-label habit-often">{t('start.often')}</span>
+            <div className="choice-grid choice-grid-cadence" role="group" aria-label={t('start.cadence', { name })}>
+              {WEEK_CADENCE.map((option) => (
+                <button
+                  key={option.id}
+                  type="button"
+                  className={`choice-tile choice-tile-stack ${cadence === option.id ? 'choice-tile-selected' : ''}`}
+                  aria-pressed={cadence === option.id}
+                  onClick={() => setCadence(option.id)}
+                >
+                  <span className="choice-tile-primary">
+                    {option.id === 'daily'
+                      ? t('cadence.daily')
+                      : option.id === 'once'
+                        ? t('cadence.once')
+                        : t('cadence.twice')}
+                  </span>
+                  {option.secondary ? <span className="choice-tile-secondary">{t('cadence.week')}</span> : null}
+                </button>
+              ))}
+            </div>
+          </fieldset>
+        </>
+      )}
+      {error && <p className="error">{error}</p>}
+      <button
+        type="button"
+        className="btn btn-primary catalog-habit-save"
+        disabled={saving || !goalReady || !weightReady}
+        onClick={() => void save()}
+      >
+        {saving ? t('reminders.saving') : t('start.save')}
+      </button>
+    </div>
+  )
+}
+
 export function ActivityForm({
   initial = null,
   existingNames = [],
@@ -85,11 +299,13 @@ export function ActivityForm({
   error?: string | null
   onSubmit: (input: ActivityInput) => Promise<void> | void
   onCancel: () => void
-  onPhaseChange?: (phase: 'pick' | 'details') => void
+  onPhaseChange?: (phase: 'pick' | 'details' | 'simple') => void
 }) {
   const { locale, t } = useLocale()
   const themed = useThemedArt()
-  const [phase, setPhase] = useState<'pick' | 'details'>(initial ? 'details' : 'pick')
+  const [phase, setPhase] = useState<'pick' | 'details' | 'simple'>(
+    initial?.template_id ? 'simple' : initial ? 'details' : 'pick',
+  )
   const [selectedTemplateId, setSelectedTemplateId] = useState<string | null>(
     initial?.template_id ?? null,
   )
@@ -207,6 +423,10 @@ export function ActivityForm({
       })()
     : null
 
+  if (initial?.template_id) {
+    return <CatalogHabitEdit initial={initial} saving={saving} error={error} onSubmit={onSubmit} />
+  }
+
   if (!initial && phase === 'pick') {
     return (
       <div className="activity-form activity-pick">
@@ -214,21 +434,26 @@ export function ActivityForm({
           <div className="field">
             <span className="field-label">{t('form.template')}</span>
             <div className="habit-groups habit-pick">
-              {HABIT_GROUPS.map((group) => (
+              {HABIT_GROUPS.map((group) => {
+                const ids = group.ids.filter((id) => {
+                  const template = templateById(id)
+                  if (!template || VITAL_GOAL_IDS.has(id)) return false
+                  return !templateAlreadyAdded(template.id, template.label, existingNames)
+                })
+                if (ids.length === 0) return null
+                return (
                 <section key={group.title} className="habit-group">
                   <h2 className="habit-group-title">{groupTitle(group.title, locale)}</h2>
                   <div className="onboarding-chips">
-                    {group.ids.map((id) => {
+                    {ids.map((id) => {
                       const template = templateById(id)
-                      if (!template || VITAL_GOAL_IDS.has(id)) return null
-                      const taken = templateAlreadyAdded(template.id, template.label, existingNames)
+                      if (!template) return null
                       const art = HABIT_ART[template.id]
                       return (
                         <button
                           key={template.id}
                           type="button"
                           className="onboarding-chip habit-tile"
-                          disabled={taken}
                           onClick={() => pickTemplate(template.id)}
                         >
                           <span className={`habit-tile-icon${art ? ' habit-tile-icon-art' : ''}`} aria-hidden>
@@ -244,7 +469,8 @@ export function ActivityForm({
                     })}
                   </div>
                 </section>
-              ))}
+                )
+              })}
             </div>
           </div>
 

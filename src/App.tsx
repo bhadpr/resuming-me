@@ -301,6 +301,7 @@ export const appRouteObjects = [
               { path: '/medicines/:id', element: <RouteSlot /> },
               { path: '/reminders', element: <RouteSlot /> },
               { path: '/reminders/new', element: <RouteSlot /> },
+              { path: '/reminders/community', element: <RouteSlot /> },
               { path: '/reminders/:id', element: <RouteSlot /> },
               { path: '/reminders/:id/edit', element: <RouteSlot /> },
               { path: '/insights', element: <RouteSlot /> },

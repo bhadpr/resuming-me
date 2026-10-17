@@ -14,6 +14,7 @@ import {
 import { formatDuration } from '../lib/timer'
 import { AppAlertsNote } from './AppAlertsNote'
 import { GuestSaveWidget } from './GuestSaveWidget'
+import { TabGuide } from './TabGuide'
 import { HabitMark } from './HabitMark'
 import { Icon } from './Icon'
 import { Toast } from './Toast'
@@ -553,7 +554,7 @@ export function GuestTodayPage() {
       done: isDoseFinished(dose),
       node: <MedicineDoseRow dose={dose} busy={false} onToggle={toggleDose} onSkip={skipDose} />,
     })),
-    ...draft.activities.map((activity) => ({
+    ...draft.activities.filter((activity) => !activity.archived).map((activity) => ({
       key: `activity-${activity.localId}`,
       kind: isNumberEntryVital(activity) ? ('vital' as const) : ('activity' as const),
       period: isNumberEntryVital(activity) ? ('anytime' as const) : activityPeriod(activity),
@@ -608,7 +609,9 @@ export function GuestTodayPage() {
           <div className="screen-heading today-heading">
             <h2>{t('nav.today')}</h2>
             <p className="screen-sub">{dateLabel}</p>
+            <p className="today-role">{t('today.role')}</p>
           </div>
+          <TabGuide />
           {timedItems.some((item) => !item.done && (item.kind === 'medicine' || item.kind === 'reminder')) && (
             <AppAlertsNote where="today" />
           )}

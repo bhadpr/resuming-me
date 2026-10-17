@@ -15,6 +15,7 @@ import { askForReminderAlerts } from '../lib/reminderNotifications'
 import { REMINDERS_CHANGED, remindersComingUp, remindersForToday } from '../lib/reminderSchedule'
 import { forgetSharedReminder } from '../lib/sharedEvents'
 import { track } from '../lib/track'
+import { CommunityRemindersPage } from './CommunityRemindersPage'
 import { ReminderEditor } from './ReminderForm'
 import { GuestSaveWidget } from './GuestSaveWidget'
 import { ReminderListSection } from './ReminderSection'
@@ -82,7 +83,6 @@ export function GuestReminderEditor({ reminderId, editing = false }: { reminderI
 
 export function GuestReminderList() {
   const navigate = useNavigate()
-  const { locale } = useLocale()
   const [draft, setDraft] = useState<GuestDraft | null>(() => loadGuestDraft())
   useEffect(() => {
     const refresh = () => setDraft(loadGuestDraft())
@@ -103,30 +103,46 @@ export function GuestReminderList() {
         error={null}
         onAdd={() => navigate('/reminders/new')}
         onOpen={(reminder) => navigate(`/reminders/${reminder.id}`)}
-        community={{
-          addedIds: addedCommunityIds(draft.reminders),
-          onAdd: async (item) => {
-            const current = loadGuestDraft()
-            if (!current) return 'ok'
-            const input = communityReminderInput(item, locale)
-            const next = addGuestReminder(current, input)
-            if (!next) return 'full'
-            setDraft(next)
-            track('reminder_added', {
-              has_time: false,
-              day_before: input.remindBefore === true,
-              kind: input.kind ?? 'event',
-              every_year: false,
-              repeat: 'none',
-              signed_in: false,
-              photo: false,
-              community: true,
-            })
-            void askForReminderAlerts(input)
-            return 'ok'
-          },
-        }}
+        onAddCommunity={() => navigate('/reminders/community')}
       />
     </>
+  )
+}
+
+export function GuestCommunityReminders() {
+  const { locale } = useLocale()
+  const [draft, setDraft] = useState<GuestDraft | null>(() => loadGuestDraft())
+  useEffect(() => {
+    const refresh = () => setDraft(loadGuestDraft())
+    window.addEventListener(REMINDERS_CHANGED, refresh)
+    return () => window.removeEventListener(REMINDERS_CHANGED, refresh)
+  }, [])
+  if (!draft) return null
+
+  return (
+    <CommunityRemindersPage
+      today={todayLocalDate()}
+      addedIds={addedCommunityIds(draft.reminders)}
+      onAdd={async (item) => {
+        const current = loadGuestDraft()
+        if (!current) return 'ok'
+        const input = communityReminderInput(item, locale)
+        const next = addGuestReminder(current, input)
+        if (!next) return 'full'
+        setDraft(next)
+        track('reminder_added', {
+          has_time: false,
+          day_before: input.remindBefore === true,
+          kind: input.kind ?? 'event',
+          every_year: false,
+          repeat: 'none',
+          signed_in: false,
+          photo: false,
+          community: true,
+        })
+        void askForReminderAlerts(input)
+        return 'ok'
+      }}
+    />
   )
 }

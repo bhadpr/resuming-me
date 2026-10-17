@@ -35,16 +35,22 @@ export function CommunityReminderPicker({
   onAdd,
   onEmpty,
   expanded = false,
+  selection,
 }: {
   today: string
   /** Community reminders this person already has. */
   addedIds: readonly string[]
   /** Resolves 'full' when the person has no room for another reminder. */
-  onAdd: (item: CommunityReminder) => Promise<'ok' | 'full'>
+  onAdd?: (item: CommunityReminder) => Promise<'ok' | 'full'>
   /** Called once when there is nothing to show, so a flow can move on. */
   onEmpty?: () => void
   /** Show every card, two by two, instead of scrolling inside the list. */
   expanded?: boolean
+  /** Taps choose cards. The caller saves them together. */
+  selection?: {
+    ids: readonly string[]
+    onToggle: (item: CommunityReminder) => void
+  }
 }) {
   const { locale, t } = useLocale()
   const [items, setItems] = useState<CommunityReminder[] | null>(null)
@@ -72,6 +78,7 @@ export function CommunityReminderPicker({
   }, [today])
 
   async function add(item: CommunityReminder) {
+    if (!onAdd) return
     setBusyId(item.id)
     setMessage(null)
     try {
@@ -86,30 +93,39 @@ export function CommunityReminderPicker({
   }
 
   const added = new Set([...addedIds, ...addedNow])
+  const visible = items?.filter((item) => !added.has(item.id)) ?? null
 
   return (
     <div className={`community-picker${expanded ? ' community-picker-open' : ''}`}>
       {loadFailed ? (
         <p className="error">{t('reminders.community.error')}</p>
-      ) : items === null ? (
+      ) : visible === null ? (
         <p className="muted-center">{t('reminders.loading')}</p>
-      ) : items.length === 0 ? (
+      ) : visible.length === 0 ? (
         <p className="muted-center">{t('reminders.community.empty')}</p>
       ) : (
         <ul className="community-grid">
-          {items.map((item) => {
+          {visible.map((item) => {
             const name = communityTitle(item, locale)
             const photo = communityPhotoUrl(item.photoPath)
-            const done = added.has(item.id)
+            const saved = added.has(item.id)
+            const picked = selection?.ids.includes(item.id) === true
+            const marked = saved || picked
             return (
               <li key={item.id}>
                 <button
                   type="button"
-                  className={`community-card picture-pick${done ? ' community-card-added' : ''}`}
-                  disabled={done || busyId != null}
-                  aria-pressed={done}
-                  aria-label={`${done ? t('reminders.community.added') : t('reminders.community.add')}: ${name}`}
-                  onClick={() => void add(item)}
+                  className={`community-card picture-pick${saved ? ' community-card-added' : ''}${picked ? ' community-card-picked' : ''}`}
+                  disabled={selection ? saved : saved || busyId != null}
+                  aria-pressed={marked}
+                  aria-label={`${marked ? t('reminders.community.added') : t('reminders.community.add')}: ${name}`}
+                  onClick={() => {
+                    if (selection) {
+                      if (!saved) selection.onToggle(item)
+                      return
+                    }
+                    void add(item)
+                  }}
                 >
                   <span className="community-photo-frame">
                     <CardPicture photo={photo} kind={item.kind} />

@@ -13,6 +13,8 @@ interface SiteFooterProps {
   compact?: boolean
   /** Native welcome: Privacy only, no social or marketing cluster. */
   privacyOnly?: boolean
+  /** Shown above the social icons, such as the Play Store link on the landing page. */
+  leading?: ReactNode
 }
 
 const SOCIAL_ICONS: Record<SocialLinkId, ReactNode> = {
@@ -53,6 +55,7 @@ const SOCIAL_ICONS: Record<SocialLinkId, ReactNode> = {
 export function SiteFooter({
   compact = false,
   privacyOnly = false,
+  leading = null,
 }: SiteFooterProps) {
   if (privacyOnly) {
     return (
@@ -68,6 +71,7 @@ export function SiteFooter({
 
   return (
     <footer className={`site-footer ${compact ? 'site-footer-compact' : ''}`}>
+      {leading}
       {SOCIAL_LINKS.length > 0 && (
         <nav className="site-footer-social" aria-label="Social media">
           {SOCIAL_LINKS.map((link) => (

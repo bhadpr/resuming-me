@@ -49,6 +49,7 @@ function ItemList({
   kind,
   items,
   onAdd,
+  onOpen,
 }: {
   title: string
   sub: string
@@ -58,6 +59,7 @@ function ItemList({
   kind: 'activity' | 'vital'
   items: GuestActivity[]
   onAdd: () => void
+  onOpen?: (activity: GuestActivity) => void
 }) {
   const { locale, t } = useLocale()
   return (
@@ -91,15 +93,36 @@ function ItemList({
               <ul className="activity-list">
                 {list.map((activity) => {
                   const detail = guestDetail(activity, t)
+                  const inner = (
+                    <>
+                      <HabitMark name={visibleName(activity, locale)} templateId={activity.templateId} />
+                      <span className="activity-meta">
+                        <span className="activity-name">
+                          {visibleName(activity, locale)}
+                          {activity.archived ? <span className="badge">{t('list.archived')}</span> : null}
+                        </span>
+                        {detail ? <span className="activity-desc">{detail}</span> : null}
+                      </span>
+                      {onOpen ? (
+                        <span className="activity-chevron" aria-hidden>
+                          <Icon name="chevron" />
+                        </span>
+                      ) : null}
+                    </>
+                  )
                   return (
                     <li key={activity.localId}>
-                      <div className={`activity-row item-kind-${kind}`}>
-                        <HabitMark name={visibleName(activity, locale)} templateId={activity.templateId} />
-                        <span className="activity-meta">
-                          <span className="activity-name">{visibleName(activity, locale)}</span>
-                          {detail ? <span className="activity-desc">{detail}</span> : null}
-                        </span>
-                      </div>
+                      {onOpen ? (
+                        <button
+                          type="button"
+                          className={`activity-row item-kind-${kind}`}
+                          onClick={() => onOpen(activity)}
+                        >
+                          {inner}
+                        </button>
+                      ) : (
+                        <div className={`activity-row item-kind-${kind}`}>{inner}</div>
+                      )}
                     </li>
                   )
                 })}
@@ -131,6 +154,7 @@ export function GuestActivitiesPage() {
         kind="activity"
         items={habits}
         onAdd={() => navigate('/start?step=1&add=1')}
+        onOpen={(activity) => navigate(`/activities/${activity.localId}`)}
       />
     </>
   )
