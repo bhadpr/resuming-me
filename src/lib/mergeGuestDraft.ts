@@ -23,6 +23,26 @@ function reminderKey(item: Pick<Reminder, 'text' | 'day' | 'hour' | 'minute'>): 
   return `${item.text.trim().toLowerCase()}|${item.day}|${item.hour ?? ''}|${item.minute ?? ''}`
 }
 
+type SavedReminder = Pick<
+  Reminder,
+  'text' | 'day' | 'hour' | 'minute' | 'communityId' | 'sharedEventId'
+>
+
+/** The account already has this reminder, even when the wording changed with the language. */
+export function guestReminderAlreadySaved(
+  existing: readonly SavedReminder[],
+  reminder: SavedReminder,
+): boolean {
+  if (reminder.communityId && existing.some((item) => item.communityId === reminder.communityId)) {
+    return true
+  }
+  if (reminder.sharedEventId && existing.some((item) => item.sharedEventId === reminder.sharedEventId)) {
+    return true
+  }
+  const key = reminderKey(reminder)
+  return existing.some((item) => reminderKey(item) === key)
+}
+
 async function mergeMedicines(userId: string, draft: GuestDraft): Promise<void> {
   const existing = await listMedicines()
   const saved = new Map(existing.map((item) => [item.name.trim().toLowerCase(), item.id]))
@@ -57,8 +77,9 @@ function isDuplicate(err: unknown): boolean {
 
 /** A retry after a partial failure skips reminders already copied. */
 async function mergeReminders(userId: string, draft: GuestDraft): Promise<void> {
-  const existing = new Set((await listReminders()).map(reminderKey))
+  const existing = await listReminders()
   for (const reminder of draft.reminders) {
+    if (guestReminderAlreadySaved(existing, reminder)) continue
     if (reminder.sharedEventId) {
       try {
         await followSharedEvent(reminder.sharedEventId)
@@ -66,14 +87,13 @@ async function mergeReminders(userId: string, draft: GuestDraft): Promise<void> 
         /* the copy still moves; only the count misses it */
       }
     }
-    if (existing.has(reminderKey(reminder))) continue
     try {
       await addReminder(userId, reminder)
     } catch (err) {
       if (err instanceof ReminderCapError) return
       if (!isDuplicate(err)) throw err
     }
-    existing.add(reminderKey(reminder))
+    existing.push(reminder)
   }
 }
 

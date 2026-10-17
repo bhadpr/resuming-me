@@ -15,6 +15,7 @@ import { formatDuration } from '../lib/timer'
 import { AppAlertsNote } from './AppAlertsNote'
 import { GuestSaveWidget } from './GuestSaveWidget'
 import { HabitMark } from './HabitMark'
+import { Icon } from './Icon'
 import { Toast } from './Toast'
 import { useUndoToast } from '../hooks/useUndoToast'
 import { formatCompletedUndoMessage, formatCountUndoMessage, formatSessionUndoMessage } from '../lib/undoMessages'
@@ -618,25 +619,40 @@ export function GuestTodayPage() {
             </div>
           )}
 
-          {timedItems.length === 0 && (
-            <div className="today-empty">
-              <p className="today-empty-title">{t('list.empty')}</p>
-              <p className="today-empty-copy">
-                {t('list.activityEmpty')} {t('reminders.empty')}
-              </p>
-            </div>
+          {timedItems.length === 0 ? (
+            <section className="empty-state">
+              <span className="empty-state-icon">
+                <Icon name="today" size={24} />
+              </span>
+              <h2>{t('list.empty')}</h2>
+              <p>{t('today.setupEmpty')}</p>
+              <Link className="btn btn-primary" to="/start?step=1">
+                {t('landing.getStarted')}
+              </Link>
+              <p className="empty-state-or">{t('today.or')}</p>
+              <div className="today-add-row">
+                <Link className="btn btn-secondary today-add" to="/start?step=1&add=1">
+                  {t('today.add')}
+                </Link>
+                <Link className="btn btn-secondary today-add" to="/reminders/new">
+                  {t('reminders.add')}
+                </Link>
+              </div>
+            </section>
+          ) : (
+            <TodayByTime items={timedItems} listClassName="today-list today-guest-list" />
           )}
 
-          <TodayByTime items={timedItems} listClassName="today-list today-guest-list" />
-
-          <div className="today-add-row">
-            <Link className="btn btn-secondary today-add" to="/start?step=1&add=1">
-              {t('today.add')}
-            </Link>
-            <Link className="btn btn-secondary today-add" to="/reminders/new">
-              {t('reminders.add')}
-            </Link>
-          </div>
+          {timedItems.length > 0 && (
+            <div className="today-add-row">
+              <Link className="btn btn-secondary today-add" to="/start?step=1&add=1">
+                {t('today.add')}
+              </Link>
+              <Link className="btn btn-secondary today-add" to="/reminders/new">
+                {t('reminders.add')}
+              </Link>
+            </div>
+          )}
           {undoToast.toast && (
             <Toast message={undoToast.toast.message} onUndo={() => void undoToast.undo()} />
           )}

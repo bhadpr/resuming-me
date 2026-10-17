@@ -102,6 +102,7 @@ interface TodayScreenProps {
   onWelcomeDismiss?: () => void
   onFreshStart?: () => void
   onAddActivity?: () => void
+  onGetStarted?: () => void
   moment?: Moment | null
   onMomentStart?: (activityId: string, minutes: number | null) => void
   onMomentDismiss?: (id: string) => void
@@ -154,6 +155,7 @@ export function TodayScreen({
   onWelcomeDismiss,
   onFreshStart,
   onAddActivity,
+  onGetStarted,
   moment = null,
   onMomentStart,
   onMomentDismiss,
@@ -473,17 +475,40 @@ export function TodayScreen({
           )}
 
           {emptyKind === 'setup' && timedItems.length === 0 && (
-            <div className="today-empty">
-              <p className="today-empty-title">{t('list.empty')}</p>
-              <p className="today-empty-copy">
-                {t('list.activityEmpty')} {t('reminders.empty')}
-              </p>
-            </div>
+            <section className="empty-state">
+              <span className="empty-state-icon">
+                <Icon name="today" size={24} />
+              </span>
+              <h2>{t('list.empty')}</h2>
+              <p>{t('today.setupEmpty')}</p>
+              {onGetStarted && (
+                <button type="button" className="btn btn-primary" onClick={onGetStarted}>
+                  {t('landing.getStarted')}
+                </button>
+              )}
+              {(onAddActivity || onAddReminder) && (
+                <>
+                  {onGetStarted && <p className="empty-state-or">{t('today.or')}</p>}
+                  <div className="today-add-row">
+                    {onAddActivity && (
+                      <button type="button" className="btn btn-secondary today-add" onClick={onAddActivity}>
+                        {t('today.add')}
+                      </button>
+                    )}
+                    {onAddReminder && (
+                      <button type="button" className="btn btn-secondary today-add" onClick={onAddReminder}>
+                        {t('reminders.add')}
+                      </button>
+                    )}
+                  </div>
+                </>
+              )}
+            </section>
           )}
 
           <TodayByTime items={timedItems} />
 
-          {(emptyKind !== 'setup' || timedItems.length === 0) && (onAddActivity || onAddReminder) && (
+          {emptyKind !== 'setup' && (onAddActivity || onAddReminder) && (
             <div className="today-add-row">
               {onAddActivity && (
                 <button type="button" className="btn btn-secondary today-add" onClick={onAddActivity}>

@@ -68,11 +68,21 @@ export function KapalabhatiVideos({
   }
 
   return (
-    <figure className="habit-video kapal-videos">
+    <figure className={`habit-video kapal-videos${withTimer ? ' kapal-videos-live' : ''}`}>
       <div className="kapal-row">
         {clips.map((clip) => {
           const middle = clip.speed === speed
-          const order = middle ? 1 : clip.speed === left ? 0 : 2
+          const order = withTimer
+            ? middle
+              ? 0
+              : clip.speed === left
+                ? 1
+                : 2
+            : middle
+              ? 1
+              : clip.speed === left
+                ? 0
+                : 2
           const label = t(`video.speed.${clip.speed}`)
           return (
             <div

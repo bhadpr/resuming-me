@@ -3,6 +3,7 @@ import { addDays } from '../lib/dates'
 import { reminderPhotoSrc } from '../lib/eventPhotoUrl'
 import { prepareReminderPhoto } from '../lib/reminderPhotos'
 import { useLocale } from '../hooks/useLocale'
+import { localeTag, type Locale } from '../lib/i18n'
 import {
   REMINDER_REPEATS,
   clampRepeatUntil,
@@ -66,6 +67,29 @@ function choiceClass(on: boolean): string {
   return `btn reminder-choice ${on ? 'btn-primary' : 'btn-secondary'}`
 }
 
+/** Opens the browser's own date or time picker. Returns false when this browser will not. */
+function openNativePicker(input: HTMLInputElement | null): boolean {
+  if (!input || typeof input.showPicker !== 'function') return false
+  try {
+    input.showPicker()
+    return true
+  } catch {
+    return false
+  }
+}
+
+function pickedClock(value: string, locale: Parameters<typeof formatReminderTime>[2]): string {
+  const match = /^(\d{2}):(\d{2})$/.exec(value)
+  if (!match) return ''
+  return formatReminderTime(Number(match[1]), Number(match[2]), locale)
+}
+
+function pickedDayLabel(day: string, locale: Locale): string {
+  const [year, month, date] = day.split('-').map(Number)
+  if (!year || !month || !date) return day
+  return new Date(year, month - 1, date).toLocaleDateString(localeTag(locale), { month: 'short', day: 'numeric' })
+}
+
 export function ReminderForm({
   initial,
   today,
@@ -102,6 +126,12 @@ export function ReminderForm({
   /** Missing until the person picks an end date, so it follows the first day until then. */
   const [pickedUntil, setPickedUntil] = useState<string | null>(initial?.repeatUntil ?? null)
   const [issue, setIssue] = useState<ReminderIssue | null>(null)
+  const [manualDate, setManualDate] = useState(false)
+  const [manualTime, setManualTime] = useState(false)
+  const dateInput = useRef<HTMLInputElement>(null)
+  const timeInput = useRef<HTMLInputElement>(null)
+  const photoInput = useRef<HTMLInputElement>(null)
+  const photoChosen = Boolean(currentPhoto)
   const repeating = repeat !== null
   const canRemindBefore = resolvedDay() > today && !repeating
   const dayBeforeOn = canRemindBefore && remindBefore
@@ -203,42 +233,80 @@ export function ReminderForm({
           />
         </label>
 
-        <ReminderPhotoField
-          src={currentPhoto}
-          busy={photoBusy}
-          failed={photoFailed}
-          onPick={async (file) => {
-            setPhotoBusy(true)
-            setPhotoFailed(false)
-            try {
-              setPhoto(await prepareReminderPhoto(file))
-            } catch {
-              setPhotoFailed(true)
-            } finally {
-              setPhotoBusy(false)
-            }
-          }}
-          onRemove={() => {
-            setPhoto(null)
-            setPhotoFailed(false)
-          }}
-        />
-
         <p className="reminder-question">{t('reminders.kind')}</p>
         <div className="reminder-kinds">
           {REMINDER_KINDS.map((choice) => (
             <button
               key={choice}
               type="button"
-              className={`reminder-kind${kind === choice ? ' is-selected' : ''}`}
-              aria-pressed={kind === choice}
-              onClick={() => setKind((current) => (current === choice ? null : choice))}
+              className={`reminder-kind${!photoChosen && kind === choice ? ' is-selected' : ''}`}
+              aria-pressed={!photoChosen && kind === choice}
+              onClick={() => {
+                setPhoto(null)
+                setPhotoFailed(false)
+                setKind((current) => (photoChosen || current !== choice ? choice : null))
+              }}
             >
               <ReminderKindMark kind={choice} />
               <span className="reminder-kind-label">{t(`reminders.kinds.${choice}`)}</span>
             </button>
           ))}
+          <button
+            type="button"
+            className={`reminder-kind reminder-kind-own${photoChosen ? ' is-selected' : ''}`}
+            aria-pressed={photoChosen}
+            disabled={photoBusy}
+            onClick={() => photoInput.current?.click()}
+          >
+            {currentPhoto ? (
+              <img className="reminder-kind-photo" src={currentPhoto} alt="" />
+            ) : (
+              <span className="reminder-kind-photo reminder-kind-photo-empty" aria-hidden="true">
+                <Icon name="photo" />
+              </span>
+            )}
+            <span className="reminder-kind-label reminder-kind-label-wrap">
+              {photoBusy ? t('reminders.photoReading') : t('reminders.addPhoto')}
+            </span>
+          </button>
         </div>
+        <input
+          ref={photoInput}
+          className="photo-pick-input"
+          type="file"
+          accept="image/*"
+          tabIndex={-1}
+          aria-hidden="true"
+          onChange={(event) => {
+            const file = event.target.files?.[0]
+            event.target.value = ''
+            if (!file || !file.type.startsWith('image/')) return
+            setPhotoBusy(true)
+            setPhotoFailed(false)
+            void prepareReminderPhoto(file)
+              .then((next) => {
+                setPhoto(next)
+                setKind(null)
+              })
+              .catch(() => setPhotoFailed(true))
+              .finally(() => setPhotoBusy(false))
+          }}
+        />
+        {photoChosen && (
+          <button
+            type="button"
+            className="btn btn-ghost btn-sm"
+            disabled={photoBusy}
+            onClick={() => {
+              setPhoto(null)
+              setPhotoFailed(false)
+            }}
+          >
+            {t('sharedEvent.removePhoto')}
+          </button>
+        )}
+        {photoFailed && <p className="error">{t('reminders.photoFailed')}</p>}
+        <p className="reminder-switch-hint">{t('reminders.photoHint')}</p>
 
         <p className="reminder-question">{t('reminders.day')}</p>
         <div className="reminder-choices">
@@ -248,13 +316,38 @@ export function ReminderForm({
               type="button"
               className={choiceClass(dayChoice === choice)}
               aria-pressed={dayChoice === choice}
-              onClick={() => setDayChoice(choice)}
+              onClick={() => {
+                if (choice !== 'pick') {
+                  setDayChoice(choice)
+                  return
+                }
+                if (!openNativePicker(dateInput.current)) {
+                  setDayChoice('pick')
+                  setManualDate(true)
+                }
+              }}
             >
-              {t(choice === 'pick' ? 'reminders.pickDate' : `reminders.${choice}`)}
+              {choice === 'pick' && dayChoice === 'pick'
+                ? pickedDayLabel(pickedDay, locale)
+                : t(choice === 'pick' ? 'reminders.pickDate' : `reminders.${choice}`)}
             </button>
           ))}
         </div>
-        {dayChoice === 'pick' && (
+        <input
+          ref={dateInput}
+          className="picker-proxy"
+          type="date"
+          min={today}
+          value={pickedDay}
+          tabIndex={-1}
+          aria-hidden="true"
+          onChange={(event) => {
+            if (!event.target.value) return
+            setPickedDay(event.target.value)
+            setDayChoice('pick')
+          }}
+        />
+        {manualDate && dayChoice === 'pick' && (
           <input
             className="field-input"
             type="date"
@@ -262,6 +355,9 @@ export function ReminderForm({
             value={pickedDay}
             aria-label={t('reminders.pickDate')}
             onChange={(event) => setPickedDay(event.target.value)}
+            onClick={(event) => {
+              openNativePicker(event.currentTarget)
+            }}
           />
         )}
 
@@ -308,6 +404,9 @@ export function ReminderForm({
                   min={repeatFrom}
                   max={repeatLimit(repeatFrom)}
                   value={repeatUntil}
+                  onClick={(event) => {
+                    openNativePicker(event.currentTarget)
+                  }}
                   onChange={(event) => {
                     setPickedUntil(event.target.value || null)
                     if (issue === 'repeat') setIssue(null)
@@ -345,18 +444,39 @@ export function ReminderForm({
             type="button"
             className={choiceClass(timeChoice === 'pick')}
             aria-pressed={timeChoice === 'pick'}
-            onClick={() => setTimeChoice('pick')}
+            onClick={() => {
+              if (!openNativePicker(timeInput.current)) {
+                setTimeChoice('pick')
+                setManualTime(true)
+              }
+            }}
           >
-            {t('reminders.pickTime')}
+            {timeChoice === 'pick' ? pickedClock(pickedTime, locale) || t('reminders.pickTime') : t('reminders.pickTime')}
           </button>
         </div>
-        {timeChoice === 'pick' && (
+        <input
+          ref={timeInput}
+          className="picker-proxy"
+          type="time"
+          value={pickedTime}
+          tabIndex={-1}
+          aria-hidden="true"
+          onChange={(event) => {
+            if (!event.target.value) return
+            setPickedTime(event.target.value)
+            setTimeChoice('pick')
+          }}
+        />
+        {manualTime && timeChoice === 'pick' && (
           <input
             className="field-input"
             type="time"
             value={pickedTime}
             aria-label={t('reminders.pickTime')}
             onChange={(event) => setPickedTime(event.target.value)}
+            onClick={(event) => {
+              openNativePicker(event.currentTarget)
+            }}
           />
         )}
 
@@ -405,63 +525,6 @@ export function ReminderForm({
         {saving ? t('reminders.saving') : t('reminders.save')}
       </button>
     </form>
-  )
-}
-
-interface ReminderPhotoFieldProps {
-  src: string | null
-  busy: boolean
-  failed: boolean
-  onPick: (file: File) => void
-  onRemove: () => void
-}
-
-/** An optional photo, such as an invitation card. It takes the place of the kind picture. */
-function ReminderPhotoField({ src, busy, failed, onPick, onRemove }: ReminderPhotoFieldProps) {
-  const { t } = useLocale()
-  const input = useRef<HTMLInputElement>(null)
-  return (
-    <div className="field photo-pick">
-      <span className="reminder-question">{t('reminders.photo')}</span>
-      <input
-        ref={input}
-        className="photo-pick-input"
-        type="file"
-        accept="image/*"
-        tabIndex={-1}
-        aria-hidden="true"
-        onChange={(event) => {
-          const file = event.target.files?.[0]
-          if (file && file.type.startsWith('image/')) onPick(file)
-          event.target.value = ''
-        }}
-      />
-      {src ? (
-        <div className="photo-pick-chosen">
-          <img className="photo-pick-thumb" src={src} alt={t('sharedEvent.photoAlt')} />
-          <div className="photo-pick-actions">
-            <button type="button" className="btn btn-ghost btn-sm" disabled={busy} onClick={() => input.current?.click()}>
-              {t('sharedEvent.changePhoto')}
-            </button>
-            <button type="button" className="btn btn-ghost btn-sm" disabled={busy} onClick={onRemove}>
-              {t('sharedEvent.removePhoto')}
-            </button>
-          </div>
-        </div>
-      ) : (
-        <button
-          type="button"
-          className="btn btn-secondary btn-sm photo-pick-add"
-          disabled={busy}
-          onClick={() => input.current?.click()}
-        >
-          <Icon name="photo" />
-          {busy ? t('reminders.photoReading') : t('reminders.addPhoto')}
-        </button>
-      )}
-      {failed && <p className="error">{t('reminders.photoFailed')}</p>}
-      <p className="reminder-switch-hint">{t('reminders.photoHint')}</p>
-    </div>
   )
 }
 

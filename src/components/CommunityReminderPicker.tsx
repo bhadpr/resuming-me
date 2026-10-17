@@ -34,6 +34,7 @@ export function CommunityReminderPicker({
   addedIds,
   onAdd,
   onEmpty,
+  expanded = false,
 }: {
   today: string
   /** Community reminders this person already has. */
@@ -42,6 +43,8 @@ export function CommunityReminderPicker({
   onAdd: (item: CommunityReminder) => Promise<'ok' | 'full'>
   /** Called once when there is nothing to show, so a flow can move on. */
   onEmpty?: () => void
+  /** Show every card, two by two, instead of scrolling inside the list. */
+  expanded?: boolean
 }) {
   const { locale, t } = useLocale()
   const [items, setItems] = useState<CommunityReminder[] | null>(null)
@@ -85,7 +88,7 @@ export function CommunityReminderPicker({
   const added = new Set([...addedIds, ...addedNow])
 
   return (
-    <div className="community-picker">
+    <div className={`community-picker${expanded ? ' community-picker-open' : ''}`}>
       {loadFailed ? (
         <p className="error">{t('reminders.community.error')}</p>
       ) : items === null ? (
@@ -99,20 +102,20 @@ export function CommunityReminderPicker({
             const photo = communityPhotoUrl(item.photoPath)
             const done = added.has(item.id)
             return (
-              <li key={item.id} className={`community-card${done ? ' community-card-added' : ''}`}>
-                <div className="community-photo-frame">
-                  <CardPicture photo={photo} kind={item.kind} />
-                </div>
-                <span className="community-name">{name}</span>
-                <span className="community-day">{formatReminderDay(item.day, today, locale)}</span>
+              <li key={item.id}>
                 <button
                   type="button"
-                  className={`btn btn-sm ${done ? 'btn-secondary' : 'btn-primary'}`}
+                  className={`community-card picture-pick${done ? ' community-card-added' : ''}`}
                   disabled={done || busyId != null}
+                  aria-pressed={done}
                   aria-label={`${done ? t('reminders.community.added') : t('reminders.community.add')}: ${name}`}
                   onClick={() => void add(item)}
                 >
-                  {done ? t('reminders.community.added') : t('reminders.community.add')}
+                  <span className="community-photo-frame">
+                    <CardPicture photo={photo} kind={item.kind} />
+                  </span>
+                  <span className="community-name">{name}</span>
+                  <span className="community-day">{formatReminderDay(item.day, today, locale)}</span>
                 </button>
               </li>
             )

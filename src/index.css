@@ -285,7 +285,8 @@ a.btn {
 .back-btn {
   align-self: flex-start;
   gap: 0.25rem;
-  margin-bottom: 0.75rem;
+  min-height: 2rem;
+  margin-bottom: 0.15rem;
   margin-left: -0.25rem;
   padding-left: 0;
 }
@@ -787,7 +788,7 @@ select.field-input.language-select {
 }
 
 .start-medicine-title {
-  margin-top: var(--space-5);
+  margin-top: 0;
   font-size: var(--text-xl);
   line-height: var(--leading-body);
 }
@@ -1326,6 +1327,10 @@ select.field-input.language-select {
   color: var(--color-text);
 }
 
+.guest-save-widget-warning-urgent {
+  color: var(--color-primary);
+}
+
 .guest-save-widget .btn {
   width: 100%;
   justify-content: center;
@@ -1363,11 +1368,12 @@ select.field-input.language-select {
 }
 
 .landing-hero-figure {
-  margin: 0.35rem 0 0;
+  margin: 0;
   width: 100%;
   border-radius: 1.15rem;
   overflow: hidden;
   border: 0;
+  line-height: 0;
   background: color-mix(in srgb, #f5e3c9 70%, var(--color-surface));
   box-shadow: 0 8px 22px color-mix(in srgb, var(--color-text) 10%, transparent);
 }
@@ -1377,7 +1383,7 @@ select.field-input.language-select {
   width: 100%;
   height: auto;
   aspect-ratio: 4 / 3;
-  object-fit: cover;
+  object-fit: contain;
   object-position: center;
 }
 
@@ -1704,18 +1710,16 @@ select.field-input.language-select {
 .landing-signin {
   display: flex;
   flex-direction: column;
-  gap: 0.75rem;
-  padding-top: 0.35rem;
-  border-top: 1px solid var(--color-border);
+  gap: 0.45rem;
+  align-items: stretch;
 }
 
 .landing-signin-heading {
   margin: 0;
-  font-size: var(--text-sm);
-  font-weight: var(--weight-semibold);
+  font-size: var(--text-md);
+  font-weight: var(--weight-regular);
   color: var(--color-text-muted);
-  letter-spacing: 0.03em;
-  text-transform: uppercase;
+  text-align: center;
 }
 
 .landing-signin .btn {
@@ -2513,6 +2517,24 @@ select.field-input.language-select {
   flex: 1;
 }
 
+.btn.reminder-time-pick {
+  flex: 1;
+  min-height: 3.25rem;
+  background: var(--color-surface);
+  border-color: var(--color-border);
+  font-size: 1.5rem;
+  font-weight: var(--weight-semibold);
+  font-variant-numeric: tabular-nums;
+  letter-spacing: 0.01em;
+}
+
+@media (hover: hover) {
+  .btn.reminder-time-pick:hover:not(:disabled) {
+    border-color: var(--color-primary);
+    background: var(--color-surface);
+  }
+}
+
 .habit-video {
   width: 100%;
   margin: var(--space-3) 0 var(--space-4);
@@ -2611,6 +2633,21 @@ select.field-input.language-select {
   margin-top: 16%;
 }
 
+/* Once the timer starts, the clip you are following fills the card. */
+.kapal-videos-live .kapal-row {
+  flex-wrap: wrap;
+  justify-content: center;
+}
+
+.kapal-videos-live .kapal-item-middle {
+  flex: 1 0 100%;
+}
+
+.kapal-videos-live .kapal-item-side {
+  flex: 0 1 28%;
+  margin-top: 0;
+}
+
 .kapal-frame {
   position: relative;
   width: 100%;
@@ -2673,7 +2710,7 @@ select.field-input.language-select {
   margin-inline: auto;
 }
 
-/* Four pictures, two by two, each with its own Add. Both rows stay in view. */
+/* Four pictures, two by two. The whole card is the button. */
 .picture-picks {
   width: 100%;
   margin: var(--space-3) 0;
@@ -2691,12 +2728,49 @@ select.field-input.language-select {
   border-radius: inherit;
 }
 
+.picture-picks .picture-pick {
+  width: 100%;
+  cursor: pointer;
+  transition:
+    border-color 0.15s ease,
+    box-shadow 0.15s ease,
+    transform 0.15s ease;
+}
+
+@media (hover: hover) {
+  .picture-pick:hover:not(:disabled),
+  button.community-card:hover:not(:disabled) {
+    border-color: var(--color-primary);
+    box-shadow: 0 8px 18px color-mix(in srgb, var(--color-text) 14%, transparent);
+    transform: translateY(-2px);
+  }
+
+  .picture-picks .picture-pick.community-card-added:hover:not(:disabled),
+  button.community-card.community-card-added:hover:not(:disabled) {
+    box-shadow:
+      inset 0 0 0 1px var(--color-primary),
+      0 8px 18px color-mix(in srgb, var(--color-text) 14%, transparent);
+  }
+}
+
+.picture-pick:active:not(:disabled),
+button.community-card:active:not(:disabled) {
+  transform: translateY(0);
+}
+
+.picture-picks .picture-pick.community-card-added,
+button.community-card.community-card-added {
+  opacity: 1;
+  border-color: var(--color-primary);
+  box-shadow: inset 0 0 0 1px var(--color-primary);
+}
+
 /* Community reminders: picture cards for days many people keep. */
 .community-picker {
   --community-gap: var(--space-3);
-  /* Square photo, then the name, the day, and the Add button. */
+  /* Square photo, then the name and the day. */
   --community-photo: calc((100cqi - var(--community-gap)) / 2 - 1rem);
-  --community-row: calc(var(--community-photo) + 7.65rem);
+  --community-row: calc(var(--community-photo) + 4.8rem);
   container-type: inline-size;
   width: 100%;
   margin: var(--space-3) 0;
@@ -2709,6 +2783,13 @@ select.field-input.language-select {
   margin: 0;
   padding: 0;
   list-style: none;
+}
+
+/* Onboarding shows every card, two by two, the same way as the picture picks. */
+.community-picker-open .community-grid:has(li:nth-child(3)) {
+  max-height: none;
+  overflow: visible;
+  scroll-snap-type: none;
 }
 
 /* First row in full, and about a fifth of the next row, so the rest is obviously scrolled. */
@@ -2733,6 +2814,18 @@ select.field-input.language-select {
   border-radius: var(--radius-lg);
   background: var(--color-surface);
   text-align: center;
+}
+
+button.community-card {
+  width: 100%;
+  font: inherit;
+  color: inherit;
+  cursor: pointer;
+}
+
+button.community-card:disabled {
+  opacity: 1;
+  color: inherit;
 }
 
 .community-card-added {
@@ -3090,6 +3183,24 @@ select.field-input.language-select {
   letter-spacing: 0;
 }
 
+.app-header-brand {
+  display: flex;
+  align-items: center;
+  gap: 0.55rem;
+  min-width: 0;
+}
+
+.app-header-mark {
+  flex-shrink: 0;
+}
+
+.app-header-brand .app-title {
+  min-width: 0;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
 .app-title .brand-title-text {
   letter-spacing: var(--brand-tracking, 0.04em);
 }
@@ -3133,6 +3244,29 @@ select.field-input.language-select {
 .empty-state p {
   color: var(--color-text-muted);
   max-width: 280px;
+}
+
+.empty-state .btn {
+  width: 100%;
+}
+
+.empty-state-or {
+  margin: 0.15rem 0 0;
+  color: var(--color-text-muted);
+  font-size: var(--text-sm);
+}
+
+.empty-state .today-add-row {
+  width: 100%;
+  flex-wrap: nowrap;
+}
+
+.empty-state .today-add-row .btn {
+  width: auto;
+  flex: 1 1 0;
+  min-width: 0;
+  padding-inline: 0.5rem;
+  white-space: nowrap;
 }
 
 .app-nav {
@@ -3362,6 +3496,14 @@ select.field-input.language-select {
   grid-template-columns: repeat(7, minmax(0, 1fr));
   gap: var(--space-1);
   align-items: end;
+}
+
+.steps-week-long .steps-week-value {
+  display: none;
+}
+
+.steps-week-long .steps-week-label {
+  font-size: 0.65rem;
 }
 
 .steps-week-day {
@@ -3632,14 +3774,24 @@ select.field-input.language-select {
   align-items: center;
 }
 
+.reminder-choices {
+  flex-wrap: nowrap;
+  gap: 0.35rem;
+}
+
 .reminder-choices .btn,
 .reminder-delete .btn {
   width: auto;
   flex: 0 0 auto;
 }
 
-.reminder-choices .reminder-choice {
-  padding-inline: 0.9rem;
+.reminder-choices .btn {
+  flex: 1 1 0;
+  min-width: 0;
+  padding-inline: 0.4rem;
+  font-size: clamp(0.7rem, 2.7vw, 0.9rem);
+  white-space: nowrap;
+  line-height: 1.15;
 }
 
 .reminder-kinds {
@@ -3672,7 +3824,9 @@ select.field-input.language-select {
 
 .reminder-kind-label {
   max-width: 100%;
-  overflow-wrap: anywhere;
+  white-space: nowrap;
+  font-size: clamp(0.62rem, 2.4vw, 0.75rem);
+  letter-spacing: -0.01em;
 }
 
 .activity-emoji-art.reminder-mark {
@@ -3683,6 +3837,78 @@ select.field-input.language-select {
 .today-row .activity-emoji-art.reminder-mark {
   width: 3.5rem;
   height: 3.5rem;
+}
+
+.reminder-kind-photo {
+  width: 100%;
+  max-width: 4rem;
+  aspect-ratio: 1;
+  border-radius: 22%;
+  object-fit: cover;
+}
+
+.reminder-kind-photo-empty {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  background: color-mix(in srgb, var(--color-text) 6%, var(--color-surface));
+  color: var(--color-text-muted);
+}
+
+.reminder-kind.is-selected .reminder-kind-photo {
+  outline: 3px solid var(--color-primary);
+  outline-offset: 2px;
+}
+
+.reminder-kind-label-wrap {
+  white-space: normal;
+}
+
+.reminder-kind-own {
+  grid-column: 1 / -1;
+  flex-direction: row;
+  justify-content: center;
+  gap: 0.55rem;
+  margin-top: 0.15rem;
+  padding: 0.4rem 0.75rem;
+  border: 1px solid var(--color-border);
+  border-radius: var(--radius-lg);
+  background: var(--color-surface);
+  transition:
+    border-color 0.15s ease,
+    box-shadow 0.15s ease;
+}
+
+.reminder-kind-own .reminder-kind-photo {
+  width: 2.25rem;
+  max-width: 2.25rem;
+}
+
+.reminder-kind-own .reminder-kind-label {
+  white-space: nowrap;
+  font-size: var(--text-sm);
+}
+
+.reminder-kind-own.is-selected {
+  border-color: var(--color-primary);
+  box-shadow: inset 0 0 0 1px var(--color-primary);
+}
+
+@media (hover: hover) {
+  .reminder-kind-own:hover:not(:disabled) {
+    border-color: var(--color-primary);
+    box-shadow: 0 6px 14px color-mix(in srgb, var(--color-text) 12%, transparent);
+  }
+}
+
+.picker-proxy {
+  position: fixed;
+  top: 0;
+  left: 0;
+  width: 1px;
+  height: 1px;
+  opacity: 0;
+  pointer-events: none;
 }
 
 .reminder-kind .activity-emoji-art.reminder-mark {
@@ -4067,7 +4293,7 @@ select.field-input.language-select {
 }
 
 .activity-row.reminder-row-shareable {
-  padding-right: 7.5rem;
+  padding-right: 5.25rem;
 }
 
 .reminder-row-shareable .activity-chevron {
@@ -4083,20 +4309,19 @@ select.field-input.language-select {
 
 .reminder-row-share {
   position: absolute;
-  right: 2.6rem;
+  right: 2.35rem;
   top: 50%;
   transform: translateY(-50%);
   display: inline-flex;
   align-items: center;
-  gap: 0.35rem;
+  justify-content: center;
+  width: 2.5rem;
   min-height: 2.5rem;
-  padding: 0 0.75rem;
+  padding: 0;
   border: 1px solid color-mix(in srgb, var(--color-primary) 30%, var(--color-border));
   border-radius: 999px;
   background: var(--color-surface);
   color: var(--color-primary);
-  font-size: var(--text-sm);
-  font-weight: var(--weight-semibold);
 }
 
 .reminder-row-share:hover {
@@ -6573,8 +6798,19 @@ select.field-input.language-select {
 .start-back {
   align-self: flex-start;
   gap: var(--space-1);
+  min-height: 2rem;
+  margin-bottom: -0.35rem;
   margin-left: calc(var(--space-1) * -1);
+  padding-block: 0;
   padding-left: 0;
+}
+
+.start-flow > .screen-heading {
+  margin-bottom: 0;
+}
+
+.start-flow > .screen-heading + .screen-sub {
+  margin-top: -0.35rem;
 }
 
 .start-timer {

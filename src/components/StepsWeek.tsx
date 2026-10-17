@@ -10,8 +10,16 @@ import {
 import { localeTag } from '../lib/i18n'
 import { formatStepCount } from '../lib/steps'
 
-/** Seven daily step totals from Health Connect against the goal. */
-export function StepsWeek({ goal, heading = true }: { goal: number; heading?: boolean }) {
+/** Daily step totals from Health Connect against the goal. */
+export function StepsWeek({
+  goal,
+  heading = true,
+  days = 7,
+}: {
+  goal: number
+  heading?: boolean
+  days?: number
+}) {
   const { t, locale } = useLocale()
   const [week, setWeek] = useState<PhoneStepsWeek | null>(null)
   const [asking, setAsking] = useState(false)
@@ -19,7 +27,7 @@ export function StepsWeek({ goal, heading = true }: { goal: number; heading?: bo
 
   useEffect(() => {
     let cancelled = false
-    void readPhoneStepsWeek().then((next) => {
+    void readPhoneStepsWeek(new Date(), days).then((next) => {
       if (!cancelled) setWeek(next)
     })
     const onVisible = () => {
@@ -30,7 +38,7 @@ export function StepsWeek({ goal, heading = true }: { goal: number; heading?: bo
       cancelled = true
       document.removeEventListener('visibilitychange', onVisible)
     }
-  }, [tick])
+  }, [tick, days])
 
   async function connect() {
     setAsking(true)
@@ -77,14 +85,19 @@ export function StepsWeek({ goal, heading = true }: { goal: number; heading?: bo
   return (
     <section className="steps-week">
       {title}
-      <div className="steps-week-chart">
+      <div
+        className={`steps-week-chart${week.days.length > 7 ? ' steps-week-long' : ''}`}
+        style={{ gridTemplateColumns: `repeat(${week.days.length}, minmax(0, 1fr))` }}
+      >
         {week.days.map((day) => {
           const met = day.steps >= goal
+          const parsed = parseLocalDate(day.date)
+          const axis = week.days.length > 7 ? String(parsed.getDate()) : weekday.format(parsed)
           return (
             <div
               key={day.date}
               className={`steps-week-day ${day.date === today ? 'steps-week-today' : ''}`}
-              aria-label={`${weekday.format(parseLocalDate(day.date))}: ${formatStepCount(day.steps, locale)}`}
+              aria-label={`${weekday.format(parsed)}: ${formatStepCount(day.steps, locale)}`}
             >
               <span className="steps-week-value">{day.steps > 0 ? compact.format(day.steps) : ''}</span>
               <span className="steps-week-track">
@@ -94,7 +107,7 @@ export function StepsWeek({ goal, heading = true }: { goal: number; heading?: bo
                   style={{ height: `${Math.min(100, (day.steps / scale) * 100)}%` }}
                 />
               </span>
-              <span className="steps-week-label">{weekday.format(parseLocalDate(day.date))}</span>
+              <span className="steps-week-label">{axis}</span>
             </div>
           )
         })}

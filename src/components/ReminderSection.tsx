@@ -270,11 +270,6 @@ export function ReminderListSection({
                       <span className="activity-meta">
                         <span className="activity-name reminder-text-line">{reminder.text}</span>
                         <span className="activity-desc">{reminderWhen(reminder, today, locale, t)}</span>
-                        {reminder.sharedEventId && (
-                          <span className="reminder-tags">
-                            <span className="badge badge-shared">{t('sharedEvent.sharedTag')}</span>
-                          </span>
-                        )}
                       </span>
                       <span className="activity-chevron" aria-hidden>
                         <Icon name="chevron" />
@@ -288,7 +283,6 @@ export function ReminderListSection({
                         onClick={() => onShare(reminder)}
                       >
                         <Icon name="share" />
-                        <span>{t('sharedEvent.shareShort')}</span>
                       </button>
                     )}
                   </li>

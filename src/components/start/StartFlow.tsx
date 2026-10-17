@@ -348,6 +348,113 @@ function choiceCode(ids: string[]): string {
   return ids.slice(0, 8).join(',').slice(0, 80)
 }
 
+function PicturePick({
+  id,
+  name,
+  selected,
+  onToggle,
+}: {
+  id: string
+  name: string | null
+  selected: boolean
+  onToggle: () => void
+}) {
+  return (
+    <li>
+      <button
+        type="button"
+        className={`community-card picture-pick${selected ? ' community-card-added' : ''}`}
+        aria-pressed={selected}
+        onClick={onToggle}
+      >
+        <span className="community-photo-frame">
+          <HabitMark templateId={id} />
+        </span>
+        <span className="community-name">{name ?? id}</span>
+      </button>
+    </li>
+  )
+}
+
+function openNativePicker(input: HTMLInputElement | null): boolean {
+  if (!input || typeof input.showPicker !== 'function') return false
+  try {
+    input.showPicker()
+    return true
+  } catch {
+    return false
+  }
+}
+
+function NudgeTimeField({
+  time,
+  index,
+  total,
+  onChange,
+  onRemove,
+}: {
+  time: string
+  index: number
+  total: number
+  onChange: (value: string) => void
+  onRemove: () => void
+}) {
+  const { t } = useLocale()
+  const input = useRef<HTMLInputElement>(null)
+  const [manual, setManual] = useState(false)
+  const value = time || '19:00'
+  const clock = formatReminderClock(value)
+  return (
+    <div className="field">
+      {total > 1 && <span className="field-label">{t('start.reminderN', { n: index + 1 })}</span>}
+      <div className="reminder-time-row">
+        {manual ? (
+          <input
+            className="field-input"
+            type="time"
+            value={value}
+            aria-label={t('start.reminder')}
+            onChange={(event) => onChange(event.target.value || '19:00')}
+            onClick={(event) => {
+              openNativePicker(event.currentTarget)
+            }}
+          />
+        ) : (
+          <button
+            type="button"
+            className="btn btn-secondary reminder-time-pick"
+            aria-label={`${t('start.reminder')}, ${clock}`}
+            onClick={() => {
+              if (!openNativePicker(input.current)) setManual(true)
+            }}
+          >
+            {clock}
+          </button>
+        )}
+        <input
+          ref={input}
+          className="picker-proxy"
+          type="time"
+          value={value}
+          tabIndex={-1}
+          aria-hidden="true"
+          onChange={(event) => onChange(event.target.value || '19:00')}
+        />
+        {total > 1 && (
+          <button
+            type="button"
+            className="btn btn-ghost btn-sm"
+            aria-label={t('start.removeN', { n: index + 1 })}
+            onClick={onRemove}
+          >
+            {t('start.remove')}
+          </button>
+        )}
+      </div>
+    </div>
+  )
+}
+
 export function StartFlow({
   draft,
   onDraft,
@@ -1456,9 +1563,10 @@ export function StartFlow({
             <Icon name="back" />
             {t('start.back')}
           </button>
-          <h1 className="screen-heading">{t('reminders.community.title')}</h1>
+          <h1 className="screen-heading">{t('start.communityReady')}</h1>
           <p className="screen-sub">{t('reminders.community.sub')}</p>
           <CommunityReminderPicker
+            expanded
             today={today}
             addedIds={addedCommunityIds(draft.reminders)}
             onEmpty={() => persist({ ...draft, pickPhase: 'reminderAsk' })}
@@ -1485,6 +1593,13 @@ export function StartFlow({
             onClick={() => persist({ ...draft, pickPhase: 'reminderAsk' })}
           >
             {t('start.continue')}
+          </button>
+          <button
+            type="button"
+            className="btn btn-ghost"
+            onClick={() => persist({ ...draft, pickPhase: 'reminderAsk' })}
+          >
+            {t('start.noThanks')}
           </button>
         </>
       )}
@@ -1606,21 +1721,13 @@ export function StartFlow({
               const selected = draft.activities.some((item) => item.templateId === id)
               const name = templateLabel(id, locale)
               return (
-                <li key={id} className={`community-card${selected ? ' community-card-added' : ''}`}>
-                  <div className="community-photo-frame">
-                    <HabitMark templateId={id} />
-                  </div>
-                  <span className="community-name">{name}</span>
-                  <button
-                    type="button"
-                    className={`btn btn-sm ${selected ? 'btn-secondary' : 'btn-primary'}`}
-                    aria-pressed={selected}
-                    aria-label={`${selected ? t('reminders.community.added') : t('reminders.community.add')}: ${name}`}
-                    onClick={() => toggleTemplate(id)}
-                  >
-                    {selected ? t('reminders.community.added') : t('reminders.community.add')}
-                  </button>
-                </li>
+                <PicturePick
+                  key={id}
+                  id={id}
+                  name={name}
+                  selected={selected}
+                  onToggle={() => toggleTemplate(id)}
+                />
               )
             })}
           </ul>
@@ -1668,21 +1775,13 @@ export function StartFlow({
               const selected = draft.activities.some((item) => item.templateId === id)
               const name = templateLabel(id, locale)
               return (
-                <li key={id} className={`community-card${selected ? ' community-card-added' : ''}`}>
-                  <div className="community-photo-frame">
-                    <HabitMark templateId={id} />
-                  </div>
-                  <span className="community-name">{name}</span>
-                  <button
-                    type="button"
-                    className={`btn btn-sm ${selected ? 'btn-secondary' : 'btn-primary'}`}
-                    aria-pressed={selected}
-                    aria-label={`${selected ? t('reminders.community.added') : t('reminders.community.add')}: ${name}`}
-                    onClick={() => toggleTemplate(id)}
-                  >
-                    {selected ? t('reminders.community.added') : t('reminders.community.add')}
-                  </button>
-                </li>
+                <PicturePick
+                  key={id}
+                  id={id}
+                  name={name}
+                  selected={selected}
+                  onToggle={() => toggleTemplate(id)}
+                />
               )
             })}
           </ul>
@@ -1735,21 +1834,13 @@ export function StartFlow({
               const selected = draft.activities.some((item) => item.templateId === id)
               const name = templateLabel(id, locale)
               return (
-                <li key={id} className={`community-card${selected ? ' community-card-added' : ''}`}>
-                  <div className="community-photo-frame">
-                    <HabitMark templateId={id} />
-                  </div>
-                  <span className="community-name">{name}</span>
-                  <button
-                    type="button"
-                    className={`btn btn-sm ${selected ? 'btn-secondary' : 'btn-primary'}`}
-                    aria-pressed={selected}
-                    aria-label={`${selected ? t('reminders.community.added') : t('reminders.community.add')}: ${name}`}
-                    onClick={() => toggleTemplate(id)}
-                  >
-                    {selected ? t('reminders.community.added') : t('reminders.community.add')}
-                  </button>
-                </li>
+                <PicturePick
+                  key={id}
+                  id={id}
+                  name={name}
+                  selected={selected}
+                  onToggle={() => toggleTemplate(id)}
+                />
               )
             })}
           </ul>
@@ -2285,33 +2376,18 @@ export function StartFlow({
           <p className="screen-sub">{t('start.reminderSub')}</p>
           <div className="reminder-times">
             {nudgeTimes.map((time, index) => (
-              <label key={`reminder-${index}`} className="field">
-                <span className="field-label">
-                  {index === 0 ? t('start.reminder') : t('start.reminderN', { n: index + 1 })}
-                </span>
-                <div className="reminder-time-row">
-                  <input
-                    className="field-input"
-                    type="time"
-                    value={time || '19:00'}
-                    onChange={(event) => {
-                      const next = [...nudgeTimes]
-                      next[index] = event.target.value || '19:00'
-                      setNudgeTimes(next)
-                    }}
-                  />
-                  {nudgeTimes.length > 1 && (
-                    <button
-                      type="button"
-                      className="btn btn-ghost btn-sm"
-                      aria-label={t('start.removeN', { n: index + 1 })}
-                      onClick={() => setNudgeTimes(nudgeTimes.filter((_, i) => i !== index))}
-                    >
-                      {t('start.remove')}
-                    </button>
-                  )}
-                </div>
-              </label>
+              <NudgeTimeField
+                key={`reminder-${index}`}
+                time={time}
+                index={index}
+                total={nudgeTimes.length}
+                onChange={(value) => {
+                  const next = [...nudgeTimes]
+                  next[index] = value
+                  setNudgeTimes(next)
+                }}
+                onRemove={() => setNudgeTimes(nudgeTimes.filter((_, i) => i !== index))}
+              />
             ))}
           </div>
           {nudgeTimes.length < 5 && (
@@ -2324,9 +2400,7 @@ export function StartFlow({
             </button>
           )}
           <button type="button" className="btn btn-primary" onClick={() => openTodayAfterReminder(true)}>
-            {nudgeTimes.length === 1
-              ? t('start.remindAt', { time: formatReminderClock(nudgeTimes[0] || '19:00') })
-              : t('start.remindTimes', { count: nudgeTimes.length })}
+            {t('start.continue')}
           </button>
           <button type="button" className="btn btn-ghost" onClick={() => openTodayAfterReminder(false)}>
             {t('start.notNow')}

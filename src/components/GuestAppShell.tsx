@@ -1,6 +1,5 @@
-import { useEffect, useState } from 'react'
+import { useEffect } from 'react'
 import { useLocation } from 'react-router-dom'
-import { useAuth } from '../hooks/useAuth'
 import { useLocale } from '../hooks/useLocale'
 import { guestMedicineSchedules, guestTakenMarks, loadGuestDraft, saveGuestSharedStatuses } from '../lib/guestDraft'
 import { mealMessageKey } from '../lib/medicineFormat'
@@ -14,13 +13,13 @@ import {
 } from '../lib/reminderNotifications'
 import { REMINDERS_CHANGED } from '../lib/reminderSchedule'
 import { withSharedStatuses } from '../lib/reminders'
-import { track } from '../lib/track'
 import { useDocumentMeta } from '../hooks/useDocumentMeta'
 import { BrandTitle } from './BrandTitle'
 import { BottomNav } from './BottomNav'
 import { GuestActivitiesPage, GuestVitalsPage } from './GuestLibrary'
 import { GuestReminderEditor, GuestReminderList } from './GuestReminders'
 import { InsightsHeaderButton } from './InsightsHeaderButton'
+import { GuestInsightsPage } from './GuestInsightsPage'
 import { GuestTodayPage } from './GuestTodayPage'
 
 const TAB_LABEL_KEYS: Record<AppTab, string> = {
@@ -35,7 +34,7 @@ function guestTabFromPath(pathname: string): AppTab {
   return tabFromView(parseAppPath(pathname))
 }
 
-/** Guest shell: same bottom nav as signed-in; gated tabs show sign-in in-place. */
+/** Guest shell: same bottom nav as signed-in. */
 export function GuestAppShell() {
   const location = useLocation()
   const { t } = useLocale()
@@ -66,7 +65,7 @@ export function GuestAppShell() {
         {tab === 'today' && <GuestTodayPage />}
         {tab === 'activities' && <GuestActivitiesPage />}
         {tab === 'metrics' && <GuestVitalsPage />}
-        {tab === 'insights' && <GuestSignInPanel tab={tab} />}
+        {tab === 'insights' && <GuestInsightsPage />}
       </main>
       <BottomNav tab={tab} />
     </div>
@@ -161,53 +160,6 @@ function useGuestReminderAlerts(): void {
     window.addEventListener(REMINDERS_CHANGED, sync)
     return () => window.removeEventListener(REMINDERS_CHANGED, sync)
   }, [locale])
-}
-
-function GuestSignInPanel({ tab }: { tab: AppTab }) {
-  const { signInWithGoogle, authError } = useAuth()
-  const { t } = useLocale()
-  const [signingIn, setSigningIn] = useState(false)
-  const [error, setError] = useState<string | null>(null)
-  const label = t(TAB_LABEL_KEYS[tab])
-  const displayError = authError || error
-
-  async function handleGoogle() {
-    track('signin_method_clicked', { method: 'google' })
-    setError(null)
-    setSigningIn(true)
-    try {
-      await signInWithGoogle()
-    } catch (err) {
-      setError(err instanceof Error ? err.message : t('guest.signInFailed'))
-      setSigningIn(false)
-    }
-  }
-
-  return (
-    <div className="guest-auth-stage">
-      <div className="guest-auth-panel">
-        <div className="guest-auth-panel-header">
-          <h2>{label}</h2>
-          <p className="screen-sub">{t('guest.signInToUse', { label })}</p>
-        </div>
-        {displayError && (
-          <div className="notice notice-warning">
-            <p>{displayError}</p>
-          </div>
-        )}
-        <div className="landing-signin guest-auth-signin">
-          <button
-            type="button"
-            className="btn btn-secondary"
-            onClick={() => void handleGoogle()}
-            disabled={signingIn}
-          >
-            {signingIn ? t('guest.openingGoogle') : t('landing.google')}
-          </button>
-        </div>
-      </div>
-    </div>
-  )
 }
 
 export function isGuestAppPath(pathname: string): boolean {

@@ -14,6 +14,8 @@ import {
   clearGuestDraft,
   createGuestDraft,
   ensureGuestDraft,
+  guestSaveWarning,
+  guestSaveWarningUrgent,
   isGuestDraftFresh,
   loadGuestDraft,
   sanitizeActivityName,
@@ -89,6 +91,20 @@ describe('guest draft helpers', () => {
     expect(isGuestDraftFresh(old)).toBe(false)
     const fresh = createGuestDraft(new Date())
     expect(isGuestDraftFresh(fresh)).toBe(true)
+  })
+
+  it('stays quiet until day 4, then counts down', () => {
+    const day = 24 * 60 * 60 * 1000
+    const now = Date.parse('2026-10-16T12:00:00.000Z')
+    const aged = (days: number) => createGuestDraft(new Date(now - days * day))
+    expect(guestSaveWarning(aged(3), now)).toBeNull()
+    expect(guestSaveWarningUrgent(aged(3), now)).toBe(false)
+    expect(guestSaveWarning(aged(4), now)).toBe('3 days left on this device. Sign in to keep it.')
+    expect(guestSaveWarning(aged(5), now)).toBe('2 days left on this device. Sign in to keep it.')
+    expect(guestSaveWarning(aged(6), now)).toBe('Tomorrow this leaves this device. Sign in to keep it.')
+    expect(guestSaveWarningUrgent(aged(6), now)).toBe(true)
+    expect(guestSaveWarning(aged(7), now)).toBe('This leaves today. Sign in to keep it.')
+    expect(guestSaveWarningUrgent(aged(7), now)).toBe(true)
   })
 })
 

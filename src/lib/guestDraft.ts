@@ -47,7 +47,7 @@ export const GUEST_WHEN_MAX = 40
 export const GUEST_DRAFT_TTL_MS = 7 * 24 * 60 * 60 * 1000
 export const GUEST_STEP_MIN = 1
 export const GUEST_STEP_MAX = 8
-export const GUEST_SAVE_WARN_DAY = 5
+export const GUEST_SAVE_WARN_DAY = 4
 export const GUEST_MAX_REMINDERS = 5
 export const GUEST_MAX_MEDICINES = 8
 
@@ -255,7 +255,7 @@ export function guestDraftAgeDays(draft: GuestDraft, now = Date.now()): number {
 }
 
 /**
- * From day 5, tell the guest the local draft is about to expire.
+ * From day 4, tell the guest how many days the local draft has left.
  * Returns null before that.
  */
 export function guestSaveWarning(draft: GuestDraft, now = Date.now()): string | null {
@@ -265,6 +265,11 @@ export function guestSaveWarning(draft: GuestDraft, now = Date.now()): string | 
   if (left <= 0) return t('guest.expiresToday')
   if (left === 1) return t('guest.expiresTomorrow')
   return t('guest.expiresDays', { days: left })
+}
+
+/** Day 6 and day 7 use the stronger warning. */
+export function guestSaveWarningUrgent(draft: GuestDraft, now = Date.now()): boolean {
+  return guestDraftAgeDays(draft, now) >= 6
 }
 
 function isDraft(value: unknown): value is GuestDraft {

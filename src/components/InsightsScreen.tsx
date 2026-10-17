@@ -18,8 +18,11 @@ import { track } from '../lib/track'
 import { templateLabel, visibleName } from '../lib/catalogName'
 import { habitTemplateId } from '../data/habitArt'
 import { useLocale } from '../hooks/useLocale'
+import { phoneStepsSupported, readPhoneStepsWeek, summarizeStepWeek, type PhoneStepsWeek } from '../lib/healthSteps'
+import { DEFAULT_STEP_GOAL, formatStepCount, isDailyStepsMetric } from '../lib/steps'
 import { ActivityInsightChart } from './ActivityInsightChart'
 import { HabitMark } from './HabitMark'
+import { StepsWeek } from './StepsWeek'
 import { VitalTrend } from './VitalTrend'
 import { formatPair, formatPairDelta } from '../lib/vitalChart'
 import { Icon } from './Icon'
@@ -81,7 +84,9 @@ export function InsightsScreen({
 }: InsightsScreenProps) {
   const { locale, t } = useLocale()
   const windowWord = t(window === 'week' ? 'insights.week' : 'insights.month')
+  const windowDays = INSIGHTS_WINDOW_DAYS[window]
   const [openKeys, setOpenKeys] = useState<Set<string>>(() => new Set())
+  const [phoneSteps, setPhoneSteps] = useState<PhoneStepsWeek | null>(null)
   const [didInitOpen, setDidInitOpen] = useState(false)
 
   const activeMetrics = useMemo(
@@ -92,6 +97,13 @@ export function InsightsScreen({
     () => activities.filter((a) => !a.archived),
     [activities],
   )
+  const hasStepsHabit = activeActivities.some((activity) => activity.template_id === 'steps')
+  const listedMetrics = useMemo(
+    () => (hasStepsHabit ? activeMetrics.filter((metric) => !isDailyStepsMetric(metric)) : activeMetrics),
+    [activeMetrics, hasStepsHabit],
+  )
+  const showPhoneSteps =
+    hasStepsHabit || activeMetrics.some((metric) => isDailyStepsMetric(metric))
   const comebacks = useMemo(
     () => listAccountComebacks(activities, entries, today, 30, dayStatusOpts),
     [activities, entries, today, dayStatusOpts],
@@ -124,6 +136,17 @@ export function InsightsScreen({
   )
   const empty =
     !loading && activeActivities.length === 0 && activeMetrics.length === 0
+
+  useEffect(() => {
+    if (!showPhoneSteps || !phoneStepsSupported()) return
+    let cancelled = false
+    void readPhoneStepsWeek(new Date(), windowDays).then((next) => {
+      if (!cancelled) setPhoneSteps(next)
+    })
+    return () => {
+      cancelled = true
+    }
+  }, [showPhoneSteps, windowDays])
 
   useEffect(() => {
     if (didInitOpen || loading || !insights) return
@@ -299,8 +322,15 @@ export function InsightsScreen({
                   const key = activityKey(a.activityId)
                   const open = isOpen(key)
                   const activity = activities.find((x) => x.id === a.activityId)
+                  const isSteps = activity?.template_id === 'steps'
+                  const stepGoal = activity?.target_value ?? DEFAULT_STEP_GOAL
+                  const phoneDays = phoneSteps?.status === 'days' ? phoneSteps.days : null
+                  const phoneSummary =
+                    isSteps && phoneDays
+                      ? summarizeStepWeek(phoneDays, stepGoal, today)
+                      : null
                   const series =
-                    open && activity
+                    open && activity && !isSteps
                       ? buildActivityInsightSeries(activity, entries, window, today, dayStatusOpts)
                       : []
                   return (
@@ -323,39 +353,64 @@ export function InsightsScreen({
                             {activity ? visibleName(activity, locale) : a.name}
                           </span>
                           <span className="activity-desc">
-                            {a.scheduled === 0
-                              ? t('insights.nothingScheduled')
-                              : a.postponed > 0
-                                ? t('insights.showedUpSkipped', {
-                                    done: a.showedUp,
-                                    scheduled: a.scheduled,
-                                    count: a.postponed,
-                                  })
-                                : t('insights.showedUp', {
-                                    done: a.showedUp,
-                                    scheduled: a.scheduled,
-                                  })}
+                            {phoneSummary
+                              ? `${t('today.stepsWeekMet', {
+                                  met: String(phoneSummary.metDays),
+                                  days: String(phoneDays?.length ?? windowDays),
+                                })}${
+                                  phoneSummary.average > 0
+                                    ? ` · ${t('today.stepsWeekAverage', {
+                                        value: formatStepCount(phoneSummary.average, locale),
+                                      })}`
+                                    : ''
+                                }`
+                              : a.scheduled === 0
+                                ? t('insights.nothingScheduled')
+                                : a.postponed > 0
+                                  ? t('insights.showedUpSkipped', {
+                                      done: a.showedUp,
+                                      scheduled: a.scheduled,
+                                      count: a.postponed,
+                                    })
+                                  : t('insights.showedUp', {
+                                      done: a.showedUp,
+                                      scheduled: a.scheduled,
+                                    })}
                           </span>
                           <div className="progress-bar" aria-hidden>
                             <div
-                              className="progress-bar-fill progress-bar-fill-warn"
+                              className={`progress-bar-fill ${phoneSummary ? 'progress-bar-fill-done' : 'progress-bar-fill-warn'}`}
                               style={{
-                                width: `${Math.round(a.postponementRate * 100)}%`,
+                                width: `${
+                                  phoneSummary
+                                    ? Math.round(
+                                        (phoneSummary.metDays / Math.max(phoneDays?.length ?? 1, 1)) * 100,
+                                      )
+                                    : Math.round(a.postponementRate * 100)
+                                }%`,
                               }}
                             />
                           </div>
                         </span>
                         <span className="insights-rate">
-                          {a.scheduled === 0 ? '—' : `${a.showedUp}/${a.scheduled}`}
+                          {phoneSummary
+                            ? `${phoneSummary.metDays}/${phoneDays?.length ?? windowDays}`
+                            : a.scheduled === 0
+                              ? '—'
+                              : `${a.showedUp}/${a.scheduled}`}
                         </span>
                       </button>
                       {open && activity && (
                         <div className="insights-row-chart">
-                          <ActivityInsightChart
-                            points={series}
-                            windowLabel={window === 'week' ? t('insights.chart7') : t('insights.chart30')}
-                            target={chartTarget(activity)}
-                          />
+                          {isSteps ? (
+                            <StepsWeek goal={stepGoal} heading={false} days={windowDays} />
+                          ) : (
+                            <ActivityInsightChart
+                              points={series}
+                              windowLabel={window === 'week' ? t('insights.chart7') : t('insights.chart30')}
+                              target={chartTarget(activity)}
+                            />
+                          )}
                         </div>
                       )}
                     </li>
@@ -370,15 +425,20 @@ export function InsightsScreen({
             <p className="screen-sub insights-hint">
               {t('insights.tapNumber', { window: windowWord })}
             </p>
-            {activeMetrics.length === 0 ? (
+            {listedMetrics.length === 0 ? (
               <p className="muted-center">{t('insights.addWeight')}</p>
             ) : (
               <ul className="insights-list">
-                {activeMetrics.map((m) => {
+                {listedMetrics.map((m) => {
                   const key = metricKey(m.id)
                   const open = isOpen(key)
                   const rows = metricEntries.filter((e) => e.metric_id === m.id)
-                  const windowDays = INSIGHTS_WINDOW_DAYS[window]
+                  const stepsMetric = isDailyStepsMetric(m)
+                  const phoneDays = phoneSteps?.status === 'days' ? phoneSteps.days : null
+                  const phoneSummary =
+                    stepsMetric && phoneDays
+                      ? summarizeStepWeek(phoneDays, DEFAULT_STEP_GOAL, today)
+                      : null
                   const trend = computeMetricTrendStats(
                     rows,
                     windowDays as 7 | 30,
@@ -403,29 +463,46 @@ export function InsightsScreen({
                         <span className="activity-meta">
                           <span className="activity-name">{visibleName(m, locale)}</span>
                           <span className="activity-desc">
-                            {latest
-                              ? t('insights.latest', {
-                                  value: formatPair(latest.value, latest.secondary),
-                                  unit: m.unit,
-                                  count: trend.values.length,
-                                })
-                              : t('insights.noLogs', { window: windowWord })}
+                            {phoneSummary
+                              ? `${t('today.stepsWeekMet', {
+                                  met: String(phoneSummary.metDays),
+                                  days: String(phoneDays?.length ?? windowDays),
+                                })}${
+                                  phoneSummary.average > 0
+                                    ? ` · ${t('today.stepsWeekAverage', {
+                                        value: formatStepCount(phoneSummary.average, locale),
+                                      })}`
+                                    : ''
+                                }`
+                              : latest
+                                ? t('insights.latest', {
+                                    value: formatPair(latest.value, latest.secondary),
+                                    unit: m.unit,
+                                    count: trend.values.length,
+                                  })
+                                : t('insights.noLogs', { window: windowWord })}
                           </span>
                         </span>
                         <span className="insights-rate">
-                          {formatPairDelta(trend.delta, trend.secondaryDelta)}
+                          {phoneSummary
+                            ? `${phoneSummary.metDays}/${phoneDays?.length ?? windowDays}`
+                            : formatPairDelta(trend.delta, trend.secondaryDelta)}
                         </span>
                       </button>
                       {open && (
                         <div className="insights-row-chart">
-                          <VitalTrend
-                            metric={m}
-                            entries={rows}
-                            activities={activities}
-                            values={trend.values}
-                            windowDays={windowDays}
-                            today={today}
-                          />
+                          {stepsMetric ? (
+                            <StepsWeek goal={DEFAULT_STEP_GOAL} heading={false} days={windowDays} />
+                          ) : (
+                            <VitalTrend
+                              metric={m}
+                              entries={rows}
+                              activities={activities}
+                              values={trend.values}
+                              windowDays={windowDays}
+                              today={today}
+                            />
+                          )}
                         </div>
                       )}
                     </li>

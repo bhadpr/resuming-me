@@ -1795,25 +1795,33 @@ export function AppShell() {
     return <Navigate to="/settings" replace />
   }
 
+  const headerTitle =
+    adminPage === 'analytics'
+      ? 'Analytics'
+      : adminPage === 'feedback'
+        ? 'Feedback'
+        : adminPage === 'events'
+          ? 'Shared events'
+          : adminPage === 'community'
+            ? 'Community reminders'
+            : adminPage === 'groups'
+              ? 'Group numbers'
+              : themesOpen
+                ? t('settings.themes')
+                : settingsOpen
+                  ? settingsPage === 'reminders'
+                    ? t('settings.remindersPage')
+                    : t('settings.title')
+                  : null
+
   return (
     <div className="app">
       <header className="app-header">
-        {adminPage === 'analytics' ? (
-          <h1 className="app-title">Analytics</h1>
-        ) : adminPage === 'feedback' ? (
-          <h1 className="app-title">Feedback</h1>
-        ) : adminPage === 'events' ? (
-          <h1 className="app-title">Shared events</h1>
-        ) : adminPage === 'community' ? (
-          <h1 className="app-title">Community reminders</h1>
-        ) : adminPage === 'groups' ? (
-          <h1 className="app-title">Group numbers</h1>
-        ) : themesOpen ? (
-          <h1 className="app-title">{t('settings.themes')}</h1>
-        ) : settingsOpen ? (
-          <h1 className="app-title">
-            {settingsPage === 'reminders' ? t('settings.remindersPage') : t('settings.title')}
-          </h1>
+        {headerTitle ? (
+          <div className="app-header-brand">
+            <BrandTitle as="span" className="app-header-mark" homeTo="/today" markOnly />
+            <h1 className="app-title">{headerTitle}</h1>
+          </div>
         ) : (
           <BrandTitle className="app-title" homeTo="/today" />
         )}
@@ -1999,6 +2007,7 @@ export function AppShell() {
                       setError(null)
                       navigate('/activities/new')
                     }}
+                    onGetStarted={() => navigate('/start?step=1&force=1')}
                     moment={moment}
                     onMomentStart={handleMomentStart}
                     onMomentDismiss={dismissMoment}

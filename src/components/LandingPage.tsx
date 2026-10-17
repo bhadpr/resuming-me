@@ -12,10 +12,8 @@ import {
 } from '../hooks/useDocumentMeta'
 import { PLAY_STORE_URL } from '../lib/marketing'
 import { track } from '../lib/track'
-import { templateLabel } from '../lib/catalogName'
 import { useLocale } from '../hooks/useLocale'
 import { LanguagePicker } from './LanguagePicker'
-import { localeTag, type Locale } from '../lib/i18n'
 
 function LandingBrand() {
   return (
@@ -33,25 +31,6 @@ interface LandingPageProps {
   onSignIn: () => Promise<void>
 }
 
-/** Monday-first narrow weekday names, e.g. M T W … in English. */
-function previewDays(locale: Locale): string[] {
-  const format = new Intl.DateTimeFormat(localeTag(locale), { weekday: 'narrow' })
-  return Array.from({ length: 7 }, (_, index) => format.format(new Date(2024, 0, 1 + index)))
-}
-
-/** Sample week — gaps, then coming back. */
-const PREVIEW_SERIES = [
-  {
-    name: 'Walking',
-    target: 20,
-    values: [0, 10, 0, 20, 15, 0, 20],
-  },
-] as const
-
-function previewDoneDays(values: readonly number[], target: number): number {
-  return values.filter((value) => value >= target).length
-}
-
 export function LandingPage({
   configured,
   configError = null,
@@ -59,14 +38,11 @@ export function LandingPage({
   onSignIn,
 }: LandingPageProps) {
   const navigate = useNavigate()
-  const { t, locale } = useLocale()
-  const days = previewDays(locale)
-  const minUnit = t('unit.min')
+  const { t } = useLocale()
   const native = Capacitor.isNativePlatform()
   const [error, setError] = useState<string | null>(null)
   const [signingIn, setSigningIn] = useState(false)
   const [accountDeleted] = useState(() => consumeAccountDeletedFlag())
-  const [showSignIn, setShowSignIn] = useState(() => Boolean(authError) || accountDeleted)
 
   useDocumentMeta({
     title: DEFAULT_TITLE,
@@ -82,10 +58,6 @@ export function LandingPage({
       utm_source: new URLSearchParams(window.location.search).get('utm_source')?.slice(0, 60) ?? null,
     })
   }, [])
-
-  useEffect(() => {
-    if (authError) setShowSignIn(true)
-  }, [authError])
 
   async function handleSignIn() {
     track('signin_clicked')
@@ -156,84 +128,25 @@ export function LandingPage({
           </div>
         )}
 
-        <div className="landing-preview" aria-label={t('landing.previewLabel')}>
-          <div className="landing-preview-header">
-            <p className="landing-preview-title">{t('landing.thisWeek')}</p>
-            <p className="landing-preview-sub">{t('landing.previewSub')}</p>
-          </div>
-          <ul className="landing-preview-list">
-            {PREVIEW_SERIES.map((series) => {
-              const doneDays = previewDoneDays(series.values, series.target)
-              return (
-                <li key={series.name} className="landing-preview-row">
-                  <div className="landing-preview-meta">
-                    <span className="landing-preview-name">{templateLabel('walk', locale)}</span>
-                    <span className="landing-preview-stat">
-                      {t('landing.days', {
-                        done: doneDays,
-                        total: days.length,
-                        target: series.target,
-                        unit: minUnit,
-                      })}
-                    </span>
-                  </div>
-                  <div className="landing-preview-chart" aria-hidden>
-                    {series.values.map((value, index) => {
-                      const ratio = Math.min(1, value / series.target)
-                      const state =
-                        value <= 0 ? 'empty' : value >= series.target ? 'done' : 'partial'
-                      return (
-                        <div key={`${series.name}-${index}`} className="landing-preview-col">
-                          <div className="landing-preview-bar-track">
-                            <div
-                              className={`landing-preview-bar landing-preview-bar-${state}`}
-                              style={{ height: `${Math.max(ratio * 100, value > 0 ? 12 : 0)}%` }}
-                              title={`${days[index]}: ${value} ${minUnit}`}
-                            />
-                          </div>
-                          <span className="landing-preview-day">{days[index]}</span>
-                        </div>
-                      )
-                    })}
-                  </div>
-                </li>
-              )
-            })}
-          </ul>
-        </div>
-
         <div className="landing-actions">
           <button type="button" className="btn btn-primary btn-lg" onClick={startSetup}>
             {t('landing.getStarted')}
           </button>
           <p className="landing-actions-note">{t('landing.noAccount')}</p>
-          {!showSignIn ? (
+          <div className="landing-signin">
+            <p className="landing-signin-heading">{t('landing.haveAccount')}</p>
             <button
               type="button"
-              className="btn btn-ghost landing-signin-toggle"
+              className="btn btn-secondary"
               onClick={() => {
-                track('signin_reveal_clicked')
-                setShowSignIn(true)
+                track('signin_method_clicked', { method: 'google' })
+                void handleSignIn()
               }}
+              disabled={signingIn}
             >
-              {t('landing.haveAccount')}
+              {signingIn ? t('landing.redirecting') : t('landing.signInGoogle')}
             </button>
-          ) : (
-            <div className="landing-signin">
-              <p className="landing-signin-heading">{t('landing.signIn')}</p>
-              <button
-                type="button"
-                className="btn btn-secondary"
-                onClick={() => {
-                  track('signin_method_clicked', { method: 'google' })
-                  void handleSignIn()
-                }}
-                disabled={signingIn}
-              >
-                {signingIn ? t('landing.redirecting') : t('landing.google')}
-              </button>
-            </div>
-          )}
+          </div>
           {!native && (
             <a
               className="btn btn-ghost landing-get-app"
