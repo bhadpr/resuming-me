@@ -2803,7 +2803,22 @@ button.community-card.community-card-added {
   list-style: none;
 }
 
-/* Onboarding shows every card, two by two, the same way as the picture picks. */
+/* The full page of days: three smaller cards across, all of them visible. */
+.community-picker-open .community-grid {
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  gap: var(--space-2);
+}
+
+.community-picker-open .community-card {
+  gap: 0.2rem;
+  padding: 0.35rem;
+}
+
+.community-picker-open .community-name {
+  font-size: var(--text-sm);
+  line-height: 1.25;
+}
+
 .community-picker-open .community-grid:has(li:nth-child(3)) {
   max-height: none;
   overflow: visible;

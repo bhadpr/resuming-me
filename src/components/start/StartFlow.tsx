@@ -63,7 +63,7 @@ import { Icon } from '../Icon'
 import { CommunityReminderPicker } from '../CommunityReminderPicker'
 import { ReminderEditor } from '../ReminderForm'
 import { ReminderKindMark } from '../ReminderKindIcon'
-import { addedCommunityIds, communityReminderInput } from '../../lib/communityReminders'
+import { addedCommunityIds, communityReminderInput, type CommunityReminder } from '../../lib/communityReminders'
 import { askForReminderAlerts } from '../../lib/reminderNotifications'
 import {
   formatReminderDay,
@@ -502,6 +502,9 @@ export function StartFlow({
   })
   const gapTimer = useRef<number | null>(null)
   const keptIds = useRef<Set<string> | null>(adding ? new Set(draft.activities.map((item) => item.localId)) : null)
+  const [communityPicked, setCommunityPicked] = useState<CommunityReminder[]>([])
+  const [communityBusy, setCommunityBusy] = useState(false)
+  const [communityMessage, setCommunityMessage] = useState<string | null>(null)
   const [practiceOn, setPracticeOn] = useState(false)
   const [practiceElapsed, setPracticeElapsed] = useState(0)
   const [practicePaused, setPracticePaused] = useState(false)
@@ -1572,29 +1575,60 @@ export function StartFlow({
             today={today}
             addedIds={addedCommunityIds(draft.reminders)}
             onEmpty={() => persist({ ...draft, pickPhase: 'reminderAsk' })}
-            onAdd={async (item) => {
-              const input = communityReminderInput(item, locale)
-              const next = addGuestReminder(draft, input)
-              if (!next) return 'full'
-              track('reminder_added', {
-                has_time: false,
-                day_before: input.remindBefore === true,
-                kind: input.kind ?? 'event',
-                every_year: false,
-                signed_in: false,
-                community: true,
-              })
-              void askForReminderAlerts(input)
-              persist(saveGuestDraft({ ...next, pickPhase: 'reminderCommunity' }))
-              return 'ok'
+            selection={{
+              ids: communityPicked.map((item) => item.id),
+              onToggle: (item) => {
+                setCommunityMessage(null)
+                setCommunityPicked((current) =>
+                  current.some((one) => one.id === item.id)
+                    ? current.filter((one) => one.id !== item.id)
+                    : [...current, item],
+                )
+              },
             }}
           />
+          {communityMessage && <p className="error">{communityMessage}</p>}
           <button
             type="button"
-            className="btn btn-primary"
-            onClick={() => persist({ ...draft, pickPhase: 'reminderAsk' })}
+            className="btn btn-primary community-continue"
+            disabled={communityBusy}
+            onClick={() => {
+              if (communityPicked.length === 0) {
+                persist({ ...draft, pickPhase: 'reminderAsk' })
+                return
+              }
+              setCommunityBusy(true)
+              setCommunityMessage(null)
+              let next = draft
+              const saved: string[] = []
+              for (const item of communityPicked) {
+                const input = communityReminderInput(item, locale)
+                const updated = addGuestReminder({ ...next, pickPhase: 'reminderCommunity' }, input)
+                if (!updated) {
+                  setCommunityMessage(t('reminders.full'))
+                  persist(next)
+                  setCommunityPicked((current) => current.filter((one) => !saved.includes(one.id)))
+                  setCommunityBusy(false)
+                  return
+                }
+                track('reminder_added', {
+                  has_time: false,
+                  day_before: input.remindBefore === true,
+                  kind: input.kind ?? 'event',
+                  every_year: false,
+                  signed_in: false,
+                  community: true,
+                })
+                void askForReminderAlerts(input)
+                next = updated
+                saved.push(item.id)
+              }
+              setCommunityPicked([])
+              setCommunityBusy(false)
+              persist({ ...next, pickPhase: 'reminderAsk' })
+            }}
           >
-            {t('start.continue')}
+            {communityBusy ? t('reminders.saving') : t('start.continue')}
           </button>
           <button
             type="button"
