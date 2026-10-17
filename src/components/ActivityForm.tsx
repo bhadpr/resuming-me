@@ -328,7 +328,7 @@ export function ActivityForm({
     scrollFormTop()
   }, [phase])
 
-  function goPhase(next: 'pick' | 'details') {
+  function goPhase(next: 'pick' | 'details' | 'simple') {
     setPhase(next)
   }
 
@@ -391,7 +391,7 @@ export function ActivityForm({
     setGoalText('')
     setVideoText('')
     setVideoInvalid(false)
-    goPhase('details')
+    goPhase('simple')
   }
 
   async function handleSubmit(e: FormEvent) {
@@ -425,6 +425,50 @@ export function ActivityForm({
 
   if (initial?.template_id) {
     return <CatalogHabitEdit initial={initial} saving={saving} error={error} onSubmit={onSubmit} />
+  }
+
+  if (!initial && phase === 'simple' && selectedTemplateId) {
+    const template = templateById(selectedTemplateId)
+    if (template) {
+      const next = activityInputFromTemplate(template, 'tiny')
+      const seed: Activity = {
+        id: '',
+        user_id: '',
+        name: next.name,
+        emoji: next.emoji,
+        type: next.type,
+        tracking_mode: next.trackingMode,
+        target_value: next.targetValue,
+        target_unit: next.trackingMode === 'timer' ? 'minutes' : next.targetUnit,
+        target_effective_from: todayLocalDate(),
+        weekly_target: next.weeklyTarget,
+        deadline: next.type === 'deadline' ? addDays(todayLocalDate(), 14) : null,
+        why_matters: null,
+        usually_when: null,
+        off_weekdays: [],
+        micro_steps: [],
+        archived: false,
+        template_id: template.id,
+        name_overridden: false,
+        created_at: '',
+        updated_at: '',
+      }
+      return (
+        <>
+          <button
+            type="button"
+            className="btn btn-ghost start-back"
+            onClick={() => {
+              setSelectedTemplateId(null)
+              goPhase('pick')
+            }}
+          >
+            {t('start.back')}
+          </button>
+          <CatalogHabitEdit initial={seed} saving={saving} error={error} onSubmit={onSubmit} />
+        </>
+      )
+    }
   }
 
   if (!initial && phase === 'pick') {

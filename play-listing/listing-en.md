@@ -45,7 +45,7 @@ Files are in `screenshots/`.
 3. Follow along, one breath at a time
 4. Blood pressure, weight, and water
 5. Bills, visits, birthdays: never forget
-6. Add Diwali in one tap
+6. Pick the days you want to remember
 7. Meet friends at Inorbit Mall
 8. Set up in a minute
 
