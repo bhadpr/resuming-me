@@ -81,6 +81,9 @@ const SettingsScreen = lazy(() =>
 const AnalyticsScreen = lazy(() =>
   import('./AnalyticsScreen').then((m) => ({ default: m.AnalyticsScreen })),
 )
+const AnalyticsTwoScreen = lazy(() =>
+  import('./AnalyticsTwoScreen').then((m) => ({ default: m.AnalyticsTwoScreen })),
+)
 const AdminFeedbackScreen = lazy(() =>
   import('./AdminFeedbackScreen').then((m) => ({ default: m.AdminFeedbackScreen })),
 )
@@ -92,9 +95,6 @@ const AdminSharedEventsScreen = lazy(() =>
 )
 const AdminGroupsScreen = lazy(() =>
   import('./AdminGroupsScreen').then((m) => ({ default: m.AdminGroupsScreen })),
-)
-const ThemesScreen = lazy(() =>
-  import('./ThemesScreen').then((m) => ({ default: m.ThemesScreen })),
 )
 import {
   activityTargetMinutes,
@@ -302,7 +302,6 @@ export function AppShell() {
   const tab = tabFromView(view)
   const settingsOpen = view?.name === 'settings'
   const settingsPage = view?.name === 'settings' && view.page === 'reminders' ? 'reminders' : 'main'
-  const themesOpen = view?.name === 'themes'
   const adminPage = view?.name === 'admin' ? view.page : null
   const activityScreen =
     view?.name === 'activities'
@@ -958,7 +957,11 @@ export function AppShell() {
 
   useEffect(() => {
     if (adminPage === 'analytics') {
-      trackPageView('/admin/analytics', 'Analytics')
+      trackPageView('/admin/analytics', 'Visitors and growth')
+      return
+    }
+    if (adminPage === 'analytics2') {
+      trackPageView('/admin/analytics-2', 'App health')
       return
     }
     if (adminPage === 'feedback') {
@@ -975,10 +978,6 @@ export function AppShell() {
     }
     if (adminPage === 'community') {
       trackPageView('/admin/community', 'Community reminders')
-      return
-    }
-    if (themesOpen) {
-      trackPageView('/settings/themes', 'Themes')
       return
     }
     if (settingsOpen) {
@@ -1016,7 +1015,7 @@ export function AppShell() {
       trackPageView('/insights', 'Insights')
       track('insights_viewed', { range: insightsWindow })
     }
-  }, [tab, settingsOpen, settingsPage, themesOpen, adminPage, location.pathname, insightsWindow, reviewWeekStart])
+  }, [tab, settingsOpen, settingsPage, adminPage, location.pathname, insightsWindow, reviewWeekStart])
 
   useEffect(() => {
     if (!isAdmin && adminPage && adminPage !== 'groups') navigate('/today', { replace: true })
@@ -1028,7 +1027,9 @@ export function AppShell() {
 
   const appTitle = adminPage
     ? adminPage === 'analytics'
-      ? 'Analytics · Resuming'
+      ? 'Visitors & growth · Resuming'
+      : adminPage === 'analytics2'
+        ? 'App health · Resuming'
       : adminPage === 'groups'
         ? 'Group numbers · Resuming'
         : adminPage === 'events'
@@ -1038,8 +1039,6 @@ export function AppShell() {
             : 'Feedback · Resuming'
     : reviewWeekStart
       ? 'This week · Resuming'
-    : themesOpen
-      ? 'Themes · Resuming'
     : settingsOpen
       ? 'Settings · Resuming'
       : tab === 'today'
@@ -1802,7 +1801,9 @@ export function AppShell() {
 
   const headerTitle =
     adminPage === 'analytics'
-      ? 'Analytics'
+      ? 'Visitors & growth'
+      : adminPage === 'analytics2'
+        ? 'App health'
       : adminPage === 'feedback'
         ? 'Feedback'
         : adminPage === 'events'
@@ -1811,9 +1812,7 @@ export function AppShell() {
             ? 'Community reminders'
             : adminPage === 'groups'
               ? 'Group numbers'
-              : themesOpen
-                ? t('settings.themes')
-                : settingsOpen
+              : settingsOpen
                   ? settingsPage === 'reminders'
                     ? t('settings.remindersPage')
                     : t('settings.title')
@@ -1831,15 +1830,15 @@ export function AppShell() {
           <BrandTitle className="app-title" homeTo="/today" />
         )}
         <div className="app-header-actions">
-          <InsightsHeaderButton active={tab === 'insights' && !settingsOpen && !themesOpen && !adminPage} />
+          <InsightsHeaderButton active={tab === 'insights' && !settingsOpen && !adminPage} />
           <button
             type="button"
-            className={`icon-btn ${settingsOpen || themesOpen || adminPage ? 'icon-btn-active' : ''}`}
-            aria-label={settingsOpen || themesOpen || adminPage ? t('settings.close') : t('settings.open')}
-            aria-pressed={Boolean(settingsOpen || themesOpen || adminPage)}
+            className={`icon-btn ${settingsOpen || adminPage ? 'icon-btn-active' : ''}`}
+            aria-label={settingsOpen || adminPage ? t('settings.close') : t('settings.open')}
+            aria-pressed={Boolean(settingsOpen || adminPage)}
             onClick={() => {
               setError(null)
-              if (adminPage || settingsOpen || themesOpen) {
+              if (adminPage || settingsOpen) {
                 navigateBack(navigate, '/today')
                 return
               }
@@ -1856,6 +1855,10 @@ export function AppShell() {
         {adminPage === 'analytics' ? (
           <Suspense fallback={<ScreenChunkFallback />}>
             <AnalyticsScreen />
+          </Suspense>
+        ) : adminPage === 'analytics2' ? (
+          <Suspense fallback={<ScreenChunkFallback />}>
+            <AnalyticsTwoScreen />
           </Suspense>
         ) : adminPage === 'feedback' ? (
           <Suspense fallback={<ScreenChunkFallback />}>
@@ -1877,11 +1880,7 @@ export function AppShell() {
           </Suspense>
         ) : (
           <>
-            {themesOpen ? (
-              <Suspense fallback={<ScreenChunkFallback />}>
-                <ThemesScreen onBack={() => navigateBack(navigate, '/settings')} />
-              </Suspense>
-            ) : settingsOpen ? (
+            {settingsOpen ? (
               <Suspense fallback={<ScreenChunkFallback />}>
                 <SettingsScreen
                   isAdmin={isAdmin}
@@ -1898,6 +1897,10 @@ export function AppShell() {
                     if (!isAdmin) return
                     navigate('/admin/analytics')
                   }}
+                  onOpenAnalytics2={() => {
+                    if (!isAdmin) return
+                    navigate('/admin/analytics-2')
+                  }}
                   onOpenFeedback={() => {
                     if (!isAdmin) return
                     navigate('/admin/feedback')
@@ -1913,7 +1916,6 @@ export function AppShell() {
                   onOpenGroups={(groupId) => {
                     navigate(groupId ? `/admin/groups/${groupId}` : '/admin/groups')
                   }}
-                  onOpenThemes={() => navigate('/settings/themes')}
                   onOpenPrivacy={() => navigate('/privacy')}
                   onSignOut={() => void signOut()}
                   canUndoFreshStart={freshStarts.length > 0}

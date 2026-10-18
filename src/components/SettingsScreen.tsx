@@ -1,4 +1,4 @@
-import { useEffect, useRef, useState } from 'react'
+import { useEffect, useRef, useState, type ReactNode } from 'react'
 import { Capacitor } from '@capacitor/core'
 import { useTheme } from '../hooks/useTheme'
 import { useAuth } from '../hooks/useAuth'
@@ -33,19 +33,77 @@ import { REVIEW_WEEKDAYS } from '../lib/weeklyReview'
 import { useLocale } from '../hooks/useLocale'
 import { localeTag } from '../lib/i18n'
 import { applyTextSize, readTextSize, TEXT_SIZES, type TextSize } from '../lib/textSize'
+import { THEME_PREFERENCES } from '../lib/themes'
 import { REMINDER_PARTS, readPartTimes, savePartTimes, type PartTimes } from '../lib/reminderSchedule'
 import { LanguagePicker } from './LanguagePicker'
 import { fetchMyMarketingGroups, type MyMarketingGroup } from '../lib/marketingData'
-import { Icon } from './Icon'
+import { Icon, type IconName } from './Icon'
+import './settings-ui.css'
+
+function SettingsPanel({
+  title,
+  lead,
+  children,
+}: {
+  title: string
+  lead?: string
+  children: ReactNode
+}) {
+  return (
+    <section className="st-panel">
+      <div className="st-panel-head">
+        <h3 className="st-panel-title">{title}</h3>
+        {lead && <p className="st-panel-lead">{lead}</p>}
+      </div>
+      <div className="st-panel-body">{children}</div>
+    </section>
+  )
+}
+
+function SettingsLink({
+  title,
+  desc,
+  onClick,
+  icon,
+  danger = false,
+  disabled = false,
+}: {
+  title: string
+  desc: string
+  onClick?: () => void
+  icon: IconName
+  danger?: boolean
+  disabled?: boolean
+}) {
+  return (
+    <button
+      type="button"
+      className={`st-link ${danger ? 'st-link-danger' : ''}`}
+      onClick={onClick}
+      disabled={disabled}
+    >
+      <span className="st-link-icon" aria-hidden>
+        <Icon name={icon} />
+      </span>
+      <span className="st-link-text">
+        <span className="st-link-title">{title}</span>
+        <span className="st-link-desc">{desc}</span>
+      </span>
+      <span className="st-link-chevron" aria-hidden>
+        <Icon name="chevron" />
+      </span>
+    </button>
+  )
+}
 interface SettingsScreenProps {
   onBack: () => void
   isAdmin?: boolean
   onOpenAnalytics?: () => void
+  onOpenAnalytics2?: () => void
   onOpenFeedback?: () => void
   onOpenSharedEvents?: () => void
   onOpenCommunity?: () => void
   onOpenGroups?: (groupId?: string) => void
-  onOpenThemes?: () => void
   todayItems?: DigestItem[]
   onSignOut: () => void
   onOpenPrivacy: () => void
@@ -87,52 +145,36 @@ function GroupsSettingsLink({
     }
   }, [isAdmin])
 
+  if (!isAdmin && rows.length === 0) return null
+
   if (!isAdmin && rows.length > 0) {
     return (
-      <section className="today-section">
-        <h3 className="section-label">{t('settings.yourGroup')}</h3>
+      <SettingsPanel title={t('settings.yourGroup')}>
         {rows.map((row) => (
-          <button
+          <SettingsLink
             key={row.group.id}
-            type="button"
-            className="theme-option settings-nav-link"
+            title={row.group.name}
+            desc={t('settings.groupStats', {
+              installs: row.counts.installs.toLocaleString('en-IN'),
+              retained: row.counts.retained.toLocaleString('en-IN'),
+            })}
+            icon="activities"
             onClick={() => onOpen?.(row.group.id)}
-          >
-            <span className="activity-meta">
-              <span className="activity-name">{row.group.name}</span>
-              <span className="activity-desc">
-                {t('settings.groupStats', {
-                  installs: row.counts.installs.toLocaleString('en-IN'),
-                  retained: row.counts.retained.toLocaleString('en-IN'),
-                })}
-              </span>
-            </span>
-            <span className="activity-chevron" aria-hidden>
-              <Icon name="chevron" />
-            </span>
-          </button>
+          />
         ))}
-      </section>
+      </SettingsPanel>
     )
   }
 
   return (
-    <section className="today-section">
-      <h3 className="section-label">Groups</h3>
-      <button
-        type="button"
-        className="theme-option settings-nav-link"
+    <SettingsPanel title="Groups" lead="Installs and five-day returns from a shared link.">
+      <SettingsLink
+        title="Group numbers"
+        desc="Installs and five-day returns"
+        icon="activities"
         onClick={() => onOpen?.()}
-      >
-        <span className="activity-meta">
-          <span className="activity-name">Group numbers</span>
-          <span className="activity-desc">Installs and five-day returns</span>
-        </span>
-        <span className="activity-chevron" aria-hidden>
-          <Icon name="chevron" />
-        </span>
-      </button>
-    </section>
+      />
+    </SettingsPanel>
   )
 }
 
@@ -140,11 +182,11 @@ export function SettingsScreen({
   onBack,
   isAdmin = false,
   onOpenAnalytics,
+  onOpenAnalytics2,
   onOpenFeedback,
   onOpenSharedEvents,
   onOpenCommunity,
   onOpenGroups,
-  onOpenThemes,
   todayItems = [],
   onSignOut,
   onOpenPrivacy,
@@ -162,7 +204,7 @@ export function SettingsScreen({
 }: SettingsScreenProps) {
   const { user } = useAuth()
   const { t, locale } = useLocale()
-  const { preference } = useTheme()
+  const { preference, setPreference } = useTheme()
   const [textSize, setTextSize] = useState<TextSize>(readTextSize)
   const weekdayNames = REVIEW_WEEKDAYS.map((_, index) =>
     new Date(2024, 0, 7 + index).toLocaleDateString(localeTag(locale), { weekday: 'long' }),
@@ -304,15 +346,14 @@ export function SettingsScreen({
 
   if (page === 'reminders') {
     return (
-      <div className="settings-screen">
+      <div className="settings-screen st">
         <button type="button" className="btn btn-ghost btn-sm back-btn" onClick={onBack}>
           <Icon name="back" />
           {t('settings.back')}
         </button>
 
       {native && (
-      <section className="today-section">
-        <h3 className="section-label">{t('settings.notifications')}</h3>
+      <SettingsPanel title={t('settings.notifications')} lead={t('settings.dailyDesc')}>
         <div className="digest-card">
           <div className="digest-toggle">
             <span className="activity-meta">
@@ -435,11 +476,10 @@ export function SettingsScreen({
 
           {permissionError && <p className="error">{permissionError}</p>}
         </div>
-      </section>
+      </SettingsPanel>
       )}
 
-      <section className="today-section">
-        <h3 className="section-label">{t('settings.emails')}</h3>
+      <SettingsPanel title={t('settings.emails')} lead={t('settings.checkinsDesc')}>
         <div className="digest-card">
           <div className="digest-toggle">
             <span className="activity-meta">
@@ -508,10 +548,9 @@ export function SettingsScreen({
             </div>
           )}
         </div>
-      </section>
+      </SettingsPanel>
 
-      <section className="today-section">
-        <h3 className="section-label">{t('settings.review')}</h3>
+      <SettingsPanel title={t('settings.review')} lead={t('settings.reviewDesc')}>
         <div className="digest-card">
           <div className="digest-toggle">
             <span className="activity-meta">
@@ -553,10 +592,9 @@ export function SettingsScreen({
             />
           </label>
         </div>
-      </section>
+      </SettingsPanel>
 
-      <section className="today-section">
-        <h3 className="section-label">{t('reminders.partTimes')}</h3>
+      <SettingsPanel title={t('reminders.partTimes')} lead={t('reminders.partTimesHint')}>
         <div className="digest-card">
           {REMINDER_PARTS.map((part) => (
             <label key={part} className="field">
@@ -575,12 +613,10 @@ export function SettingsScreen({
               />
             </label>
           ))}
-          <p className="digest-hint">{t('reminders.partTimesHint')}</p>
         </div>
-      </section>
+      </SettingsPanel>
 
-      <section className="today-section">
-        <h3 className="section-label">{t('settings.birthday')}</h3>
+      <SettingsPanel title={t('settings.birthday')} lead={t('settings.birthdayHint')}>
         <div className="digest-card">
           <label className="field">
             <span className="field-label">{t('settings.birthdayDate')}</span>
@@ -590,9 +626,6 @@ export function SettingsScreen({
               value={birthday ?? ''}
               onChange={(event) => onBirthday?.(event.target.value || null)}
             />
-            <p className="digest-hint">
-              {t('settings.birthdayHint')}
-            </p>
           </label>
           {birthday && (
             <button type="button" className="btn btn-ghost" onClick={() => onBirthday?.(null)}>
@@ -600,212 +633,162 @@ export function SettingsScreen({
             </button>
           )}
         </div>
-      </section>
+      </SettingsPanel>
 
       </div>
     )
   }
 
   return (
-    <div className="settings-screen">
-      <button type="button" className="btn btn-ghost btn-sm back-btn" onClick={onBack}>
-        <Icon name="back" />
-        {t('settings.back')}
-      </button>
+    <div className="settings-screen st">
+      <header className="st-intro">
+        <p className="st-intro-kicker">{user?.email ? t('settings.account') : t('settings.title')}</p>
+        <h2 className="st-intro-title">{user?.email ?? t('settings.title')}</h2>
+      </header>
 
-      <section className="today-section">
-        <h3 className="section-label">{t('settings.textSize')}</h3>
-        <div className="segmented" role="group" aria-label={t('settings.textSize')}>
-          {TEXT_SIZES.map((size) => (
-            <button
-              key={size}
-              type="button"
-              className={`segmented-btn ${textSize === size ? 'segmented-btn-active' : ''}`}
-              aria-pressed={textSize === size}
-              onClick={() => {
-                setTextSize(size)
-                applyTextSize(size)
-              }}
-            >
-              {t(size === 'normal' ? 'settings.textNormal' : 'settings.textLarge')}
-            </button>
-          ))}
+      <SettingsPanel title={t('settings.appearance')} lead={t('settings.textSizeHint')}>
+        <div className="st-block">
+          <h4 className="st-block-title">{t('settings.textSize')}</h4>
+          <div className="st-range" role="group" aria-label={t('settings.textSize')}>
+            {TEXT_SIZES.map((size) => (
+              <button
+                key={size}
+                type="button"
+                className={`st-range-btn ${textSize === size ? 'st-range-btn-active' : ''}`}
+                aria-pressed={textSize === size}
+                onClick={() => {
+                  setTextSize(size)
+                  applyTextSize(size)
+                }}
+              >
+                {t(size === 'normal' ? 'settings.textNormal' : 'settings.textLarge')}
+              </button>
+            ))}
+          </div>
         </div>
-        <p className="activity-desc">{t('settings.textSizeHint')}</p>
-      </section>
+        <div className="st-block">
+          <h4 className="st-block-title">{t('language.label')}</h4>
+          <LanguagePicker variant="chips" />
+          <p className="st-hint">{t('language.hint')}</p>
+        </div>
+        <div className="st-block">
+          <h4 className="st-block-title">{t('settings.themes')}</h4>
+          <div className="st-themes" role="group" aria-label={t('settings.themes')}>
+            {THEME_PREFERENCES.map((id) => (
+              <button
+                key={id}
+                type="button"
+                className={`st-theme ${preference === id ? 'st-theme-active' : ''}`}
+                aria-pressed={preference === id}
+                onClick={() => setPreference(id)}
+              >
+                <span className={`theme-swatch theme-swatch-${id}`} aria-hidden />
+                <span className="st-theme-name">{t(`themes.${id}`)}</span>
+              </button>
+            ))}
+          </div>
+          <p className="st-hint st-theme-desc">{t(`themes.${preference}Desc`)}</p>
+        </div>
+      </SettingsPanel>
 
-      <section className="today-section">
-        <h3 className="section-label">{t('settings.appearance')}</h3>
-        <button
-          type="button"
-          className="theme-option settings-nav-link"
-          onClick={onOpenThemes}
-        >
-          <span className="activity-meta">
-            <span className="activity-name">{t('settings.themes')}</span>
-            <span className="activity-desc">{t(`themes.${preference}`)}</span>
-          </span>
-          <span className="activity-chevron" aria-hidden>
-            <Icon name="chevron" />
-          </span>
-        </button>
-      </section>
-
-      <section className="today-section">
-        <h3 className="section-label">{t('settings.notifications')}</h3>
-        <button
-          type="button"
-          className="theme-option settings-nav-link"
+      <SettingsPanel title={t('settings.notifications')} lead={t('settings.remindersPageDesc')}>
+        <SettingsLink
+          title={t('settings.remindersPage')}
+          desc={t('settings.remindersPageDesc')}
+          icon="reminders"
           onClick={onOpenReminders}
-        >
-          <span className="activity-meta">
-            <span className="activity-name">{t('settings.remindersPage')}</span>
-            <span className="activity-desc">{t('settings.remindersPageDesc')}</span>
-          </span>
-          <span className="activity-chevron" aria-hidden>
-            <Icon name="chevron" />
-          </span>
-        </button>
-      </section>
-
-      <section className="today-section">
-        <h3 className="section-label">{t('language.label')}</h3>
-        <LanguagePicker />
-        <p className="activity-desc">{t('language.hint')}</p>
-      </section>
-
-      {canUndoFreshStart && (
-        <section className="today-section">
-          <h3 className="section-label">{t('settings.history')}</h3>
+        />
+        {canUndoFreshStart && (
           <button type="button" className="btn btn-ghost" onClick={onUndoFreshStart}>
             {t('settings.undoFresh')}
           </button>
-        </section>
-      )}
+        )}
+      </SettingsPanel>
 
-      {(isAdmin && onOpenAnalytics) || (isAdmin && onOpenFeedback) ? (
-        <section className="today-section">
-          <h3 className="section-label">Admin</h3>
-          {onOpenAnalytics && (
-            <button
-              type="button"
-              className="theme-option settings-nav-link"
-              onClick={onOpenAnalytics}
-            >
-              <span className="activity-meta">
-                <span className="activity-name">Analytics</span>
-                <span className="activity-desc">Website traffic and page views</span>
-              </span>
-              <span className="activity-chevron" aria-hidden>
-                <Icon name="chevron" />
-              </span>
-            </button>
-          )}
-          {onOpenFeedback && (
-            <button
-              type="button"
-              className="theme-option settings-nav-link"
-              onClick={onOpenFeedback}
-            >
-              <span className="activity-meta">
-                <span className="activity-name">Feedback</span>
-                <span className="activity-desc">Ratings and comments people sent</span>
-              </span>
-              <span className="activity-chevron" aria-hidden>
-                <Icon name="chevron" />
-              </span>
-            </button>
-          )}
-          {onOpenSharedEvents && (
-            <button
-              type="button"
-              className="theme-option settings-nav-link"
-              onClick={onOpenSharedEvents}
-            >
-              <span className="activity-meta">
-                <span className="activity-name">Shared events</span>
-                <span className="activity-desc">Reports, and switching an event off</span>
-              </span>
-              <span className="activity-chevron" aria-hidden>
-                <Icon name="chevron" />
-              </span>
-            </button>
-          )}
-          {onOpenCommunity && (
-            <button
-              type="button"
-              className="theme-option settings-nav-link"
-              onClick={onOpenCommunity}
-            >
-              <span className="activity-meta">
-                <span className="activity-name">Community reminders</span>
-                <span className="activity-desc">Diwali, Christmas and other days people can pick</span>
-              </span>
-              <span className="activity-chevron" aria-hidden>
-                <Icon name="chevron" />
-              </span>
-            </button>
-          )}
-        </section>
-      ) : null}
+      {((isAdmin && onOpenAnalytics) || (isAdmin && onOpenFeedback)) && (
+        <SettingsPanel title="Admin" lead="Numbers and tools only you can see.">
+          <div className="st-grid st-grid-2">
+            {onOpenAnalytics && (
+              <SettingsLink
+                title="Visitors & growth"
+                desc="Who visits, who signs up, who stays"
+                icon="insights"
+                onClick={onOpenAnalytics}
+              />
+            )}
+            {onOpenAnalytics2 && (
+              <SettingsLink
+                title="App health"
+                desc="Installs, who comes back, problems"
+                icon="metrics"
+                onClick={onOpenAnalytics2}
+              />
+            )}
+            {onOpenFeedback && (
+              <SettingsLink
+                title="Feedback"
+                desc="Ratings and comments people sent"
+                icon="today"
+                onClick={onOpenFeedback}
+              />
+            )}
+            {onOpenSharedEvents && (
+              <SettingsLink
+                title="Shared events"
+                desc="Reports, and switching an event off"
+                icon="calendar"
+                onClick={onOpenSharedEvents}
+              />
+            )}
+            {onOpenCommunity && (
+              <SettingsLink
+                title="Community reminders"
+                desc="Diwali, Christmas and other days people can pick"
+                icon="reminders"
+                onClick={onOpenCommunity}
+              />
+            )}
+          </div>
+        </SettingsPanel>
+      )}
 
       <GroupsSettingsLink isAdmin={Boolean(isAdmin)} onOpen={onOpenGroups} />
 
-      <section className="today-section">
-        <h3 className="section-label">{t('settings.account')}</h3>
-        <button
-          type="button"
-          className="theme-option settings-nav-link"
+      <SettingsPanel title={t('settings.account')}>
+        <SettingsLink
+          title={t('settings.privacy')}
+          desc={t('settings.privacyDesc')}
+          icon="lock"
           onClick={onOpenPrivacy}
-        >
-          <span className="activity-meta">
-            <span className="activity-name">{t('settings.privacy')}</span>
-            <span className="activity-desc">{t('settings.privacyDesc')}</span>
-          </span>
-          <span className="activity-chevron" aria-hidden>
-            <Icon name="chevron" />
-          </span>
-        </button>
-
-        <button
-          type="button"
-          className="theme-option settings-nav-link"
-          onClick={() => void handleExport()}
+        />
+        <SettingsLink
+          title={exportBusy ? t('settings.exporting') : t('settings.export')}
+          desc={t('settings.exportDesc')}
+          icon="share"
           disabled={exportBusy || !user}
-        >
-          <span className="activity-meta">
-            <span className="activity-name">
-              {exportBusy ? t('settings.exporting') : t('settings.export')}
-            </span>
-            <span className="activity-desc">{t('settings.exportDesc')}</span>
-          </span>
-          <span className="activity-chevron" aria-hidden>
-            <Icon name="chevron" />
-          </span>
-        </button>
-        {exportNotice && <p className="digest-hint settings-account-hint">{exportNotice}</p>}
+          onClick={() => void handleExport()}
+        />
+        {exportNotice && <p className="st-hint">{exportNotice}</p>}
         {exportError && <p className="error">{exportError}</p>}
-
+        {user && (
+          <button type="button" className="btn btn-secondary st-sign-out" onClick={() => void onSignOut()}>
+            {t('settings.signOut')}
+          </button>
+        )}
         {!deleteOpen ? (
-          <button
-            type="button"
-            className="theme-option settings-nav-link settings-delete-link"
+          <SettingsLink
+            title={t('settings.delete')}
+            desc={t('settings.deleteDesc')}
+            icon="close"
+            danger
             onClick={() => {
               setDeleteOpen(true)
               setDeleteConfirmText('')
               setDeleteError(null)
             }}
-          >
-            <span className="activity-meta">
-              <span className="activity-name">{t('settings.delete')}</span>
-              <span className="activity-desc">{t('settings.deleteDesc')}</span>
-            </span>
-            <span className="activity-chevron" aria-hidden>
-              <Icon name="chevron" />
-            </span>
-          </button>
+          />
         ) : (
-          <div className="confirm-delete settings-delete-confirm">
+          <div className="confirm-delete settings-delete-confirm st-danger">
             <p>{t('settings.deleteWarn')}</p>
             <p>
               {t('settings.deleteCopy')}{' '}
@@ -857,11 +840,7 @@ export function SettingsScreen({
             </div>
           </div>
         )}
-
-        <button type="button" className="btn btn-primary btn-lg settings-sign-out" onClick={() => void onSignOut()}>
-          {t('settings.signOut')}
-        </button>
-      </section>
+      </SettingsPanel>
     </div>
   )
 }

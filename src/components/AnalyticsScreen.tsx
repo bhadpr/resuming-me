@@ -3,20 +3,17 @@ import {
   fetchPageViewsForAnalytics,
   fetchProductAnalytics,
   fetchSignedInEmails,
-  formatRetentionRate,
-  formatSignInTime,
   summarizePageViews,
   type AnalyticsSummary,
   type AnalyticsWindow,
-  type NamedCount,
   type ProductAnalyticsSummary,
   type SignedInAccount,
 } from '../lib/analytics'
 import { fetchOnboardingFunnel, type OnboardingFunnel } from '../lib/onboardingFunnel'
 import { fetchGuestJourney, type CreateCounts, type GuestJourney } from '../lib/guestJourney'
-import { templateLabel } from '../lib/catalogName'
 import { fetchLoopAnalytics, type CohortRow, type ComebackLoopSummary } from '../lib/loopAnalytics'
-import { fetchReminderSummary, oneTimeDoneRate, type ReminderSummary } from '../lib/reminderAnalytics'
+import { fetchReminderSummary, type ReminderSummary } from '../lib/reminderAnalytics'
+import { AnalyticsView } from './AnalyticsView'
 import { GrowthSection } from './GrowthSection'
 import { fetchSiteEvents, summarizeSiteEvents, type SiteSummary } from '../lib/siteAnalytics'
 
@@ -207,437 +204,31 @@ export function AnalyticsScreen() {
   }, [])
 
   return (
-    <div className="analytics-screen">
-      <p className="screen-sub settings-lead">First-party website traffic for Resuming.</p>
-
-      <div className="segmented window-toggle">
-        <button
-          type="button"
-          className={`segmented-btn ${window === '7d' ? 'segmented-btn-active' : ''}`}
-          onClick={() => setWindow('7d')}
-        >
-          7 days
-        </button>
-        <button
-          type="button"
-          className={`segmented-btn ${window === '30d' ? 'segmented-btn-active' : ''}`}
-          onClick={() => setWindow('30d')}
-        >
-          30 days
-        </button>
-      </div>
-
-      <section className="today-section">
-        <h3 className="section-label">Product</h3>
-        <p className="screen-sub insights-hint">
-          Sign-ups, retention, logs, and comebacks from first-party events.
-        </p>
-        {productError && <p className="error">{productError}</p>}
-        {productLoading || !product ? (
-          <p className="muted-center">
-            {productLoading ? 'Loading product metrics…' : 'No product data yet.'}
-          </p>
-        ) : (
-          <section className="analytics-overview">
-            <StatCard
-              label="Sign-ups"
-              value={formatInt(product.signups)}
-              hint="signup_completed"
-            />
-            <StatCard
-              label="D1 retention"
-              value={formatRetentionRate(product.d1Retention)}
-              hint="Returned next day"
-            />
-            <StatCard
-              label="D7 retention"
-              value={formatRetentionRate(product.d7Retention)}
-              hint="Returned on day 7"
-            />
-            <StatCard
-              label="Logs / active user"
-              value={
-                product.logsPerActiveUser == null
-                  ? '—'
-                  : formatDecimal(product.logsPerActiveUser)
-              }
-              hint={`${formatInt(product.logEvents)} logs · ${formatInt(product.activeUsers)} users`}
-            />
-            <StatCard
-              label="Comebacks"
-              value={formatInt(product.comebackCount)}
-              hint="After 3+ day gap"
-            />
-          </section>
-        )}
-      </section>
-
-      <GrowthSection />
-
-      <section className="today-section">
-        <h3 className="section-label">Comeback loop</h3>
-        <p className="screen-sub insights-hint">Last 90 days. Not a controlled test.</p>
-        {loopError && <p className="error">{loopError}</p>}
-        {loop && (
-          <ul className="analytics-rank-list">
-            <li className="analytics-rank-row">
-              Comebacks per active user ·{' '}
-              {loop.comebacksPerActiveUser == null ? '—' : loop.comebacksPerActiveUser.toFixed(1)}
-            </li>
-            <li className="analytics-rank-row">
-              Returned after a gap, card shown · {loop.returnedWithCard}
-            </li>
-            <li className="analytics-rank-row">
-              Returned after a gap, card not shown · {loop.returnedWithoutCard}
-            </li>
-            <li className="analytics-rank-row">
-              Review open rate · {loop.reviewOpenRate == null ? '—' : `${Math.round(loop.reviewOpenRate * 100)}%`}
-            </li>
-            <li className="analytics-rank-row">
-              Review to action · {loop.reviewActionRate == null ? '—' : `${Math.round(loop.reviewActionRate * 100)}%`}
-            </li>
-            <li className="analytics-rank-row">{loop.caveat}</li>
-          </ul>
-        )}
-        {cohorts.length > 0 && (
-          <ul className="analytics-rank-list">
-            {cohorts.slice(0, 6).map((row) => (
-              <li key={row.weekStart} className="analytics-rank-row">
-                Joined {row.weekStart} · {row.size} · week 2 {formatRetentionRate(row.week2)} · week 4{' '}
-                {formatRetentionRate(row.week4)} · week 8 {formatRetentionRate(row.week8)}
-              </li>
-            ))}
-          </ul>
-        )}
-      </section>
-
-      <section className="today-section">
-        <h3 className="section-label">Website</h3>
-        <p className="screen-sub insights-hint">
-          resuming.app visitors, counted by a random id in their browser. Tag a link with ?utm_source=name to see
-          that channel.
-        </p>
-        {siteError && <p className="error">{siteError}</p>}
-        {siteLoading || !site ? (
-          <p className="muted-center">{siteLoading ? 'Loading website numbers…' : 'No website data yet.'}</p>
-        ) : site.pageViews === 0 ? (
-          <p className="muted-center">No website visits in this window.</p>
-        ) : (
-          <>
-            <section className="analytics-overview">
-              <StatCard label="Visitors" value={formatInt(site.visitors)} hint={`${formatInt(site.pageViews)} page views`} />
-              <StatCard
-                label="Tapped Google Play"
-                value={formatInt(site.tappedPlay)}
-                hint={percentOf(site.tappedPlay, site.visitors)}
-              />
-              <StatCard
-                label="Tried in browser"
-                value={formatInt(site.tappedBrowser)}
-                hint={percentOf(site.tappedBrowser, site.visitors)}
-              />
-            </section>
-            <h4 className="section-label">Where they came from</h4>
-            <ul className="analytics-rank-list">
-              {site.sources.map((row) => (
-                <li key={row.source} className="analytics-rank-row">
-                  <div className="analytics-rank-meta">
-                    <span className="activity-name">{row.source}</span>
-                    <span className="insights-rate">
-                      {formatInt(row.visitors)} · Play {formatInt(row.tappedPlay)} ({percentOf(row.tappedPlay, row.visitors)})
-                    </span>
-                  </div>
-                </li>
-              ))}
-            </ul>
-            <section className="analytics-split">
-              <div className="today-section">
-                <h4 className="section-label">Taps</h4>
-                <RankList rows={site.taps} empty="No taps yet." />
-              </div>
-              <div className="today-section">
-                <h4 className="section-label">Devices</h4>
-                <RankList rows={site.devices} empty="No device data." />
-              </div>
-            </section>
-          </>
-        )}
-      </section>
-
-      {error && <p className="error">{error}</p>}
-
-      {loading || !summary ? (
-        <p className="muted-center">{loading ? 'Loading analytics…' : 'No data yet.'}</p>
-      ) : (
-        <>
-          <section className="analytics-overview">
-            <StatCard label="Page views" value={formatInt(summary.totalViews)} hint={`${summary.from} → ${summary.to}`} />
-            <StatCard label="Unique visitors" value={formatInt(summary.uniqueVisitors)} hint="By visitor id" />
-            <StatCard label="Signed-in visitors" value={formatInt(summary.signedInVisitors)} hint="Distinct accounts" />
-            <StatCard label="Views today" value={formatInt(summary.viewsToday)} hint="UTC day" />
-          </section>
-
-          <section className="today-section">
-            <h3 className="section-label">Page views over time</h3>
-            <div className="insights-pattern-chart analytics-chart">
-              <div className="bar-grid analytics-daily-grid">
-                {summary.daily.map((d) => (
-                  <div key={d.date} className="bar-grid-item" title={`${d.date}: ${d.views} views`}>
-                    <div className="bar-grid-track">
-                      <div
-                        className="bar-grid-fill bar-grid-fill-primary"
-                        style={{ height: `${barHeight(d.views, summary.daily.map((x) => x.views))}%` }}
-                      />
-                    </div>
-                    <span className="bar-grid-label">{d.date.slice(5)}</span>
-                  </div>
-                ))}
-              </div>
-            </div>
-          </section>
-
-          <section className="today-section">
-            <h3 className="section-label">Top pages</h3>
-            <RankList rows={summary.topPages} empty="No page views in this window." />
-          </section>
-
-          <section className="today-section">
-            <h3 className="section-label">Top referrers</h3>
-            <RankList rows={summary.topReferrers} empty="No referrer data yet." />
-          </section>
-
-          <section className="analytics-split">
-            <div className="today-section">
-              <h3 className="section-label">Devices</h3>
-              <RankList rows={summary.devices} empty="No device data." />
-            </div>
-            <div className="today-section">
-              <h3 className="section-label">Browsers</h3>
-              <RankList rows={summary.browsers} empty="No browser data." />
-            </div>
-          </section>
-        </>
-      )}
-
-      <section className="today-section">
-        <h3 className="section-label">Guest journey</h3>
-        <p className="screen-sub insights-hint">
-          People before an account, counted by anonymous id. A later sign-up stays on the same id.
-        </p>
-        {journeyError && <p className="error">{journeyError}</p>}
-        {journey && (
-          <ul className="analytics-rank-list">
-            <li className="analytics-rank-row">Landing · {journey.landing}</li>
-            <li className="analytics-rank-row">Intent started · {journey.intentStarted}</li>
-            <li className="analytics-rank-row">Setup started · {journey.setupStarted}</li>
-            <li className="analytics-rank-row">Habits picked · {journey.habitsPicked}</li>
-            <li className="analytics-rank-row">First guest log · {journey.firstLog}</li>
-            <li className="analytics-rank-row">Sign-in shown · {journey.signInShown}</li>
-            <li className="analytics-rank-row">Accounts · {journey.signups}</li>
-          </ul>
-        )}
-        {creates && (
-          <>
-            <p className="screen-sub insights-hint">
-              Habits from the list {creates.habitsCatalog} · habits they named {creates.habitsCustom}
-              · vitals from the list {creates.vitalsCatalog} · vitals they named {creates.vitalsCustom}
-            </p>
-            <ul className="analytics-rank-list">
-              {creates.topHabits.map((row) => (
-                <li key={`habit-${row.id}`} className="analytics-rank-row">
-                  {templateLabel(row.id) ?? row.id} · {row.count}
-                </li>
-              ))}
-              {creates.topVitals.map((row) => (
-                <li key={`vital-${row.id}`} className="analytics-rank-row">
-                  {templateLabel(row.id) ?? row.id} · {row.count}
-                </li>
-              ))}
-            </ul>
-          </>
-        )}
-      </section>
-
-      <section className="today-section">
-        <h3 className="section-label">Reminders</h3>
-        <p className="screen-sub insights-hint">Counts only. Reminder text is never sent to analytics.</p>
-        {remindersError && <p className="error">{remindersError}</p>}
-        {reminders && (
-          <ul className="analytics-rank-list">
-            <li className="analytics-rank-row">
-              Added · {reminders.added} · by {reminders.people} {reminders.people === 1 ? 'person' : 'people'}
-            </li>
-            <li className="analytics-rank-row">
-              Done · {reminders.done} · from a notification {reminders.doneFromNotification}
-            </li>
-            {oneTimeDoneRate(reminders) != null && (
-              <li className="analytics-rank-row">
-                One-time reminders done per added · {oneTimeDoneRate(reminders)}%
-              </li>
-            )}
-            <li className="analytics-rank-row">
-              Repeats · every day {reminders.repeatAdded.day} · every week {reminders.repeatAdded.week} · marked done{' '}
-              {reminders.repeatDone}
-            </li>
-            <li className="analytics-rank-row">
-              With a time {reminders.withTime} · day before {reminders.dayBefore} · every year{' '}
-              {reminders.everyYear}
-            </li>
-            <li className="analytics-rank-row">
-              Signed in {reminders.signedIn} · guests {reminders.added - reminders.signedIn}
-            </li>
-            {[...reminders.perDay].reverse().map((row) => (
-              <li key={`reminder-day-${row.day}`} className="analytics-rank-row">
-                {row.day} · added {row.added} · done {row.done}
-              </li>
-            ))}
-            {reminders.kinds.length > 0 && (
-              <li className="analytics-rank-row">
-                {reminders.kinds.map((row) => `${row.kind} ${row.count}`).join(' · ')}
-              </li>
-            )}
-            <li className="analytics-rank-row">
-              Shared events · made {reminders.shared.created} · link opens {reminders.shared.opened} · added{' '}
-              {reminders.shared.added} · installs from a link {reminders.shared.installs}
-            </li>
-            <li className="analytics-rank-row">
-              Shared events cancelled {reminders.shared.cancelled} · reports {reminders.shared.reported}
-            </li>
-          </ul>
-        )}
-      </section>
-
-      <section className="today-section">
-        <h3 className="section-label">Onboarding</h3>
-        <p className="screen-sub insights-hint">
-          Funnel, first-week logs, and median time to the first resume.
-        </p>
-        {funnelError && <p className="error">{funnelError}</p>}
-        {funnel && (
-          <ul className="analytics-rank-list">
-            <li className="analytics-rank-row">Started · {funnel.started}</li>
-            {funnel.steps.map((step) => (
-              <li key={step.step} className="analytics-rank-row">
-                Step {step.step} · {step.people}
-              </li>
-            ))}
-            <li className="analytics-rank-row">Timer started · {funnel.timerStarted}</li>
-            <li className="analytics-rank-row">Timer finished · {funnel.timerCompleted}</li>
-            <li className="analytics-rank-row">Timer skipped · {funnel.timerSkipped}</li>
-            <li className="analytics-rank-row">
-              Reminder yes / no · {funnel.reminderSet} / {funnel.reminderNone}
-            </li>
-            <li className="analytics-rank-row">Sign-in shown · {funnel.signinShown}</li>
-            <li className="analytics-rank-row">Sign-ups · {funnel.signups}</li>
-            <li className="analytics-rank-row">
-              Median seconds to first resume · {funnel.medianSecondsToFirstResume ?? '—'}
-            </li>
-            <li className="analytics-rank-row">
-              Logged on day 2 / 3 / 7 · {funnel.loggedDay2} / {funnel.loggedDay3} / {funnel.loggedDay7}
-            </li>
-          </ul>
-        )}
-      </section>
-
-      <section className="today-section">
-        <h3 className="section-label">Signed-in Google accounts</h3>
-        <p className="screen-sub insights-hint">
-          {accounts.length === 0
-            ? 'Emails from Google sign-in.'
-            : `${accounts.length} account${accounts.length === 1 ? '' : 's'}`}
-        </p>
-        {accountsError ? (
-          <p className="error">{accountsError}</p>
-        ) : accounts.length === 0 ? (
-          <p className="muted-center">No Google sign-ins yet.</p>
-        ) : (
-          <ul className="analytics-rank-list">
-            {accounts.map((account) => (
-              <li key={account.email} className="analytics-rank-row">
-                <div className="analytics-rank-meta">
-                  <span className="activity-name analytics-email">{account.email}</span>
-                  <span className="insights-rate">
-                    {formatSignInTime(account.lastSignInAt)}
-                  </span>
-                </div>
-                <p className="analytics-account-counts">
-                  {formatCount(account.activityCount, 'activity', 'activities')}
-                  {' · '}
-                  {formatCount(account.metricCount, 'number', 'numbers')}
-                </p>
-              </li>
-            ))}
-          </ul>
-        )}
-      </section>
-    </div>
+    <AnalyticsView
+      window={window}
+      onWindow={setWindow}
+      summary={summary}
+      loading={loading}
+      error={error}
+      product={product}
+      productLoading={productLoading}
+      productError={productError}
+      site={site}
+      siteLoading={siteLoading}
+      siteError={siteError}
+      journey={journey}
+      creates={creates}
+      journeyError={journeyError}
+      funnel={funnel}
+      funnelError={funnelError}
+      reminders={reminders}
+      remindersError={remindersError}
+      loop={loop}
+      cohorts={cohorts}
+      loopError={loopError}
+      accounts={accounts}
+      accountsError={accountsError}
+      growth={<GrowthSection />}
+    />
   )
-}
-
-function StatCard({
-  label,
-  value,
-  hint,
-}: {
-  label: string
-  value: string
-  hint: string
-}) {
-  return (
-    <div className="analytics-stat">
-      <span className="analytics-stat-label">{label}</span>
-      <span className="analytics-stat-value">{value}</span>
-      <span className="analytics-stat-hint">{hint}</span>
-    </div>
-  )
-}
-
-function RankList({ rows, empty }: { rows: NamedCount[]; empty: string }) {
-  if (rows.length === 0) {
-    return <p className="muted-center">{empty}</p>
-  }
-  const max = Math.max(...rows.map((r) => r.count), 1)
-  return (
-    <ul className="analytics-rank-list">
-      {rows.map((row) => (
-        <li key={row.key} className="analytics-rank-row">
-          <div className="analytics-rank-meta">
-            <span className="activity-name">{row.label}</span>
-            <span className="insights-rate">{formatInt(row.count)}</span>
-          </div>
-          <div className="progress-bar" aria-hidden>
-            <div
-              className="progress-bar-fill"
-              style={{ width: `${Math.round((row.count / max) * 100)}%` }}
-            />
-          </div>
-        </li>
-      ))}
-    </ul>
-  )
-}
-
-function barHeight(count: number, all: number[]): number {
-  const max = Math.max(...all, 1)
-  return Math.round((count / max) * 100)
-}
-
-function formatInt(n: number): string {
-  return new Intl.NumberFormat().format(n)
-}
-
-function percentOf(part: number, whole: number): string {
-  if (whole <= 0) return '—'
-  return `${Math.round((part / whole) * 100)}%`
-}
-
-function formatDecimal(n: number): string {
-  return new Intl.NumberFormat(undefined, {
-    maximumFractionDigits: 1,
-    minimumFractionDigits: 0,
-  }).format(n)
-}
-
-function formatCount(n: number, one: string, many: string): string {
-  return `${formatInt(n)} ${n === 1 ? one : many}`
 }

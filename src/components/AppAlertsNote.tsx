@@ -1,6 +1,6 @@
 import { Capacitor } from '@capacitor/core'
 import { useLocale } from '../hooks/useLocale'
-import { PLAY_STORE_URL } from '../lib/marketing'
+import { playStoreUrl } from '../lib/marketing'
 import { track } from '../lib/track'
 
 /** Browsers cannot ring at a set time, so on the website alerts point to the Android app. */
@@ -11,7 +11,7 @@ export function AppAlertsNote({ where }: { where: 'today' | 'medicine' | 'remind
     <p className="app-alerts-note">
       {t('reminders.alertsAppOnly')}{' '}
       <a
-        href={PLAY_STORE_URL}
+        href={playStoreUrl(`alerts-${where}`)}
         target="_blank"
         rel="noopener noreferrer"
         onClick={() => track('get_app_clicked', { where })}

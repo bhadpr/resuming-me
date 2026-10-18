@@ -764,6 +764,8 @@ export const gu: DeepString<typeof en> = {
     days7: '7 દિવસ',
     days30: '30 દિવસ',
     easiest: 'શરૂ કરવા સૌથી સહેલું',
+    kpiShowed: 'કર્યું',
+    kpiComebacks: 'પાછા આવ્યા',
     tapHabit: '{window} નો ચાર્ટ જોવા ટેવ પર ટૅપ કરો.',
     week: 'અઠવાડિયા',
     month: 'મહિના',

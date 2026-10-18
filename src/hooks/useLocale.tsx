@@ -11,6 +11,7 @@ import {
   type Locale,
 } from '../lib/i18n'
 import { createSupabaseClient, isSupabaseConfigured, sendQuery } from '../lib/supabase'
+import { track } from '../lib/track'
 
 type LocaleContextValue = {
   locale: Locale
@@ -99,6 +100,8 @@ export function LocaleProvider({ children }: { children: ReactNode }) {
       localeChosen,
       localeResolved,
       setLocale: (next) => {
+        // `first` is the choice made on the language screen; later ones are switches.
+        if (next !== locale || !localeChosen) track('language_changed', { from: locale, to: next, first: !localeChosen })
         pickedThisSession.current = true
         persistLocale(next)
         setLocaleState(next)

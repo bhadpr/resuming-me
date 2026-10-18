@@ -6,6 +6,8 @@ import { LocaleProvider } from './hooks/useLocale'
 import { ThemeProvider } from './hooks/useTheme'
 import { setupServiceWorker } from './lib/pwa'
 import { initTracking } from './lib/track'
+import { installErrorReporting } from './lib/errorReporting'
+import { trackInstallSource } from './lib/installSource'
 import { appRouteObjects } from './App'
 import './fonts-dawn.css'
 import '@fontsource-variable/noto-sans-devanagari/wght.css'
@@ -18,6 +20,8 @@ import './index.css'
 
 void setupServiceWorker()
 initTracking()
+installErrorReporting()
+void trackInstallSource()
 
 const router = createBrowserRouter(appRouteObjects)
 

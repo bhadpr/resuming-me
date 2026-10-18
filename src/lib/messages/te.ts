@@ -764,6 +764,8 @@ export const te: DeepString<typeof en> = {
     days7: '7 రోజులు',
     days30: '30 రోజులు',
     easiest: 'మొదలుపెట్టడానికి అతి తేలికైనది',
+    kpiShowed: 'చేశారు',
+    kpiComebacks: 'తిరిగి రావడాలు',
     tapHabit: '{window} చార్ట్ చూడటానికి అలవాటుపై నొక్కండి.',
     week: 'వారం',
     month: 'నెల',

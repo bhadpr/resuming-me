@@ -10,7 +10,7 @@ import {
   DEFAULT_TITLE,
   useDocumentMeta,
 } from '../hooks/useDocumentMeta'
-import { PLAY_STORE_URL } from '../lib/marketing'
+import { playStoreUrl } from '../lib/marketing'
 import { track } from '../lib/track'
 import { useLocale } from '../hooks/useLocale'
 import { LanguagePicker } from './LanguagePicker'
@@ -155,7 +155,7 @@ export function LandingPage({
             native ? null : (
               <a
                 className="landing-get-app"
-                href={PLAY_STORE_URL}
+                href={playStoreUrl('landing')}
                 target="_blank"
                 rel="noopener noreferrer"
                 onClick={() => track('get_app_clicked', { where: 'landing' })}

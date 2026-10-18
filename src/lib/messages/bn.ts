@@ -765,6 +765,8 @@ export const bn: DeepString<typeof en> = {
     days7: '7 দিন',
     days30: '30 দিন',
     easiest: 'আবার ধরা সবচেয়ে সহজ',
+    kpiShowed: 'করেছেন',
+    kpiComebacks: 'ফিরে আসা',
     tapHabit: '{window}-এর চার্ট দেখতে একটা অভ্যাসে ট্যাপ করুন।',
     week: 'সপ্তাহ',
     month: 'মাস',

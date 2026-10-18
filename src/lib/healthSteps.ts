@@ -1,6 +1,7 @@
 import { Capacitor } from '@capacitor/core'
 import type { HealthConnectPlugin } from '@devmaxime/capacitor-health-connect'
 import { addDays, todayLocalDate } from './dates'
+import { track } from './track'
 
 export type PhoneSteps =
   | { status: 'count'; steps: number }
@@ -89,11 +90,19 @@ export async function requestPhoneSteps(now = new Date()): Promise<PhoneSteps> {
   try {
     const { HealthConnect } = await import('@devmaxime/capacitor-health-connect')
     const { availability } = await HealthConnect.checkAvailability()
-    if (availability !== 'Available') return { status: 'unavailable' }
+    if (availability !== 'Available') {
+      track('health_permission', { kind: 'steps', result: 'unavailable' })
+      return { status: 'unavailable' }
+    }
     const next = await HealthConnect.requestPermissions({ read: ['Steps'], write: [] })
-    if (!next.read.includes('Steps')) return { status: 'denied' }
+    if (!next.read.includes('Steps')) {
+      track('health_permission', { kind: 'steps', result: 'denied' })
+      return { status: 'denied' }
+    }
+    track('health_permission', { kind: 'steps', result: 'granted' })
     return await aggregateToday(HealthConnect, now)
   } catch {
+    track('health_permission', { kind: 'steps', result: 'unavailable' })
     return { status: 'unavailable' }
   }
 }

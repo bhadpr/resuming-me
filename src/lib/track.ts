@@ -1,4 +1,5 @@
 import { Capacitor } from '@capacitor/core'
+import { readInitialLocale } from './i18n'
 import { createSupabaseClient, isSupabaseConfigured } from './supabase'
 import type { Database, Json } from '../types/database'
 
@@ -54,6 +55,12 @@ export type TrackedEventName =
   | 'shared_event_reset'
   | 'shared_event_cancelled'
   | 'shared_event_reported'
+  | 'app_error'
+  | 'alerts_status'
+  | 'install_attributed'
+  | 'video_played'
+  | 'health_permission'
+  | 'language_changed'
 
 type EventInsert = Database['public']['Tables']['events']['Insert']
 
@@ -284,7 +291,8 @@ export function trackAppOpened(): void {
   lastAppOpenedAt = now
   const days = daysSinceLastOpen(now)
   markAppOpened(now)
-  track('app_opened', { days_since_last_open: days ?? 0 })
+  // The language shows in the admin installs card. It is the app's language, nothing about the person.
+  track('app_opened', { days_since_last_open: days ?? 0, locale: readInitialLocale() })
 }
 
 /**

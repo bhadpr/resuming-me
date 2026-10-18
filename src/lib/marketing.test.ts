@@ -6,8 +6,20 @@ import {
   marketingInstallLink,
   payableNow,
   playGap,
+  playStoreUrl,
   retentionBucket,
 } from './marketing'
+
+describe('playStoreUrl', () => {
+  it('tags the Play link with the button it came from, and is not mistaken for a partner link', () => {
+    const url = new URL(playStoreUrl('landing'))
+    expect(url.hostname).toBe('play.google.com')
+    expect(url.searchParams.get('id')).toBe(PLAY_PACKAGE)
+    const referrer = url.searchParams.get('referrer') ?? ''
+    expect(new URLSearchParams(referrer).get('utm_content')).toBe('landing')
+    expect(codesFromReferrer(referrer)).toBeNull()
+  })
+})
 
 describe('marketingInstallLink', () => {
   it('builds a Play link whose referrer carries the group and member', () => {

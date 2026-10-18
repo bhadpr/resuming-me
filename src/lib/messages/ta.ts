@@ -764,6 +764,8 @@ export const ta: DeepString<typeof en> = {
     days7: '7 நாட்கள்',
     days30: '30 நாட்கள்',
     easiest: 'மீண்டும் எடுக்க எளிது',
+    kpiShowed: 'செய்தது',
+    kpiComebacks: 'திரும்புதல்கள்',
     tapHabit: 'அதன் {window} வரைபடத்திற்குப் பழக்கத்தைத் தட்டு.',
     week: 'வாரம்',
     month: 'மாதம்',

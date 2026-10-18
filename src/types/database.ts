@@ -907,6 +907,30 @@ export interface Database {
         Args: { p_weeks?: number }
         Returns: Json
       }
+      event_counts_by_period: {
+        Args: { p_period: string; p_periods?: number }
+        Returns: Json
+      }
+      app_installs_summary: {
+        Args: { p_days: number }
+        Returns: Json
+      }
+      app_errors_summary: {
+        Args: { p_days: number }
+        Returns: Json
+      }
+      alert_status_summary: {
+        Args: { p_days: number }
+        Returns: Json
+      }
+      guest_retention_summary: {
+        Args: { p_weeks: number; p_platform: string }
+        Returns: Json
+      }
+      event_prop_breakdown: {
+        Args: { p_name: string; p_prop: string; p_days: number }
+        Returns: Json
+      }
       save_growth_snapshot: {
         Args: Record<string, never>
         Returns: string

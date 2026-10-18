@@ -6,6 +6,7 @@ import type { MetricEntry } from '../lib/metricEntries'
 import {
   buildActivityInsightSeries,
   INSIGHTS_WINDOW_DAYS,
+  mostResumableActivity,
   type DayStatusOpts,
   type InsightsResult,
   type InsightsWindow,
@@ -26,6 +27,7 @@ import { StepsWeek } from './StepsWeek'
 import { VitalTrend } from './VitalTrend'
 import { formatPair, formatPairDelta } from '../lib/vitalChart'
 import { Icon } from './Icon'
+import './insights-ui.css'
 
 function chartTarget(activity: Activity | undefined): number | null {
   if (!activity || activity.type === 'deadline') return null
@@ -136,6 +138,21 @@ export function InsightsScreen({
   )
   const empty =
     !loading && activeActivities.length === 0 && activeMetrics.length === 0
+  const easiest = insights ? mostResumableActivity(insights.activities) : null
+  const easiestActivity = easiest
+    ? activities.find((activity) => activity.id === easiest.activityId)
+    : undefined
+  const easiestName = easiestActivity
+    ? visibleName(easiestActivity, locale)
+    : easiest?.name ?? null
+  const habitRows = useMemo(() => {
+    if (!insights) return []
+    return [...insights.activities].sort((a, b) => {
+      const rateA = a.scheduled > 0 ? a.showedUp / a.scheduled : -1
+      const rateB = b.scheduled > 0 ? b.showedUp / b.scheduled : -1
+      return rateB - rateA
+    })
+  }, [insights])
 
   useEffect(() => {
     if (!showPhoneSteps || !phoneStepsSupported()) return
@@ -151,14 +168,14 @@ export function InsightsScreen({
   useEffect(() => {
     if (didInitOpen || loading || !insights) return
     const first =
-      insights.activities[0] != null
-        ? activityKey(insights.activities[0].activityId)
-        : activeMetrics[0] != null
-          ? metricKey(activeMetrics[0].id)
-          : 'skip-days'
-    setOpenKeys(new Set([first]))
+      habitRows[0] != null
+        ? activityKey(habitRows[0].activityId)
+        : listedMetrics[0] != null
+          ? metricKey(listedMetrics[0].id)
+          : null
+    if (first) setOpenKeys(new Set([first]))
     setDidInitOpen(true)
-  }, [didInitOpen, loading, insights, activeMetrics])
+  }, [didInitOpen, loading, insights, habitRows, listedMetrics])
 
   const shownPatternKinds = useRef(new Set<string>())
 
@@ -196,12 +213,30 @@ export function InsightsScreen({
   }
 
   return (
-    <div className="insights-screen">
-      <div className="screen-heading">
+    <div className="insights-screen in">
+      <div className="in-intro">
         <div>
           <h2>{t('nav.insights')}</h2>
           <p className="screen-sub">{t('insights.sub')}</p>
         </div>
+        {!empty && !loading && (
+          <div className="segmented window-toggle">
+            <button
+              type="button"
+              className={`segmented-btn ${window === 'week' ? 'segmented-btn-active' : ''}`}
+              onClick={() => onWindowChange('week')}
+            >
+              {t('insights.days7')}
+            </button>
+            <button
+              type="button"
+              className={`segmented-btn ${window === 'month' ? 'segmented-btn-active' : ''}`}
+              onClick={() => onWindowChange('month')}
+            >
+              {t('insights.days30')}
+            </button>
+          </div>
+        )}
       </div>
 
       {error && <p className="error">{error}</p>}
@@ -237,19 +272,32 @@ export function InsightsScreen({
         <p className="muted-center">{t('list.loading')}</p>
       ) : (
         <>
-          {quietLine && (
-            <p className="insights-quiet">{quietLine}</p>
-          )}
-          <section className="insights-summary comeback-hero">
-            <p>
-              {t(comebacks.length === 1 ? 'insights.comeback' : 'insights.comebacks', {
-                count: comebacks.length,
-              })}
+          <section className="in-hero">
+            <div className="in-kpis">
+              <div className="in-kpi">
+                <span className="in-kpi-value">
+                  {insights.totalScheduled === 0 ? '—' : `${insights.showedUpScheduled}/${insights.totalScheduled}`}
+                </span>
+                <span className="in-kpi-label">{t('insights.kpiShowed')}</span>
+              </div>
+              <div className="in-kpi">
+                <span className="in-kpi-value">{comebacks.length}</span>
+                <span className="in-kpi-label">{t('insights.kpiComebacks')}</span>
+              </div>
+              <div className="in-kpi">
+                <span className="in-kpi-value">{easiest && easiest.showedUp > 0 && easiestName ? easiestName : '—'}</span>
+                <span className="in-kpi-label">{t('insights.easiest')}</span>
+              </div>
+            </div>
+            <p className="in-hero-story">{insights.summary}</p>
+            <p className="in-hero-range">
+              {insights.from} → {insights.to}
             </p>
-            {showComebackHelp && (
-              <p className="screen-sub">{t('insights.help')}</p>
+            {showComebackHelp && !earlyAccount && (
+              <p className="in-hero-help">{t('insights.help')}</p>
             )}
           </section>
+          {quietLine && <p className="in-quiet">{quietLine}</p>}
           {earlyAccount ? (
             <section className="today-section">
               <h3 className="section-label">{t('insights.patterns')}</h3>
@@ -262,51 +310,89 @@ export function InsightsScreen({
                     })}
               </p>
             </section>
-          ) : patterns.length > 0 && (
-            <section className="today-section">
-              <h3 className="section-label">{t('insights.patterns')}</h3>
-              <ul className="insights-list">
-                {patterns.map((pattern) => (
-                  <li key={pattern.kind}>
-                    <button
-                      type="button"
-                      className="insights-row"
-                      onClick={() => {
-                        track('pattern_tapped', { kind: pattern.kind })
-                        if (pattern.activityId) onOpenActivity?.(pattern.activityId)
-                      }}
-                    >
-                      <span className="activity-meta">
-                        <span className="activity-name">{pattern.earlyGuess ? t('insights.earlyGuess') : t('insights.pattern')}</span>
-                        <span className="activity-desc">{pattern.text}</span>
-                      </span>
-                    </button>
-                  </li>
-                ))}
-              </ul>
-            </section>
+          ) : (
+            patterns.length > 0 && (
+              <section className="today-section">
+                <h3 className="section-label">{t('insights.patterns')}</h3>
+                <ul className="in-patterns">
+                  {patterns.map((pattern) => (
+                    <li key={pattern.kind}>
+                      <button
+                        type="button"
+                        className="in-pattern"
+                        onClick={() => {
+                          track('pattern_tapped', { kind: pattern.kind })
+                          if (pattern.activityId) onOpenActivity?.(pattern.activityId)
+                        }}
+                      >
+                        <span className="in-pattern-kind">
+                          {pattern.earlyGuess ? t('insights.earlyGuess') : t('insights.pattern')}
+                        </span>
+                        <span className="in-pattern-text">{pattern.text}</span>
+                      </button>
+                    </li>
+                  ))}
+                </ul>
+              </section>
+            )
           )}
-          <div className="segmented window-toggle">
-            <button
-              type="button"
-              className={`segmented-btn ${window === 'week' ? 'segmented-btn-active' : ''}`}
-              onClick={() => onWindowChange('week')}
-            >
-              {t('insights.days7')}
-            </button>
-            <button
-              type="button"
-              className={`segmented-btn ${window === 'month' ? 'segmented-btn-active' : ''}`}
-              onClick={() => onWindowChange('month')}
-            >
-              {t('insights.days30')}
-            </button>
-          </div>
-          <section className="insights-summary">
-            <p>{insights.summary}</p>
-            <p className="screen-sub">
-              {insights.from} → {insights.to}
-            </p>
+
+          <section className="today-section">
+            <div className="in-charts">
+              <div className="in-chart-card">
+                <p className="in-chart-title">{t('insights.whenShow')}</p>
+                <p className="in-chart-note">
+                  {insights.peakSessionBucket
+                    ? t('insights.mostLand', {
+                        bucket: insights.peakSessionBucket.label,
+                        count: insights.peakSessionBucket.count,
+                      })
+                    : t('insights.noTimed')}
+                </p>
+                <div className="bar-grid bar-grid-4">
+                  {insights.sessionTimeBuckets.map((b) => (
+                    <div key={b.key} className="bar-grid-item">
+                      <div className="bar-grid-track">
+                        <div
+                          className="bar-grid-fill bar-grid-fill-primary"
+                          style={{
+                            height: `${barHeight(b.count, insights.sessionTimeBuckets)}%`,
+                          }}
+                        />
+                      </div>
+                      <span className="bar-grid-label">{b.label}</span>
+                    </div>
+                  ))}
+                </div>
+              </div>
+              {insights.peakSkipDay && (
+                <div className="in-chart-card in-chart-slip">
+                  <p className="in-chart-title">{t('insights.whenSkip')}</p>
+                  <p className="in-chart-note">
+                    {t('insights.skipMost', {
+                      day: insights.peakSkipDay.label,
+                      count: insights.peakSkipDay.count,
+                      window: windowWord,
+                    })}
+                  </p>
+                  <div className="bar-grid">
+                    {insights.dayOfWeekSkips.map((d) => (
+                      <div key={d.key} className="bar-grid-item">
+                        <div className="bar-grid-track">
+                          <div
+                            className="bar-grid-fill"
+                            style={{
+                              height: `${barHeight(d.count, insights.dayOfWeekSkips)}%`,
+                            }}
+                          />
+                        </div>
+                        <span className="bar-grid-label">{d.label}</span>
+                      </div>
+                    ))}
+                  </div>
+                </div>
+              )}
+            </div>
           </section>
 
           <section className="today-section">
@@ -318,7 +404,7 @@ export function InsightsScreen({
               <p className="muted-center">{t('insights.noHabits')}</p>
             ) : (
               <ul className="insights-list">
-                {insights.activities.map((a) => {
+                {habitRows.map((a) => {
                   const key = activityKey(a.activityId)
                   const open = isOpen(key)
                   const activity = activities.find((x) => x.id === a.activityId)
@@ -379,14 +465,16 @@ export function InsightsScreen({
                           </span>
                           <div className="progress-bar" aria-hidden>
                             <div
-                              className={`progress-bar-fill ${phoneSummary ? 'progress-bar-fill-done' : 'progress-bar-fill-warn'}`}
+                              className="progress-bar-fill"
                               style={{
                                 width: `${
                                   phoneSummary
                                     ? Math.round(
                                         (phoneSummary.metDays / Math.max(phoneDays?.length ?? 1, 1)) * 100,
                                       )
-                                    : Math.round(a.postponementRate * 100)
+                                    : a.scheduled === 0
+                                      ? 0
+                                      : Math.round((a.showedUp / a.scheduled) * 100)
                                 }%`,
                               }}
                             />
@@ -510,117 +598,6 @@ export function InsightsScreen({
                 })}
               </ul>
             )}
-          </section>
-
-          <section className="today-section">
-            <h3 className="section-label">{t('insights.patterns')}</h3>
-            <p className="screen-sub insights-hint">
-              {t('insights.tapPattern', { window: windowWord })}
-            </p>
-            <ul className="insights-list">
-              <li
-                className={`insights-row-wrap ${isOpen('skip-days') ? 'is-open' : ''}`}
-              >
-                <button
-                  type="button"
-                  className={`insights-row ${isOpen('skip-days') ? 'insights-row-active' : ''}`}
-                  onClick={() => toggle('skip-days')}
-                  aria-expanded={isOpen('skip-days')}
-                >
-                  <span className="activity-emoji insights-row-icon" aria-hidden>
-                    <Icon name="calendar" size={24} />
-                  </span>
-                  <span className="activity-meta">
-                    <span className="activity-name">{t('insights.whenSkip')}</span>
-                    <span className="activity-desc">
-                      {insights.peakSkipDay
-                        ? t('insights.skipMost', {
-                            day: insights.peakSkipDay.label,
-                            count: insights.peakSkipDay.count,
-                            window: windowWord,
-                          })
-                        : t('insights.nothingSkipped')}
-                    </span>
-                  </span>
-                  <span className="insights-rate">
-                    {insights.peakSkipDay ? insights.peakSkipDay.label : '—'}
-                  </span>
-                </button>
-                {isOpen('skip-days') && (
-                  <div className="insights-row-chart">
-                    <div className="insights-pattern-chart">
-                      <div className="bar-grid">
-                        {insights.dayOfWeekSkips.map((d) => (
-                          <div key={d.key} className="bar-grid-item">
-                            <div className="bar-grid-track">
-                              <div
-                                className="bar-grid-fill"
-                                style={{
-                                  height: `${barHeight(d.count, insights.dayOfWeekSkips)}%`,
-                                }}
-                              />
-                            </div>
-                            <span className="bar-grid-label">{d.label}</span>
-                          </div>
-                        ))}
-                      </div>
-                    </div>
-                  </div>
-                )}
-              </li>
-
-              <li
-                className={`insights-row-wrap ${isOpen('session-times') ? 'is-open' : ''}`}
-              >
-                <button
-                  type="button"
-                  className={`insights-row ${isOpen('session-times') ? 'insights-row-active' : ''}`}
-                  onClick={() => toggle('session-times')}
-                  aria-expanded={isOpen('session-times')}
-                >
-                  <span className="activity-emoji" aria-hidden>
-                    ⏰
-                  </span>
-                  <span className="activity-meta">
-                    <span className="activity-name">{t('insights.whenShow')}</span>
-                    <span className="activity-desc">
-                      {insights.peakSessionBucket
-                        ? t('insights.mostLand', {
-                            bucket: insights.peakSessionBucket.label,
-                            count: insights.peakSessionBucket.count,
-                          })
-                        : t('insights.noTimed')}
-                    </span>
-                  </span>
-                  <span className="insights-rate">
-                    {insights.peakSessionBucket
-                      ? insights.peakSessionBucket.label
-                      : '—'}
-                  </span>
-                </button>
-                {isOpen('session-times') && (
-                  <div className="insights-row-chart">
-                    <div className="insights-pattern-chart">
-                      <div className="bar-grid bar-grid-4">
-                        {insights.sessionTimeBuckets.map((b) => (
-                          <div key={b.key} className="bar-grid-item">
-                            <div className="bar-grid-track">
-                              <div
-                                className="bar-grid-fill bar-grid-fill-primary"
-                                style={{
-                                  height: `${barHeight(b.count, insights.sessionTimeBuckets)}%`,
-                                }}
-                              />
-                            </div>
-                            <span className="bar-grid-label">{b.label}</span>
-                          </div>
-                        ))}
-                      </div>
-                    </div>
-                  </div>
-                )}
-              </li>
-            </ul>
           </section>
         </>
       )}

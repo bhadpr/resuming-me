@@ -760,6 +760,8 @@ export const en = {
     days7: '7 days',
     days30: '30 days',
     easiest: 'Easiest to pick up',
+    kpiShowed: 'Showed up',
+    kpiComebacks: 'Comebacks',
     tapHabit: 'Tap a habit for its {window} chart.',
     week: 'week',
     month: 'month',

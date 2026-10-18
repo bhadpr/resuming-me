@@ -47,8 +47,9 @@ describe('parseAppPath', () => {
     expect(parseAppPath('/insights')).toEqual({ name: 'insights' })
     expect(parseAppPath('/review/2026-09-14')).toEqual({ name: 'review', weekStart: '2026-09-14' })
     expect(parseAppPath('/settings')).toEqual({ name: 'settings' })
-    expect(parseAppPath('/settings/themes')).toEqual({ name: 'themes' })
+    expect(parseAppPath('/settings/themes')).toEqual({ name: 'settings' })
     expect(parseAppPath('/admin/analytics')).toEqual({ name: 'admin', page: 'analytics' })
+    expect(parseAppPath('/admin/analytics-2')).toEqual({ name: 'admin', page: 'analytics2' })
     expect(parseAppPath('/admin/groups')).toEqual({ name: 'admin', page: 'groups' })
     expect(parseAppPath('/admin/groups/group-1')).toEqual({
       name: 'admin',

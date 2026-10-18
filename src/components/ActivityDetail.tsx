@@ -20,7 +20,7 @@ import {
   formatHistoryDay,
   formatQuietRange,
 } from '../lib/activityHistory'
-import { formatMonthDay, freshStartCovering, listActivityComebacks, longestReturnedGap, showedUpDayCount } from '../lib/comeback'
+import { formatMonthDay, freshStartCovering, listActivityComebacks, longestReturnedGap } from '../lib/comeback'
 import { addDays, todayLocalDate } from '../lib/dates'
 import { getDayStatus } from '../lib/dayStatus'
 import { isDeadlineOverdue } from '../lib/rollover'
@@ -41,6 +41,7 @@ import { tracksDistance } from '../lib/healthDistance'
 import { SessionDistanceLine, SessionDistanceSuffix } from './SessionDistance'
 import { StepsWeek } from './StepsWeek'
 import { DEFAULT_STEP_GOAL } from '../lib/steps'
+import './activity-detail-ui.css'
 
 const PAUSE_OPTIONS: { duration: PauseDuration; label: string }[] = [
   { duration: '1_week', label: '1 week' },
@@ -120,6 +121,7 @@ export function ActivityDetail({
   const [pauseOpen, setPauseOpen] = useState(false)
   const [expandedFresh, setExpandedFresh] = useState<string | null>(null)
   const [heatDate, setHeatDate] = useState<string | null>(null)
+  const [historyOpen, setHistoryOpen] = useState(false)
 
   const today = todayLocalDate()
   const activePause = findActivePause(pauses, activity.id, today)
@@ -155,10 +157,6 @@ export function ActivityDetail({
     [activity, entries, today, dayStatusOpts],
   )
   const longestGap = longestReturnedGap(comebackHits)
-  const showedUp30 = useMemo(
-    () => showedUpDayCount(activity, entries, today, 30, dayStatusOpts),
-    [activity, entries, today, dayStatusOpts],
-  )
   const heatDays = useMemo(() => {
     if (activity.type === 'deadline') return []
     const created = activity.created_at.slice(0, 10)
@@ -195,106 +193,39 @@ export function ActivityDetail({
   const canResume = Boolean(onResume) && Boolean(activePause)
   const showsDistance = tracksDistance(habitTemplateId(activity))
   const stepsHabit = habitTemplateId(activity) === 'steps'
+  const showedInWindow = seriesStats.done + seriesStats.partial
+  const scheduledInWindow = showedInWindow + seriesStats.skipped + seriesStats.open
+  const historyCount = historyGroups.reduce((total, group) => {
+    return (
+      total +
+      group.rows.filter((row) => row.kind === 'entry' || row.kind === 'count').length
+    )
+  }, 0)
 
   return (
-    <div className="activity-detail">
+    <div className="activity-detail ad">
       <button type="button" className="btn btn-ghost btn-sm back-btn" onClick={onBack}>
         <Icon name="back" />
         Back
       </button>
 
-      <div className="detail-hero detail-hero-row">
+      <div className="ad-hero">
         <HabitMark name={name} templateId={activity.template_id} />
-        <div className="detail-hero-text">
+        <div className="ad-hero-text">
           <h2>{name}</h2>
           <p className="screen-sub">{describeActivity(activity)}</p>
           {activity.archived && <span className="badge">Archived</span>}
           {activePause && <span className="badge badge-paused">{t('list.paused')}</span>}
         </div>
-      </div>
-
-      <div className="detail-top-actions">
-        {canResume ? (
-          <button
-            type="button"
-            className="btn btn-secondary"
-            disabled={busy}
-            onClick={() => void onResume?.()}
-          >
-            Resume habit
-          </button>
-        ) : canPause ? (
-          <button
-            type="button"
-            className="btn btn-secondary"
-            disabled={busy}
-            aria-expanded={pauseOpen}
-            onClick={() => setPauseOpen((open) => !open)}
-          >
-            Pause
-          </button>
-        ) : null}
-        <button type="button" className="btn btn-primary" onClick={onEdit} disabled={busy}>
+        <button type="button" className="btn btn-ghost btn-sm ad-edit" onClick={onEdit} disabled={busy}>
           Edit
         </button>
       </div>
-
-      {canPause && !canResume && pauseOpen && (
-        <div className="detail-pause-sheet">
-          <p className="activity-desc">Pause for — it stays hidden from Today until you come back.</p>
-          <div className="detail-pause-options">
-            {PAUSE_OPTIONS.map(({ duration, label }) => (
-              <button
-                key={duration}
-                type="button"
-                className="btn btn-secondary"
-                disabled={busy}
-                onClick={() => {
-                  void onPause?.(duration)
-                  setPauseOpen(false)
-                }}
-              >
-                {label}
-              </button>
-            ))}
-          </div>
-        </div>
-      )}
       {activePause?.paused_until && (
         <p className="activity-desc">Paused until {activePause.paused_until}.</p>
       )}
 
       {stepsHabit && <StepsWeek goal={activity.target_value ?? DEFAULT_STEP_GOAL} />}
-
-      {heatDays.length >= 7 && !stepsHabit && (
-        <section className="heat-section">
-          <div className="heat-scroll">
-            <div className="heat-row" role="list">
-              {heatDays.map((day) => (
-                <button
-                  key={day.date}
-                  type="button"
-                  role="listitem"
-                  className={`heat-cell heat-${heatClass(day.status)} ${heatDate === day.date ? 'heat-selected' : ''}`}
-                  aria-label={`${day.date}, ${heatWords(day.status)}`}
-                  onClick={() => setHeatDate((current) => (current === day.date ? null : day.date))}
-                />
-              ))}
-            </div>
-          </div>
-          {heatDate && (
-            <p className="screen-sub">
-              {heatDate}
-              {entries.some((entry) => entry.activity_id === activity.id && entry.date === heatDate)
-                ? ` · ${entries
-                    .filter((entry) => entry.activity_id === activity.id && entry.date === heatDate)
-                    .map((entry) => describeLogEntry(entry))
-                    .join(', ')}`
-                : ' · nothing logged'}
-            </p>
-          )}
-        </section>
-      )}
 
       {overdue && onMarkDeadlineComplete && onRescheduleDeadline && (
         <DeadlineOverduePrompt
@@ -310,141 +241,112 @@ export function ActivityDetail({
       )}
 
       {showChart && (
-        <>
-          <div className="segmented window-toggle">
-            {([7, 30, 90] as const).map((days) => (
-              <button
-                key={days}
-                type="button"
-                className={`segmented-btn ${windowDays === days ? 'segmented-btn-active' : ''}`}
-                onClick={() => setWindowDays(days)}
-              >
-                {days}d
-              </button>
-            ))}
+        <section className="ad-story">
+          <div className="ad-story-head">
+            <div className="segmented window-toggle">
+              {([7, 30, 90] as const).map((days) => (
+                <button
+                  key={days}
+                  type="button"
+                  className={`segmented-btn ${windowDays === days ? 'segmented-btn-active' : ''}`}
+                  onClick={() => setWindowDays(days)}
+                >
+                  {days}d
+                </button>
+              ))}
+            </div>
           </div>
-
+          <div className="ad-kpis">
+            <div className="ad-kpi">
+              <span className="ad-kpi-value">
+                {scheduledInWindow === 0 ? '—' : `${showedInWindow}/${scheduledInWindow}`}
+              </span>
+              <span className="ad-kpi-label">{t('insights.kpiShowed')}</span>
+            </div>
+            <div className="ad-kpi">
+              <span className="ad-kpi-value">{comebackHits.length}</span>
+              <span className="ad-kpi-label">{t('insights.kpiComebacks')}</span>
+            </div>
+            <div className="ad-kpi">
+              <span className="ad-kpi-value">{longestGap == null ? '—' : `${longestGap}d`}</span>
+              <span className="ad-kpi-label">Longest return</span>
+            </div>
+          </div>
+          {activity.tracking_mode === 'timer' && stats.averageSessionSeconds != null && (
+            <p className="ad-note">Avg session {formatAvgSession(stats.averageSessionSeconds)}</p>
+          )}
           {loadingEntries ? (
             <p className="muted-center">Loading trend…</p>
           ) : (
-            <>
-              <ActivityInsightChart
-                points={series}
-                windowLabel={`${windowDays}-day`}
-                target={
-                  activity.tracking_mode === 'checkbox'
-                    ? 1
-                    : activity.target_unit === 'seconds'
-                      ? (activity.target_value ?? 0) / 60
-                      : activity.target_value
-                }
-              />
-
-              <dl className="detail-facts">
-                <div>
-                  <dt>Done</dt>
-                  <dd>{seriesStats.done}</dd>
-                </div>
-                <div>
-                  <dt>Partial</dt>
-                  <dd>{seriesStats.partial}</dd>
-                </div>
-                <div>
-                  <dt>Skipped</dt>
-                  <dd>{seriesStats.skipped}</dd>
-                </div>
-                <div>
-                  <dt>Nothing logged</dt>
-                  <dd>{seriesStats.open}</dd>
-                </div>
-                {seriesStats.min != null && (
-                  <>
-                    <div>
-                      <dt>Min</dt>
-                      <dd>{formatSeriesValue(seriesStats.min, seriesStats.unit)}</dd>
-                    </div>
-                    <div>
-                      <dt>Max</dt>
-                      <dd>{formatSeriesValue(seriesStats.max!, seriesStats.unit)}</dd>
-                    </div>
-                    <div>
-                      <dt>Avg</dt>
-                      <dd>{formatSeriesValue(seriesStats.avg!, seriesStats.unit)}</dd>
-                    </div>
-                  </>
-                )}
-              </dl>
-            </>
+            <ActivityInsightChart
+              points={series}
+              windowLabel={`${windowDays}-day`}
+              target={
+                activity.tracking_mode === 'checkbox'
+                  ? 1
+                  : activity.target_unit === 'seconds'
+                    ? (activity.target_value ?? 0) / 60
+                    : activity.target_value
+              }
+            />
           )}
-        </>
+        </section>
+      )}
+
+      {heatDays.length >= 7 && !stepsHabit && (
+        <section className="heat-section ad-heat">
+          <h3 className="section-label">Last 90 days</h3>
+          <div className="heat-scroll">
+            <div className="heat-row" role="list">
+              {heatDays.map((day) => (
+                <button
+                  key={day.date}
+                  type="button"
+                  role="listitem"
+                  className={`heat-cell heat-${heatClass(day.status)} ${heatDate === day.date ? 'heat-selected' : ''}`}
+                  aria-label={`${day.date}, ${heatWords(day.status)}`}
+                  onClick={() => setHeatDate((current) => (current === day.date ? null : day.date))}
+                />
+              ))}
+            </div>
+          </div>
+          {heatDate && (
+            <p className="ad-note">
+              {formatHistoryDay(heatDate)}
+              {entries.some((entry) => entry.activity_id === activity.id && entry.date === heatDate)
+                ? ` · ${entries
+                    .filter((entry) => entry.activity_id === activity.id && entry.date === heatDate)
+                    .map((entry) => describeLogEntry(entry))
+                    .join(', ')}`
+                : ' · nothing logged'}
+            </p>
+          )}
+        </section>
       )}
 
       {!stepsHabit && (
-        <dl className="detail-facts">
-          {activity.type !== 'deadline' && (
-            <>
-              <div>
-                <dt>Comebacks (30d)</dt>
-                <dd>{comebackHits.length}</dd>
-              </div>
-              <div>
-                <dt>Longest gap returned from</dt>
-                <dd>{longestGap == null ? '—' : `${longestGap} days`}</dd>
-              </div>
-              <div>
-                <dt>Times shown up (30d)</dt>
-                <dd>{showedUp30}</dd>
-              </div>
-            </>
-          )}
-          {activity.tracking_mode === 'timer' && (
-            <div>
-              <dt>Avg session</dt>
-              <dd>{formatAvgSession(stats.averageSessionSeconds)}</dd>
-            </div>
-          )}
-          <div>
-            <dt>Type</dt>
-            <dd>{activity.type.replace('_', ' ')}</dd>
-          </div>
-          <div>
-            <dt>Tracking</dt>
-            <dd>{activity.tracking_mode}</dd>
-          </div>
-          {activity.target_value != null && (
-            <div>
-              <dt>Target</dt>
-              <dd>
-                {activity.target_value}
-                {activity.target_unit ? ` ${activity.target_unit}` : ''}
-              </dd>
-            </div>
-          )}
-          {activity.weekly_target != null && (
-            <div>
-              <dt>Weekly</dt>
-              <dd>{activity.weekly_target}×</dd>
-            </div>
-          )}
-          {activity.deadline && (
-            <div>
-              <dt>Deadline</dt>
-              <dd>{activity.deadline}</dd>
-            </div>
-          )}
-        </dl>
-      )}
-
-      {!stepsHabit && (
-        <section className="history-section">
-          <h3 className="section-label">History</h3>
-          {showsDistance && (
+        <section className={`history-section ${historyOpen ? 'is-open' : ''}`}>
+          <button
+            type="button"
+            className="history-toggle"
+            aria-expanded={historyOpen}
+            onClick={() => setHistoryOpen((open) => !open)}
+          >
+            <h3 className="section-label">
+              History
+              {historyCount > 0 && <span className="ad-history-count">{historyCount}</span>}
+            </h3>
+            <span className="activity-chevron" aria-hidden>
+              <Icon name="chevron" />
+            </span>
+          </button>
+          {historyOpen && showsDistance && (
             <SessionDistanceLine
               entries={entries.filter((entry) => entry.activity_id === activity.id)}
               showTotal={false}
             />
           )}
-          {loadingEntries ? (
+          {!historyOpen ? null : loadingEntries ? (
             <p className="muted-center">Loading history…</p>
           ) : historyGroups.length === 0 ? (
             <p className="muted-center">No log entries yet.</p>
@@ -552,6 +454,49 @@ export function ActivityDetail({
       {error && <p className="error">{error}</p>}
 
       <div className="detail-actions">
+        {canResume ? (
+          <button
+            type="button"
+            className="btn btn-secondary"
+            disabled={busy}
+            onClick={() => void onResume?.()}
+          >
+            Resume habit
+          </button>
+        ) : canPause ? (
+          <>
+            <button
+              type="button"
+              className="btn btn-secondary"
+              disabled={busy}
+              aria-expanded={pauseOpen}
+              onClick={() => setPauseOpen((open) => !open)}
+            >
+              Pause
+            </button>
+            {pauseOpen && (
+              <div className="detail-pause-sheet">
+                <p className="activity-desc">Pause for — it stays hidden from Today until you come back.</p>
+                <div className="detail-pause-options">
+                  {PAUSE_OPTIONS.map(({ duration, label }) => (
+                    <button
+                      key={duration}
+                      type="button"
+                      className="btn btn-secondary"
+                      disabled={busy}
+                      onClick={() => {
+                        void onPause?.(duration)
+                        setPauseOpen(false)
+                      }}
+                    >
+                      {label}
+                    </button>
+                  ))}
+                </div>
+              </div>
+            )}
+          </>
+        ) : null}
         {shrink && onShrink && (
           <button
             type="button"
@@ -629,14 +574,6 @@ export function ActivityDetail({
       </div>
     </div>
   )
-}
-
-function formatSeriesValue(value: number, unit: string): string {
-  const n = Number.isInteger(value) ? value : Math.round(value * 10) / 10
-  if (unit === 'min') return `${n} min`
-  if (unit === '×') return `${n}×`
-  if (unit === 'done') return String(n)
-  return String(n)
 }
 
 function LogEntryEditor({

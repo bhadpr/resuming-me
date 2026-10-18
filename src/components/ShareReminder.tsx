@@ -1,7 +1,7 @@
 import { useEffect, useRef, useState } from 'react'
 import { Capacitor } from '@capacitor/core'
 import { useLocale } from '../hooks/useLocale'
-import { eventPhotoUrl, reminderPhotoSrc } from '../lib/eventPhotoUrl'
+import { communityPhotoUrl, eventPhotoUrl, reminderPhotoSrc } from '../lib/eventPhotoUrl'
 import { compressEventPhoto } from '../lib/eventPhotos'
 import { reminderPhotoBlob } from '../lib/reminderPhotos'
 import { canSharePhoto, copyPhotoToClipboard, sharePhotoWithText } from '../lib/sharePhoto'
@@ -50,22 +50,28 @@ function issueKey(issue: SharedEventIssue): string {
   return 'sharedEvent.shareFailed'
 }
 
+async function fetchPhoto(url: string): Promise<Blob | null> {
+  try {
+    const response = await fetch(url)
+    return response.ok ? await response.blob() : null
+  } catch {
+    return null
+  }
+}
+
 /**
- * The photo to send: the event's saved one once shared, otherwise the reminder's own.
- * Null when there is none or it does not load.
+ * The photo to send: the event's saved one once shared, otherwise the reminder's own,
+ * otherwise the community picture it was added with. Null when there is none or it does not load.
  */
 async function photoToSend(reminder: Reminder): Promise<File | null> {
   let blob: Blob | null = null
   const saved = eventPhotoUrl(reminder.sharedPhotoPath)
   if (saved) {
-    try {
-      const response = await fetch(saved)
-      if (response.ok) blob = await response.blob()
-    } catch {
-      blob = null
-    }
+    blob = await fetchPhoto(saved)
   } else {
     blob = await reminderPhotoBlob(reminder)
+    const community = communityPhotoUrl(reminder.communityPhotoPath)
+    if (!blob && community) blob = await fetchPhoto(community)
   }
   return blob ? new File([blob], 'invitation.jpg', { type: 'image/jpeg' }) : null
 }

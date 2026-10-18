@@ -1,0 +1,304 @@
+/*
+ * Settings look, using the person's chosen theme only.
+ */
+
+.settings-screen.st {
+  display: flex;
+  flex-direction: column;
+  gap: 1rem;
+  min-width: 0;
+}
+
+.st-intro {
+  padding: 1rem 1.1rem;
+  border-radius: var(--radius);
+  border: 1px solid color-mix(in srgb, var(--color-primary) 28%, var(--color-border));
+  background: color-mix(in srgb, var(--color-primary) 10%, var(--color-surface));
+}
+
+.st-intro-kicker {
+  margin: 0 0 0.15rem;
+  font-size: var(--text-xs);
+  font-weight: var(--weight-semibold);
+  letter-spacing: 0.04em;
+  text-transform: uppercase;
+  color: var(--color-text-muted);
+}
+
+.st-intro-title {
+  margin: 0;
+  font-family: var(--font-display);
+  font-size: var(--text-lg, 1.2rem);
+  line-height: var(--leading-tight);
+  overflow-wrap: anywhere;
+}
+
+.st-intro-text {
+  margin: 0.3rem 0 0;
+  font-size: var(--text-sm);
+  line-height: var(--leading-body);
+  color: var(--color-text-muted);
+}
+
+.st-panel {
+  background: var(--color-surface);
+  border: 1px solid var(--color-border);
+  border-top: 4px solid var(--color-primary);
+  border-radius: var(--radius);
+  overflow: hidden;
+}
+
+.st-panel-head {
+  padding: 0.85rem 1.05rem 0.45rem;
+  background: linear-gradient(to bottom, color-mix(in srgb, var(--color-primary) 10%, transparent), transparent);
+}
+
+.st-panel-title {
+  margin: 0;
+  font-family: var(--font-display);
+  font-size: var(--text-lg, 1.15rem);
+  line-height: var(--leading-tight);
+}
+
+.st-panel-lead {
+  margin: 0.2rem 0 0;
+  font-size: var(--text-sm);
+  line-height: var(--leading-body);
+  color: var(--color-text-muted);
+}
+
+.st-panel-body {
+  display: flex;
+  flex-direction: column;
+  gap: 0.85rem;
+  padding: 0.35rem 1.05rem 1.05rem;
+  min-width: 0;
+}
+
+.st-block {
+  display: flex;
+  flex-direction: column;
+  gap: 0.45rem;
+  min-width: 0;
+}
+
+.st-block-title {
+  margin: 0;
+  font-size: var(--text-sm);
+  font-weight: var(--weight-semibold);
+  color: var(--color-text);
+}
+
+.st-hint {
+  margin: 0;
+  font-size: var(--text-sm);
+  line-height: var(--leading-body);
+  color: var(--color-text-muted);
+}
+
+.st-range {
+  display: inline-flex;
+  align-self: flex-start;
+  padding: 0.2rem;
+  gap: 0.2rem;
+  background: var(--color-primary-soft);
+  border: 1px solid color-mix(in srgb, var(--color-primary) 28%, var(--color-border));
+  border-radius: 999px;
+}
+
+.st-range-btn {
+  min-height: 2.1rem;
+  padding: 0 0.95rem;
+  font: inherit;
+  font-size: var(--text-sm);
+  font-weight: var(--weight-semibold);
+  color: var(--color-text-muted);
+  background: none;
+  border: 0;
+  border-radius: 999px;
+  cursor: pointer;
+}
+
+.st-range-btn-active {
+  color: var(--color-on-primary);
+  background: var(--color-primary);
+}
+
+.st-langs {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.4rem;
+}
+
+.st-lang {
+  min-height: 2.1rem;
+  padding: 0.25rem 0.75rem;
+  font: inherit;
+  font-size: var(--text-sm);
+  font-weight: var(--weight-semibold);
+  color: var(--color-text);
+  background: var(--color-surface);
+  border: 1px solid var(--color-border);
+  border-radius: 999px;
+  cursor: pointer;
+}
+
+.st-lang-active {
+  color: var(--color-on-primary);
+  background: var(--color-primary);
+  border-color: transparent;
+}
+
+.st-themes {
+  display: grid;
+  grid-template-columns: repeat(5, minmax(0, 1fr));
+  gap: 0.4rem;
+}
+
+.st-theme {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 0.35rem;
+  min-width: 0;
+  padding: 0.5rem 0.15rem 0.45rem;
+  font: inherit;
+  color: inherit;
+  background: var(--color-surface);
+  border: 1px solid var(--color-border);
+  border-radius: var(--radius-sm);
+  cursor: pointer;
+}
+
+.st-theme:hover {
+  background: var(--color-surface-raised, var(--color-primary-soft));
+}
+
+.st-theme-active {
+  border-color: var(--color-primary);
+  background: var(--color-primary-soft);
+  box-shadow: var(--shadow-focus);
+}
+
+.st-theme .theme-swatch {
+  width: 1.85rem;
+  height: 1.85rem;
+  border-radius: 50%;
+}
+
+.st-theme-name {
+  font-size: 0.68rem;
+  font-weight: var(--weight-semibold);
+  line-height: 1.15;
+  text-align: center;
+}
+
+.st-theme-desc {
+  margin: 0;
+}
+
+.st-link {
+  width: 100%;
+  display: flex;
+  align-items: center;
+  gap: 0.75rem;
+  padding: 0.7rem 0.75rem;
+  text-align: left;
+  color: inherit;
+  background: var(--color-surface);
+  border: 1px solid var(--color-border);
+  border-radius: var(--radius-sm);
+  cursor: pointer;
+}
+
+.st-link:hover:not(:disabled) {
+  background: var(--color-surface-raised, var(--color-primary-soft));
+  border-color: color-mix(in srgb, var(--color-primary) 35%, var(--color-border));
+}
+
+.st-link:disabled {
+  opacity: 0.65;
+  cursor: wait;
+}
+
+.st-link-icon {
+  flex: none;
+  display: grid;
+  place-items: center;
+  width: 2.2rem;
+  height: 2.2rem;
+  color: var(--color-on-primary);
+  background: var(--color-primary);
+  border-radius: 0.7rem;
+}
+
+.st-link-text {
+  display: flex;
+  flex-direction: column;
+  gap: 0.1rem;
+  min-width: 0;
+  flex: 1;
+}
+
+.st-link-title {
+  font-weight: var(--weight-semibold);
+}
+
+.st-link-desc {
+  font-size: var(--text-sm);
+  line-height: var(--leading-tight);
+  color: var(--color-text-muted);
+}
+
+.st-link-chevron {
+  flex: none;
+  color: var(--color-text-muted);
+}
+
+.st-link-danger .st-link-icon {
+  background: var(--color-danger);
+}
+
+.st-link-danger .st-link-title {
+  color: var(--color-danger);
+}
+
+.st-grid {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr);
+  gap: 0.55rem;
+}
+
+@media (min-width: 640px) {
+  .st-grid-2 {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
+}
+
+.st-sign-out {
+  width: 100%;
+}
+
+.st-danger {
+  padding: 0.75rem 0.8rem;
+  background: color-mix(in srgb, var(--color-danger) 8%, var(--color-surface));
+  border: 1px solid color-mix(in srgb, var(--color-danger) 28%, var(--color-border));
+  border-radius: var(--radius-sm);
+}
+
+.st-panel .digest-card {
+  padding: 0;
+  background: none;
+  border: 0;
+  border-radius: 0;
+}
+
+.st-panel .field-input,
+.st-panel .language-select {
+  background: var(--color-surface);
+  border-color: var(--color-border);
+}
+
+.settings-screen.st > .back-btn {
+  align-self: flex-start;
+}

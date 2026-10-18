@@ -1,6 +1,7 @@
 import type { RecordType } from '@devmaxime/capacitor-health-connect'
 import { phoneStepsSupported } from './healthSteps'
 import type { LogEntry } from './logs'
+import { track } from './track'
 
 export const DISTANCE_TEMPLATE_IDS = new Set(['walk', 'running'])
 export const DISTANCE_ACCESS_CHANGED = 'resuming-distance-access'
@@ -85,6 +86,7 @@ export async function requestDistanceAccess(): Promise<DistanceAccess> {
   } catch {
     access = 'unavailable'
   }
+  track('health_permission', { kind: 'distance', result: access === 'declined' ? 'denied' : access })
   if (access === 'declined') localStorage.setItem(DECLINED_KEY, '1')
   if (access === 'granted') localStorage.removeItem(DECLINED_KEY)
   accessCheck = Promise.resolve(access)

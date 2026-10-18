@@ -1,6 +1,7 @@
 import { Capacitor } from '@capacitor/core'
 import { createClient, type SupabaseClient } from '@supabase/supabase-js'
 import type { Database } from '../types/database'
+import { reportingFetch } from './apiFailures'
 
 const supabaseUrl = import.meta.env.VITE_SUPABASE_URL
 const supabaseAnonKey = import.meta.env.VITE_SUPABASE_ANON_KEY
@@ -47,6 +48,8 @@ export function createSupabaseClient(): SupabaseClient<Database> {
       // PKCE query params survive Android deep links; implicit hash tokens often do not.
       flowType: native ? 'pkce' : 'implicit',
     },
+    // The same requests as before; a failed one is also noticed for the admin Errors panel.
+    global: { fetch: reportingFetch },
   })
 
   return client

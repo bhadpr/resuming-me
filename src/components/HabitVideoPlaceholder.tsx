@@ -80,7 +80,16 @@ export function HabitVideoPlaceholder({
   // A video the person added themselves still wins.
   const speeds = own == null ? speedBreathClips(templateId) : null
   if (speeds) {
-    return <KapalabhatiVideos key={templateId} name={name} clips={speeds} playing={playing} paused={paused} />
+    return (
+      <KapalabhatiVideos
+        key={templateId}
+        name={name}
+        clips={speeds}
+        playing={playing}
+        paused={paused}
+        videoId={templateId}
+      />
+    )
   }
   const single = own == null ? singleBreathClip(templateId) : null
   if (single) {
@@ -92,6 +101,7 @@ export function HabitVideoPlaceholder({
         poster={single.poster}
         playing={playing}
         paused={paused}
+        videoId={templateId}
       />
     )
   }

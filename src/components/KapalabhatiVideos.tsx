@@ -7,6 +7,7 @@ import {
   type KapalabhatiSpeed,
 } from '../data/kapalbhatiVideos'
 import { useLocale } from '../hooks/useLocale'
+import { track } from '../lib/track'
 
 /**
  * Plays the clip. A phone or browser may refuse to start a video with sound unless the tap was
@@ -23,6 +24,19 @@ async function startPlaying(video: HTMLVideoElement | null | undefined) {
 }
 
 /**
+ * One `video_played` event the first time each clip plays on this screen. `by` says whether the
+ * timer started it or a tap did. Only the clip's id is sent, never what the person named the habit.
+ */
+function useVideoPlayEvent(videoId: string | null) {
+  const sent = useRef(new Set<string>())
+  return (variant: string, byTimer: boolean) => {
+    if (sent.current.has(variant)) return
+    sent.current.add(variant)
+    track('video_played', { video: videoId ?? 'unknown', speed: variant, by: byTimer ? 'timer' : 'tap' })
+  }
+}
+
+/**
  * Kapalabhati's three clips, one for each speed. The one you are on sits in the middle and plays;
  * the other two wait on either side, and tapping one brings it to the middle and plays it.
  * The timer drives the middle one: it plays while the timer runs and pauses with it.
@@ -32,12 +46,15 @@ export function KapalabhatiVideos({
   playing = false,
   paused = false,
   clips = KAPALABHATI_CLIPS,
+  videoId = null,
 }: {
   name: string
   playing?: boolean
   paused?: boolean
   /** Three speeds. Kapalabhati's clips are the default; Bhastrika passes its own. */
   clips?: readonly KapalabhatiClip[]
+  /** The habit's template id, sent with `video_played`. */
+  videoId?: string | null
 }) {
   const { t } = useLocale()
   const [speed, setSpeed] = useState<KapalabhatiSpeed>(KAPALABHATI_DEFAULT_SPEED)
@@ -45,6 +62,7 @@ export function KapalabhatiVideos({
   const wasWithTimer = useRef(false)
   const withTimer = playing || paused
   const { left } = kapalabhatiNeighbours(speed)
+  const reportPlay = useVideoPlayEvent(videoId)
 
   useEffect(() => {
     const video = videos.current[speed]
@@ -103,6 +121,7 @@ export function KapalabhatiVideos({
                   playsInline
                   preload={middle ? 'metadata' : 'none'}
                   aria-label={`${name}, ${label}`}
+                  onPlay={() => reportPlay(clip.speed, playing)}
                 />
                 {!middle && (
                   <button
@@ -132,17 +151,21 @@ export function OwnClipVideo({
   poster,
   playing = false,
   paused = false,
+  videoId = null,
 }: {
   name: string
   src: string
   poster: string
   playing?: boolean
   paused?: boolean
+  /** The habit's template id, sent with `video_played`. */
+  videoId?: string | null
 }) {
   const { t } = useLocale()
   const video = useRef<HTMLVideoElement>(null)
   const wasWithTimer = useRef(false)
   const withTimer = playing || paused
+  const reportPlay = useVideoPlayEvent(videoId)
 
   useEffect(() => {
     if (playing) {
@@ -166,6 +189,7 @@ export function OwnClipVideo({
           playsInline
           preload="metadata"
           aria-label={name}
+          onPlay={() => reportPlay('single', playing)}
         />
       </div>
       <figcaption className="screen-sub">{t('video.follow', { name })}</figcaption>

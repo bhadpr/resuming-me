@@ -764,6 +764,8 @@ export const mr: DeepString<typeof en> = {
     days7: '७ दिवस',
     days30: '३० दिवस',
     easiest: 'पुन्हा हातात घेणे सोपे',
+    kpiShowed: 'केले',
+    kpiComebacks: 'परती',
     tapHabit: 'त्याच्या {window} आलेखासाठी सवयीवर टॅप करा.',
     week: 'आठवडा',
     month: 'महिना',

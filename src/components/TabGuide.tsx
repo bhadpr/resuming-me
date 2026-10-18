@@ -1,8 +1,7 @@
-import { useState } from 'react'
+import { useEffect, useState } from 'react'
 import { useLocale } from '../hooks/useLocale'
+import { dismissTabGuide, recordTabGuideVisit, tabGuideDismissed } from '../lib/tabGuide'
 import { Icon, type IconName } from './Icon'
-
-const GUIDE_KEY = 'resuming-tab-guide'
 
 const PLACES: Array<{ icon: IconName; name: string; line: string }> = [
   { icon: 'today', name: 'nav.today', line: 'guide.today' },
@@ -11,16 +10,16 @@ const PLACES: Array<{ icon: IconName; name: string; line: string }> = [
   { icon: 'metrics', name: 'nav.vitals', line: 'guide.health' },
 ]
 
-/** One short map of the four tabs, until the person dismisses it. */
+/** Map of the four tabs. Hides after Got it, or after three visits to Today. */
 export function TabGuide() {
   const { t } = useLocale()
-  const [open, setOpen] = useState(() => {
-    try {
-      return localStorage.getItem(GUIDE_KEY) !== '1'
-    } catch {
-      return true
-    }
-  })
+  const [open, setOpen] = useState(() => !tabGuideDismissed())
+
+  useEffect(() => {
+    if (!open) return
+    recordTabGuideVisit()
+  }, [open])
+
   if (!open) return null
 
   return (
@@ -41,11 +40,7 @@ export function TabGuide() {
         type="button"
         className="btn btn-secondary btn-compact"
         onClick={() => {
-          try {
-            localStorage.setItem(GUIDE_KEY, '1')
-          } catch {
-            // The guide can show again next visit.
-          }
+          dismissTabGuide()
           setOpen(false)
         }}
       >

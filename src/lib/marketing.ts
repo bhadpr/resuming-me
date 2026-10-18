@@ -6,6 +6,15 @@ export const RETENTION_VISITS = 5
 
 export const PLAY_STORE_URL = `https://play.google.com/store/apps/details?id=${PLAY_PACKAGE}`
 
+/**
+ * The Play listing from a button in the web app, tagged with where it was pressed so the admin
+ * installs card can tell which button brought the install. `where` is a short word like "landing".
+ */
+export function playStoreUrl(where: string): string {
+  const referrer = `utm_source=resuming.me&utm_medium=web&utm_content=${encodeURIComponent(where)}`
+  return `${PLAY_STORE_URL}&referrer=${encodeURIComponent(referrer)}`
+}
+
 export function marketingInstallLink(groupCode: string, memberCode: string): string {
   const referrer = `utm_source=${encodeURIComponent(groupCode)}&utm_medium=play&utm_campaign=${encodeURIComponent(memberCode)}`
   return `https://play.google.com/store/apps/details?id=${PLAY_PACKAGE}&referrer=${encodeURIComponent(referrer)}`

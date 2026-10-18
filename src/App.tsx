@@ -310,6 +310,7 @@ export const appRouteObjects = [
               { path: '/settings/reminders', element: <RouteSlot /> },
               { path: '/settings', element: <RouteSlot /> },
               { path: '/admin/analytics', element: <RouteSlot /> },
+              { path: '/admin/analytics-2', element: <RouteSlot /> },
               { path: '/admin/feedback', element: <RouteSlot /> },
               { path: '/admin/events', element: <RouteSlot /> },
               { path: '/admin/community', element: <RouteSlot /> },
