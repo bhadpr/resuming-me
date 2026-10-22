@@ -70,6 +70,7 @@ Do not tick "Medication and treatment management". Medicines are hidden in the A
 The app only reads. It asks for no write permissions. Give one reason per permission:
 
 - **Steps (`READ_STEPS`):** Shows today's steps on the Today screen next to the user's daily step goal, and the daily totals for the last 7 days. Read only, and never sent off the device.
-- **Distance (`READ_DISTANCE`):** Shows how far the user went during a walk or run they timed in the app. Read only. Kept on the device and never sent to our servers.
 
-Data safety needs no change for these: neither steps nor distance leaves the phone, so Play does not count them as collected.
+Do not declare Distance. Version 1.0.8 does not request `READ_DISTANCE`. If Distance is still listed, remove it before resubmitting.
+
+Data safety needs no change: step counts stay on the phone, so Play does not count them as collected.

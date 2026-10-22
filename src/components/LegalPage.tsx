@@ -149,15 +149,11 @@ function PrivacyContent() {
           event, we store the reason and their account or anonymous device id.
         </li>
         <li>
-          <strong>Steps and distance.</strong> On Android, if you allow it, the app
+          <strong>Steps.</strong> On Android, if you allow it, the app
           reads your step counts from Health Connect on your phone: today’s count, shown
           on Today, and your daily totals for the last 7 days, shown next to your goal.
-          If you also allow distance, the app reads how far you went during a walk or
-          run you timed in the app, and shows it with that session. We do not write
-          steps or distance to Health Connect, and we do not send step counts or
-          distances to our servers. Distances for past sessions are kept on this device
-          so they don’t have to be read again. A number you type, and your daily step
-          goal, stay on this device.
+          We do not write steps to Health Connect, and we do not send step counts to
+          our servers. A number you type, and your daily step goal, stay on this device.
           Our use of information received from Health Connect follows the Health
           Connect Permissions policy, including its Limited Use requirements.
         </li>
@@ -204,8 +200,8 @@ function PrivacyContent() {
           visits. See “Cookies &amp; local storage” below. On Android, an optional daily
           reminder, medicine reminders, and alerts for your own reminders are scheduled
           on the device only. They
-          are not delivered through a cloud push service. A typed step count, the
-          daily step goal, and distances read from Health Connect stay on the device.
+          are not delivered through a cloud push service. A typed step count and the
+          daily step goal stay on the device.
         </li>
       </ul>
 
@@ -295,7 +291,7 @@ function PrivacyContent() {
         <li>
           Local preferences such as theme, language, a guest onboarding draft (kept on
           this device for up to 7 days, until you save an account), daily reminder time,
-          a typed step count, the daily step goal, distances read for timed walks and runs,
+          a typed step count, the daily step goal,
           and in-progress timer state
         </li>
         <li>

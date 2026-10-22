@@ -5,6 +5,11 @@ import { track } from './track'
 
 export const DISTANCE_TEMPLATE_IDS = new Set(['walk', 'running'])
 export const DISTANCE_ACCESS_CHANGED = 'resuming-distance-access'
+/**
+ * Off until distance is on a screen a reviewer can open without finishing a walk.
+ * Play rejected READ_DISTANCE because that line only appeared after a session.
+ */
+const DISTANCE_READS_ENABLED = false
 
 const CACHE_KEY = 'resuming-session-distance'
 const DECLINED_KEY = 'resuming-distance-declined'
@@ -56,7 +61,7 @@ async function healthConnect() {
 let accessCheck: Promise<DistanceAccess> | null = null
 
 export function distanceAccess(): Promise<DistanceAccess> {
-  if (!phoneStepsSupported()) return Promise.resolve('unavailable')
+  if (!DISTANCE_READS_ENABLED || !phoneStepsSupported()) return Promise.resolve('unavailable')
   accessCheck ??= (async (): Promise<DistanceAccess> => {
     try {
       const health = await healthConnect()
@@ -78,6 +83,7 @@ export function recheckDistanceAccess(): void {
 }
 
 export async function requestDistanceAccess(): Promise<DistanceAccess> {
+  if (!DISTANCE_READS_ENABLED) return 'unavailable'
   let access: DistanceAccess
   try {
     const health = await healthConnect()
@@ -118,6 +124,7 @@ function saveCached(id: string, meters: number): void {
 
 /** Metres Health Connect recorded during this session, or null when it can't say. */
 export async function readSessionDistance(entry: DistanceSession): Promise<number | null> {
+  if (!DISTANCE_READS_ENABLED) return null
   const span = sessionWindow(entry)
   if (!span) return null
   const cached = loadCache()[entry.id]

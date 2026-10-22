@@ -106,16 +106,15 @@ export const en = {
     },
   },
   steps: {
-    kicker: 'Steps & distance',
-    title: 'Your steps, and how far you walked',
-    body: 'On Android, Resuming reads your steps from Health Connect and shows them on Today, next to the goal you picked. Time a walk or a run, and it shows how far you went.',
+    kicker: 'Steps',
+    title: 'Your steps, next to a goal you pick',
+    body: 'On Android, Resuming reads your steps from Health Connect and shows them on Today, next to the goal you picked.',
     points: [
       'Today’s steps next to your daily goal',
       'The last 7 days, and the days you met your goal',
-      'Distance for timed walks and runs',
     ],
-    note: 'Steps and distance need an Android phone with Health Connect. Distance shows up when your phone or watch saves it there.',
-    noteSoon: 'Steps and distance are in the Android app, coming soon to Google Play. They need Health Connect, and distance shows up when your phone or watch saves it there.',
+    note: 'Steps need an Android phone with Health Connect. They stay on the phone.',
+    noteSoon: 'Steps are in the Android app, coming soon to Google Play. They need Health Connect, and they stay on the phone.',
     mock: {
       heading: 'Today',
       steps: 'Steps',
