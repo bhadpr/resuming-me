@@ -21,18 +21,27 @@ export function ReminderKindMark({ kind, photo }: { kind: ReminderKind; photo?: 
 }
 
 /** A photo at full width, for the reminder and the event page. Hidden if it does not load. */
-export function EventPhoto({ src, alt }: { src: string | null | undefined; alt: string }) {
+export function EventPhoto({
+  src,
+  alt,
+  className,
+}: {
+  src: string | null | undefined
+  alt: string
+  className?: string
+}) {
   const [failed, setFailed] = useState<string | null>(null)
+  const photoClass = className ? `event-photo ${className}` : 'event-photo'
   if (!src || failed === src) return null
   if (src.startsWith('data:')) {
     return (
-      <div className="event-photo">
+      <div className={photoClass}>
         <img src={src} alt={alt} decoding="async" onError={() => setFailed(src)} />
       </div>
     )
   }
   return (
-    <a className="event-photo" href={src} target="_blank" rel="noreferrer">
+    <a className={photoClass} href={src} target="_blank" rel="noreferrer">
       <img src={src} alt={alt} decoding="async" onError={() => setFailed(src)} />
     </a>
   )

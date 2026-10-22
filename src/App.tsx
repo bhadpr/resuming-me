@@ -20,6 +20,7 @@ import { FeedbackPage } from './components/FeedbackPage'
 import { NotFoundPage } from './components/NotFoundPage'
 import { DeleteAccountPage } from './components/DeleteAccountPage'
 import { SharedEventPage } from './components/SharedEventPage'
+import { SharedListPage } from './components/SharedListPage'
 import { StartPage } from './components/StartPage'
 import { GuestMergeBanner } from './components/GuestMergeBanner'
 import { GuestAppShell, isGuestAppPath } from './components/GuestAppShell'
@@ -69,7 +70,7 @@ function RootLayout() {
   useSharedEventLinks()
   const { localeChosen, localeResolved } = useLocale()
   const { pathname } = useLocation()
-  const skipLanguage = !Capacitor.isNativePlatform() && pathname.startsWith('/e/')
+  const skipLanguage = !Capacitor.isNativePlatform() && (pathname.startsWith('/e/') || pathname.startsWith('/c/'))
 
   useEffect(() => {
     if (!localeResolved) return
@@ -250,6 +251,20 @@ function PublicFeedbackRoute() {
   )
 }
 
+function SharedListRoute() {
+  const { code = '' } = useParams()
+
+  useEffect(() => {
+    trackPageView('/c', 'shared-list')
+  }, [])
+
+  return (
+    <PublicPageFrame>
+      <SharedListPage code={code.toLowerCase()} />
+    </PublicPageFrame>
+  )
+}
+
 function SharedEventRoute() {
   const { code = '' } = useParams()
 
@@ -290,6 +305,7 @@ export const appRouteObjects = [
       { path: '/feedback', element: <PublicFeedbackRoute /> },
       { path: '/delete-account', element: <PublicDeleteAccountRoute /> },
       { path: '/e/:code', element: <SharedEventRoute /> },
+      { path: '/c/:code', element: <SharedListRoute /> },
       {
         element: <RequireAuth />,
         children: [
@@ -322,6 +338,7 @@ export const appRouteObjects = [
               { path: '/admin/feedback', element: <RouteSlot /> },
               { path: '/admin/events', element: <RouteSlot /> },
               { path: '/admin/community', element: <RouteSlot /> },
+              { path: '/admin/lists', element: <RouteSlot /> },
               { path: '/admin/groups', element: <RouteSlot /> },
               { path: '/admin/groups/:groupId', element: <RouteSlot /> },
             ],

@@ -36,7 +36,7 @@
                 <data android:scheme="@string/custom_url_scheme" android:host="auth" android:pathPrefix="/callback" />
             </intent-filter>
 
-            <!-- Shared event links. Verified by https://resuming.me/.well-known/assetlinks.json -->
+            <!-- Shared event (/e/) and reminder list (/c/) links. Verified by https://resuming.me/.well-known/assetlinks.json -->
             <intent-filter android:autoVerify="true">
                 <action android:name="android.intent.action.VIEW" />
                 <category android:name="android.intent.category.DEFAULT" />
@@ -45,6 +45,7 @@
                 <data android:host="resuming.me" />
                 <data android:host="www.resuming.me" />
                 <data android:pathPrefix="/e/" />
+                <data android:pathPrefix="/c/" />
             </intent-filter>
 
             <intent-filter>

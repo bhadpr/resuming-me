@@ -141,12 +141,22 @@ function PrivacyContent() {
           description, the optional From line you type, its day, time, time zone and kind,
           a copy of the reminder’s photo if it has one, and a short link code, tied to your
           account. Anyone with the link can see the text, description, photo, From line and
-          time, but never your name, email or phone number. Switching an event off deletes
+          time, but never your name, email or phone number.           Switching an event off deletes
           its photo, and deleting your account deletes the photos of events you shared. When someone adds a
           shared event, we store that their account, or an anonymous id for their device,
           follows it, so we can count how many people added it and tell their copy if it is
           cancelled. We do not show the organizer who added it. If someone reports an
           event, we store the reason and their account or anonymous device id.
+        </li>
+        <li>
+          <strong>Reminder lists.</strong> An admin can publish a list of reminders.
+          Anyone with the link can read the title, each reminder’s text, day, and time,
+          and one picture for the whole list if the admin added one.
+          Accepting stores a copy on that person’s account, or on their device if they are
+          not signed in. We store that their account, or an anonymous id for their device,
+          accepted the list, so we can count how many people accepted it. We do not store
+          their name. If someone reports a list, we store the reason and their account or
+          anonymous device id.
         </li>
         <li>
           <strong>Steps.</strong> On Android, if you allow it, the app
@@ -222,7 +232,9 @@ function PrivacyContent() {
       </p>
       <p>
         Your reminders and their photos are private unless you choose Share on WhatsApp. A shared event,
-        with its photo, can be seen by anyone with its link. Reminder and event text is not sent to our
+        with its photo, can be seen by anyone with its link. An admin can publish a list of reminders,
+        and anyone with that link can read it, including its picture if it has one. Accepting a list stores a copy on that person’s account
+        or device. Reminder and event text is not sent to our
         analytics, which count only how many reminders and shared events are added,
         opened and done.
       </p>

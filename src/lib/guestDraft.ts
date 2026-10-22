@@ -529,6 +529,7 @@ function normalizeGuestReminders(list: unknown, now = Date.now()): Reminder[] {
       everyYear: item.everyYear === true,
       doneAt,
       sharedEventId: typeof item.sharedEventId === 'string' ? item.sharedEventId : null,
+      ...(typeof item.sharedListItemId === 'string' ? { sharedListItemId: item.sharedListItemId } : {}),
       ...(typeof item.communityId === 'string' ? { communityId: item.communityId } : {}),
       ...(isEventPhotoPath(item.communityPhotoPath) ? { communityPhotoPath: item.communityPhotoPath } : {}),
       ...(item.alertOff === true ? { alertOff: true } : {}),
@@ -580,6 +581,7 @@ function newGuestReminder(input: ReminderInput): Reminder {
       : {}),
     doneAt: null,
     sharedEventId: input.sharedEventId ?? null,
+    ...(input.sharedListItemId ? { sharedListItemId: input.sharedListItemId } : {}),
     ...(input.communityId ? { communityId: input.communityId } : {}),
     ...(isEventPhotoPath(input.communityPhotoPath) ? { communityPhotoPath: input.communityPhotoPath } : {}),
   }

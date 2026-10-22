@@ -356,6 +356,7 @@ export interface Database {
           last_done_on: string | null
           done_at: string | null
           shared_event_id: string | null
+          shared_list_item_id: string | null
           community_id: string | null
           community_photo_path: string | null
           alert_off: boolean
@@ -381,6 +382,7 @@ export interface Database {
           last_done_on?: string | null
           done_at?: string | null
           shared_event_id?: string | null
+          shared_list_item_id?: string | null
           community_id?: string | null
           community_photo_path?: string | null
           alert_off?: boolean
@@ -404,6 +406,7 @@ export interface Database {
           last_done_on?: string | null
           done_at?: string | null
           shared_event_id?: string | null
+          shared_list_item_id?: string | null
           alert_off?: boolean
         }
         Relationships: []
@@ -443,6 +446,60 @@ export interface Database {
           kind?: string
           photo_path?: string | null
           active?: boolean
+          sort_order?: number
+        }
+        Relationships: []
+      }
+      shared_lists: {
+        Row: {
+          id: string
+          code: string
+          title: string
+          status: string
+          photo_path: string | null
+          created_at: string
+          updated_at: string
+        }
+        Insert: {
+          id?: string
+          code?: string
+          title: string
+          status?: string
+          photo_path?: string | null
+          created_at?: string
+          updated_at?: string
+        }
+        Update: {
+          title?: string
+          status?: string
+          photo_path?: string | null
+        }
+        Relationships: []
+      }
+      shared_list_items: {
+        Row: {
+          id: string
+          list_id: string
+          text: string
+          day: string
+          hour: number | null
+          minute: number | null
+          sort_order: number
+        }
+        Insert: {
+          id?: string
+          list_id: string
+          text: string
+          day: string
+          hour?: number | null
+          minute?: number | null
+          sort_order?: number
+        }
+        Update: {
+          text?: string
+          day?: string
+          hour?: number | null
+          minute?: number | null
           sort_order?: number
         }
         Relationships: []
@@ -1047,6 +1104,29 @@ export interface Database {
       report_shared_event: {
         Args: { p_event_id: string; p_reason: string; p_device_id?: string | null }
         Returns: undefined
+      }
+      accept_shared_list: {
+        Args: { p_list_id: string; p_device_id?: string | null }
+        Returns: undefined
+      }
+      claim_shared_list_accepts: {
+        Args: { p_device_id?: string | null }
+        Returns: undefined
+      }
+      report_shared_list: {
+        Args: { p_list_id: string; p_reason: string; p_device_id?: string | null }
+        Returns: undefined
+      }
+      admin_shared_list_stats: {
+        Args: Record<string, never>
+        Returns: {
+          list_id: string
+          accepts: number
+          reports: number
+          spam: number
+          harmful: number
+          other: number
+        }[]
       }
       admin_shared_events: {
         Args: Record<string, never>

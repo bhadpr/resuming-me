@@ -21,12 +21,13 @@ function clean(value: string | null): string | null {
 /**
  * Where an install came from, read from the Play install referrer (the decoded query string).
  * Our website and web-app buttons send utm_source=resuming.me; a partner's link sends the group as
- * utm_source and the member as utm_campaign; a shared event sends event=<code>. No referrer at all
- * means the app was not installed through a tagged link.
+ * utm_source and the member as utm_campaign; a shared event sends event=<code>; a shared list
+ * sends list=<code>. No referrer at all means the app was not installed through a tagged link.
  */
 export function installSourceFromReferrer(referrer: string | null | undefined): InstallSource {
   const params = new URLSearchParams(referrer ?? '')
   if (params.get('event')) return { source: 'shared_event', medium: null, content: null }
+  if (params.get('list')) return { source: 'shared_list', medium: null, content: null }
   const source = clean(params.get('utm_source'))
   if (!source) return { source: 'direct', medium: null, content: null }
   return {

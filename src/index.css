@@ -4102,6 +4102,15 @@ button.community-card.community-card-picked {
   object-fit: contain;
 }
 
+.event-photo-thumb {
+  width: 5.5rem;
+}
+
+.event-photo-thumb img {
+  max-height: 5.5rem;
+  object-fit: cover;
+}
+
 .reminder-locked {
   display: flex;
   gap: var(--space-2);
@@ -4219,6 +4228,33 @@ button.community-card.community-card-picked {
   font-size: var(--text-sm);
   font-weight: var(--weight-semibold);
   color: var(--color-text-muted);
+}
+
+.shared-list-items {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-2);
+}
+
+.shared-list-item label,
+.shared-list-item-saved {
+  display: flex;
+  flex-direction: column;
+  gap: 0.15rem;
+  padding: var(--space-3);
+  border: 1px solid var(--color-border);
+  border-radius: var(--radius-md);
+}
+
+.shared-list-item label {
+  cursor: pointer;
+}
+
+.shared-list-item input {
+  margin-bottom: 0.25rem;
 }
 
 .shared-event-card {

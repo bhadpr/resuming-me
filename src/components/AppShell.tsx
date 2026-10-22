@@ -90,6 +90,9 @@ const AdminFeedbackScreen = lazy(() =>
 const AdminCommunityScreen = lazy(() =>
   import('./AdminCommunityScreen').then((m) => ({ default: m.AdminCommunityScreen })),
 )
+const AdminSharedListsScreen = lazy(() =>
+  import('./AdminSharedListsScreen').then((m) => ({ default: m.AdminSharedListsScreen })),
+)
 const AdminSharedEventsScreen = lazy(() =>
   import('./AdminSharedEventsScreen').then((m) => ({ default: m.AdminSharedEventsScreen })),
 )
@@ -980,6 +983,10 @@ export function AppShell() {
       trackPageView('/admin/community', 'Community reminders')
       return
     }
+    if (adminPage === 'lists') {
+      trackPageView('/admin/lists', 'Reminder lists')
+      return
+    }
     if (settingsOpen) {
       if (settingsPage === 'reminders') trackPageView('/settings/reminders', 'Reminders and emails')
       else trackPageView('/settings', 'Settings')
@@ -1036,7 +1043,9 @@ export function AppShell() {
           ? 'Shared events · Resuming'
           : adminPage === 'community'
             ? 'Community reminders · Resuming'
-            : 'Feedback · Resuming'
+            : adminPage === 'lists'
+              ? 'Reminder lists · Resuming'
+              : 'Feedback · Resuming'
     : reviewWeekStart
       ? 'This week · Resuming'
     : settingsOpen
@@ -1810,7 +1819,9 @@ export function AppShell() {
           ? 'Shared events'
           : adminPage === 'community'
             ? 'Community reminders'
-            : adminPage === 'groups'
+            : adminPage === 'lists'
+              ? 'Reminder lists'
+              : adminPage === 'groups'
               ? 'Group numbers'
               : settingsOpen
                   ? settingsPage === 'reminders'
@@ -1872,6 +1883,10 @@ export function AppShell() {
           <Suspense fallback={<ScreenChunkFallback />}>
             <AdminCommunityScreen />
           </Suspense>
+        ) : adminPage === 'lists' ? (
+          <Suspense fallback={<ScreenChunkFallback />}>
+            <AdminSharedListsScreen />
+          </Suspense>
         ) : adminPage === 'groups' ? (
           <Suspense fallback={<ScreenChunkFallback />}>
             <AdminGroupsScreen
@@ -1912,6 +1927,10 @@ export function AppShell() {
                   onOpenCommunity={() => {
                     if (!isAdmin) return
                     navigate('/admin/community')
+                  }}
+                  onOpenSharedLists={() => {
+                    if (!isAdmin) return
+                    navigate('/admin/lists')
                   }}
                   onOpenGroups={(groupId) => {
                     navigate(groupId ? `/admin/groups/${groupId}` : '/admin/groups')

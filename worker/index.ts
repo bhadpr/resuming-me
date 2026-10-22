@@ -1,5 +1,6 @@
 // resuming.me Worker. Static files and the single-page app come from ./dist.
-// Only /e/<code> runs here first, so WhatsApp's link preview shows the event, not the generic Resuming card.
+// Only /e/<code> and /c/<code> run here first, so WhatsApp's link preview shows the
+// event or the reminder list, not the generic Resuming card.
 
 interface Env {
   ASSETS: { fetch(request: Request): Promise<Response> }
@@ -32,6 +33,7 @@ interface SharedEventRow {
 }
 
 const EVENT_PATH = /^\/e\/([a-z0-9]{6,12})\/?$/i
+const LIST_PATH = /^\/c\/([a-z0-9]{6})\/?$/i
 const PHOTO_PATH = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}\/[a-z0-9-]{8,64}\.jpg$/
 
 /** The event's own photo for the preview, while the event is live. */
@@ -96,65 +98,121 @@ function preview(row: SharedEventRow | null): { title: string; description: stri
   }
 }
 
+function listPreview(title: string | null): { title: string; description: string } {
+  if (!title) {
+    return { title: 'List not available · Resuming', description: 'This list is no longer available.' }
+  }
+  return {
+    title,
+    description: 'A list of reminders. Tap to add them on Resuming.',
+  }
+}
+
+async function fetchList(env: Env, code: string): Promise<{ title: string; photo: string | null } | null> {
+  if (!env.SUPABASE_URL || !env.SUPABASE_ANON_KEY) return null
+  try {
+    const response = await fetch(
+      `${env.SUPABASE_URL.replace(/\/+$/, '')}/rest/v1/shared_lists?code=eq.${encodeURIComponent(code)}&status=eq.active&select=title,photo_path`,
+      {
+        headers: {
+          apikey: env.SUPABASE_ANON_KEY,
+          authorization: `Bearer ${env.SUPABASE_ANON_KEY}`,
+        },
+        signal: AbortSignal.timeout(2500),
+      },
+    )
+    if (!response.ok) return null
+    const rows = (await response.json()) as { title?: string; photo_path?: string | null }[]
+    const title = rows[0]?.title?.replace(/\s+/g, ' ').trim()
+    if (!title) return null
+    const path = rows[0]?.photo_path ?? ''
+    const photo =
+      env.SUPABASE_URL && PHOTO_PATH.test(path)
+        ? `${env.SUPABASE_URL.replace(/\/+$/, '')}/storage/v1/object/public/list-photos/${path}`
+        : null
+    return { title, photo }
+  } catch {
+    return null
+  }
+}
+
+function rewritePreview(
+  page: Response,
+  title: string,
+  description: string,
+  pageUrl: string,
+  photo: string | null,
+): Response {
+  const set = (value: string) => ({
+    element(element: RewriterElement) {
+      element.setAttribute('content', attr(value))
+    },
+  })
+  const drop = {
+    element(element: RewriterElement) {
+      element.remove()
+    },
+  }
+
+  let rewriter = new HTMLRewriter()
+  if (photo) {
+    rewriter = rewriter
+      .on('meta[property="og:image"]', set(photo))
+      .on('meta[name="twitter:image"]', set(photo))
+      .on('meta[property="og:image:width"]', drop)
+      .on('meta[property="og:image:height"]', drop)
+  }
+
+  const rewritten = rewriter
+    .on('title', {
+      element(element) {
+        element.setInnerContent(title)
+      },
+    })
+    .on('meta[name="description"]', set(description))
+    .on('meta[property="og:title"]', set(title))
+    .on('meta[property="og:description"]', set(description))
+    .on('meta[property="og:url"]', set(pageUrl))
+    .on('meta[name="twitter:title"]', set(title))
+    .on('meta[name="twitter:description"]', set(description))
+    .on('link[rel="canonical"]', {
+      element(element) {
+        element.setAttribute('href', pageUrl)
+      },
+    })
+    .on('head', {
+      element(element) {
+        element.append('<meta name="robots" content="noindex" />', { html: true })
+      },
+    })
+    .transform(page)
+
+  const response = new Response(rewritten.body, rewritten)
+  response.headers.set('cache-control', 'public, max-age=60')
+  response.headers.set('x-robots-tag', 'noindex')
+  return response
+}
+
 export default {
   async fetch(request: Request, env: Env): Promise<Response> {
     const page = await env.ASSETS.fetch(request)
     const url = new URL(request.url)
-    const match = EVENT_PATH.exec(url.pathname)
-    if (!match || !(page.headers.get('content-type') ?? '').includes('text/html')) return page
+    if (!(page.headers.get('content-type') ?? '').includes('text/html')) return page
 
-    const code = match[1].toLowerCase()
-    const row = await fetchEvent(env, code)
-    const { title, description } = preview(row)
-    const photo = photoUrl(env, row)
-    const pageUrl = `https://resuming.me/e/${code}`
-    const set = (value: string) => ({
-      element(element: RewriterElement) {
-        element.setAttribute('content', attr(value))
-      },
-    })
-    const drop = {
-      element(element: RewriterElement) {
-        element.remove()
-      },
+    const eventMatch = EVENT_PATH.exec(url.pathname)
+    if (eventMatch) {
+      const code = eventMatch[1].toLowerCase()
+      const row = await fetchEvent(env, code)
+      const card = preview(row)
+      return rewritePreview(page, card.title, card.description, `https://resuming.me/e/${code}`, photoUrl(env, row))
     }
 
-    let rewriter = new HTMLRewriter()
-    if (photo) {
-      rewriter = rewriter
-        .on('meta[property="og:image"]', set(photo))
-        .on('meta[name="twitter:image"]', set(photo))
-        .on('meta[property="og:image:width"]', drop)
-        .on('meta[property="og:image:height"]', drop)
-    }
-
-    const rewritten = rewriter
-      .on('title', {
-        element(element) {
-          element.setInnerContent(title)
-        },
-      })
-      .on('meta[name="description"]', set(description))
-      .on('meta[property="og:title"]', set(title))
-      .on('meta[property="og:description"]', set(description))
-      .on('meta[property="og:url"]', set(pageUrl))
-      .on('meta[name="twitter:title"]', set(title))
-      .on('meta[name="twitter:description"]', set(description))
-      .on('link[rel="canonical"]', {
-        element(element) {
-          element.setAttribute('href', pageUrl)
-        },
-      })
-      .on('head', {
-        element(element) {
-          element.append('<meta name="robots" content="noindex" />', { html: true })
-        },
-      })
-      .transform(page)
-
-    const response = new Response(rewritten.body, rewritten)
-    response.headers.set('cache-control', 'public, max-age=60')
-    response.headers.set('x-robots-tag', 'noindex')
-    return response
+    const listMatch = LIST_PATH.exec(url.pathname)
+    if (!listMatch) return page
+    const code = listMatch[1].toLowerCase()
+    const list = await fetchList(env, code)
+    const card = listPreview(list?.title ?? null)
+    return rewritePreview(page, card.title, card.description, `https://resuming.me/c/${code}`, list?.photo ?? null)
   },
 }
+

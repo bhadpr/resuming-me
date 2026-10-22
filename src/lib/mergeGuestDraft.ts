@@ -4,6 +4,7 @@ import { listMedicines, markDoseTaken, saveMedicine } from './medicines'
 import { addReminder, listReminders, ReminderCapError } from './reminders'
 import type { Reminder } from './reminderSchedule'
 import { followSharedEvent } from './sharedEvents'
+import { claimSharedListAccepts } from './sharedLists'
 
 export const MERGE_RETRY_MESSAGE = "We couldn't save that just yet — tap to retry."
 
@@ -25,7 +26,7 @@ function reminderKey(item: Pick<Reminder, 'text' | 'day' | 'hour' | 'minute'>): 
 
 type SavedReminder = Pick<
   Reminder,
-  'text' | 'day' | 'hour' | 'minute' | 'communityId' | 'sharedEventId'
+  'text' | 'day' | 'hour' | 'minute' | 'communityId' | 'sharedEventId' | 'sharedListItemId'
 >
 
 /** The account already has this reminder, even when the wording changed with the language. */
@@ -37,6 +38,9 @@ export function guestReminderAlreadySaved(
     return true
   }
   if (reminder.sharedEventId && existing.some((item) => item.sharedEventId === reminder.sharedEventId)) {
+    return true
+  }
+  if (reminder.sharedListItemId && existing.some((item) => item.sharedListItemId === reminder.sharedListItemId)) {
     return true
   }
   const key = reminderKey(reminder)
@@ -102,6 +106,11 @@ async function mergeReminders(userId: string, draft: GuestDraft): Promise<void> 
  * On failure the draft stays in localStorage.
  */
 export async function mergeGuestDraft(draft: GuestDraft): Promise<void> {
+  try {
+    await claimSharedListAccepts()
+  } catch {
+    /* the copies still move; only the count misses the move onto the account */
+  }
   const client = createSupabaseClient()
   const reminders = draft.reminders ?? []
   if (draft.medicines.length > 0 || reminders.length > 0) {

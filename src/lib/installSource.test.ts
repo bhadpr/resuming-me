@@ -30,6 +30,10 @@ describe('installSourceFromReferrer', () => {
     expect(installSourceFromReferrer('event=ab12cd')).toEqual({ source: 'shared_event', medium: null, content: null })
   })
 
+  it('reads a shared list link without keeping its code', () => {
+    expect(installSourceFromReferrer('list=kyrsme')).toEqual({ source: 'shared_list', medium: null, content: null })
+  })
+
   it('calls an install with no tag direct, and Play\'s own organic tag by its name', () => {
     expect(installSourceFromReferrer('')).toEqual({ source: 'direct', medium: null, content: null })
     expect(installSourceFromReferrer(undefined)).toEqual({ source: 'direct', medium: null, content: null })

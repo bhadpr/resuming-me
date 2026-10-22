@@ -103,6 +103,7 @@ interface SettingsScreenProps {
   onOpenFeedback?: () => void
   onOpenSharedEvents?: () => void
   onOpenCommunity?: () => void
+  onOpenSharedLists?: () => void
   onOpenGroups?: (groupId?: string) => void
   todayItems?: DigestItem[]
   onSignOut: () => void
@@ -186,6 +187,7 @@ export function SettingsScreen({
   onOpenFeedback,
   onOpenSharedEvents,
   onOpenCommunity,
+  onOpenSharedLists,
   onOpenGroups,
   todayItems = [],
   onSignOut,
@@ -746,6 +748,14 @@ export function SettingsScreen({
                 desc="Diwali, Christmas and other days people can pick"
                 icon="reminders"
                 onClick={onOpenCommunity}
+              />
+            )}
+            {onOpenSharedLists && (
+              <SettingsLink
+                title="Reminder lists"
+                desc="One link that adds many reminders"
+                icon="share"
+                onClick={onOpenSharedLists}
               />
             )}
           </div>

@@ -1,56 +1,89 @@
-# Resuming — Phase 17: Shared calendars (parked idea)
+# Resuming — Phase 17: One link, many reminders
 
-Status: parked on 17 Oct 2026. Nothing is built. This file keeps the idea and the decisions to make, so it can be picked up later.
+Status: planned on 22 Oct 2026. Nothing is built.
 
-Goal: someone makes a set of reminders once and shares them with one link, so many people get them all at once.
+Goal: an admin makes a set of reminders once and shares one link. Anyone who opens it can accept them onto their own list.
 
-## Use case
+Example: a school holiday list. Parents tap one link. If Resuming is installed, they see the holidays and accept them. If it is not installed, they go through the install path and see that same list on the first open.
 
-A school publishes its holiday calendar for the year. Today parents go back to the school website every time to check a date. Instead, one parent (or the school) makes all the holidays as reminders and shares one link. Parents open it and have every holiday in one place, with the normal alerts.
+## Decisions
+
+- **Admin only creates the link.** The same rule as community reminders. A signed-in person cannot make one.
+- **Anyone with the link can read it and accept it.** No account is required to accept. A WhatsApp link can be forwarded. The admin stops that by switching the link off.
+- **Accepting takes a tap.** The link never adds reminders by itself. The person can accept all, or only some.
+- **A copy is an ordinary reminder.** Alerts work as they do today. The website can show them and cannot alert.
+- **Snapshot.** Accepting copies what the list holds at that moment. A later edit is not pushed to people who already accepted. To fix a mistake, the admin switches the link off and shares a new one.
+- **One day per item.** A break that spans many days is one reminder per day. No end date in this phase.
+- **No web links in the text.** Same block as a shared event.
+- **Cap.** 20 reminders on one link, so it stays a list.
+- **Privacy.** The server stores the title, the reminder text, and the dates. It does not store the names of people who accept. A count is enough.
 
 ## What exists today
 
-- A single reminder can be shared as `resuming.me/e/<code>`. The link opens a page with an "Add to my reminders" button (`SharedEventPage`, `src/lib/sharedEvents.ts`).
-- The app tracks who added it (followers), lets the organizer close the link, cancel the event, or reset the code, and lets people report it.
-- Shared events are one-day only and in the future (`isShareableReminder`), block web links (`hasWebLink`), and have a daily cap.
-- Community reminders (admin-only, `src/lib/communityReminders.ts`) copy a catalogue item into an ordinary reminder. A shared calendar can use the same copy approach.
+- One reminder can already be shared as `resuming.me/e/<code>` (`SharedEventPage`, `src/lib/sharedEvents.ts`). The page can send an Android phone without the app to Play, and the install referrer brings that event back on the first open.
+- Android App Links already open `/e/` inside the app. `/c/` does not.
+- Community reminders are already admin-only. Accepting a shared list can copy items into ordinary reminders the same way.
 
-## The idea
+## How to use this file
 
-A shared calendar: one link, `resuming.me/c/<code>`, that holds many reminders.
+Five sprints, in order. Each one is usable on its own. Finish a sprint before starting the next.
 
-- The creator picks several reminders, or builds the list as they go, and shares the link.
-- The link opens a page such as "Springfield School holidays 2026–27" with the list.
-- A parent taps "Add all", or picks only some. Each one becomes a normal reminder on their phone.
-- Built on the shared events pieces: a table for the calendar, a table for its items, and the same follow, close and report logic. Moderate effort, a few days.
+## Sprints
 
-## Decision 1: do copies update when the calendar changes?
+| Sprint | Done when | Size |
+|--------|-----------|------|
+| 1. Admin makes the list | An admin can add the reminders, copy one link, and switch it off | M |
+| 2. The list page | Anyone can open the link on the website, see the reminders, and accept them | M |
+| 3. Not installed | An Android phone without the app goes to Play, then sees the list on the first open | M |
+| 4. Already installed | The link opens the Android app on that same list | M |
+| 5. Safety | Report, the count, privacy, and all seven languages are in place | S |
 
-| Option | What it means | Cost |
-|--------|---------------|------|
-| Snapshot (start here) | Parents get what the calendar holds when they tap "Add all". A later change is not pushed. The page shows "Updated on <date>" and an "Add new ones" button for people who reopen it. | Small |
-| Live | Parents follow the calendar, and new or changed holidays arrive in the app. Needs edit sync, which does not exist today (a copy only picks up a cancellation), and phones must check for changes. | Larger |
+About 3 to 5 days for all five. Sprint 4 needs a new Android version code. Do not upload that build while 1.0.8 is still in Play review.
 
-Recommendation: snapshot first.
+### Sprint 1 — Admin makes the list
 
-## Other things to decide
+- Two tables: the list (title, short code, status, created time) and its items (text, day, optional time, optional kind).
+- Only an admin can insert or change them. Anyone can read an active list by its code.
+- An admin screen, opened from **Settings → Admin → Reminder lists**: title, then each reminder typed by hand, then **Copy link**. The link is `resuming.me/c/<code>`.
+- **Switch off** makes the link say it is no longer available. Items already accepted stay on those phones.
+- New strings in all seven languages.
 
-- **Who can create one.** Admin-only first (safer, like community reminders), or every signed-in user later.
-- **Web links.** Keep the block on links in text, as shared events do.
-- **Multi-day breaks.** Shared events are one-day only. "Winter break, 22 Dec to 2 Jan" needs one reminder per day, or an end date on the item.
-- **Limits.** A cap on items per calendar (for example 60) and on calendars per day, so it cannot be used to spam.
-- **Time zones.** Holidays are all-day, so this does not matter for the school case. Timed items would reuse `localEventTime`.
-- **Privacy.** The server holds the text and dates of the shared items. Nothing about the people who add them is stored beyond a follower count (unless live sync is added later).
-- **Android.** Alerts for the copies work as today. A new app build is needed so `/c/` links open in the app, as `/e/` links do.
-- **Translations.** New strings in all seven locales.
+### Sprint 2 — The list page
 
-## Related, also parked
+`resuming.me/c/<code>`
 
-`.ics` calendar files. Exporting a reminder or a shared calendar as an `.ics` file is cheap (plain text, no backend). Importing `.ics` files into the app is not worth it for now. Decided on 17 Oct 2026 to think about it in the future.
+- The page shows the title and every reminder: text, day, and time if it has one. The page's own words follow the visitor's language. The reminder text stays as the admin wrote it.
+- **Accept all** and a way to accept only some. Each accepted item becomes that person's own reminder, signed in or as a guest.
+- Accepting the same item twice does not make a second copy.
+- A switched-off list, or a bad code, shows a clear message and no accept button.
+- WhatsApp's link preview shows the title, not a generic Resuming card.
 
-## Done when (if picked up)
+### Sprint 3 — Not installed
 
-- The creator can share a set of reminders with one link.
-- A parent who opens the link can add all of them, or some, in a couple of taps.
-- A closed, expired or switched-off calendar shows a clear message.
-- Reports and the admin view work as they do for shared events.
+- On an Android phone that does not have the app, the link opens Play with this list's code in the install referrer, the same way a shared event does.
+- On the first open, after the language screen, the app shows the Sprint 2 list.
+- **Accept** adds the chosen reminders. **Not now** adds nothing.
+- If the list was switched off between the tap and the install, the app says so and adds nothing.
+- An iPhone opens the website page from Sprint 2. The App Store path waits until the iPhone app is listed.
+
+### Sprint 4 — Already installed
+
+- Android App Links for `resuming.me/c/*`, with the verification file on the website, so the link opens Resuming without asking which app to use.
+- The app shows the same list and the same Accept / Not now choice.
+- This ships in a new Android version code, after 1.0.8 has left review.
+- iPhone universal links for `/c/` are part of the iPhone release, not this sprint.
+
+### Sprint 5 — Safety
+
+- A **Report** link on the list page and on the accept screen.
+- The admin sees how many people accepted the list. One account or one guest device counts once. No names.
+- The privacy page says an admin can publish a list of reminders, anyone with the link can read it, and accepting stores a copy on that person's account or device.
+
+## Not in these sprints
+
+- A signed-in person creating a list. Admin only.
+- Pushing later edits to people who already accepted.
+- An end date that covers many days in one item.
+- `.ics` export or import.
+- The iPhone App Store install path.
+- Reading dates out of a photo. The admin types each day. A photo that suggests dates, for the admin to check before the link is shared, can come after this.

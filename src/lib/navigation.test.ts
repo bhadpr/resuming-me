@@ -50,6 +50,7 @@ describe('parseAppPath', () => {
     expect(parseAppPath('/settings/themes')).toEqual({ name: 'settings' })
     expect(parseAppPath('/admin/analytics')).toEqual({ name: 'admin', page: 'analytics' })
     expect(parseAppPath('/admin/analytics-2')).toEqual({ name: 'admin', page: 'analytics2' })
+    expect(parseAppPath('/admin/lists')).toEqual({ name: 'admin', page: 'lists' })
     expect(parseAppPath('/admin/groups')).toEqual({ name: 'admin', page: 'groups' })
     expect(parseAppPath('/admin/groups/group-1')).toEqual({
       name: 'admin',

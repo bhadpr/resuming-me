@@ -44,6 +44,8 @@ export interface Reminder {
   sharedEventId?: string | null
   /** The community reminder this was picked from, so the list can show it as added. */
   communityId?: string | null
+  /** The shared-list item this was accepted from, so it is not added twice. */
+  sharedListItemId?: string | null
   /** That community reminder's picture, kept on this reminder after it is picked. */
   communityPhotoPath?: string | null
   /** The person turned this reminder's alerts off. It still shows on Today. */
@@ -96,6 +98,7 @@ export interface ReminderInput {
   sharedEventId?: string | null
   communityId?: string | null
   communityPhotoPath?: string | null
+  sharedListItemId?: string | null
   alertOff?: boolean
 }
 
