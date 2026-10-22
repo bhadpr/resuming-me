@@ -4,6 +4,7 @@ import { createBrowserRouter, RouterProvider } from 'react-router-dom'
 import { AuthProvider } from './hooks/useAuth'
 import { LocaleProvider } from './hooks/useLocale'
 import { ThemeProvider } from './hooks/useTheme'
+import { Capacitor } from '@capacitor/core'
 import { setupServiceWorker } from './lib/pwa'
 import { initTracking } from './lib/track'
 import { installErrorReporting } from './lib/errorReporting'
@@ -17,6 +18,16 @@ import '@fontsource-variable/noto-sans-tamil/wght.css'
 import '@fontsource-variable/noto-sans-bengali/wght.css'
 import './themes.css'
 import './index.css'
+
+if (Capacitor.getPlatform() === 'ios') {
+  document.documentElement.classList.add('native-ios')
+  document
+    .querySelector('meta[name="viewport"]')
+    ?.setAttribute(
+      'content',
+      'width=device-width, initial-scale=1, viewport-fit=cover, maximum-scale=1, user-scalable=no',
+    )
+}
 
 void setupServiceWorker()
 initTracking()

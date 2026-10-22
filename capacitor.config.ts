@@ -8,6 +8,10 @@ const config: CapacitorConfig = {
   android: {
     allowMixedContent: false,
   },
+  ios: {
+    backgroundColor: '#fff4e8',
+    contentInset: 'never',
+  },
   plugins: {
     LocalNotifications: {
       smallIcon: 'ic_stat_resuming',

@@ -25,7 +25,7 @@ import { GuestMergeBanner } from './components/GuestMergeBanner'
 import { GuestAppShell, isGuestAppPath } from './components/GuestAppShell'
 import { LanguageScreen } from './components/LanguageScreen'
 import { useLocale } from './hooks/useLocale'
-import { hideNativeSplash } from './lib/nativeChrome'
+import { hideNativeSplash, listenForIosKeyboard } from './lib/nativeChrome'
 import { loadGuestDraft } from './lib/guestDraft'
 import { markCheckinOpened } from './lib/checkinPrefs'
 import { navigateBack, safeNextPath, stashAuthNext, takeAuthNext } from './lib/navigation'
@@ -78,6 +78,14 @@ function RootLayout() {
 
   useEffect(() => {
     void import('./lib/marketingCapture').then((mod) => mod.captureMarketingOpen())
+  }, [])
+
+  useEffect(() => {
+    let remove = () => {}
+    void listenForIosKeyboard().then((stop) => {
+      remove = stop
+    })
+    return () => remove()
   }, [])
 
   if (!localeResolved) return <LoadingScreen />

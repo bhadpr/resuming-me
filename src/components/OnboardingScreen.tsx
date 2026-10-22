@@ -473,7 +473,7 @@ export function OnboardingScreen({
           </label>
           {!native && (
             <p className="onboarding-hint">
-              Reminders arrive in the Android app. We’ll save this choice either way.
+              Reminders arrive in the phone app. We’ll save this choice either way.
             </p>
           )}
           {error && <p className="error">{error}</p>}

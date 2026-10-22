@@ -35,6 +35,27 @@ body {
   color: var(--color-text-body);
 }
 
+html.native-ios,
+html.native-ios body {
+  background-color: var(--color-bg);
+  overscroll-behavior: none;
+}
+
+html.native-ios button,
+html.native-ios a,
+html.native-ios .app-nav {
+  -webkit-user-select: none;
+  user-select: none;
+  -webkit-touch-callout: none;
+}
+
+html.native-ios input,
+html.native-ios textarea,
+html.native-ios select {
+  scroll-margin-top: calc(env(safe-area-inset-top, 0px) + 1rem);
+  scroll-margin-bottom: calc(var(--keyboard-height, 0px) + 1rem);
+}
+
 #root {
   min-height: 100dvh;
 }

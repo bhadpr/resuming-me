@@ -250,12 +250,12 @@ export function SettingsScreen({
   }, [user])
 
   useEffect(() => {
-    if (!native || !digest.enabled) {
+    if (Capacitor.getPlatform() !== 'android' || !digest.enabled) {
       setExactDenied(false)
       return
     }
     void hasExactAlarms().then((granted) => setExactDenied(!granted))
-  }, [native, digest.enabled])
+  }, [digest.enabled])
 
   async function updateDigest(patch: Partial<DailyDigestPrefs>) {
     const previous = digestRef.current

@@ -1,6 +1,9 @@
 import { Capacitor } from '@capacitor/core'
 import { LocalNotifications } from '@capacitor/local-notifications'
+import { noteReminderAlerts } from './alertBudget'
 import { reportAlertsStatus } from './alertsStatus'
+import { digestNotificationIds } from './dailyDigest'
+import { REENTRY_NOTIFICATION_ID } from './reentry'
 import { todayLocalDate } from './dates'
 import { completeGuestReminder, loadGuestDraft, updateGuestReminder } from './guestDraft'
 import { translate, type Locale } from './i18n'
@@ -118,7 +121,16 @@ export async function syncReminderNotifications(
     ],
   })
   await LocalNotifications.cancel({ notifications: reminderNotificationIds().map((id) => ({ id })) })
-  const alerts = planReminderAlerts(reminders, activeReminderSnoozes(now), now, readPartTimes().evening, copy)
+  const planned = planReminderAlerts(reminders, activeReminderSnoozes(now), now, readPartTimes().evening, copy)
+  const fit = Capacitor.getPlatform() === 'ios' ? noteReminderAlerts(planned) : null
+  const alerts = fit ? fit.reminders : planned
+  if (fit) {
+    const keep = new Set([...fit.digests.map((item) => item.id), ...(fit.reentry ? [fit.reentry.id] : [])])
+    const drop = [...digestNotificationIds(), REENTRY_NOTIFICATION_ID].filter((id) => !keep.has(id))
+    if (drop.length > 0) {
+      await LocalNotifications.cancel({ notifications: drop.map((id) => ({ id })) })
+    }
+  }
   const permission = alerts.length > 0 ? await LocalNotifications.checkPermissions() : null
   void reportAlertsStatus(permission?.display, alerts.length)
   if (alerts.length === 0 || permission?.display !== 'granted') {

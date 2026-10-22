@@ -1,5 +1,6 @@
 import { Capacitor } from '@capacitor/core'
 import { LocalNotifications } from '@capacitor/local-notifications'
+import { noteDigestAlerts, reminderIdsOutside } from './alertBudget'
 import {
   buildDigestNotifications,
   digestNotificationIds,
@@ -120,13 +121,18 @@ export async function syncDailyDigestSchedule(
 
   const prefs = loadDailyDigestPrefs()
   const now = new Date()
-  const notifications: DigestNotification[] = [
-    ...buildDigestNotifications(rows, prefs, now),
-  ]
-  const reentry = quiet
-    ? buildReentryNotification({ ...quiet, prefs, now })
-    : null
-  if (reentry) notifications.push(reentry)
+  const digests = buildDigestNotifications(rows, prefs, now)
+  const reentry = quiet ? buildReentryNotification({ ...quiet, prefs, now }) : null
+  const fit = Capacitor.getPlatform() === 'ios' ? noteDigestAlerts(digests, reentry) : null
+  const notifications: DigestNotification[] = fit
+    ? [...fit.digests, ...(fit.reentry ? [fit.reentry] : [])]
+    : [...digests, ...(reentry ? [reentry] : [])]
+  if (fit) {
+    const drop = reminderIdsOutside(fit.reminders)
+    if (drop.length > 0) {
+      await LocalNotifications.cancel({ notifications: drop.map((id) => ({ id })) })
+    }
+  }
   if (notifications.length === 0) return
 
   const permission = await LocalNotifications.checkPermissions()
@@ -148,7 +154,7 @@ export async function syncDailyDigestSchedule(
 
 export async function scheduleTestDigest(): Promise<Date> {
   if (!nativePluginAvailable()) {
-    throw new Error('Reminders are only available in the Android app.')
+    throw new Error('Reminders are only available in the phone app.')
   }
   const granted = await requestDailyDigestPermission()
   if (!granted) {
