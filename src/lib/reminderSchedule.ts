@@ -46,6 +46,10 @@ export interface Reminder {
   communityId?: string | null
   /** The shared-list item this was accepted from, so it is not added twice. */
   sharedListItemId?: string | null
+  /** The calendar this copy still follows. The calendar keeps the name and date. */
+  sharedListId?: string | null
+  /** The list's one picture, such as a school logo, learned from that item. */
+  listPhotoPath?: string | null
   /** That community reminder's picture, kept on this reminder after it is picked. */
   communityPhotoPath?: string | null
   /** The person turned this reminder's alerts off. It still shows on Today. */
@@ -59,6 +63,13 @@ export interface Reminder {
 }
 
 export type SharedReminderStatus = 'active' | 'cancelled' | 'switched_off'
+
+/** A day copied from a reminder list. The list keeps its name and date. */
+export function isFollowedListReminder(
+  reminder: Pick<Reminder, 'sharedListItemId' | 'sharedListId'>,
+): boolean {
+  return Boolean(reminder.sharedListItemId || reminder.sharedListId)
+}
 
 /** A copy whose event the organizer cancelled or the admin switched off. */
 export function isSharedEventGone(reminder: Pick<Reminder, 'sharedStatus'>): boolean {
@@ -99,6 +110,8 @@ export interface ReminderInput {
   communityId?: string | null
   communityPhotoPath?: string | null
   sharedListItemId?: string | null
+  sharedListId?: string | null
+  listPhotoPath?: string | null
   alertOff?: boolean
 }
 

@@ -36,7 +36,20 @@ describe('shared list csv', () => {
         { text: 'Thanksgiving', day: '2026-11-25', time: '' },
         { text: 'Early release, grades K-5 · Half day', day: '2026-11-24', time: '12:30' },
       ],
+      zipCodes: [],
     })
+  })
+
+  it('reads ZIP codes from the first row that has them', () => {
+    const once = sharedListItemsFromCsv(
+      'Holiday,Date,Zip codes\nThanksgiving,11/26/2026,98052 98053\nWinter break,12/21/2026,\n',
+    )
+    expect(once.ok && once.zipCodes).toEqual(['98052', '98053'])
+    const repeated = sharedListItemsFromCsv(
+      'Holiday,Date,Zip codes\nThanksgiving,11/26/2026,"98052, 98053"\nWinter break,12/21/2026,98074\n',
+    )
+    expect(repeated.ok && repeated.zipCodes).toEqual(['98052', '98053'])
+    expect(sharedListItemsFromCsv('Holiday,Date,Zip codes\nThanksgiving,11/26/2026,9805\n').ok).toBe(false)
   })
 
   it('reads a file with no header, and a day written out', () => {
@@ -47,21 +60,23 @@ describe('shared list csv', () => {
         { text: 'Thanksgiving', day: '2026-11-25', time: '' },
         { text: 'Winter break', day: '2026-12-19', time: '' },
       ],
+      zipCodes: [],
     })
     const written = sharedListItemsFromCsv('name,date\nWinter break,"November 25, 2026"\n')
     expect(written).toEqual({
       ok: true,
       items: [{ text: 'Winter break', day: '2026-11-25', time: '' }],
+      zipCodes: [],
     })
   })
 
   it('stops on a bad date and on too many rows', () => {
     expect(sharedListItemsFromCsv('name,date\nRecess,13/40/2026\n').ok).toBe(false)
-    const rows = ['name,date', ...Array.from({ length: 21 }, (_, i) => `Day ${i + 1},2026-11-01`)]
+    const rows = ['name,date', ...Array.from({ length: 41 }, (_, i) => `Day ${i + 1},2026-11-01`)]
     const result = sharedListItemsFromCsv(rows.join('\n'))
     expect(result.ok).toBe(false)
     if (result.ok) return
-    expect(result.error).toContain('20')
+    expect(result.error).toContain('40')
   })
 })
 

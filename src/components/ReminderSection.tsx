@@ -4,11 +4,14 @@ import type { Locale } from '../lib/i18n'
 import {
   formatReminderDay,
   formatReminderTime,
+  isFollowedListReminder,
   isSharedEventGone,
   tomorrowOf,
   type Reminder,
 } from '../lib/reminderSchedule'
-import { reminderPhotoSrc } from '../lib/eventPhotoUrl'
+import { LIST_PHOTO_SIDE, reminderPhotoSrc } from '../lib/eventPhotoUrl'
+import { groupByMonth } from '../lib/monthFold'
+import { MonthFold, useClosedMonths } from './MonthFold'
 import { repeatSummary } from '../lib/reminderRepeat'
 import { isShareableReminder } from '../lib/sharedEvents'
 import { Icon } from './Icon'
@@ -53,7 +56,7 @@ export function ReminderRow({ reminder, today, busy, onDone, onSkip, onMove, onC
   return (
     <li className="today-row today-row-stack today-row-compact item-kind-reminder">
       <div className="today-row-head">
-        <ReminderKindMark kind={reminder.kind} photo={reminderPhotoSrc(reminder)} />
+        <ReminderKindMark kind={reminder.kind} photo={reminderPhotoSrc(reminder, LIST_PHOTO_SIDE)} />
         <span className="activity-name reminder-text-line">{reminder.text}</span>
       </div>
       <div className="today-row-main">
@@ -68,7 +71,7 @@ export function ReminderRow({ reminder, today, busy, onDone, onSkip, onMove, onC
         </span>
       </div>
       <div className="today-extra">
-        {!reminder.sharedEventId && !reminder.repeat && (
+        {!reminder.sharedEventId && !isFollowedListReminder(reminder) && !reminder.repeat && (
           <button type="button" className="today-extra-btn" disabled={busy} onClick={() => onMove(tomorrowOf(today))}>
             {t('reminders.moveTomorrow')}
           </button>
@@ -127,7 +130,7 @@ export function ReminderDoneRow({
   return (
     <li className="today-row today-row-stack today-row-compact today-row-done item-kind-reminder">
       <div className="today-row-head">
-        <ReminderKindMark kind={reminder.kind} photo={reminderPhotoSrc(reminder)} />
+        <ReminderKindMark kind={reminder.kind} photo={reminderPhotoSrc(reminder, LIST_PHOTO_SIDE)} />
         <span className="activity-name reminder-text-line reminder-struck">{reminder.text}</span>
       </div>
       <div className="today-row-main">
@@ -141,7 +144,7 @@ export function ReminderDoneRow({
             <UndoSkipButton disabled={busy} onUndo={onNotDone} />
           ) : (
             <button type="button" className="btn btn-secondary btn-today" disabled={busy} onClick={onNotDone}>
-              {t('reminders.notDone')}
+              {t('today.undoSkip')}
             </button>
           )}
         </span>
@@ -169,8 +172,61 @@ interface ReminderListSectionProps {
 /** Not yet shared, or shared by this account and still on. Copies from others are not shared on. */
 function canShareFromList(reminder: Reminder, today: string): boolean {
   if (!isShareableReminder(reminder, today)) return false
+  if (isFollowedListReminder(reminder)) return false
   if (!reminder.sharedEventId) return true
   return reminder.sharedByMe === true && !isSharedEventGone(reminder)
+}
+
+function ReminderDayGroup({
+  group,
+  today,
+  onOpen,
+  onShare,
+}: {
+  group: { key: string; label: string; items: Reminder[] }
+  today: string
+  onOpen: (reminder: Reminder) => void
+  onShare?: (reminder: Reminder) => void
+}) {
+  const { locale, t } = useLocale()
+  return (
+    <div className="reminder-day-group">
+      <p className="reminder-day-label">{group.label}</p>
+      <ul className="activity-list">
+        {group.items.map((reminder) => {
+          const shareable = onShare != null && canShareFromList(reminder, today)
+          return (
+            <li key={reminder.id} className="reminder-list-item">
+              <button
+                type="button"
+                className={`activity-row item-kind-reminder${shareable ? ' reminder-row-shareable' : ''}`}
+                onClick={() => onOpen(reminder)}
+              >
+                <ReminderKindMark kind={reminder.kind} photo={reminderPhotoSrc(reminder, LIST_PHOTO_SIDE)} />
+                <span className="activity-meta">
+                  <span className="activity-name reminder-text-line">{reminder.text}</span>
+                  <span className="activity-desc">{reminderWhen(reminder, today, locale, t)}</span>
+                </span>
+                <span className="activity-chevron" aria-hidden>
+                  <Icon name="chevron" />
+                </span>
+              </button>
+              {shareable && (
+                <button
+                  type="button"
+                  className="reminder-row-share"
+                  aria-label={t('sharedEvent.shareThis', { text: reminder.text })}
+                  onClick={() => onShare(reminder)}
+                >
+                  <Icon name="share" />
+                </button>
+              )}
+            </li>
+          )
+        })}
+      </ul>
+    </div>
+  )
 }
 
 /** The Reminders tab: open reminders from today on, grouped by day. Done and past ones are not listed. */
@@ -187,21 +243,30 @@ export function ReminderListSection({
 }: ReminderListSectionProps) {
   const { locale, t } = useLocale()
   const tomorrow = tomorrowOf(today)
-  const groups: { key: string; label: string; items: Reminder[] }[] = []
   const todays = dueNow.filter((reminder) => reminder.day >= today)
-  if (todays.length > 0) groups.push({ key: 'today', label: t('reminders.today'), items: todays })
-  for (const reminder of later) {
-    const last = groups[groups.length - 1]
-    if (last?.key === reminder.day) {
-      last.items.push(reminder)
-      continue
+  const laterMonths = groupByMonth(later)
+  const { isOpen, toggle } = useClosedMonths(
+    laterMonths.map((month) => month.key),
+    today,
+  )
+  const dayGroups = (items: Reminder[]): { key: string; label: string; items: Reminder[] }[] => {
+    const groups: { key: string; label: string; items: Reminder[] }[] = []
+    for (const reminder of items) {
+      const last = groups[groups.length - 1]
+      if (last?.key === reminder.day) {
+        last.items.push(reminder)
+        continue
+      }
+      groups.push({
+        key: reminder.day,
+        label: reminder.day === tomorrow ? t('reminders.tomorrow') : formatReminderDay(reminder.day, today, locale),
+        items: [reminder],
+      })
     }
-    groups.push({
-      key: reminder.day,
-      label: reminder.day === tomorrow ? t('reminders.tomorrow') : formatReminderDay(reminder.day, today, locale),
-      items: [reminder],
-    })
+    return groups
   }
+  const todayGroup = todays.length > 0 ? { key: 'today', label: t('reminders.today'), items: todays } : null
+  const hasReminders = todayGroup != null || laterMonths.length > 0
 
   return (
     <div className="activity-list-screen reminder-list-section">
@@ -225,52 +290,34 @@ export function ReminderListSection({
 
       {error && <p className="error">{error}</p>}
 
-      {loading && groups.length === 0 ? (
+      {loading && !hasReminders ? (
         <p className="muted-center">{t('reminders.loading')}</p>
-      ) : groups.length === 0 ? (
+      ) : !hasReminders ? (
         <section className="empty-state">
           <span className="empty-state-icon"><Icon name="reminders" size={24} /></span>
           <p>{t('reminders.empty')}</p>
         </section>
       ) : (
-        groups.map((group) => (
-          <div key={group.key} className="reminder-day-group">
-            <p className="reminder-day-label">{group.label}</p>
-            <ul className="activity-list">
-              {group.items.map((reminder) => {
-                const shareable = onShare != null && canShareFromList(reminder, today)
-                return (
-                  <li key={reminder.id} className="reminder-list-item">
-                    <button
-                      type="button"
-                      className={`activity-row item-kind-reminder${shareable ? ' reminder-row-shareable' : ''}`}
-                      onClick={() => onOpen(reminder)}
-                    >
-                      <ReminderKindMark kind={reminder.kind} photo={reminderPhotoSrc(reminder)} />
-                      <span className="activity-meta">
-                        <span className="activity-name reminder-text-line">{reminder.text}</span>
-                        <span className="activity-desc">{reminderWhen(reminder, today, locale, t)}</span>
-                      </span>
-                      <span className="activity-chevron" aria-hidden>
-                        <Icon name="chevron" />
-                      </span>
-                    </button>
-                    {shareable && (
-                      <button
-                        type="button"
-                        className="reminder-row-share"
-                        aria-label={t('sharedEvent.shareThis', { text: reminder.text })}
-                        onClick={() => onShare(reminder)}
-                      >
-                        <Icon name="share" />
-                      </button>
-                    )}
-                  </li>
-                )
-              })}
-            </ul>
-          </div>
-        ))
+        <>
+          {todayGroup && <ReminderDayGroup group={todayGroup} today={today} onOpen={onOpen} onShare={onShare} />}
+          {laterMonths.length > 0 && (
+            <div className="month-folds">
+              {laterMonths.map((month) => (
+                <MonthFold
+                  key={month.key}
+                  monthKey={month.key}
+                  count={month.items.length}
+                  open={isOpen(month.key)}
+                  onToggle={() => toggle(month.key)}
+                >
+                  {dayGroups(month.items).map((group) => (
+                    <ReminderDayGroup key={group.key} group={group} today={today} onOpen={onOpen} onShare={onShare} />
+                  ))}
+                </MonthFold>
+              ))}
+            </div>
+          )}
+        </>
       )}
     </div>
   )

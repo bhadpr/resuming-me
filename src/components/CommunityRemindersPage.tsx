@@ -3,14 +3,15 @@ import { useNavigate } from 'react-router-dom'
 import { useLocale } from '../hooks/useLocale'
 import type { CommunityReminder } from '../lib/communityReminders'
 import { navigateBack } from '../lib/navigation'
-import { CommunityReminderPicker } from './CommunityReminderPicker'
+import { communityRegion } from '../lib/schoolZip'
+import { INDIA_HOLIDAY_LIST_ID, US_HOLIDAY_LIST_ID, type SharedList } from '../lib/sharedLists'
+import { CalendarImportDetail, CalendarImportSection, NflImportSection } from './CalendarImports'
+import { HolidayCatalog } from './HolidayCatalog'
 import { Icon } from './Icon'
 
-/** Community days on their own page: pick several, then save them together. */
+/** Community days on their own page. Holiday catalogs follow their list. */
 export function CommunityRemindersPage({
   today,
-  addedIds,
-  onAdd,
 }: {
   today: string
   addedIds: readonly string[]
@@ -18,66 +19,45 @@ export function CommunityRemindersPage({
 }) {
   const navigate = useNavigate()
   const { t } = useLocale()
-  const [picked, setPicked] = useState<CommunityReminder[]>([])
-  const [busy, setBusy] = useState(false)
-  const [message, setMessage] = useState<string | null>(null)
-
-  function toggle(item: CommunityReminder) {
-    setPicked((current) =>
-      current.some((one) => one.id === item.id) ? current.filter((one) => one.id !== item.id) : [...current, item],
-    )
-  }
-
-  async function save() {
-    if (picked.length === 0 || busy) return
-    setBusy(true)
-    setMessage(null)
-    const saved = new Set<string>()
-    try {
-      for (const item of picked) {
-        const result = await onAdd(item)
-        if (result === 'full') {
-          setMessage(t('reminders.full'))
-          setPicked((current) => current.filter((one) => !saved.has(one.id)))
-          return
-        }
-        saved.add(item.id)
-      }
-      navigate('/reminders', { replace: true })
-    } catch (err) {
-      setMessage(err instanceof Error ? err.message : 'Could not add that reminder')
-      setPicked((current) => current.filter((one) => !saved.has(one.id)))
-    } finally {
-      setBusy(false)
-    }
-  }
+  const [opened, setOpened] = useState<SharedList | null>(null)
+  const region = communityRegion()
 
   return (
     <div className="activity-list-screen">
       <button
         type="button"
         className="btn btn-ghost btn-sm back-btn"
-        onClick={() => navigateBack(navigate, '/reminders')}
+        onClick={() => {
+          if (opened) {
+            setOpened(null)
+            return
+          }
+          navigateBack(navigate, '/reminders')
+        }}
       >
         <Icon name="back" />
         {t('reminders.back')}
       </button>
       <div className="screen-heading">
         <div>
-          <h2>{t('reminders.community.title')}</h2>
-          <p className="screen-sub">{t('reminders.community.sub')}</p>
+          <h2>{opened ? opened.title : t('reminders.community.title')}</h2>
+          {!opened && <p className="screen-sub">{t('reminders.community.sub')}</p>}
         </div>
       </div>
-      <CommunityReminderPicker
-        expanded
-        today={today}
-        addedIds={addedIds}
-        selection={{ ids: picked.map((item) => item.id), onToggle: toggle }}
-      />
-      {message && <p className="error">{message}</p>}
-      <button type="button" className="btn btn-primary community-continue" disabled={busy || picked.length === 0} onClick={() => void save()}>
-        {busy ? t('reminders.saving') : t('start.continue')}
-      </button>
+      {opened ? (
+        <CalendarImportDetail list={opened} />
+      ) : (
+        <>
+          {region === 'us' && (
+            <>
+              <HolidayCatalog title={t('reminders.community.usHolidays2026')} listId={US_HOLIDAY_LIST_ID} today={today} />
+              <CalendarImportSection title={t('reminders.community.usSchool')} onOpen={setOpened} />
+              <NflImportSection title={t('reminders.community.nfl')} onOpen={setOpened} />
+            </>
+          )}
+          <HolidayCatalog title={t('reminders.community.inHolidays2026')} listId={INDIA_HOLIDAY_LIST_ID} today={today} />
+        </>
+      )}
     </div>
   )
 }

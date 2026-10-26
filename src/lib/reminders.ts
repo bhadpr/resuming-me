@@ -14,6 +14,7 @@ import {
   uploadReminderPhoto,
   withReminderPhotoUrls,
 } from './reminderPhotos'
+import { withListPhotos } from './sharedLists'
 import { createSupabaseClient } from './supabase'
 import {
   REMINDER_DONE_KEEP_MS,
@@ -57,6 +58,7 @@ function fromRow(row: ReminderRow): Reminder {
     doneAt: row.done_at,
     sharedEventId: row.shared_event_id ?? null,
     sharedListItemId: row.shared_list_item_id ?? null,
+    sharedListId: row.shared_list_id ?? null,
     communityId: row.community_id ?? null,
     communityPhotoPath: isEventPhotoPath(row.community_photo_path) ? row.community_photo_path : null,
     alertOff: row.alert_off ?? false,
@@ -134,7 +136,7 @@ export async function listReminders(now = new Date()): Promise<Reminder[]> {
     .order('day', { ascending: true })
   if (error) throw error
   const list = settleEndedRepeats((data ?? []).map(fromRow), now)
-  return withReminderPhotoUrls(await withSharedStatuses(list))
+  return withListPhotos(await withReminderPhotoUrls(await withSharedStatuses(list)))
 }
 
 /**
@@ -200,6 +202,7 @@ export async function addReminder(
       done_at: input.doneAt ?? null,
       shared_event_id: input.sharedEventId ?? null,
       shared_list_item_id: input.sharedListItemId ?? null,
+      shared_list_id: input.sharedListId ?? null,
       community_id: input.communityId ?? null,
       community_photo_path: isEventPhotoPath(input.communityPhotoPath) ? input.communityPhotoPath : null,
       alert_off: input.alertOff === true,
@@ -220,8 +223,16 @@ export async function addReminder(
 export async function updateReminder(
   id: string,
   input: ReminderInput,
+  options?: { detachSharedList?: boolean },
 ): Promise<Pick<Reminder, 'photoPath' | 'photoUrl'> | null> {
   const client = createSupabaseClient()
+  const { data: existing, error: existingError } = await client
+    .from('reminders')
+    .select('shared_list_item_id, shared_list_id')
+    .eq('id', id)
+    .maybeSingle()
+  if (existingError) throw existingError
+  if (existing?.shared_list_item_id || existing?.shared_list_id) return null
   let next: { path: string | null; url: string | null } | null = null
   let previous: string | null = null
   if (input.photo !== undefined) {
@@ -253,6 +264,7 @@ export async function updateReminder(
       kind: reminderKindOf(input.kind),
       every_year: input.everyYear === true && !input.repeat,
       ...repeatColumns(input),
+      ...(options?.detachSharedList ? { shared_list_item_id: null, shared_list_id: null } : {}),
     })
     .eq('id', id)
   if (error) {
@@ -278,6 +290,13 @@ export async function setReminderAlertOff(id: string, alertOff: boolean): Promis
 
 export async function moveReminder(id: string, day: string): Promise<void> {
   const client = createSupabaseClient()
+  const { data: existing, error: existingError } = await client
+    .from('reminders')
+    .select('shared_list_item_id, shared_list_id')
+    .eq('id', id)
+    .maybeSingle()
+  if (existingError) throw existingError
+  if (existing?.shared_list_item_id || existing?.shared_list_id) return
   const { error } = await client.from('reminders').update({ day }).eq('id', id)
   if (error) throw error
 }

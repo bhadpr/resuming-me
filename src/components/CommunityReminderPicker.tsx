@@ -1,26 +1,88 @@
 import { useEffect, useRef, useState } from 'react'
 import { useLocale } from '../hooks/useLocale'
+import { parseLocalDate } from '../lib/dates'
 import {
   communityTitle,
+  COMMUNITY_LIST_MAX,
+  festivalOf,
+  holidayFestival,
   listCommunityReminders,
   type CommunityReminder,
 } from '../lib/communityReminders'
 import { communityPhotoUrl } from '../lib/eventPhotoUrl'
+import { localeTag, type Locale } from '../lib/i18n'
 import { formatReminderDay } from '../lib/reminderSchedule'
 import { ReminderKindMark } from './ReminderKindIcon'
 
-/** The picture, or the kind's picture when there is none or it does not load. */
-function CardPicture({ photo, kind }: { photo: string | null; kind: CommunityReminder['kind'] }) {
-  const [failed, setFailed] = useState(false)
-  if (!photo || failed) return <ReminderKindMark kind={kind} />
+/** Clay pictures, the same kind as Halloween, Thanksgiving, and Christmas. */
+const FESTIVAL_ART: Record<string, string> = {
+  halloween: '/community/halloween.jpg',
+  thanksgiving: '/community/thanksgiving.jpg',
+  christmas: '/community/christmas.jpg',
+  election: '/community/election.jpg',
+  veteran: '/community/veteran.jpg',
+  newyear: '/community/newyear.jpg',
+  mlk: '/community/mlk.jpg',
+  presidents: '/community/presidents.jpg',
+  memorial: '/community/memorial.jpg',
+  juneteenth: '/community/juneteenth.jpg',
+  independence: '/community/independence.jpg',
+  labor: '/community/labor.jpg',
+  columbus: '/community/columbus.jpg',
+  diwali: '/community/diwali.jpg',
+  vijaya: '/community/vijaya.jpg',
+  nanak: '/community/nanak.jpg',
+  republic: '/community/republic.jpg',
+  holi: '/community/holi.jpg',
+  fitr: '/community/fitr.jpg',
+  ramnavami: '/community/ramnavami.jpg',
+  mahavir: '/community/mahavir.jpg',
+  goodfriday: '/community/goodfriday.jpg',
+  buddha: '/community/buddha.jpg',
+  adha: '/community/adha.jpg',
+  muharram: '/community/muharram.jpg',
+  'in-independence': '/community/in-independence.jpg',
+  milad: '/community/milad.jpg',
+  janmashtami: '/community/janmashtami.jpg',
+  gandhi: '/community/gandhi.jpg',
+}
+
+/** The clay picture for a holiday list day, small enough for the five-across row. */
+export function holidayArtUrl(text: string, day: string): string | null {
+  const key = holidayFestival(text, day)
+  return key && FESTIVAL_ART[key] ? `/community/sm/${key}.jpg` : null
+}
+
+function shortDay(day: string, locale: Locale): string {
+  return parseLocalDate(day).toLocaleDateString(localeTag(locale), { day: 'numeric', month: 'short', year: '2-digit' })
+}
+
+/** The clay picture for this day, then an uploaded photo, then the kind's picture. */
+function CardPicture({
+  photo,
+  kind,
+  festival,
+}: {
+  photo: string | null
+  kind: CommunityReminder['kind']
+  festival: string | null
+}) {
+  const art = festival ? FESTIVAL_ART[festival] : null
+  const [artFailed, setArtFailed] = useState(false)
+  const [photoFailed, setPhotoFailed] = useState(false)
+  const src = art && !artFailed ? art : photo && !photoFailed ? photo : null
+  if (!src) return <ReminderKindMark kind={kind} />
   return (
     <img
       className="community-photo"
-      src={photo}
+      src={src}
       alt=""
       loading="lazy"
       decoding="async"
-      onError={() => setFailed(true)}
+      onError={() => {
+        if (art && !artFailed) setArtFailed(true)
+        else setPhotoFailed(true)
+      }}
     />
   )
 }
@@ -36,6 +98,8 @@ export function CommunityReminderPicker({
   onEmpty,
   expanded = false,
   selection,
+  include,
+  limit = COMMUNITY_LIST_MAX,
 }: {
   today: string
   /** Community reminders this person already has. */
@@ -51,6 +115,10 @@ export function CommunityReminderPicker({
     ids: readonly string[]
     onToggle: (item: CommunityReminder) => void
   }
+  /** Keeps this section to one region and year. */
+  include?: (item: CommunityReminder) => boolean
+  /** How many upcoming days to load. The setup list stays short. */
+  limit?: number
 }) {
   const { locale, t } = useLocale()
   const [items, setItems] = useState<CommunityReminder[] | null>(null)
@@ -63,7 +131,7 @@ export function CommunityReminderPicker({
 
   useEffect(() => {
     let mounted = true
-    listCommunityReminders(today)
+    listCommunityReminders(today, limit)
       .then((list) => {
         if (!mounted) return
         setItems(list)
@@ -75,7 +143,7 @@ export function CommunityReminderPicker({
     return () => {
       mounted = false
     }
-  }, [today])
+  }, [today, limit])
 
   async function add(item: CommunityReminder) {
     if (!onAdd) return
@@ -93,7 +161,7 @@ export function CommunityReminderPicker({
   }
 
   const added = new Set([...addedIds, ...addedNow])
-  const visible = items?.filter((item) => !added.has(item.id)) ?? null
+  const visible = items?.filter((item) => (include ? include(item) : true) && !added.has(item.id)) ?? null
 
   return (
     <div className={`community-picker${expanded ? ' community-picker-open' : ''}`}>
@@ -108,6 +176,7 @@ export function CommunityReminderPicker({
           {visible.map((item) => {
             const name = communityTitle(item, locale)
             const photo = communityPhotoUrl(item.photoPath)
+            const festival = festivalOf(item)
             const saved = added.has(item.id)
             const picked = selection?.ids.includes(item.id) === true
             const marked = saved || picked
@@ -128,10 +197,10 @@ export function CommunityReminderPicker({
                   }}
                 >
                   <span className="community-photo-frame">
-                    <CardPicture photo={photo} kind={item.kind} />
+                    <CardPicture photo={photo} kind={item.kind} festival={festival} />
                   </span>
                   <span className="community-name">{name}</span>
-                  <span className="community-day">{formatReminderDay(item.day, today, locale)}</span>
+                  <span className="community-day">{expanded ? shortDay(item.day, locale) : formatReminderDay(item.day, today, locale)}</span>
                 </button>
               </li>
             )

@@ -6,6 +6,7 @@ import {
   communityReminderInput,
   communityTitle,
   communityToShow,
+  holidayInRegion,
   upcomingCommunity,
   type CommunityReminder,
 } from './communityReminders'
@@ -25,6 +26,24 @@ function item(patch: Partial<CommunityReminder> = {}): CommunityReminder {
     ...patch,
   }
 }
+
+describe('holiday regions', () => {
+  it('keeps each holiday on its region, and Christmas on both', () => {
+    expect(holidayInRegion(item({ titles: { en: 'Thanksgiving' } }), 'us')).toBe(true)
+    expect(holidayInRegion(item({ titles: { en: 'Thanksgiving' } }), 'in')).toBe(false)
+    expect(holidayInRegion(item({ titles: { en: 'Diwali' } }), 'in')).toBe(true)
+    expect(holidayInRegion(item({ titles: { en: 'Diwali' } }), 'us')).toBe(false)
+    expect(holidayInRegion(item({ titles: { en: 'Christmas' } }), 'us')).toBe(true)
+    expect(holidayInRegion(item({ titles: { en: 'Christmas' } }), 'in')).toBe(true)
+    expect(holidayInRegion(item({ titles: { en: 'Veterans Day' } }), 'us')).toBe(true)
+    expect(holidayInRegion(item({ titles: { en: 'Election Day' } }), 'in')).toBe(false)
+    expect(holidayInRegion(item({ titles: { en: 'Republic Day' } }), 'in')).toBe(true)
+    expect(holidayInRegion(item({ titles: { en: 'Holi' } }), 'us')).toBe(false)
+    expect(holidayInRegion(item({ titles: { en: 'Independence Day' }, festival: 'in-independence' }), 'in')).toBe(true)
+    expect(holidayInRegion(item({ titles: { en: 'Independence Day' }, festival: 'in-independence' }), 'us')).toBe(false)
+    expect(holidayInRegion(item({ titles: { en: 'Independence Day' } }), 'us')).toBe(true)
+  })
+})
 
 describe('community titles', () => {
   it('keeps known languages, tidied, and drops empty or unknown ones', () => {
@@ -90,17 +109,49 @@ describe('what people see', () => {
   })
 
   it('adds the 2026 festivals when the admin list does not already have them', () => {
-    const shown = communityToShow([], '2026-10-14')
-    expect(shown.map((row) => row.titles.en)).toEqual([
-      'Vijayadashmi',
-      'Halloween',
-      'Diwali',
-      'Guru Nanak Jayanti',
-      'Thanksgiving',
-      'Christmas',
+    const shown = communityToShow([], '2026-10-14', 80)
+    expect(shown.map((row) => `${row.day} ${row.titles.en}`)).toEqual([
+      '2026-10-20 Vijayadashmi',
+      '2026-10-31 Halloween',
+      '2026-11-03 Election Day',
+      '2026-11-08 Diwali',
+      '2026-11-11 Veterans Day',
+      '2026-11-24 Guru Nanak Jayanti',
+      '2026-11-26 Thanksgiving',
+      '2026-12-25 Christmas',
+      "2027-01-01 New Year's Day",
+      '2027-01-18 Martin Luther King Jr. Day',
+      '2027-01-26 Republic Day',
+      '2027-02-15 Presidents Day',
+      '2027-03-10 Eid al-Fitr',
+      '2027-03-23 Holi',
+      '2027-03-26 Good Friday',
+      '2027-04-15 Ram Navami',
+      '2027-04-19 Mahavir Jayanti',
+      '2027-05-17 Eid al-Adha',
+      '2027-05-20 Buddha Purnima',
+      '2027-05-31 Memorial Day',
+      '2027-06-16 Muharram',
+      '2027-06-19 Juneteenth',
+      '2027-07-04 Independence Day',
+      '2027-08-15 Independence Day',
+      '2027-08-15 Milad-un-Nabi',
+      '2027-08-25 Janmashtami',
+      '2027-09-06 Labor Day',
+      '2027-10-02 Gandhi Jayanti',
+      '2027-10-09 Vijayadashmi',
+      '2027-10-11 Columbus Day',
+      '2027-10-29 Diwali',
+      '2027-10-31 Halloween',
+      '2027-11-02 Election Day',
+      '2027-11-11 Veterans Day',
+      '2027-11-14 Guru Nanak Jayanti',
+      '2027-11-25 Thanksgiving',
+      '2027-12-25 Christmas',
     ])
     expect(shown.find((row) => row.titles.en === 'Diwali')?.titles.hi).toBe('दिवाली')
-    expect(shown.find((row) => row.titles.en === 'Guru Nanak Jayanti')?.day).toBe('2026-11-24')
+    expect(shown.find((row) => row.day === '2027-08-15' && row.festival === 'in-independence')?.titles.hi).toBe('स्वतंत्रता दिवस')
+    expect(shown.find((row) => row.day === '2027-07-04')?.festival).toBe('independence')
   })
 
   it('shows Vijayadashmi when the saved title is a lowercase spelling', () => {
@@ -115,16 +166,12 @@ describe('what people see', () => {
     const shown = communityToShow(
       [item({ id: 'admin-diwali', day: '2026-11-08', titles: { en: 'Diwali' } })],
       '2026-10-14',
+      40,
     )
-    expect(shown.map((row) => row.titles.en)).toEqual([
-      'Vijayadashmi',
-      'Halloween',
-      'Diwali',
-      'Guru Nanak Jayanti',
-      'Thanksgiving',
-      'Christmas',
-    ])
-    expect(shown.find((row) => row.titles.en === 'Diwali')?.id).toBe('admin-diwali')
+    expect(shown.filter((row) => row.titles.en === 'Diwali' && row.day.startsWith('2026'))).toHaveLength(1)
+    expect(shown.find((row) => row.day === '2026-11-08')?.id).toBe('admin-diwali')
+    expect(shown.find((row) => row.day === '2027-10-29')?.titles.en).toBe('Diwali')
+    expect(shown.filter((row) => row.titles.en === 'Veterans Day')).toHaveLength(2)
   })
 })
 

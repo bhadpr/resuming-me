@@ -5,10 +5,12 @@ import { useAuth } from '../hooks/useAuth'
 import { useDocumentMeta } from '../hooks/useDocumentMeta'
 import { useLocale } from '../hooks/useLocale'
 import { todayLocalDate } from '../lib/dates'
+import { groupByMonth } from '../lib/monthFold'
+import { MonthFold, useClosedMonths } from './MonthFold'
 import { addGuestReminder, ensureGuestDraft, loadGuestDraft } from '../lib/guestDraft'
 import { askForReminderAlerts } from '../lib/reminderNotifications'
 import { ReminderCapError, addReminder } from '../lib/reminders'
-import { formatReminderDay, formatReminderTime, type ReminderInput } from '../lib/reminderSchedule'
+import { formatReminderDay, formatReminderTime, readPartTimes, type ReminderInput } from '../lib/reminderSchedule'
 import { EventPhoto } from './ReminderKindIcon'
 import { listPhotoUrl } from '../lib/eventPhotoUrl'
 import {
@@ -44,6 +46,60 @@ function whenLabel(item: SharedListItem, today: string, locale: Parameters<typeo
   return `${day} · ${formatReminderTime(item.hour, item.minute, locale)}`
 }
 
+function ListMonths({
+  months,
+  today,
+  saved,
+  picked,
+  onToggle,
+}: {
+  months: { key: string; items: SharedListItem[] }[]
+  today: string
+  saved: Set<string>
+  picked: Set<string>
+  onToggle: (id: string) => void
+}) {
+  const { locale, t } = useLocale()
+  const { isOpen, toggle } = useClosedMonths(
+    months.map((month) => month.key),
+    today,
+  )
+  return (
+    <div className="month-folds">
+      {months.map((month) => (
+        <MonthFold
+          key={month.key}
+          monthKey={month.key}
+          count={month.items.length}
+          open={isOpen(month.key)}
+          onToggle={() => toggle(month.key)}
+        >
+          <ul className="shared-list-items">
+            {month.items.map((item) =>
+              saved.has(item.id) ? (
+                <li key={item.id} className="shared-list-item shared-list-item-saved">
+                  <span>{item.text}</span>
+                  <span className="analytics-stat-hint">
+                    {whenLabel(item, today, locale)} · {t('sharedList.already')}
+                  </span>
+                </li>
+              ) : (
+                <li key={item.id} className="shared-list-item">
+                  <label>
+                    <input type="checkbox" checked={picked.has(item.id)} onChange={() => onToggle(item.id)} />
+                    <span>{item.text}</span>
+                    <span className="analytics-stat-hint">{whenLabel(item, today, locale)}</span>
+                  </label>
+                </li>
+              ),
+            )}
+          </ul>
+        </MonthFold>
+      ))}
+    </div>
+  )
+}
+
 /** resuming.me/c/<code>: the reminders, and a tap to accept them. */
 export function SharedListPage({ code }: { code: string }) {
   const navigate = useNavigate()
@@ -56,6 +112,7 @@ export function SharedListPage({ code }: { code: string }) {
   const [saved, setSaved] = useState<Set<string>>(new Set())
   const [picked, setPicked] = useState<Set<string>>(new Set())
   const [adding, setAdding] = useState(false)
+  const [dayBeforeChoice, setDayBeforeChoice] = useState<boolean | null>(null)
   const [issueKey, setIssueKey] = useState<string | null>(null)
   const list = load.state === 'ready' ? load.list : null
   const today = todayLocalDate()
@@ -152,13 +209,16 @@ export function SharedListPage({ code }: { code: string }) {
           minute: item.minute,
           kind: 'event',
           sharedListItemId: item.id,
+          sharedListId: found.id,
+          listPhotoPath: found.photoPath,
+          remindBefore: dayBeforeChoice ?? found.remindBefore,
         }
+        if (input.hour != null || input.remindBefore) timed = input
         if (user) {
           try {
             await addReminder(user.id, input)
             created += 1
             newlySaved.add(item.id)
-            if (input.hour != null) timed = input
           } catch (err) {
             if (err instanceof ReminderCapError) {
               setIssueKey('sharedList.full')
@@ -183,7 +243,6 @@ export function SharedListPage({ code }: { code: string }) {
           }
           created += 1
           newlySaved.add(item.id)
-          if (input.hour != null) timed = input
         }
       }
       setSaved(newlySaved)
@@ -238,38 +297,44 @@ export function SharedListPage({ code }: { code: string }) {
 
   const open = list.items.filter((item) => !saved.has(item.id))
   const allPicked = open.length > 0 && open.every((item) => picked.has(item.id))
+  const evening = readPartTimes().evening
+  const months = groupByMonth(list.items)
 
   return (
     <section className="shared-event">
       <p className="shared-event-intro">{t('sharedList.intro')}</p>
       <EventPhoto src={listPhotoUrl(list.photoPath)} alt={list.title} />
       <h1 className="screen-heading">{list.title}</h1>
-      <ul className="shared-list-items">
-        {list.items.map((item) =>
-          saved.has(item.id) ? (
-            <li key={item.id} className="shared-list-item shared-list-item-saved">
-              <span>{item.text}</span>
-              <span className="analytics-stat-hint">
-                {whenLabel(item, today, locale)} · {t('sharedList.already')}
-              </span>
-            </li>
-          ) : (
-            <li key={item.id} className="shared-list-item">
-              <label>
-                <input type="checkbox" checked={picked.has(item.id)} onChange={() => toggle(item.id)} />
-                <span>{item.text}</span>
-                <span className="analytics-stat-hint">{whenLabel(item, today, locale)}</span>
-              </label>
-            </li>
-          ),
-        )}
-      </ul>
+      <ListMonths
+        months={months}
+        today={today}
+        saved={saved}
+        picked={picked}
+        onToggle={toggle}
+      />
       {open.length === 0 ? (
         <p className="shared-event-status">{t('sharedList.allSaved')}</p>
       ) : (
-        <button type="button" className="btn btn-primary" disabled={adding} onClick={() => void accept(list)}>
-          {adding ? t('sharedList.accepting') : allPicked ? t('sharedList.acceptAll') : t('sharedList.acceptSelected')}
-        </button>
+        <>
+          <label className="reminder-switch">
+            <input
+              type="checkbox"
+              checked={dayBeforeChoice ?? list.remindBefore}
+              onChange={(event) => setDayBeforeChoice(event.target.checked)}
+            />
+            <span>
+              {t('reminders.dayBefore')}
+              <span className="reminder-switch-hint">
+                {t('reminders.dayBeforeHint', {
+                  time: formatReminderTime(evening.hour, evening.minute, locale),
+                })}
+              </span>
+            </span>
+          </label>
+          <button type="button" className="btn btn-primary" disabled={adding} onClick={() => void accept(list)}>
+            {adding ? t('sharedList.accepting') : allPicked ? t('sharedList.acceptAll') : t('sharedList.acceptSelected')}
+          </button>
+        </>
       )}
       {native && open.length > 0 && (
         <button

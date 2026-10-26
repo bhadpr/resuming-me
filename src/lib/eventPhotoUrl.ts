@@ -13,39 +13,59 @@ export function isReminderPhotoData(value: unknown): value is string {
 }
 
 /** What a reminder shows instead of its kind picture: its own photo, else its shared event's photo. */
-export function reminderPhotoSrc(reminder: {
-  photoData?: string | null
-  photoUrl?: string | null
-  sharedPhotoPath?: string | null
-  communityPhotoPath?: string | null
-}): string | null {
+export function reminderPhotoSrc(
+  reminder: {
+    photoData?: string | null
+    photoUrl?: string | null
+    sharedPhotoPath?: string | null
+    communityPhotoPath?: string | null
+    listPhotoPath?: string | null
+  },
+  width?: number,
+): string | null {
   if (isReminderPhotoData(reminder.photoData)) return reminder.photoData
-  return reminder.photoUrl || eventPhotoUrl(reminder.sharedPhotoPath) || communityPhotoUrl(reminder.communityPhotoPath)
+  return (
+    reminder.photoUrl ||
+    eventPhotoUrl(reminder.sharedPhotoPath, undefined, width) ||
+    communityPhotoUrl(reminder.communityPhotoPath, undefined, width) ||
+    listPhotoUrl(reminder.listPhotoPath, undefined, width)
+  )
+}
+
+/** Square side for a picture shown in a row, not on its own page. */
+export const LIST_PHOTO_SIDE = 360
+
+function publicImageUrl(bucket: string, path: string | null | undefined, base: string | undefined, width?: number): string | null {
+  if (!base || !isEventPhotoPath(path)) return null
+  const root = base.replace(/\/+$/, '')
+  if (!width) return `${root}/storage/v1/object/public/${bucket}/${path}`
+  const side = Math.round(width)
+  return `${root}/storage/v1/render/image/public/${bucket}/${path}?width=${side}&height=${side}&quality=60&resize=cover`
 }
 
 /** The public address of a community reminder's picture. Null for anything that is not one. */
 export function communityPhotoUrl(
   path: string | null | undefined,
   base: string | undefined = import.meta.env.VITE_SUPABASE_URL,
+  width?: number,
 ): string | null {
-  if (!base || !isEventPhotoPath(path)) return null
-  return `${base.replace(/\/+$/, '')}/storage/v1/object/public/${COMMUNITY_PHOTO_BUCKET}/${path}`
+  return publicImageUrl(COMMUNITY_PHOTO_BUCKET, path, base, width)
 }
 
 /** The public address of a list's one picture. Null for anything that is not one. */
 export function listPhotoUrl(
   path: string | null | undefined,
   base: string | undefined = import.meta.env.VITE_SUPABASE_URL,
+  width?: number,
 ): string | null {
-  if (!base || !isEventPhotoPath(path)) return null
-  return `${base.replace(/\/+$/, '')}/storage/v1/object/public/${LIST_PHOTO_BUCKET}/${path}`
+  return publicImageUrl(LIST_PHOTO_BUCKET, path, base, width)
 }
 
 /** The public address of an event photo. Null for anything that is not one. */
 export function eventPhotoUrl(
   path: string | null | undefined,
   base: string | undefined = import.meta.env.VITE_SUPABASE_URL,
+  width?: number,
 ): string | null {
-  if (!base || !isEventPhotoPath(path)) return null
-  return `${base.replace(/\/+$/, '')}/storage/v1/object/public/${EVENT_PHOTO_BUCKET}/${path}`
+  return publicImageUrl(EVENT_PHOTO_BUCKET, path, base, width)
 }

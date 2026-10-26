@@ -13,7 +13,7 @@ This is company housekeeping, not app work. It does not block Phase 10. Apple an
 | Nameservers | Cloudflare: `lewis.ns.cloudflare.com`, `sima.ns.cloudflare.com`. Zone is active. |
 | Email | Cloudflare Email Routing. `bhadresh@cheerfulgames.com` forwards to Gmail. |
 | Google record | CNAME `lskgac5tb6u2` to `gv-mcmn5icix36otc.dv.googlehosted.com`, DNS only. |
-| Website | Four Squarespace A records (`198.185.159.144`, `198.185.159.145`, `198.49.23.144`, `198.49.23.145`). Squarespace forwarding sends visitors to `https://boardgame-cricket.netlify.app/` with a 302. `www` has no record. |
+| Website | As of 9 Oct 2026: four Squarespace A records (`198.185.159.144`, `198.185.159.145`, `198.49.23.144`, `198.49.23.145`). Squarespace forwarding sends visitors to `https://boardgame-cricket.netlify.app/` with a 302. `www` has no record. The intended destination is now `https://resuming.app`. |
 | DNSSEC | Off. |
 
 ## How to use this file
@@ -45,9 +45,9 @@ At the end of M1, Cloudflare sends cheerfulgames.com and www.cheerfulgames.com t
 
 - In Cloudflare DNS, delete the four Squarespace A records for `@`.
 - Add an A record for `@` and one for `www`, both `192.0.2.1`, proxied. The address is a placeholder. Cloudflare answers before it is ever used.
-- Add a redirect rule: all incoming requests, static, to `https://boardgame-cricket.netlify.app/`, status 302. Use 302, not 301, so browsers do not remember it if a company page replaces it.
+- Add a redirect rule: all incoming requests, static, to `https://resuming.app`, status 302. Use 302, not 301, so browsers do not remember it if a company page replaces it. `resuming.app` names Cheerful Games, Inc.
 - Leave the Google CNAME, MX, and TXT records as they are.
-- Done when `curl -sI https://cheerfulgames.com` and `curl -sI https://www.cheerfulgames.com` both return a 302 to the cricket game, and a test email to `bhadresh@cheerfulgames.com` still arrives.
+- Done when `curl -sI https://cheerfulgames.com` and `curl -sI https://www.cheerfulgames.com` both return a 302 to `https://resuming.app`, and a test email to `bhadresh@cheerfulgames.com` still arrives.
 
 ## Milestone 2 — Transfer
 

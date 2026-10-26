@@ -29,7 +29,7 @@ export function DeleteAccountPage({ onBack }: DeleteAccountPageProps) {
 
         <h3>Delete one habit</h3>
         <ol>
-          <li>Sign in to {PRODUCT_NAME} with Google or your email link.</li>
+          <li>Sign in to {PRODUCT_NAME} with Apple, Google, or your email link.</li>
           <li>Open the habit.</li>
           <li>
             Tap <strong>Delete permanently</strong>, then <strong>Delete forever</strong>.
@@ -42,7 +42,7 @@ export function DeleteAccountPage({ onBack }: DeleteAccountPageProps) {
 
         <h3>Delete your account and all of your data</h3>
         <ol>
-          <li>Sign in to {PRODUCT_NAME} with Google or your email link.</li>
+          <li>Sign in to {PRODUCT_NAME} with Apple, Google, or your email link.</li>
           <li>
             Open <strong>Settings</strong> (gear icon).
           </li>

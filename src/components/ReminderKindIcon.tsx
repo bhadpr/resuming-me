@@ -25,15 +25,18 @@ export function EventPhoto({
   src,
   alt,
   className,
+  plain = false,
 }: {
   src: string | null | undefined
   alt: string
   className?: string
+  /** Draw the picture only. The default opens the picture in a new tab. */
+  plain?: boolean
 }) {
   const [failed, setFailed] = useState<string | null>(null)
   const photoClass = className ? `event-photo ${className}` : 'event-photo'
   if (!src || failed === src) return null
-  if (src.startsWith('data:')) {
+  if (plain || src.startsWith('data:')) {
     return (
       <div className={photoClass}>
         <img src={src} alt={alt} decoding="async" onError={() => setFailed(src)} />

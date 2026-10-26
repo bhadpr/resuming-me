@@ -48,6 +48,10 @@ describe('reminder photos', () => {
     expect(reminderPhotoSrc({ sharedPhotoPath: PATH })).toContain(`/event-photos/${PATH}`)
     expect(reminderPhotoSrc({ sharedPhotoPath: PATH, communityPhotoPath: PATH })).toContain(`/event-photos/${PATH}`)
     expect(reminderPhotoSrc({ communityPhotoPath: PATH })).toContain(`/community-photos/${PATH}`)
+    expect(reminderPhotoSrc({ listPhotoPath: PATH })).toContain(`/list-photos/${PATH}`)
+    expect(reminderPhotoSrc({ listPhotoPath: PATH }, 360)).toContain(
+      `/render/image/public/list-photos/${PATH}?width=360&height=360&quality=60&resize=cover`,
+    )
     expect(reminderPhotoSrc({})).toBeNull()
   })
 })

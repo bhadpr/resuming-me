@@ -3,6 +3,73 @@
 // Requires SUPABASE_SERVICE_ROLE_KEY (set automatically in hosted functions).
 
 import { createClient } from 'https://esm.sh/@supabase/supabase-js@2.49.1'
+import { importPKCS8, SignJWT } from 'https://esm.sh/jose@5.9.6'
+
+const APPLE_BUNDLE_ID = Deno.env.get('APPLE_BUNDLE_ID') ?? 'com.cheerfulgames.resuming'
+const APPLE_SERVICES_ID = Deno.env.get('APPLE_SERVICES_ID') ?? 'com.cheerfulgames.resuming.signin'
+
+function json(status: number, body: { ok: boolean; error?: string }): Response {
+  return new Response(JSON.stringify(body), {
+    status,
+    headers: { ...corsHeaders, 'Content-Type': 'application/json' },
+  })
+}
+
+async function appleClientSecret(clientId: string): Promise<string> {
+  const teamId = Deno.env.get('APPLE_TEAM_ID')
+  const keyId = Deno.env.get('APPLE_KEY_ID')
+  const privateKey = Deno.env.get('APPLE_PRIVATE_KEY')
+  if (!teamId || !keyId || !privateKey) {
+    throw new Error('Apple sign-in secret is not configured')
+  }
+  const pem = privateKey.includes('\\n') ? privateKey.replace(/\\n/g, '\n') : privateKey
+  const key = await importPKCS8(pem, 'ES256')
+  return await new SignJWT({})
+    .setProtectedHeader({ alg: 'ES256', kid: keyId })
+    .setIssuer(teamId)
+    .setIssuedAt()
+    .setExpirationTime('180d')
+    .setAudience('https://appleid.apple.com')
+    .setSubject(clientId)
+    .sign(key)
+}
+
+async function exchangeAppleCode(code: string, clientId: string): Promise<string> {
+  const secret = await appleClientSecret(clientId)
+  const response = await fetch('https://appleid.apple.com/auth/token', {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/x-www-form-urlencoded' },
+    body: new URLSearchParams({
+      client_id: clientId,
+      client_secret: secret,
+      code,
+      grant_type: 'authorization_code',
+    }),
+  })
+  const payload = (await response.json().catch(() => ({}))) as { refresh_token?: string; error?: string }
+  if (!response.ok || !payload.refresh_token) {
+    throw new Error(payload.error || 'Apple did not return a refresh token')
+  }
+  return payload.refresh_token
+}
+
+async function revokeApple(token: string, clientId: string): Promise<void> {
+  const secret = await appleClientSecret(clientId)
+  const response = await fetch('https://appleid.apple.com/auth/revoke', {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/x-www-form-urlencoded' },
+    body: new URLSearchParams({
+      client_id: clientId,
+      client_secret: secret,
+      token,
+      token_type_hint: 'refresh_token',
+    }),
+  })
+  if (response.ok) return
+  const text = await response.text()
+  if (text.includes('invalid_grant') || text.includes('invalid_token')) return
+  throw new Error(text || 'Could not revoke Apple sign-in')
+}
 
 const corsHeaders = {
   'Access-Control-Allow-Origin': '*',
@@ -62,6 +129,54 @@ Deno.serve(async (req) => {
     const admin = createClient(supabaseUrl, serviceRoleKey, {
       auth: { autoRefreshToken: false, persistSession: false },
     })
+
+    const rawBody = await req.text()
+    const body = rawBody
+      ? (JSON.parse(rawBody) as { action?: string; authorizationCode?: string; refreshToken?: string })
+      : {}
+
+    if (body.action === 'remember') {
+      const code = body.authorizationCode?.trim()
+      const givenRefresh = body.refreshToken?.trim()
+      if (!code && !givenRefresh) {
+        return json(400, { ok: false, error: 'Missing Apple sign-in token' })
+      }
+      try {
+        const clientId = code ? APPLE_BUNDLE_ID : APPLE_SERVICES_ID
+        const refreshToken = code ? await exchangeAppleCode(code, clientId) : givenRefresh!
+        const { error: saveError } = await admin.from('apple_sign_in_tokens').upsert({
+          user_id: user.id,
+          refresh_token: refreshToken,
+          client_id: clientId,
+          updated_at: new Date().toISOString(),
+        })
+        if (saveError) return json(500, { ok: false, error: saveError.message })
+      } catch (err) {
+        const message = err instanceof Error ? err.message : 'Could not save Apple sign-in'
+        return json(500, { ok: false, error: message })
+      }
+      return json(200, { ok: true })
+    }
+
+    const usesApple =
+      user.identities?.some((identity) => identity.provider === 'apple') ||
+      user.app_metadata?.provider === 'apple'
+    if (usesApple) {
+      const { data: saved, error: tokenError } = await admin
+        .from('apple_sign_in_tokens')
+        .select('refresh_token, client_id')
+        .eq('user_id', user.id)
+        .maybeSingle()
+      if (tokenError) return json(500, { ok: false, error: tokenError.message })
+      if (saved?.refresh_token && saved.client_id) {
+        try {
+          await revokeApple(saved.refresh_token, saved.client_id)
+        } catch (err) {
+          const message = err instanceof Error ? err.message : 'Could not revoke Apple sign-in'
+          return json(500, { ok: false, error: message })
+        }
+      }
+    }
 
     // feedback / page_views use ON DELETE SET NULL — remove identifiable rows first.
     const { error: feedbackError } = await admin

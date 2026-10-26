@@ -104,7 +104,7 @@ function RootLayout() {
 }
 
 function IndexRoute() {
-  const { user, loading, configured, configError, authError, signInWithGoogle } = useAuth()
+  const { user, loading, configured, configError, authError, signInWithApple, signInWithGoogle } = useAuth()
   const [params] = useSearchParams()
 
   useEffect(() => {
@@ -135,6 +135,7 @@ function IndexRoute() {
       configError={configError}
       authError={authError}
       onSignIn={signInWithGoogle}
+      onApple={signInWithApple}
     />
   )
 }

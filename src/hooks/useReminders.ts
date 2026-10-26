@@ -13,6 +13,7 @@ import {
   REMINDER_OPEN_MAX,
   cleanReminderDescription,
   cleanReminderText,
+  isFollowedListReminder,
   isNextYearCopyOf,
   openReminderCount,
   reminderKindOf,
@@ -34,6 +35,7 @@ import {
   setReminderAlertOff,
   updateReminder,
 } from '../lib/reminders'
+import { refreshFollowedReminders } from '../lib/followedLists'
 import { forgetSharedReminder } from '../lib/sharedEvents'
 import { track } from '../lib/track'
 
@@ -56,7 +58,7 @@ export function useReminders(userId: string | undefined) {
       if (!quiet) setLoading(true)
       setToday(todayLocalDate())
       try {
-        setReminders(await listReminders())
+        setReminders(await refreshFollowedReminders(userId, await listReminders()))
         setLoaded(true)
         setError(null)
       } catch (err) {
@@ -179,7 +181,15 @@ export function useReminders(userId: string | undefined) {
   }
 
   async function update(id: string, input: ReminderInput): Promise<void> {
-    const photo = await updateReminder(id, input)
+    const before = reminders.find((item) => item.id === id)
+    const detach = Boolean(
+      before?.sharedListItemId &&
+        (before.text !== cleanReminderText(input.text) ||
+          before.day !== input.day ||
+          before.hour !== input.hour ||
+          (before.minute ?? null) !== (input.hour == null ? null : input.minute)),
+    )
+    const photo = await updateReminder(id, input, detach ? { detachSharedList: true } : undefined)
     patchLocal(id, {
       text: cleanReminderText(input.text),
       description: cleanReminderDescription(input.description),
@@ -195,6 +205,7 @@ export function useReminders(userId: string | undefined) {
       repeatFrom: input.repeat ? (input.repeatFrom ?? input.day) : null,
       lastDoneOn: input.repeat ? (input.lastDoneOn ?? null) : null,
       ...(photo ?? {}),
+      ...(detach ? { sharedListItemId: null, sharedListId: null } : {}),
     })
   }
 
@@ -235,6 +246,7 @@ export function useReminders(userId: string | undefined) {
   }
 
   async function move(reminder: Reminder, day: string): Promise<boolean> {
+    if (isFollowedListReminder(reminder)) return false
     return run(reminder.id, { day }, () => moveReminder(reminder.id, day))
   }
 

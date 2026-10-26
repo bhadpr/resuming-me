@@ -7,7 +7,7 @@ import { clampStep, ensureGuestDraft, setGuestStep, type GuestDraft } from '../l
 
 /** Guest onboarding at /start?step=1..8. Signed-in visitors go to Today. */
 export function StartPage() {
-  const { user, loading, signInWithGoogle } = useAuth()
+  const { user, loading, signInWithApple, signInWithGoogle } = useAuth()
   const [params, setParams] = useSearchParams()
   const [draft, setDraft] = useState<GuestDraft | null>(null)
   const stepParam = params.get('step')
@@ -63,6 +63,7 @@ export function StartPage() {
         <StartFlow
           draft={draft}
           onDraft={update}
+          onApple={signInWithApple}
           onGoogle={signInWithGoogle}
           adding={params.get('add') === '1'}
           addingVitals={params.get('add') === '1' && params.get('vital') === '1'}

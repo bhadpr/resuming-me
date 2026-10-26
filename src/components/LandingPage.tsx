@@ -14,6 +14,7 @@ import { playStoreUrl } from '../lib/marketing'
 import { track } from '../lib/track'
 import { useLocale } from '../hooks/useLocale'
 import { LanguagePicker } from './LanguagePicker'
+import { AppleMark } from './AppleMark'
 
 function LandingBrand() {
   return (
@@ -29,6 +30,7 @@ interface LandingPageProps {
   configError?: string | null
   authError?: string | null
   onSignIn: () => Promise<void>
+  onApple: () => Promise<void>
 }
 
 export function LandingPage({
@@ -36,12 +38,13 @@ export function LandingPage({
   configError = null,
   authError = null,
   onSignIn,
+  onApple,
 }: LandingPageProps) {
   const navigate = useNavigate()
   const { t } = useLocale()
   const native = Capacitor.isNativePlatform()
   const [error, setError] = useState<string | null>(null)
-  const [signingIn, setSigningIn] = useState(false)
+  const [signingIn, setSigningIn] = useState<'apple' | 'google' | null>(null)
   const [accountDeleted] = useState(() => consumeAccountDeletedFlag())
 
   useDocumentMeta({
@@ -59,15 +62,16 @@ export function LandingPage({
     })
   }, [])
 
-  async function handleSignIn() {
+  async function handleSignIn(method: 'apple' | 'google') {
     track('signin_clicked')
+    track('signin_method_clicked', { method })
     setError(null)
-    setSigningIn(true)
+    setSigningIn(method)
     try {
-      await onSignIn()
+      await (method === 'apple' ? onApple() : onSignIn())
     } catch (err) {
       setError(err instanceof Error ? err.message : 'Sign-in failed')
-      setSigningIn(false)
+      setSigningIn(null)
     }
   }
 
@@ -137,14 +141,20 @@ export function LandingPage({
             <p className="landing-signin-heading">{t('landing.haveAccount')}</p>
             <button
               type="button"
-              className="btn btn-secondary"
-              onClick={() => {
-                track('signin_method_clicked', { method: 'google' })
-                void handleSignIn()
-              }}
-              disabled={signingIn}
+              className="btn btn-apple"
+              onClick={() => void handleSignIn('apple')}
+              disabled={signingIn !== null}
             >
-              {signingIn ? t('landing.redirecting') : t('landing.signInGoogle')}
+              <AppleMark />
+              {signingIn === 'apple' ? t('landing.redirecting') : t('landing.signInApple')}
+            </button>
+            <button
+              type="button"
+              className="btn btn-secondary"
+              onClick={() => void handleSignIn('google')}
+              disabled={signingIn !== null}
+            >
+              {signingIn === 'google' ? t('landing.redirecting') : t('landing.signInGoogle')}
             </button>
           </div>
         </div>

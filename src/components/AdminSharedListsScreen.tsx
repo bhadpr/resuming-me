@@ -1,7 +1,7 @@
 import { useEffect, useState } from 'react'
 import { formatReminderDay, REMINDER_TEXT_MAX } from '../lib/reminderSchedule'
 import { todayLocalDate } from '../lib/dates'
-import { listPhotoUrl } from '../lib/eventPhotoUrl'
+import { LIST_PHOTO_SIDE, listPhotoUrl } from '../lib/eventPhotoUrl'
 import { compressEventPhoto } from '../lib/eventPhotos'
 import { EventPhoto } from './ReminderKindIcon'
 import {
@@ -9,6 +9,7 @@ import {
   emptySharedListItem,
   listSharedListsForAdmin,
   setSharedListOff,
+  deleteSharedList,
   setSharedListPhoto,
   SHARED_LIST_MAX_ITEMS,
   SHARED_LIST_TITLE_MAX,
@@ -48,6 +49,7 @@ export function AdminSharedListsScreen() {
   const [creating, setCreating] = useState(false)
   const [busyId, setBusyId] = useState<string | null>(null)
   const [copiedId, setCopiedId] = useState<string | null>(null)
+  const [confirmDeleteId, setConfirmDeleteId] = useState<string | null>(null)
 
   useEffect(() => {
     let mounted = true
@@ -95,6 +97,20 @@ export function AdminSharedListsScreen() {
     }
   }
 
+  async function remove(list: SharedList) {
+    setBusyId(list.id)
+    setError(null)
+    try {
+      await deleteSharedList(list.id, list.photoPath)
+      setRows((current) => current.filter((row) => row.id !== list.id))
+      setConfirmDeleteId(null)
+    } catch (err) {
+      setError(err instanceof Error ? err.message : 'Could not delete that list')
+    } finally {
+      setBusyId(null)
+    }
+  }
+
   if (creating) {
     return (
       <ListForm
@@ -132,6 +148,9 @@ export function AdminSharedListsScreen() {
               <p className="analytics-stat-hint">
                 {list.items.length} reminder{list.items.length === 1 ? '' : 's'} · {acceptedLabel(stats[list.id]?.accepts ?? 0)} · {sharedListUrl(list.code)}
               </p>
+              {list.zipCodes.length > 0 && (
+                <p className="analytics-stat-hint">ZIP codes {list.zipCodes.join(' ')}</p>
+              )}
               <ListPhoto
                 list={list}
                 onChanged={(photoPath) =>
@@ -164,6 +183,30 @@ export function AdminSharedListsScreen() {
                 >
                   {list.status === 'off' ? 'Turn on' : 'Switch off'}
                 </button>
+                {confirmDeleteId === list.id ? (
+                  <>
+                    <button
+                      type="button"
+                      className="btn btn-primary"
+                      disabled={busyId === list.id}
+                      onClick={() => void remove(list)}
+                    >
+                      Delete for good
+                    </button>
+                    <button type="button" className="btn btn-ghost" onClick={() => setConfirmDeleteId(null)}>
+                      Keep
+                    </button>
+                  </>
+                ) : (
+                  <button
+                    type="button"
+                    className="btn btn-ghost"
+                    disabled={busyId === list.id}
+                    onClick={() => setConfirmDeleteId(list.id)}
+                  >
+                    Delete
+                  </button>
+                )}
               </div>
             </li>
           ))}
@@ -179,6 +222,8 @@ function ListForm({ onCancel, onSaved }: { onCancel: () => void; onSaved: (list:
   const [photo, setPhoto] = useState<Blob | null>(null)
   const [photoPreview, setPhotoPreview] = useState<string | null>(null)
   const [imported, setImported] = useState<number | null>(null)
+  const [dayBefore, setDayBefore] = useState(true)
+  const [zipCodes, setZipCodes] = useState<string[]>([])
   const [error, setError] = useState<string | null>(null)
   const [saving, setSaving] = useState(false)
 
@@ -207,6 +252,7 @@ function ListForm({ onCancel, onSaved }: { onCancel: () => void; onSaved: (list:
       }
       setItems(next)
       setImported(result.items.length)
+      if (result.zipCodes.length > 0) setZipCodes(result.zipCodes)
       setError(null)
     })
   }
@@ -220,7 +266,7 @@ function ListForm({ onCancel, onSaved }: { onCancel: () => void; onSaved: (list:
     setSaving(true)
     setError(null)
     try {
-      onSaved(await createSharedList({ title, items }, photo))
+      onSaved(await createSharedList({ title, items, remindBefore: dayBefore, zipCodes }, photo))
     } catch (err) {
       setError(err instanceof Error ? err.message : 'Could not save that list')
       setSaving(false)
@@ -304,10 +350,17 @@ function ListForm({ onCancel, onSaved }: { onCancel: () => void; onSaved: (list:
         </label>
         <span className="analytics-stat-hint">
           {imported == null
-            ? 'One row per day: name, date, and an optional time. 11/25/2026 or 2026-11-25.'
-            : `Added ${imported} reminder${imported === 1 ? '' : 's'}. Check the rows, then save.`}
+            ? 'One row per day: name, date, and an optional time. A Zip codes column on the first row covers the whole calendar.'
+            : `Added ${imported} reminder${imported === 1 ? '' : 's'}${zipCodes.length > 0 ? `. ZIP codes ${zipCodes.join(' ')}` : ''}. Check the rows, then save.`}
         </span>
       </div>
+      <label className="reminder-switch">
+        <input type="checkbox" checked={dayBefore} onChange={(event) => setDayBefore(event.target.checked)} />
+        <span>
+          Remind the day before
+          <span className="reminder-switch-hint">An alert the evening before each day. People can turn it off when they accept.</span>
+        </span>
+      </label>
       {items.map((item, index) => (
         <fieldset key={index} className="field">
           <legend className="field-label">Reminder {index + 1}</legend>
@@ -392,7 +445,7 @@ function ListPhoto({ list, onChanged }: { list: SharedList; onChanged: (photoPat
 
   return (
     <div className="field">
-      <EventPhoto src={listPhotoUrl(list.photoPath)} alt="" className="event-photo-thumb" />
+      <EventPhoto src={listPhotoUrl(list.photoPath, undefined, LIST_PHOTO_SIDE)} alt="" className="event-photo-thumb" />
       <label className="btn btn-ghost">
         {busy ? 'Saving picture…' : list.photoPath ? 'Change school image' : 'Add school image'}
         <input
@@ -411,3 +464,4 @@ function ListPhoto({ list, onChanged }: { list: SharedList; onChanged: (photoPat
     </div>
   )
 }
+

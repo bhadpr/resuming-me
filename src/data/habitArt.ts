@@ -14,7 +14,7 @@ export const HABIT_ART: Record<string, string> = {
   meditate: '/habits/meditate.webp',
   rejuvenation: '/habits/meditate.webp',
   prayer: '/habits/prayer.webp',
-  relaxation: '/habits/relaxation.webp',
+  relaxation: '/habits/meditate.webp',
   weight: '/habits/weight.webp',
   steps: '/habits/steps.webp',
   sleep_hours: '/habits/sleep.webp',
@@ -22,6 +22,7 @@ export const HABIT_ART: Record<string, string> = {
   protein: '/habits/protein.webp',
   blood_pressure: '/habits/blood-pressure.webp',
   heart_rate: '/habits/heart-rate.webp',
+  blood_sugar: '/habits/blood-sugar.webp',
   reading: '/habits/reading.webp',
   writing: '/habits/writing.webp',
   journaling: '/habits/journaling.webp',
@@ -50,6 +51,8 @@ const NAME_ALIASES: Record<string, string> = {
   diastolic: 'diastolic',
   'blood pressure': 'blood_pressure',
   'heart rate': 'heart_rate',
+  'blood sugar': 'blood_sugar',
+  glucose: 'blood_sugar',
   cleaning: 'rejuvenation',
 }
 

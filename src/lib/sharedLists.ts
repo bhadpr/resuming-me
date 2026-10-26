@@ -3,11 +3,14 @@ import { hasWebLink, SHARED_EVENT_ORIGIN, type SharedReportReason } from './shar
 import { getOrCreateAnonId } from './track'
 import { LIST_PHOTO_BUCKET, isEventPhotoPath } from './eventPhotoUrl'
 import { cleanReminderText, REMINDER_TEXT_MAX } from './reminderSchedule'
+import { parseZipCodes } from './schoolZip'
+import { nflSearchKey } from './nflSearch'
 import { createSupabaseClient } from './supabase'
 import type { Database } from '../types/database'
 
 export const SHARED_LIST_TITLE_MAX = 80
-export const SHARED_LIST_MAX_ITEMS = 20
+/** A school year, including each weekday of a break. A shared link uses the same cap. */
+export const SHARED_LIST_MAX_ITEMS = 40
 
 export type SharedListStatus = 'active' | 'off'
 
@@ -36,6 +39,14 @@ export interface SharedList {
   createdAt: string
   /** School picture, or null. Anyone with the link can see it. */
   photoPath: string | null
+  /** An evening alert the day before each day. People who accept can turn it off. */
+  remindBefore: boolean
+  /** Five-digit ZIP codes. Empty keeps the list off School calendar. */
+  zipCodes: string[]
+  /** City, team, and short code. Empty keeps the list off NFL search. */
+  searchKeys: string[]
+  /** Kickoff zone. Null means the stored clock is already the reminder clock. */
+  timeZone: string | null
   items: SharedListItem[]
 }
 
@@ -217,11 +228,12 @@ function headerKey(value: string): string {
   return value.toLowerCase().replace(/[^a-z]/g, '')
 }
 
-function headerKind(value: string): 'name' | 'date' | 'time' | 'note' | null {
+function headerKind(value: string): 'name' | 'date' | 'time' | 'note' | 'zip' | null {
   const key = headerKey(value)
   if (!key) return null
   if (CSV_DATE.has(key) || key.endsWith('date')) return 'date'
   if (CSV_TIME.has(key) || key.endsWith('time')) return 'time'
+  if (CSV_ZIP.has(key) || key.startsWith('zip')) return 'zip'
   if (CSV_NOTE.has(key) || key.includes('half')) return 'note'
   if (CSV_NAME.has(key) || key.startsWith('holiday') || key.startsWith('name') || key.endsWith('name')) return 'name'
   return null
@@ -231,8 +243,11 @@ const CSV_NAME = new Set(['text', 'name', 'holiday', 'event', 'title', 'descript
 const CSV_DATE = new Set(['date', 'day', 'when'])
 const CSV_TIME = new Set(['time', 'hour'])
 const CSV_NOTE = new Set(['type', 'kind', 'note', 'notes', 'detail', 'halfday'])
+const CSV_ZIP = new Set(['zip', 'zipcode', 'zipcodes', 'postal', 'postalcode'])
 
-export type SharedListCsvResult = { ok: true; items: SharedListItemDraft[] } | { ok: false; error: string }
+export type SharedListCsvResult =
+  | { ok: true; items: SharedListItemDraft[]; zipCodes: string[] }
+  | { ok: false; error: string }
 
 /**
  * Rows for the admin form, not a saved list. The admin checks them, then saves.
@@ -248,6 +263,7 @@ export function sharedListItemsFromCsv(source: string): SharedListCsvResult {
     date: kinds.indexOf('date'),
     time: kinds.indexOf('time'),
     note: kinds.indexOf('note'),
+    zip: kinds.indexOf('zip'),
   }
   const hasHeader = named.name >= 0 && named.date >= 0
   let columns = named
@@ -269,7 +285,7 @@ export function sharedListItemsFromCsv(source: string): SharedListCsvResult {
       return { ok: false, error: 'Each row needs a name as well as a date.' }
     }
     const note = sample.findIndex((_, index) => index !== date && index !== time && index !== name)
-    columns = { name, date, time, note }
+    columns = { name, date, time, note, zip: -1 }
   }
 
   if (data.length === 0) return { ok: false, error: 'That file has no reminders.' }
@@ -300,7 +316,22 @@ export function sharedListItemsFromCsv(source: string): SharedListCsvResult {
     }
     items.push({ text: cleaned, day, time })
   }
-  return { ok: true, items }
+
+  let zipCodes: string[] = []
+  if (columns.zip >= 0) {
+    for (let index = 0; index < data.length; index += 1) {
+      const cell = (data[index][columns.zip] ?? '').trim()
+      if (!cell) continue
+      const parsed = parseZipCodes(cell)
+      if (!parsed.ok) {
+        const line = hasHeader ? index + 2 : index + 1
+        return { ok: false, error: `Row ${line} has a ZIP code that needs 5 digits.` }
+      }
+      zipCodes = parsed.zipCodes
+      break
+    }
+  }
+  return { ok: true, items, zipCodes }
 }
 
 /** Why a draft cannot be saved. Null when it can. */
@@ -343,6 +374,10 @@ function fromList(row: ListRow, items: ItemRow[]): SharedList {
     status: row.status === 'off' ? 'off' : 'active',
     createdAt: row.created_at,
     photoPath: isEventPhotoPath(row.photo_path) ? row.photo_path : null,
+    remindBefore: row.remind_before === true,
+    zipCodes: (row.zip_codes ?? []).filter((zip) => /^\d{5}$/.test(zip)),
+    searchKeys: (row.search_keys ?? []).map((key) => key.toLowerCase()),
+    timeZone: row.time_zone ?? null,
     items: items
       .filter((item) => item.list_id === row.id)
       .map(fromItem)
@@ -350,28 +385,114 @@ function fromList(row: ListRow, items: ItemRow[]): SharedList {
   }
 }
 
+/** The holiday catalogs. Empty ZIP codes, so they stay off the school list. Phones that add one keep following it. */
+export const US_HOLIDAY_LIST_ID = 'a11ce001-0000-4111-8001-000000000001'
+export const INDIA_HOLIDAY_LIST_ID = 'a11ce002-0000-4111-8001-000000000002'
+
+const LIST_PAGE = 1000
+
+/** PostgREST stops at 1,000 rows. A statewide set of calendars is larger than that. */
+async function selectPages<T>(
+  load: (from: number, to: number) => PromiseLike<{ data: T[] | null; error: { message: string } | null }>,
+): Promise<T[]> {
+  const rows: T[] = []
+  for (let from = 0; ; from += LIST_PAGE) {
+    const { data, error } = await load(from, from + LIST_PAGE - 1)
+    if (error) throw error
+    const page = data ?? []
+    rows.push(...page)
+    if (page.length < LIST_PAGE) return rows
+  }
+}
+
+async function itemsForLists(listIds: readonly string[]): Promise<ItemRow[]> {
+  const client = createSupabaseClient()
+  const rows: ItemRow[] = []
+  for (let index = 0; index < listIds.length; index += 80) {
+    const ids = listIds.slice(index, index + 80)
+    const page = await selectPages<ItemRow>((from, to) =>
+      client.from('shared_list_items').select('*').in('list_id', ids).order('id', { ascending: true }).range(from, to),
+    )
+    rows.push(...page)
+  }
+  return rows
+}
+
+/** One active list and its days. Null when the list is missing or switched off. */
+export async function getSharedListById(id: string): Promise<SharedList | null> {
+  const client = createSupabaseClient()
+  const { data: list, error } = await client.from('shared_lists').select('*').eq('id', id).maybeSingle()
+  if (error) throw error
+  if (!list || list.status !== 'active') return null
+  const { data: items, error: itemError } = await client
+    .from('shared_list_items')
+    .select('*')
+    .eq('list_id', list.id)
+    .order('sort_order', { ascending: true })
+  if (itemError) throw itemError
+  const built = fromList(list, items ?? [])
+  return built.items.length > 0 ? built : null
+}
+
+/** School calendars that include this ZIP. Other districts stay on the server. */
+export async function listSchoolCalendarsForZip(zip: string): Promise<SharedList[]> {
+  if (!/^\d{5}$/.test(zip)) return []
+  const client = createSupabaseClient()
+  const { data: lists, error } = await client
+    .from('shared_lists')
+    .select('*')
+    .eq('status', 'active')
+    .contains('zip_codes', [zip])
+    .order('title', { ascending: true })
+  if (error) throw error
+  if (!lists?.length) return []
+  const items = await itemsForLists(lists.map((row) => row.id))
+  return lists.map((row) => fromList(row, items)).filter((list) => list.items.length > 0)
+}
+
+/** NFL teams whose search keys include this city, name, or short code. */
+export async function listNflTeamsForSearch(raw: string): Promise<SharedList[]> {
+  const key = nflSearchKey(raw)
+  if (!key) return []
+  const client = createSupabaseClient()
+  const { data: lists, error } = await client
+    .from('shared_lists')
+    .select('*')
+    .eq('status', 'active')
+    .contains('search_keys', [key])
+    .order('title', { ascending: true })
+  if (error) throw error
+  if (!lists?.length) return []
+  const items = await itemsForLists(lists.map((row) => row.id))
+  return lists.map((row) => fromList(row, items)).filter((list) => list.items.length > 0)
+}
+
 export async function listSharedListsForAdmin(): Promise<SharedList[]> {
   const client = createSupabaseClient()
-  const [{ data: lists, error: listError }, { data: items, error: itemError }] = await Promise.all([
-    client.from('shared_lists').select('*').order('created_at', { ascending: false }),
-    client.from('shared_list_items').select('*'),
-  ])
-  if (listError) throw listError
-  if (itemError) throw itemError
-  return (lists ?? []).map((row) => fromList(row, items ?? []))
+  const lists = await selectPages<ListRow>((from, to) =>
+    client.from('shared_lists').select('*').order('created_at', { ascending: false }).order('id', { ascending: true }).range(from, to),
+  )
+  const items = await itemsForLists(lists.map((row) => row.id))
+  return lists.map((row) => fromList(row, items))
 }
 
 export async function createSharedList(
   form: {
     title: string
     items: readonly SharedListItemDraft[]
+    remindBefore?: boolean
+    zipCodes?: readonly string[]
   },
   photo: Blob | null = null,
 ): Promise<SharedList> {
   if (sharedListFormIssue(form)) throw new Error('That list is not complete')
   const client = createSupabaseClient()
   const title = form.title.replace(/\s+/g, ' ').trim()
-  const { data: list, error } = await client.from('shared_lists').insert({ title }).select('*').single()
+  const { data: list, error } = await client
+    .from('shared_lists')
+    .insert({ title, remind_before: form.remindBefore === true, zip_codes: [...(form.zipCodes ?? [])] })
+    .select('*')
+    .single()
   if (error) throw error
   const rows = form.items
     .filter((item) => item.text.trim() || item.day || item.time)
@@ -428,6 +549,14 @@ export async function setSharedListOff(id: string, off: boolean): Promise<void> 
   if (error) throw error
 }
 
+/** Removes the list, its days, and its picture. Reminders people already accepted stay on their phones. */
+export async function deleteSharedList(id: string, photoPath: string | null): Promise<void> {
+  const client = createSupabaseClient()
+  const { error } = await client.from('shared_lists').delete().eq('id', id)
+  if (error) throw error
+  if (photoPath) void client.storage.from(LIST_PHOTO_BUCKET).remove([photoPath])
+}
+
 /** The active list for this code, or null when the code is wrong or the list is off. */
 export async function getSharedList(code: string): Promise<SharedList | null> {
   if (!isSharedListCode(code)) return null
@@ -441,6 +570,37 @@ export async function getSharedList(code: string): Promise<SharedList | null> {
     .eq('list_id', list.id)
   if (itemError) throw itemError
   return fromList(list, items ?? [])
+}
+
+/** Puts each accepted reminder's school picture on the reminder. Missing when the list is off. */
+export async function withListPhotos<
+  T extends { sharedListItemId?: string | null; listPhotoPath?: string | null },
+>(list: readonly T[]): Promise<T[]> {
+  const ids = [...new Set(list.map((item) => item.sharedListItemId).filter((id): id is string => Boolean(id)))]
+  if (ids.length === 0) return [...list]
+  try {
+    const client = createSupabaseClient()
+    const { data: items, error } = await client.from('shared_list_items').select('id, list_id').in('id', ids)
+    if (error || !items?.length) return [...list]
+    const listIds = [...new Set(items.map((item) => item.list_id))]
+    const { data: lists, error: listError } = await client
+      .from('shared_lists')
+      .select('id, photo_path')
+      .in('id', listIds)
+    if (listError || !lists) return [...list]
+    const photoByList = new Map(
+      lists.map((row) => [row.id, isEventPhotoPath(row.photo_path) ? row.photo_path : null]),
+    )
+    const photoByItem = new Map(items.map((item) => [item.id, photoByList.get(item.list_id) ?? null]))
+    return list.map((item) => {
+      if (!item.sharedListItemId) return item
+      const photo = photoByItem.get(item.sharedListItemId)
+      if (photo === undefined) return item
+      return { ...item, listPhotoPath: photo }
+    })
+  } catch {
+    return [...list]
+  }
 }
 
 /** Item ids this signed-in person has already accepted. */

@@ -1,7 +1,14 @@
 import { useEffect } from 'react'
 import { useLocation } from 'react-router-dom'
 import { useLocale } from '../hooks/useLocale'
-import { guestMedicineSchedules, guestTakenMarks, loadGuestDraft, saveGuestSharedStatuses } from '../lib/guestDraft'
+import {
+  guestMedicineSchedules,
+  guestTakenMarks,
+  loadGuestDraft,
+  refreshGuestFollowedLists,
+  saveGuestListPhotos,
+  saveGuestSharedStatuses,
+} from '../lib/guestDraft'
 import { mealMessageKey } from '../lib/medicineFormat'
 import { listenForMedicineNotificationActions, syncMedicineNotifications } from '../lib/medicineNotifications'
 import { MEDICINE_REMINDER_CHANGED } from '../lib/medicineReminderState'
@@ -13,6 +20,7 @@ import {
 } from '../lib/reminderNotifications'
 import { REMINDERS_CHANGED } from '../lib/reminderSchedule'
 import { withSharedStatuses } from '../lib/reminders'
+import { withListPhotos } from '../lib/sharedLists'
 import { useDocumentMeta } from '../hooks/useDocumentMeta'
 import { BrandTitle } from './BrandTitle'
 import { BottomNav } from './BottomNav'
@@ -148,11 +156,23 @@ function useGuestReminderAlerts(): void {
     const refresh = () => {
       if (document.visibilityState !== 'visible') return
       const draft = loadGuestDraft()
-      if (!draft?.reminders.some((item) => item.sharedEventId)) return
-      void withSharedStatuses(draft.reminders).then((updated) => {
-        const latest = loadGuestDraft()
-        if (latest) saveGuestSharedStatuses(latest, updated)
-      })
+      if (!draft) return
+      if (draft.reminders.some((item) => item.sharedEventId)) {
+        void withSharedStatuses(draft.reminders).then((updated) => {
+          const latest = loadGuestDraft()
+          if (latest) saveGuestSharedStatuses(latest, updated)
+        })
+      }
+      if (draft.reminders.some((item) => item.sharedListItemId || item.sharedListId)) {
+        void refreshGuestFollowedLists().then(() => {
+          const latest = loadGuestDraft()
+          if (!latest?.reminders.some((item) => item.sharedListItemId)) return
+          void withListPhotos(latest.reminders).then((updated) => {
+            const after = loadGuestDraft()
+            if (after) saveGuestListPhotos(after, updated)
+          })
+        })
+      }
     }
     refresh()
     document.addEventListener('visibilitychange', refresh)

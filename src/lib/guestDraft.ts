@@ -15,6 +15,7 @@ import {
   cleanReminderDescription,
   cleanReminderText,
   isDay,
+  isFollowedListReminder,
   isNextYearCopyOf,
   nextYearCopy,
   openReminderCount,
@@ -23,6 +24,7 @@ import {
   type ReminderInput,
 } from './reminderSchedule'
 import { isEventPhotoPath, isReminderPhotoData } from './eventPhotoUrl'
+import { followedPlanIsQuiet, loadFollowedCalendarDays, planFollowedListRefresh } from './followedLists'
 import { getLocale, t } from './i18n'
 import { canLogPastGoal, countPortion, countProgressLabel } from './dayStatus'
 import { endOfWeekSunday, startOfWeekMonday, todayLocalDate } from './dates'
@@ -530,6 +532,8 @@ function normalizeGuestReminders(list: unknown, now = Date.now()): Reminder[] {
       doneAt,
       sharedEventId: typeof item.sharedEventId === 'string' ? item.sharedEventId : null,
       ...(typeof item.sharedListItemId === 'string' ? { sharedListItemId: item.sharedListItemId } : {}),
+      ...(typeof item.sharedListId === 'string' ? { sharedListId: item.sharedListId } : {}),
+      ...(isEventPhotoPath(item.listPhotoPath) ? { listPhotoPath: item.listPhotoPath } : {}),
       ...(typeof item.communityId === 'string' ? { communityId: item.communityId } : {}),
       ...(isEventPhotoPath(item.communityPhotoPath) ? { communityPhotoPath: item.communityPhotoPath } : {}),
       ...(item.alertOff === true ? { alertOff: true } : {}),
@@ -582,6 +586,8 @@ function newGuestReminder(input: ReminderInput): Reminder {
     doneAt: null,
     sharedEventId: input.sharedEventId ?? null,
     ...(input.sharedListItemId ? { sharedListItemId: input.sharedListItemId } : {}),
+    ...(input.sharedListId ? { sharedListId: input.sharedListId } : {}),
+    ...(isEventPhotoPath(input.listPhotoPath) ? { listPhotoPath: input.listPhotoPath } : {}),
     ...(input.communityId ? { communityId: input.communityId } : {}),
     ...(isEventPhotoPath(input.communityPhotoPath) ? { communityPhotoPath: input.communityPhotoPath } : {}),
   }
@@ -640,14 +646,101 @@ export function reopenGuestReminder(draft: GuestDraft, id: string): GuestDraft {
   return next
 }
 
+const MANAGED_REMINDER_FIELDS = [
+  'text',
+  'description',
+  'day',
+  'hour',
+  'minute',
+  'kind',
+  'everyYear',
+  'repeat',
+  'repeatUntil',
+  'repeatFrom',
+  'lastDoneOn',
+  'remindBefore',
+  'remindWeekBefore',
+  'photoData',
+  'sharedListItemId',
+  'sharedListId',
+] as const
+
+/** A calendar copy keeps its name and date. Done and the alert switch still apply. */
+function patchForFollowedReminder(current: Reminder, patch: Partial<Reminder>): Partial<Reminder> | null {
+  if (!isFollowedListReminder(current)) return patch
+  const next = { ...patch }
+  for (const key of MANAGED_REMINDER_FIELDS) delete next[key]
+  return Object.keys(next).length > 0 ? next : null
+}
+
 export function updateGuestReminder(draft: GuestDraft, id: string, patch: Partial<Reminder>): GuestDraft {
   const cleaned = 'description' in patch ? { ...patch, description: cleanReminderDescription(patch.description) } : patch
+  const current = draft.reminders.find((item) => item.id === id)
+  const nextPatch = current ? patchForFollowedReminder(current, cleaned) : cleaned
+  if (!nextPatch) return draft
   const next = saveGuestDraft({
     ...draft,
-    reminders: draft.reminders.map((item) => (item.id === id ? { ...item, ...cleaned } : item)),
+    reminders: draft.reminders.map((item) => (item.id === id ? { ...item, ...nextPatch } : item)),
   })
   announceRemindersChanged()
   return next
+}
+
+let guestFollowRefresh: Promise<void> | null = null
+
+/** Pulls calendar changes onto the copies this phone still follows. */
+export async function refreshGuestFollowedLists(): Promise<void> {
+  if (guestFollowRefresh) return guestFollowRefresh
+  guestFollowRefresh = refreshGuestFollowedListsOnce().finally(() => {
+    guestFollowRefresh = null
+  })
+  return guestFollowRefresh
+}
+
+async function refreshGuestFollowedListsOnce(): Promise<void> {
+  const draft = loadGuestDraft()
+  if (!draft || !draft.reminders.some((item) => item.sharedListItemId || item.sharedListId)) return
+  const loaded = await loadFollowedCalendarDays(draft.reminders)
+  if (!loaded) return
+  const latest = loadGuestDraft()
+  if (!latest) return
+  const plan = planFollowedListRefresh(latest.reminders, loaded.days, loaded.loadedListIds)
+  if (followedPlanIsQuiet(plan)) return
+  const removed = new Set(plan.removeIds)
+  const updates = new Map(plan.updates.map((update) => [update.reminderId, update]))
+  const reminders = latest.reminders
+    .filter((item) => !removed.has(item.id))
+    .map((item) => {
+      const update = updates.get(item.id)
+      if (!update) return item
+      return {
+        ...item,
+        text: update.text,
+        day: update.day,
+        hour: update.hour,
+        minute: update.minute,
+        sharedListId: update.sharedListId,
+        sharedListItemId: update.sharedListItemId,
+      }
+    })
+  for (const day of plan.add) {
+    if (openReminderCount(reminders) >= REMINDER_OPEN_MAX) break
+    reminders.push(
+      newGuestReminder({
+        text: day.text,
+        day: day.day,
+        hour: day.hour,
+        minute: day.minute,
+        kind: 'event',
+        sharedListItemId: day.id,
+        sharedListId: day.listId,
+        listPhotoPath: day.photoPath,
+        remindBefore: day.remindBefore,
+      }),
+    )
+  }
+  saveGuestDraft({ ...latest, reminders })
+  announceRemindersChanged()
 }
 
 /** Keeps what the server said about shared events, so a cancelled copy stays quiet offline. */
@@ -662,6 +755,25 @@ export function saveGuestSharedStatuses(draft: GuestDraft, updated: readonly Rem
     if (status === item.sharedStatus && photo === item.sharedPhotoPath) return item
     changed = true
     return { ...item, sharedStatus: status, sharedPhotoPath: photo }
+  })
+  if (!changed) return draft
+  const next = saveGuestDraft({ ...draft, reminders })
+  announceRemindersChanged()
+  return next
+}
+
+/** Keeps the school picture on accepted list reminders, so it still shows offline. */
+export function saveGuestListPhotos(draft: GuestDraft, updated: readonly Reminder[]): GuestDraft {
+  const byId = new Map(updated.map((item) => [item.id, item]))
+  let changed = false
+  const reminders = draft.reminders.map((item) => {
+    if (!item.sharedListItemId) return item
+    const fresh = byId.get(item.id)
+    if (!fresh || fresh.listPhotoPath === undefined) return item
+    const photo = fresh.listPhotoPath
+    if ((photo ?? null) === (item.listPhotoPath ?? null)) return item
+    changed = true
+    return { ...item, listPhotoPath: photo }
   })
   if (!changed) return draft
   const next = saveGuestDraft({ ...draft, reminders })

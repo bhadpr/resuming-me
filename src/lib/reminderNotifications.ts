@@ -138,7 +138,9 @@ export async function syncReminderNotifications(
     return
   }
   const sharedEventIds = new Map(reminders.map((item) => [item.id, item.sharedEventId ?? null]))
-  const repeating = new Set(reminders.filter((item) => item.repeat).map((item) => item.id))
+  const repeating = new Set(
+    reminders.filter((item) => item.repeat || item.sharedListItemId || item.sharedListId).map((item) => item.id),
+  )
   await ensureReminderChannel()
   await LocalNotifications.schedule({
     notifications: alerts.map((alert) => ({

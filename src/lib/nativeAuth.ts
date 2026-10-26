@@ -77,7 +77,7 @@ export async function listenForNativeAuthCallback(
       await completeNativeAuthCallback(client, url)
       await Browser.close().catch(() => {})
     } catch (err) {
-      onError(err instanceof Error ? err.message : 'Google sign-in failed')
+      onError(err instanceof Error ? err.message : 'Sign-in failed')
     }
   })
 

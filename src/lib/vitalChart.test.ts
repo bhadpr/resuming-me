@@ -18,9 +18,10 @@ const point = (value: number, secondary: number | null = null): VitalPoint => ({
 })
 
 describe('vitalTargetFor', () => {
-  it('uses the fixed ranges for blood pressure and heart rate', () => {
+  it('uses the fixed ranges for blood pressure, heart rate, and blood sugar', () => {
     expect(vitalTargetFor({ name: 'Blood Pressure' }, null, null)).toEqual({ kind: 'bp', upper: 120, lower: 80 })
     expect(vitalTargetFor({ template_id: 'heart_rate' }, 99, null)).toEqual({ kind: 'band', low: 60, high: 100 })
+    expect(vitalTargetFor({ name: 'Blood Sugar' }, null, null)).toEqual({ kind: 'band', low: 70, high: 100 })
   })
 
   it('uses the saved target for goals and weight, and draws but does not judge a custom one', () => {
@@ -82,6 +83,14 @@ describe('other targets', () => {
     expect(pointStatus(target, point(100))).toBe('on')
     expect(pointStatus(target, point(101))).toBe('off')
     expect(pointStatus(target, point(55))).toBe('off')
+  })
+
+  it('judges fasting blood sugar against the 70 to 100 range, inclusive', () => {
+    const target = vitalTargetFor({ name: 'Blood Sugar' }, null, null)
+    expect(pointStatus(target, point(70))).toBe('on')
+    expect(pointStatus(target, point(100))).toBe('on')
+    expect(pointStatus(target, point(101))).toBe('off')
+    expect(pointStatus(target, point(69))).toBe('off')
   })
 
   it('treats a day below a daily goal as off target', () => {

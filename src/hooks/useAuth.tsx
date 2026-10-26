@@ -16,9 +16,16 @@ import {
 } from '../lib/supabase'
 import { fetchIsAdmin } from '../lib/analytics'
 import {
+  appleSignInCancelled,
+  nativeAppleSignIn,
+  rememberAppleSignIn,
+} from '../lib/appleAuth'
+import {
+  completeNativeAuthCallback,
   getAuthRedirectTo,
   listenForNativeAuthCallback,
   openNativeOAuthUrl,
+  parseAuthCallbackUrl,
 } from '../lib/nativeAuth'
 import { track } from '../lib/track'
 
@@ -30,6 +37,7 @@ interface AuthContextValue {
   configError: string | null
   authError: string | null
   isAdmin: boolean
+  signInWithApple: () => Promise<void>
   signInWithGoogle: () => Promise<void>
   signInWithEmail: (email: string) => Promise<void>
   signOut: () => Promise<void>
@@ -37,12 +45,23 @@ interface AuthContextValue {
 
 const AuthContext = createContext<AuthContextValue | null>(null)
 
-function clearAuthHashFromUrl(): void {
+function clearAuthCallbackFromUrl(): void {
   if (typeof window === 'undefined') return
-  const { hash, pathname, search } = window.location
-  if (hash.includes('access_token') || hash.includes('error') || hash.includes('refresh_token')) {
-    window.history.replaceState(null, '', `${pathname}${search}`)
-  }
+  const url = new URL(window.location.href)
+  const hash = url.hash
+  const hasHashAuth =
+    hash.includes('access_token') || hash.includes('error') || hash.includes('refresh_token')
+  const hasQueryAuth =
+    url.searchParams.has('code') ||
+    url.searchParams.has('error') ||
+    url.searchParams.has('error_description')
+  if (!hasHashAuth && !hasQueryAuth) return
+  if (hasHashAuth) url.hash = ''
+  url.searchParams.delete('code')
+  url.searchParams.delete('error')
+  url.searchParams.delete('error_description')
+  url.searchParams.delete('error_code')
+  window.history.replaceState(null, '', `${url.pathname}${url.search}${url.hash}`)
 }
 
 function urlHasAuthCallback(): boolean {
@@ -83,12 +102,18 @@ export function AuthProvider({ children }: { children: ReactNode }) {
 
         if (data.session) {
           setSession(data.session)
-          clearAuthHashFromUrl()
+          clearAuthCallbackFromUrl()
         } else if (urlHasAuthCallback()) {
-          // OAuth redirected back, but session was not established (often a bad anon key).
-          setAuthError(
-            'Google sign-in returned, but the session could not be saved. Check that VITE_SUPABASE_ANON_KEY in .env is the full anon key from Supabase → Settings → API, then restart the dev server.',
-          )
+          const callback = parseAuthCallbackUrl(window.location.href)
+          try {
+            if (!callback.error) await completeNativeAuthCallback(client, window.location.href)
+            const { data: next, error: nextError } = await client.auth.getSession()
+            if (next.session) setSession(next.session)
+            else setAuthError(callback.error || nextError?.message || 'Sign-in could not be finished. Try again.')
+          } catch (err) {
+            setAuthError(err instanceof Error ? err.message : 'Sign-in could not be finished. Try again.')
+          }
+          clearAuthCallbackFromUrl()
         }
       } catch (err) {
         if (!mounted) return
@@ -102,14 +127,19 @@ export function AuthProvider({ children }: { children: ReactNode }) {
 
     const {
       data: { subscription },
-    } = client.auth.onAuthStateChange((_event, nextSession) => {
+    } = client.auth.onAuthStateChange((event, nextSession) => {
       if (!mounted) return
       setSession(nextSession)
       if (nextSession) {
         setAuthError(null)
-        clearAuthHashFromUrl()
+        clearAuthCallbackFromUrl()
       }
       setLoading(false)
+      const refreshToken = nextSession?.provider_refresh_token
+      const apple = nextSession?.user.identities?.some((identity) => identity.provider === 'apple')
+      if (event === 'SIGNED_IN' && refreshToken && apple) {
+        void rememberAppleSignIn(client, { refreshToken }).catch(() => {})
+      }
     })
 
     let removeNativeListener: (() => void) | undefined
@@ -155,6 +185,53 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     }
   }, [configured, session?.user?.id])
 
+  const signInWithApple = useCallback(async () => {
+    const client = createSupabaseClient()
+    if (Capacitor.getPlatform() === 'ios') {
+      let apple
+      try {
+        apple = await nativeAppleSignIn()
+      } catch (err) {
+        if (appleSignInCancelled(err)) return
+        throw err
+      }
+      const { error } = await client.auth.signInWithIdToken({
+        provider: 'apple',
+        token: apple.identityToken,
+        nonce: apple.rawNonce,
+      })
+      if (error) throw error
+      const fullName = [apple.givenName, apple.familyName].filter(Boolean).join(' ')
+      if (fullName) {
+        await client.auth.updateUser({
+          data: {
+            full_name: fullName,
+            given_name: apple.givenName,
+            family_name: apple.familyName,
+          },
+        })
+      }
+      if (apple.authorizationCode) {
+        void rememberAppleSignIn(client, { authorizationCode: apple.authorizationCode }).catch(() => {})
+      }
+      return
+    }
+
+    const native = Capacitor.isNativePlatform()
+    const { data, error } = await client.auth.signInWithOAuth({
+      provider: 'apple',
+      options: {
+        redirectTo: getAuthRedirectTo(),
+        skipBrowserRedirect: native,
+      },
+    })
+    if (error) throw error
+    if (native) {
+      if (!data.url) throw new Error('Apple sign-in did not return a URL')
+      await openNativeOAuthUrl(data.url)
+    }
+  }, [])
+
   const signInWithGoogle = useCallback(async () => {
     const client = createSupabaseClient()
     const native = Capacitor.isNativePlatform()
@@ -199,6 +276,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
       configError,
       authError,
       isAdmin,
+      signInWithApple,
       signInWithGoogle,
       signInWithEmail,
       signOut,
@@ -210,6 +288,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
       configError,
       authError,
       isAdmin,
+      signInWithApple,
       signInWithGoogle,
       signInWithEmail,
       signOut,

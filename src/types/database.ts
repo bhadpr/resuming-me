@@ -357,6 +357,7 @@ export interface Database {
           done_at: string | null
           shared_event_id: string | null
           shared_list_item_id: string | null
+          shared_list_id: string | null
           community_id: string | null
           community_photo_path: string | null
           alert_off: boolean
@@ -383,6 +384,7 @@ export interface Database {
           done_at?: string | null
           shared_event_id?: string | null
           shared_list_item_id?: string | null
+          shared_list_id?: string | null
           community_id?: string | null
           community_photo_path?: string | null
           alert_off?: boolean
@@ -407,6 +409,7 @@ export interface Database {
           done_at?: string | null
           shared_event_id?: string | null
           shared_list_item_id?: string | null
+          shared_list_id?: string | null
           alert_off?: boolean
         }
         Relationships: []
@@ -457,6 +460,10 @@ export interface Database {
           title: string
           status: string
           photo_path: string | null
+          remind_before: boolean
+          zip_codes: string[]
+          search_keys: string[]
+          time_zone: string | null
           created_at: string
           updated_at: string
         }
@@ -466,6 +473,10 @@ export interface Database {
           title: string
           status?: string
           photo_path?: string | null
+          remind_before?: boolean
+          zip_codes?: string[]
+          search_keys?: string[]
+          time_zone?: string | null
           created_at?: string
           updated_at?: string
         }
@@ -473,6 +484,10 @@ export interface Database {
           title?: string
           status?: string
           photo_path?: string | null
+          remind_before?: boolean
+          zip_codes?: string[]
+          search_keys?: string[]
+          time_zone?: string | null
         }
         Relationships: []
       }

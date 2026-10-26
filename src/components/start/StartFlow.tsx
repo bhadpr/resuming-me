@@ -4,19 +4,20 @@ import { ACTIVITY_TEMPLATES, HABIT_GROUPS, activityInputFromTemplate, templateBy
 import { HABIT_ART, habitArtFor, habitSizeArtFor } from '../../data/habitArt'
 import { HabitIcon } from '../HabitIcon'
 import { HabitMark } from '../HabitMark'
+import { AppleMark } from '../AppleMark'
 import { HabitVideoPlaceholder } from '../HabitVideoPlaceholder'
 import { GoalTargetPicker, StandardVitalTarget, WeightTargetField } from '../GoalTargetPicker'
-import { AUTH_PROVIDERS } from '../../lib/authProviders'
 import { MEDICINES_ENABLED } from '../../config'
 import { formatReminderClock } from '../../lib/checkinPrefs'
 import { addDays, todayLocalDate } from '../../lib/dates'
-import { reminderPhotoSrc } from '../../lib/eventPhotoUrl'
+import { LIST_PHOTO_SIDE, reminderPhotoSrc } from '../../lib/eventPhotoUrl'
 import { parseTimeInput } from '../../lib/dailyDigest'
 import { enableDailyDigestFromOnboarding } from '../../lib/localNotifications'
 import {
   GUEST_MAX_ACTIVITIES,
   GUEST_MAX_MEDICINES,
   addGuestReminder,
+  loadGuestDraft,
   appendGuestLog,
   removeGuestActivity,
   saveGuestDraft,
@@ -60,10 +61,12 @@ import { BrandTitle } from '../BrandTitle'
 import { MedicineForm } from '../MedicineForm'
 import { MedicineThumb } from '../MedicineThumb'
 import { Icon } from '../Icon'
-import { CommunityReminderPicker } from '../CommunityReminderPicker'
+import { HolidayAsk } from './HolidayAsk'
 import { ReminderEditor } from '../ReminderForm'
 import { ReminderKindMark } from '../ReminderKindIcon'
-import { addedCommunityIds, communityReminderInput, type CommunityReminder } from '../../lib/communityReminders'
+import { onboardingHolidayList } from '../../lib/onboardingHoliday'
+import { importSharedList } from '../../lib/importSharedList'
+import { type SharedList } from '../../lib/sharedLists'
 import { askForReminderAlerts } from '../../lib/reminderNotifications'
 import {
   formatReminderDay,
@@ -276,24 +279,38 @@ function listedMinutes(activity: GuestActivity): GuestActivity {
 }
 
 /** Welcome questions in order, each with its follow-up screens. Nudge time and Save come after. */
-const WELCOME_PHASES: readonly (readonly StartPickPhase[])[] = [
-  ['workout', 'workouts', 'workoutDetail'],
-  ['pranayam', 'pranayams', 'pranayamDetail'],
-  ...(MEDICINES_ENABLED ? [['ask', 'medicine', 'medicines'] as const] : []),
-  ['reminderCommunity'],
-  ['reminderAsk', 'reminder', 'reminders'],
-  ['vitals', 'vitalPicks', 'targets', 'activities'],
-]
-const WELCOME_QUESTIONS = WELCOME_PHASES.length + 2
+function welcomePhases(): readonly (readonly StartPickPhase[])[] {
+  return [
+    ['workout', 'workouts', 'workoutDetail'],
+    ['pranayam', 'pranayams', 'pranayamDetail'],
+    ...(MEDICINES_ENABLED ? [['ask', 'medicine', 'medicines'] as const] : []),
+    ...(onboardingHolidayList() ? [['reminderCommunity'] as const] : []),
+    ['reminderAsk', 'reminder', 'reminders'],
+    ['vitals', 'vitalPicks', 'targets', 'activities'],
+  ]
+}
 
-/** The question after pranayam: medicine where it is offered, otherwise the community calendar. */
-const AFTER_PRANAYAM: StartPickPhase = MEDICINES_ENABLED ? 'ask' : 'reminderCommunity'
+function welcomeQuestionCount(): number {
+  return welcomePhases().length + 2
+}
+
+/** The question after pranayam: medicine where it is offered, otherwise the holiday list. */
+function afterPranayam(): StartPickPhase {
+  if (MEDICINES_ENABLED) return 'ask'
+  return onboardingHolidayList() ? 'reminderCommunity' : 'reminderAsk'
+}
+
+/** Holiday catalogs only exist for a US or India clock. Everywhere else, skip the question. */
+function afterHolidaySetup(): StartPickPhase {
+  return onboardingHolidayList() ? 'reminderCommunity' : 'reminderAsk'
+}
 
 /** One dot per welcome question. Follow-up screens stay on their question's dot. */
 function welcomeQuestion(draft: GuestDraft): number {
-  if (draft.step === 8) return WELCOME_QUESTIONS - 1
-  if (draft.step !== 1) return WELCOME_QUESTIONS - 2
-  return Math.max(0, WELCOME_PHASES.findIndex((phases) => phases.includes(draft.pickPhase)))
+  const total = welcomeQuestionCount()
+  if (draft.step === 8) return total - 1
+  if (draft.step !== 1) return total - 2
+  return Math.max(0, welcomePhases().findIndex((phases) => phases.includes(draft.pickPhase)))
 }
 
 function pranayamPhase(draft: GuestDraft): StartPickPhase {
@@ -460,6 +477,7 @@ function NudgeTimeField({
 export function StartFlow({
   draft,
   onDraft,
+  onApple,
   onGoogle,
   adding = false,
   addingVitals = false,
@@ -467,6 +485,7 @@ export function StartFlow({
 }: {
   draft: GuestDraft
   onDraft: (draft: GuestDraft) => void
+  onApple: () => Promise<void>
   onGoogle: () => Promise<void>
   adding?: boolean
   /** Add mode from the Vitals tab: only vitals, then back to that tab. */
@@ -502,9 +521,7 @@ export function StartFlow({
   })
   const gapTimer = useRef<number | null>(null)
   const keptIds = useRef<Set<string> | null>(adding ? new Set(draft.activities.map((item) => item.localId)) : null)
-  const [communityPicked, setCommunityPicked] = useState<CommunityReminder[]>([])
-  const [communityBusy, setCommunityBusy] = useState(false)
-  const [communityMessage, setCommunityMessage] = useState<string | null>(null)
+  const holidayOffer = onboardingHolidayList()
   const [practiceOn, setPracticeOn] = useState(false)
   const [practiceElapsed, setPracticeElapsed] = useState(0)
   const [practicePaused, setPracticePaused] = useState(false)
@@ -540,8 +557,32 @@ export function StartFlow({
     track('signin_shown')
   }, [draft.step])
 
+  useEffect(() => {
+    if (draft.pickPhase !== 'reminderCommunity' || onboardingHolidayList()) return
+    persist({ ...draft, pickPhase: 'reminderAsk' })
+  }, [draft])
+
   function persist(next: GuestDraft) {
     onDraft(next)
+  }
+
+  function skipHolidays() {
+    persist(saveGuestDraft({ ...draft, pickPhase: 'reminderAsk' }))
+  }
+
+  async function acceptHolidays(list: SharedList, remindBefore: boolean): Promise<'ok' | 'full'> {
+    saveGuestDraft(draft)
+    const skip = new Set(
+      draft.reminders.map((item) => item.sharedListItemId).filter((id): id is string => Boolean(id)),
+    )
+    const result = await importSharedList(list, null, skip, remindBefore)
+    const latest = loadGuestDraft() ?? draft
+    if (result === 'full') {
+      persist(saveGuestDraft({ ...latest, pickPhase: 'reminderCommunity' }))
+      return 'full'
+    }
+    persist(saveGuestDraft({ ...latest, pickPhase: 'reminderAsk' }))
+    return 'ok'
   }
 
   function finishStep(step: number, choices: string, next: GuestDraft) {
@@ -644,13 +685,13 @@ export function StartFlow({
       }
       return removeGuestActivity(current, activity.localId)
     }, draft)
-    persist({ ...next, pickPhase: AFTER_PRANAYAM })
+    persist({ ...next, pickPhase: afterPranayam() })
   }
 
   function continuePranayams() {
     const list = selectedPranayams(draft.activities)
     if (list.length === 0) {
-      persist({ ...draft, pickPhase: AFTER_PRANAYAM })
+      persist({ ...draft, pickPhase: afterPranayam() })
       return
     }
     const snapped = list.reduce(
@@ -670,7 +711,7 @@ export function StartFlow({
       persist({ ...nextDraft, pickPhase: 'pranayamDetail' })
       return
     }
-    persist({ ...nextDraft, pickPhase: AFTER_PRANAYAM })
+    persist({ ...nextDraft, pickPhase: afterPranayam() })
   }
 
   function backPranayamDetail() {
@@ -1105,7 +1146,7 @@ export function StartFlow({
     if (draft.pickPhase !== 'pranayamDetail' || adding) return
     const list = selectedPranayams(draft.activities)
     if (list.length === 0) {
-      persist({ ...draft, pickPhase: AFTER_PRANAYAM })
+      persist({ ...draft, pickPhase: afterPranayam() })
       return
     }
     if (pranayamIndex >= list.length) setPranayamIndex(list.length - 1)
@@ -1297,8 +1338,8 @@ export function StartFlow({
         <BrandTitle className="app-title" />
       </div>
       {!adding && (
-        <div className="onboarding-dots" aria-label={`Step ${question + 1} of ${WELCOME_QUESTIONS}`}>
-          {Array.from({ length: WELCOME_QUESTIONS }, (_, index) => (
+        <div className="onboarding-dots" aria-label={`Step ${question + 1} of ${welcomeQuestionCount()}`}>
+          {Array.from({ length: welcomeQuestionCount() }, (_, index) => (
             <span
               key={index}
               className={index === question ? 'onboarding-dot onboarding-dot-active' : 'onboarding-dot'}
@@ -1425,7 +1466,7 @@ export function StartFlow({
               type="button"
               className="btn btn-secondary"
               onClick={() =>
-                persist({ ...draft, pickPhase: 'reminderCommunity', medicineDaily: false, medicines: [] })
+                persist({ ...draft, pickPhase: afterHolidaySetup(), medicineDaily: false, medicines: [] })
               }
             >
               {t('start.no')}
@@ -1504,7 +1545,7 @@ export function StartFlow({
           <button
             type="button"
             className="btn btn-primary"
-            onClick={() => persist({ ...draft, pickPhase: 'reminderCommunity', medicineDaily: true })}
+            onClick={() => persist({ ...draft, pickPhase: afterHolidaySetup(), medicineDaily: true })}
           >
             {t('start.continue')}
           </button>
@@ -1516,7 +1557,18 @@ export function StartFlow({
           <button
             type="button"
             className="btn btn-ghost start-back"
-            onClick={() => persist({ ...draft, pickPhase: 'reminderCommunity' })}
+            onClick={() =>
+              persist({
+                ...draft,
+                pickPhase: holidayOffer
+                  ? 'reminderCommunity'
+                  : !MEDICINES_ENABLED
+                    ? pranayamPhase(draft)
+                    : draft.medicines.length > 0
+                      ? 'medicines'
+                      : 'ask',
+              })
+            }
           >
             <Icon name="back" />
             {t('start.back')}
@@ -1549,7 +1601,7 @@ export function StartFlow({
         </>
       )}
 
-      {draft.step === 1 && !trackName && !adding && draft.pickPhase === 'reminderCommunity' && (
+      {draft.step === 1 && !trackName && !adding && draft.pickPhase === 'reminderCommunity' && holidayOffer && (
         <>
           <button
             type="button"
@@ -1568,75 +1620,12 @@ export function StartFlow({
             <Icon name="back" />
             {t('start.back')}
           </button>
-          <h1 className="screen-heading">{t('start.communityReady')}</h1>
-          <p className="screen-sub">{t('reminders.community.sub')}</p>
-          <CommunityReminderPicker
-            expanded
-            today={today}
-            addedIds={addedCommunityIds(draft.reminders)}
-            onEmpty={() => persist({ ...draft, pickPhase: 'reminderAsk' })}
-            selection={{
-              ids: communityPicked.map((item) => item.id),
-              onToggle: (item) => {
-                setCommunityMessage(null)
-                setCommunityPicked((current) =>
-                  current.some((one) => one.id === item.id)
-                    ? current.filter((one) => one.id !== item.id)
-                    : [...current, item],
-                )
-              },
-            }}
-          />
-          {communityMessage && <p className="error">{communityMessage}</p>}
-          <button
-            type="button"
-            className="btn btn-primary community-continue"
-            disabled={communityBusy}
-            onClick={() => {
-              if (communityPicked.length === 0) {
-                persist({ ...draft, pickPhase: 'reminderAsk' })
-                return
-              }
-              setCommunityBusy(true)
-              setCommunityMessage(null)
-              let next = draft
-              const saved: string[] = []
-              for (const item of communityPicked) {
-                const input = communityReminderInput(item, locale)
-                const updated = addGuestReminder({ ...next, pickPhase: 'reminderCommunity' }, input)
-                if (!updated) {
-                  setCommunityMessage(t('reminders.full'))
-                  persist(next)
-                  setCommunityPicked((current) => current.filter((one) => !saved.includes(one.id)))
-                  setCommunityBusy(false)
-                  return
-                }
-                track('reminder_added', {
-                  has_time: false,
-                  day_before: input.remindBefore === true,
-                  kind: input.kind ?? 'event',
-                  every_year: false,
-                  signed_in: false,
-                  community: true,
-                })
-                void askForReminderAlerts(input)
-                next = updated
-                saved.push(item.id)
-              }
-              setCommunityPicked([])
-              setCommunityBusy(false)
-              persist({ ...next, pickPhase: 'reminderAsk' })
-            }}
-          >
-            {communityBusy ? t('reminders.saving') : t('start.continue')}
-          </button>
-          <button
-            type="button"
-            className="btn btn-ghost"
-            onClick={() => persist({ ...draft, pickPhase: 'reminderAsk' })}
-          >
-            {t('start.noThanks')}
-          </button>
+          <h2 className="screen-heading start-medicine-title">
+            {t('start.holidayAsk', { name: t(holidayOffer?.titleKey ?? 'reminders.community.usHolidays2026') })}
+          </h2>
+          {holidayOffer && (
+            <HolidayAsk today={today} listId={holidayOffer.listId} onAccept={acceptHolidays} onSkip={skipHolidays} />
+          )}
         </>
       )}
 
@@ -1682,7 +1671,7 @@ export function StartFlow({
           <ul className="start-medicine-list">
             {openReminders.map((reminder) => (
               <li key={reminder.id} className="start-medicine-row">
-                <ReminderKindMark kind={reminder.kind} photo={reminderPhotoSrc(reminder)} />
+                <ReminderKindMark kind={reminder.kind} photo={reminderPhotoSrc(reminder, LIST_PHOTO_SIDE)} />
                 <span className="activity-meta">
                   <span className="activity-name">{reminder.text}</span>
                   <span className="activity-desc">{reminderWhen(reminder)}</span>
@@ -2494,23 +2483,38 @@ export function StartFlow({
               })),
               ...openReminders.map((reminder) => ({
                 id: `r-${reminder.id}`,
-                mark: <ReminderKindMark kind={reminder.kind} photo={reminderPhotoSrc(reminder)} />,
+                mark: <ReminderKindMark kind={reminder.kind} photo={reminderPhotoSrc(reminder, LIST_PHOTO_SIDE)} />,
                 label: reminder.text,
               })),
             ].slice(0, 8)}
           />
-          <button
-            type="button"
-            className="btn btn-primary"
-            disabled={googleBusy}
-            onClick={() => {
-              track('signin_method_clicked', { method: 'google' })
-              setGoogleBusy(true)
-              void onGoogle().finally(() => setGoogleBusy(false))
-            }}
-          >
-            {AUTH_PROVIDERS[0].label}
-          </button>
+          <div className="sign-in-stack">
+            <button
+              type="button"
+              className="btn btn-apple"
+              disabled={googleBusy}
+              onClick={() => {
+                track('signin_method_clicked', { method: 'apple' })
+                setGoogleBusy(true)
+                void onApple().finally(() => setGoogleBusy(false))
+              }}
+            >
+              <AppleMark />
+              {t('landing.signInApple')}
+            </button>
+            <button
+              type="button"
+              className="btn btn-primary"
+              disabled={googleBusy}
+              onClick={() => {
+                track('signin_method_clicked', { method: 'google' })
+                setGoogleBusy(true)
+                void onGoogle().finally(() => setGoogleBusy(false))
+              }}
+            >
+              {t('landing.signInGoogle')}
+            </button>
+          </div>
           <p className="onboarding-hint">{t('start.free')}</p>
           <button type="button" className="btn btn-ghost" onClick={() => navigate('/today')}>
             {t('start.notNow')}

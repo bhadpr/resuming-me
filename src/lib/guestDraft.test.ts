@@ -487,6 +487,26 @@ describe('guest reminders', () => {
     expect(loadGuestDraft()?.reminders).toEqual([])
   })
 
+  it('keeps a calendar day when someone tries to edit it', () => {
+    memoryStorage()
+    let draft = ensureGuestDraft('UTC')
+    draft = addGuestReminder(draft, {
+      text: 'Teacher work day',
+      day: '2027-01-25',
+      hour: null,
+      minute: null,
+      sharedListItemId: 'teacher-day',
+      sharedListId: 'list-issaquah',
+    })!
+    const id = draft.reminders[0].id
+    draft = updateGuestReminder(draft, id, { doneAt: new Date().toISOString() })
+    expect(draft.reminders[0].sharedListItemId).toBe('teacher-day')
+    draft = updateGuestReminder(draft, id, { day: '2027-01-26', text: 'Changed' })
+    expect(draft.reminders[0].day).toBe('2027-01-25')
+    expect(draft.reminders[0].text).toBe('Teacher work day')
+    expect(draft.reminders[0].sharedListItemId).toBe('teacher-day')
+  })
+
   it('keeps which community reminder a copy came from, and its picture', () => {
     memoryStorage()
     const photo = '0b6f6a3e-5a7d-4c1e-9f1a-2b3c4d5e6f70/1f2e3d4c-5b6a-4789-8abc-def012345678.jpg'

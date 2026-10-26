@@ -8,6 +8,8 @@ import type { GuestActivity, GuestDraft } from './guestDraft'
 function vitalUnit(activity: GuestActivity): string {
   if (activity.templateId === 'blood_pressure') return 'mmHg'
   if (activity.templateId === 'heart_rate') return 'bpm'
+  if (activity.templateId === 'blood_sugar') return 'mg/dL'
+  if (/\bblood sugar\b|\bglucose\b/i.test(activity.name)) return 'mg/dL'
   return activity.targetUnit || 'kg'
 }
 

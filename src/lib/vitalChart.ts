@@ -7,6 +7,9 @@ export const BP_LOWER_LIMIT = 80
 /** Resting heart rate target: 60 to 100 bpm. */
 export const HR_LOW = 60
 export const HR_HIGH = 100
+/** Fasting blood sugar target: 70 to 100 mg/dL. */
+export const SUGAR_LOW = 70
+export const SUGAR_HIGH = 100
 
 export type VitalTarget =
   | { kind: 'bp'; upper: number; lower: number }
@@ -45,6 +48,7 @@ export function vitalTargetFor(
   const id = habitTemplateId(metric)
   if (id === 'blood_pressure') return { kind: 'bp', upper: BP_UPPER_LIMIT, lower: BP_LOWER_LIMIT }
   if (id === 'heart_rate') return { kind: 'band', low: HR_LOW, high: HR_HIGH }
+  if (id === 'blood_sugar') return { kind: 'band', low: SUGAR_LOW, high: SUGAR_HIGH }
   if (saved == null) return null
   if (id === 'weight') return { kind: 'weight', value: saved, direction }
   if (id != null && AT_LEAST_IDS.has(id)) return { kind: 'atLeast', value: saved }

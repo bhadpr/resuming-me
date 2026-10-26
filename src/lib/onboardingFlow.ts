@@ -39,6 +39,7 @@ const LOGGED_VITAL_IDS = new Set([
   'weight',
   'blood_pressure',
   'heart_rate',
+  'blood_sugar',
   'systolic',
   'diastolic',
 ])
@@ -52,13 +53,20 @@ export function isLoggedVital(activity: {
   return activity.templateId != null && LOGGED_VITAL_IDS.has(activity.templateId)
 }
 
-/** Weight, blood pressure, and heart rate are typed in. They do not use Start. */
-export function isNumberEntryVital(activity: Pick<GuestActivity, 'templateId'>): boolean {
-  return (
+/** Weight, blood pressure, heart rate, and blood sugar are typed in. They do not use Start. */
+export function isNumberEntryVital(
+  activity: Pick<GuestActivity, 'templateId'> & { name?: string | null },
+): boolean {
+  if (
     activity.templateId === 'weight' ||
     activity.templateId === 'blood_pressure' ||
-    activity.templateId === 'heart_rate'
-  )
+    activity.templateId === 'heart_rate' ||
+    activity.templateId === 'blood_sugar'
+  ) {
+    return true
+  }
+  const name = activity.name?.trim().toLowerCase() ?? ''
+  return /\bblood sugar\b|\bglucose\b/.test(name)
 }
 
 /** Typed goal amount: whole steps, everything else to one decimal. */
