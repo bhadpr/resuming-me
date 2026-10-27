@@ -1,4 +1,4 @@
-import { Capacitor } from '@capacitor/core'
+import { Capacitor, registerPlugin } from '@capacitor/core'
 import { LocalNotifications } from '@capacitor/local-notifications'
 import { noteDigestAlerts, reminderIdsOutside } from './alertBudget'
 import {
@@ -17,6 +17,7 @@ import type { LogEntry } from './logs'
 
 const CHANNEL_ID = 'daily-digest'
 const TEST_NOTIFICATION_ID = 7199
+const AppSettings = registerPlugin<{ open(): Promise<void> }>('AppSettings')
 
 function nativePluginAvailable(): boolean {
   return (
@@ -44,6 +45,18 @@ export async function enableDailyDigestFromOnboarding(
     )
   }
   await requestExactAlarms()
+}
+
+/** Opens Resuming’s page in iPhone Settings, where notifications can be turned on. */
+export async function openAppNotificationSettings(): Promise<void> {
+  if (Capacitor.getPlatform() !== 'ios') return
+  await AppSettings.open()
+}
+
+export async function notificationsAreDenied(): Promise<boolean> {
+  if (!nativePluginAvailable()) return false
+  const status = await LocalNotifications.checkPermissions()
+  return status.display === 'denied'
 }
 
 export async function requestDailyDigestPermission(): Promise<boolean> {

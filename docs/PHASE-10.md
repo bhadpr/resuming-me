@@ -45,6 +45,28 @@ Milestone 0, then six milestones, in order. Milestone 0 is accounts, tools, and 
 | M6 Links (optional) | P10-17 Event links open the app | M |
 | | P10-18 iPhone installs in the counts | S |
 
+## Launch sprints
+
+What is left before the App Store, in order. Milestone 6 is not in these sprints.
+
+| Sprint | What ships | Tasks |
+|--------|------------|-------|
+| 1 | Sign in on iPhone | P10-07, the rest of P10-08 |
+| 2 | Alerts and their buttons | P10-10. P10-09 and P10-11 are already done. |
+| 3 | Steps from Apple Health | P10-12 |
+| 4 | Privacy policy and App Store privacy answers | P10-13 |
+| 5 | TestFlight on a real iPhone | P10-14 |
+| 6 | Listing, screenshots, and review | P10-15 |
+| 7 | Website sends iPhones to the App Store | P10-16 |
+
+Sprint 1 is done when Google and an email link return to the iPhone app, an Apple account can be deleted, and that deletion tells Apple to forget the sign-in. Google sign-in on the iPhone returns to the app. Still to check: an email link signs in. Deleting an Apple account tells Apple to forget the sign-in once the Supabase function and its secrets are on.
+
+Sprint 2 is the alerts. Permission is asked in the welcome flow and in Settings. If notifications are off, Settings has a button that opens Resuming’s page in iPhone Settings. Done, Tomorrow, and Later open the app, including when it was closed. A tap opens Today. An alert that arrives while the app is open shows as a banner. Still to try on a phone: allow notifications, lock the phone, and use Done, Tomorrow, and Later.
+
+Sprint 3 reads steps from Apple Health and leaves Android on Health Connect. The first open asks to share steps. After that, Today shows the count, including zero. A zero day on iPhone adds one line: “No steps? Allow Resuming in the Health app.” Still to try on a real iPhone: allow steps, then see today’s count. The simulator usually stays at zero.
+
+Sprint 4 is the privacy paperwork. The privacy policy and the Terms now name the iPhone app, Sign in with Apple, and Apple Health. Step counts stay on the phone. Settings already deletes a Google, email, or Apple account. Still to enter in App Store Connect: the privacy answers below, the category Health & Fitness, and the age-rating questions. The live site at resuming.me shows the new policy after the next website deploy.
+
 ## Milestone 0 — Before the code
 
 At the end of M0, Xcode on the Mac can build and run a signed app on a real iPhone under the publisher's Apple team, and the App Store name is reserved.

@@ -312,6 +312,19 @@ a.btn {
   width: 100%;
 }
 
+.sign-in-stack .btn,
+.sign-in-email,
+.sign-in-email .field-input,
+.sign-in-email .btn {
+  width: 100%;
+}
+
+.sign-in-email {
+  display: flex;
+  flex-direction: column;
+  gap: 0.45rem;
+}
+
 .btn-danger {
   background: var(--color-danger);
   color: var(--color-on-primary);
@@ -1086,9 +1099,24 @@ select.field-input.language-select {
 .detail-hero-row {
   flex-direction: row;
   justify-content: flex-start;
-  gap: 0.875rem;
-  padding: 0;
+  gap: 0.85rem;
+  margin-inline: calc(var(--space-4) * -1);
+  padding: 0 var(--space-4) 0 0;
   text-align: left;
+  background: var(--color-surface);
+  border-top: 1px solid var(--color-border);
+  border-bottom: 1px solid var(--color-border);
+  overflow: hidden;
+}
+
+.detail-hero-row .habit-mark,
+.detail-hero-row .activity-emoji-art {
+  width: 50px;
+  height: 50px;
+  border-radius: 0;
+  flex: none;
+  isolation: isolate;
+  background: #fde8cf;
 }
 
 .activity-detail > .back-btn {
@@ -3021,15 +3049,31 @@ button.community-card.community-card-picked {
   margin: 0 0 var(--space-3);
 }
 
-.reminder-add-actions {
-  display: flex;
-  flex-direction: column;
+.reminder-add-grid {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
   gap: var(--space-2);
   margin: 0 0 var(--space-4);
 }
 
-.reminder-add-actions .btn {
+.reminder-add-tile {
+  flex-direction: column;
+  gap: 0;
   width: 100%;
+  min-height: 4.5rem;
+  padding: 0.45rem 0.75rem;
+  line-height: var(--leading-tight);
+  text-align: center;
+}
+
+.reminder-add-kicker {
+  font-size: var(--text-sm);
+  font-weight: var(--weight-semibold);
+}
+
+.reminder-add-label {
+  font-size: var(--text-lg);
+  font-weight: var(--weight-semibold);
 }
 
 .community-continue {
@@ -4646,6 +4690,12 @@ button.community-card.community-card-picked {
   font-weight: var(--weight-semibold);
 }
 
+.share-event-link {
+  margin: var(--space-2) 0 0;
+  font-weight: var(--weight-semibold);
+  word-break: break-all;
+}
+
 .photo-pick {
   display: flex;
   flex-direction: column;
@@ -4726,6 +4776,33 @@ button.community-card.community-card-picked {
 .today-add-row .today-add {
   flex: 1 1 10rem;
   width: auto;
+}
+
+.reminder-when-line {
+  display: flex;
+  align-items: center;
+  gap: 0.4rem;
+  min-width: 0;
+}
+
+.reminder-when-line .activity-desc {
+  flex: 1;
+  min-width: 0;
+}
+
+.reminder-source {
+  flex: none;
+}
+
+.reminder-source-meetup {
+  background: color-mix(in srgb, var(--color-primary) 14%, var(--color-surface));
+  color: var(--color-primary);
+}
+
+.reminder-source-holiday,
+.reminder-source-schedule {
+  background: var(--color-surface-raised);
+  color: var(--color-text);
 }
 
 .reminder-text-line {
@@ -5654,6 +5731,53 @@ button.community-card.community-card-picked {
 .insights-screen .insights-row {
   gap: 0.85rem;
   padding: 0.8rem 0.95rem;
+}
+
+/* The picture fills the left of the row and meets the left, top, and bottom edges. */
+.activity-list-screen .activity-list > li > .activity-row.item-kind-activity,
+.activity-list-screen .activity-list > li > .activity-row.item-kind-reminder,
+.activity-list-screen .activity-list > li > .activity-row.item-kind-vital {
+  align-items: stretch;
+  gap: 0.85rem;
+  padding: 0 0.95rem 0 0;
+  overflow: hidden;
+  border-left-width: 4px;
+  border-left-color: var(--kind);
+}
+
+.activity-list-screen .activity-list > li > .activity-row.reminder-row-shareable {
+  padding-right: 5.25rem;
+}
+
+.activity-list-screen .activity-list > li > .activity-row.item-kind-activity::before,
+.activity-list-screen .activity-list > li > .activity-row.item-kind-reminder::before,
+.activity-list-screen .activity-list > li > .activity-row.item-kind-vital::before {
+  border-left: 0;
+  inset: 0 auto 0 50px;
+  width: min(36%, 8rem);
+  border-radius: 0;
+}
+
+.activity-list-screen .activity-list > li > .activity-row > .habit-mark,
+.activity-list-screen .activity-list > li > .activity-row > .activity-emoji-art {
+  width: 50px;
+  height: 50px;
+  align-self: center;
+  border-radius: 0;
+  overflow: hidden;
+  isolation: isolate;
+  background: #fde8cf;
+}
+
+.activity-list-screen .activity-list > li > .activity-row > .activity-emoji-art img,
+.ad-hero .activity-emoji-art img,
+.detail-hero-row .activity-emoji-art img {
+  mix-blend-mode: darken;
+}
+
+.activity-list-screen .activity-list > li > .activity-row > .activity-meta,
+.activity-list-screen .activity-list > li > .activity-row > .activity-chevron {
+  align-self: center;
 }
 
 .insights-screen .section-label,

@@ -19,6 +19,7 @@ import {
   resetSharedEventLink,
   setSharedEventTakingAdds,
   sharedEventMessage,
+  sharedEventUrl,
   whatsAppShareUrl,
   type OwnedSharedEvent,
   type SharedEventIssue,
@@ -264,6 +265,8 @@ export function ShareReminder({ reminder, userId, today, onShared, onStatus, onR
     return (
       <section ref={section} className="share-event share-card" aria-label={t('sharedEvent.share')}>
         <p className="share-event-count">{count}</p>
+        <p className="share-event-link">{sharedEventUrl(owned.code)}</p>
+        {reminder.meetup && <p className="share-event-note">{t('sharedEvent.meetupEditable')}</p>}
         {!owned.takingAdds && <p className="share-event-note">{t('sharedEvent.addsStopped')}</p>}
         {notice && (
           <p className="share-event-notice" role="status">
@@ -298,7 +301,7 @@ export function ShareReminder({ reminder, userId, today, onShared, onStatus, onR
         )}
         {open && manage && (
           <div className="share-event-manage">
-            <p className="share-event-note">{t('sharedEvent.organizerLocked')}</p>
+            {!reminder.meetup && <p className="share-event-note">{t('sharedEvent.organizerLocked')}</p>}
             {confirm === null && (
               <div className="share-event-actions">
                 <button

@@ -21,6 +21,10 @@ PODS:
     - Capacitor
   - CapacitorStatusBar (7.0.6):
     - Capacitor
+  - CheerfulgamesHealthSteps (0.0.1):
+    - Capacitor
+  - CheerfulgamesOauthSession (0.0.1):
+    - Capacitor
   - IONFilesystemLib (1.1.4)
 
 DEPENDENCIES:
@@ -35,6 +39,8 @@ DEPENDENCIES:
   - "CapacitorShare (from `../../node_modules/@capacitor/share`)"
   - "CapacitorSplashScreen (from `../../node_modules/@capacitor/splash-screen`)"
   - "CapacitorStatusBar (from `../../node_modules/@capacitor/status-bar`)"
+  - CheerfulgamesHealthSteps (from `../../native/health-steps`)
+  - CheerfulgamesOauthSession (from `../../native/oauth-session`)
 
 SPEC REPOS:
   trunk:
@@ -63,6 +69,10 @@ EXTERNAL SOURCES:
     :path: "../../node_modules/@capacitor/splash-screen"
   CapacitorStatusBar:
     :path: "../../node_modules/@capacitor/status-bar"
+  CheerfulgamesHealthSteps:
+    :path: "../../native/health-steps"
+  CheerfulgamesOauthSession:
+    :path: "../../native/oauth-session"
 
 SPEC CHECKSUMS:
   Capacitor: 46067d1c8df89760dbed78780d436327d588c726
@@ -76,8 +86,10 @@ SPEC CHECKSUMS:
   CapacitorShare: 25f7fc5dd0e4edbde5d6801c6de5d14a8b450a41
   CapacitorSplashScreen: 409eeaaeac603d264f209c0fcb718aa22fe1f7bb
   CapacitorStatusBar: 416e9e53fd6397e668d4a181cd2131617d949bd6
+  CheerfulgamesHealthSteps: 45c4d228426add5653307d5dc77613b7268b24d5
+  CheerfulgamesOauthSession: 4a514a0c6bdaae63ee7d7f34b2eb5d48cebb95d7
   IONFilesystemLib: e6610c2b260d15e4b9cb9d5e37a87095479b669e
 
-PODFILE CHECKSUM: 3292f76f413a0397a9015e016b7023e70662b07e
+PODFILE CHECKSUM: cbaea30264aebb98f895a51e2af1c35a00b4e203
 
 COCOAPODS: 1.17.0

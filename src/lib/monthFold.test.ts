@@ -21,4 +21,12 @@ describe('monthsClosedByDefault', () => {
   it('keeps the latest month open when the whole list is past', () => {
     expect([...monthsClosedByDefault(['2026-01', '2026-02'], '2026-10-24')]).toEqual(['2026-01'])
   })
+
+  it('closes months after this one when asked, and leaves this month open', () => {
+    expect([...monthsClosedByDefault(['2026-09', '2026-10', '2026-11', '2026-12'], '2026-10-24', true)]).toEqual([
+      '2026-09',
+      '2026-11',
+      '2026-12',
+    ])
+  })
 })

@@ -107,10 +107,12 @@ function PrivacyContent() {
       <p>We collect the following categories of information:</p>
       <ul>
         <li>
-          <strong>Account information.</strong> When you sign in with Google or an email
-          magic link, we receive authentication details needed to create and maintain
-          your account — typically your email address, name (if provided by Google),
-          profile image URL (if provided), and a stable account identifier.
+          <strong>Account information.</strong> When you sign in with Google, Sign in with Apple, or an email
+          magic link, we receive authentication details needed
+          to create and maintain your account — typically your email address, name (if
+          provided by Google or Apple), profile image URL (if provided), and a stable
+          account identifier. If Apple hides your email, we store the address Apple
+          gives us.
         </li>
         <li>
           <strong>App content you create.</strong> Activities, health measurements you
@@ -162,10 +164,12 @@ function PrivacyContent() {
           <strong>Steps.</strong> On Android, if you allow it, the app
           reads your step counts from Health Connect on your phone: today’s count, shown
           on Today, and your daily totals for the last 7 days, shown next to your goal.
-          We do not write steps to Health Connect, and we do not send step counts to
-          our servers. A number you type, and your daily step goal, stay on this device.
-          Our use of information received from Health Connect follows the Health
-          Connect Permissions policy, including its Limited Use requirements.
+          On iPhone, if you allow it, the app reads the same counts from Apple Health.
+          We do not write steps to Health Connect or Apple Health, and we do not send
+          step counts to our servers. A number you type, and your daily step goal, stay
+          on this device. Our use of information received from Health Connect follows
+          the Health Connect Permissions policy, including its Limited Use requirements.
+          Apple Health step counts are used only to show them in the app.
         </li>
         <li>
           <strong>Feedback.</strong> If you submit feedback, we store your rating,
@@ -207,8 +211,9 @@ function PrivacyContent() {
           <strong>Local device storage.</strong> On your device we may store session
           credentials, theme preference, onboarding state, daily reminder preference,
           active timer state, and offline sync queues so the app works reliably between
-          visits. See “Cookies &amp; local storage” below. On Android, an optional daily
-          reminder, medicine reminders, and alerts for your own reminders are scheduled
+          visits. See “Cookies &amp; local storage” below. On Android and on iPhone, an
+          optional daily reminder, medicine reminders, and alerts for your own reminders
+          are scheduled
           on the device only. They
           are not delivered through a cloud push service. A typed step count and the
           daily step goal stay on the device.
@@ -246,7 +251,8 @@ function PrivacyContent() {
         signed in and you add them, so the Service can show your log and your reminders.
         We do not sell this information. We do not use it for advertising. Deleting the
         item, or deleting your account, removes it from our active systems. Deleted data can remain in our backups for
-        up to 7 days.
+        up to 7 days. Step counts from Apple Health and from Health Connect stay on your
+        phone. We do not store them on our servers.
       </p>
       <p>
         This Service is a personal log. It is not a clinic, a medical record under the
@@ -267,8 +273,9 @@ function PrivacyContent() {
       </p>
       <ul>
         <li>
-          <strong>Service providers.</strong> Google and email magic links (sign-in; the
-          same email can belong to one account when it is already linked), Supabase
+          <strong>Service providers.</strong> Google, Apple, and email magic links
+          (sign-in; the same email can belong to one account when it is already linked),
+          Supabase
           (authentication, database, and related backend services), Resend (optional day
           2, 3, and 7 check-in emails, only if you ask for a reminder, and a morning
           email listing that day’s reminders, only if you turn it on in Settings), and
@@ -288,7 +295,7 @@ function PrivacyContent() {
       </ul>
       <p>
         Third parties named above have their own privacy practices. We encourage you to
-        review Google’s and Supabase’s policies for details on their processing.
+        review Google’s, Apple’s, and Supabase’s policies for details on their processing.
       </p>
 
       <h3>Cookies &amp; local storage</h3>
@@ -387,7 +394,7 @@ function PrivacyContent() {
       <h3>International processing</h3>
       <p>
         We and our service providers process information in the United States and in
-        Canada, where the account database is hosted. Google processes sign-in. Our
+        Canada, where the account database is hosted. Google and Apple process sign-in. Our
         email provider sends messages you ask for. Those locations may have different
         data-protection laws than your home country. For people in India, we transfer
         personal data outside India so we can provide the account. India allows that
@@ -440,8 +447,9 @@ function TermsContent() {
 
       <h3>Accounts</h3>
       <p>
-        You sign in with Google or an email magic link. If that email is already linked
-        to Google, it is the same account. You are responsible for activity under your
+        You sign in with Google, Sign in with Apple, or an email magic link. If that
+        email is already linked to Google or Apple, it is the same account. You are
+        responsible for activity under your
         account and for keeping access to that email secure. Optional day 2, 3, and 7
         check-in emails, and an optional morning email on a day with reminders, can be
         turned off in the message or in Settings. Notify us
@@ -497,8 +505,9 @@ function TermsContent() {
 
       <h3>Third-party services</h3>
       <p>
-        The Service relies on third parties such as Google (authentication) and Supabase
-        (backend infrastructure). Your use of those services may be subject to their
+        The Service relies on third parties such as Google and Apple (authentication),
+        Apple Health and Health Connect (step counts that stay on your phone), and
+        Supabase (backend infrastructure). Your use of those services may be subject to their
         terms and policies. We are not responsible for third-party services we do not
         control.
       </p>
@@ -506,7 +515,7 @@ function TermsContent() {
       <h3>Reminders</h3>
       <p>
         Reminders you add are stored so the Service can show them on Today and, if you
-        ask, alert you on your Android phone or by email. They stay private unless you
+        ask, alert you on your iPhone or Android phone, or by email. They stay private unless you
         share one. An alert or an email can arrive late or not at all. Do not rely on{' '}
         {PRODUCT_NAME} alone for anything where a missed reminder could cause harm.
       </p>
@@ -528,7 +537,8 @@ function TermsContent() {
         medical device, and it does not suggest a dose. A bottle photo is a picture you
         chose. A reminder can fail to appear. A missed mark on Today is not a medical
         record of a missed dose. You remain responsible for your own medicines and for
-        decisions about blood pressure, heart rate, weight, sleep, and steps. Do not
+        decisions about blood pressure, heart rate, weight, sleep, and steps. Step counts
+        read from Apple Health or Health Connect stay on your phone. Do not
         delay professional care because of something in the Service.
       </p>
       <p>

@@ -14,6 +14,7 @@ import {
   remindersComingUp,
   remindersDoneToday,
   remindersForToday,
+  reminderListKind,
   validateReminder,
   type Reminder,
 } from './reminderSchedule'
@@ -198,5 +199,24 @@ describe('formatShortReminderTime', () => {
 
   it('keeps the minutes otherwise', () => {
     expect(formatShortReminderTime(9, 30, 'en')).toContain('9:30')
+  })
+})
+
+describe('reminderListKind', () => {
+  const row = { meetup: false, communityId: null, sharedListItemId: null, sharedListId: null }
+
+  it('leaves a personal reminder unmarked', () => {
+    expect(reminderListKind(row)).toBeNull()
+  })
+
+  it('marks a meetup ahead of a followed list', () => {
+    expect(reminderListKind({ ...row, meetup: true })).toBe('meetup')
+    expect(reminderListKind({ ...row, meetup: true, sharedListId: 'list' })).toBe('meetup')
+  })
+
+  it('marks a holiday list separately from a school or team schedule', () => {
+    expect(reminderListKind({ ...row, communityId: 'diwali' })).toBe('holiday')
+    expect(reminderListKind({ ...row, sharedListId: 'a11ce001-0000-4111-8001-000000000001' })).toBe('holiday')
+    expect(reminderListKind({ ...row, sharedListId: 'school', sharedListItemId: 'day' })).toBe('schedule')
   })
 })

@@ -37,6 +37,17 @@ const ACTION_DONE = 'reminder-done'
 const ACTION_TOMORROW = 'reminder-tomorrow'
 const ACTION_LATER = 'reminder-later'
 
+/** Done, Tomorrow, and Later. On iPhone those buttons open the app, so they still work after it was closed. */
+export function reminderNotificationActionTypes(labels: ReminderActionLabels, foreground: boolean) {
+  const done = { id: ACTION_DONE, title: labels.done, foreground }
+  const tomorrow = { id: ACTION_TOMORROW, title: labels.tomorrow, foreground }
+  const later = { id: ACTION_LATER, title: labels.later, foreground }
+  return [
+    { id: ACTION_TYPE, actions: [done, tomorrow, later] },
+    { id: REPEAT_ACTION_TYPE, actions: [done, later] },
+  ]
+}
+
 export type ReminderActionLabels = {
   done: string
   tomorrow: string
@@ -102,23 +113,7 @@ export async function syncReminderNotifications(
 ): Promise<void> {
   if (!nativePluginAvailable()) return
   await LocalNotifications.registerActionTypes({
-    types: [
-      {
-        id: ACTION_TYPE,
-        actions: [
-          { id: ACTION_DONE, title: labels.done },
-          { id: ACTION_TOMORROW, title: labels.tomorrow },
-          { id: ACTION_LATER, title: labels.later },
-        ],
-      },
-      {
-        id: REPEAT_ACTION_TYPE,
-        actions: [
-          { id: ACTION_DONE, title: labels.done },
-          { id: ACTION_LATER, title: labels.later },
-        ],
-      },
-    ],
+    types: reminderNotificationActionTypes(labels, Capacitor.getPlatform() === 'ios'),
   })
   await LocalNotifications.cancel({ notifications: reminderNotificationIds().map((id) => ({ id })) })
   const planned = planReminderAlerts(reminders, activeReminderSnoozes(now), now, readPartTimes().evening, copy)

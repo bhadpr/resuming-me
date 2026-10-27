@@ -12,11 +12,14 @@
     "lint": "eslint .",
     "build:android": "npm run build && npx cap sync android",
     "open:android": "npx cap open android",
+    "postinstall": "node scripts/ensure-apple-sign-in-sheet.js && node scripts/ensure-ios-notification-banner.js",
     "build:ios": "npm run build && npx cap sync ios",
     "open:ios": "npx cap open ios"
   },
   "dependencies": {
     "@capacitor-community/apple-sign-in": "^7.1.0",
+    "@cheerfulgames/health-steps": "file:native/health-steps",
+    "@cheerfulgames/oauth-session": "file:native/oauth-session",
     "@capacitor/android": "^7.6.8",
     "@capacitor/app": "^7.1.2",
     "@capacitor/browser": "^7.0.5",

@@ -35,6 +35,18 @@ export function parseAuthCallbackUrl(url: string): {
   }
 }
 
+const exchangedCodes = new Set<string>()
+
+export function oauthSessionCancelled(error: unknown): boolean {
+  const message =
+    error instanceof Error
+      ? error.message
+      : typeof error === 'object' && error && 'message' in error
+        ? String(error.message)
+        : String(error)
+  return /cancel/i.test(message)
+}
+
 export async function completeNativeAuthCallback(
   client: SupabaseClient,
   url: string,
@@ -43,8 +55,13 @@ export async function completeNativeAuthCallback(
   if (error) throw new Error(error)
 
   if (code) {
+    if (exchangedCodes.has(code)) return
+    exchangedCodes.add(code)
     const { error: exchangeError } = await client.auth.exchangeCodeForSession(code)
-    if (exchangeError) throw exchangeError
+    if (exchangeError) {
+      exchangedCodes.delete(code)
+      throw exchangeError
+    }
     return
   }
 
@@ -57,9 +74,25 @@ export async function completeNativeAuthCallback(
   }
 }
 
-export async function openNativeOAuthUrl(url: string): Promise<void> {
+/** Opens sign-in. On iPhone, resolves with the return link. On Android, the app receives it later. */
+export async function openNativeOAuthUrl(url: string): Promise<string | null> {
+  if (Capacitor.getPlatform() === 'ios') {
+    const { OAuthSession } = await import('./oauthSession')
+    try {
+      const result = await OAuthSession.start({
+        url,
+        callbackScheme: 'com.cheerfulgames.resuming',
+      })
+      return result.url
+    } catch (err) {
+      if (oauthSessionCancelled(err)) return null
+      throw err
+    }
+  }
+
   const { Browser } = await import('@capacitor/browser')
   await Browser.open({ url })
+  return null
 }
 
 export async function listenForNativeAuthCallback(
@@ -71,15 +104,25 @@ export async function listenForNativeAuthCallback(
   const { App } = await import('@capacitor/app')
   const { Browser } = await import('@capacitor/browser')
 
-  const handle = await App.addListener('appUrlOpen', async ({ url }) => {
-    if (!url.startsWith('com.cheerfulgames.resuming://')) return
+  const seen = new Set<string>()
+  async function openUrl(url: string | undefined) {
+    if (!url?.startsWith('com.cheerfulgames.resuming://')) return
+    if (seen.has(url)) return
+    seen.add(url)
     try {
       await completeNativeAuthCallback(client, url)
       await Browser.close().catch(() => {})
     } catch (err) {
+      seen.delete(url)
       onError(err instanceof Error ? err.message : 'Sign-in failed')
     }
+  }
+
+  const handle = await App.addListener('appUrlOpen', ({ url }) => {
+    void openUrl(url)
   })
+  const launched = await App.getLaunchUrl()
+  void openUrl(launched?.url)
 
   return () => {
     void handle.remove()

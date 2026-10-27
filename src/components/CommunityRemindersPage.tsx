@@ -9,11 +9,13 @@ import { CalendarImportDetail, CalendarImportSection, NflImportSection } from '.
 import { HolidayCatalog } from './HolidayCatalog'
 import { Icon } from './Icon'
 
-/** Community days on their own page. Holiday catalogs follow their list. */
+/** Holiday lists, or school and sports schedules, on their own page. */
 export function CommunityRemindersPage({
   today,
+  section,
 }: {
   today: string
+  section: 'holidays' | 'schedules'
   addedIds: readonly string[]
   onAdd: (item: CommunityReminder) => Promise<'ok' | 'full'>
 }) {
@@ -40,20 +42,31 @@ export function CommunityRemindersPage({
       </button>
       <div className="screen-heading">
         <div>
-          <h2>{opened ? opened.title : t('reminders.community.title')}</h2>
-          {!opened && <p className="screen-sub">{t('reminders.community.sub')}</p>}
+          <h2>{opened ? opened.title : t(section === 'schedules' ? 'reminders.community.schedulesTitle' : 'reminders.community.holidaysTitle')}</h2>
+          {!opened && (
+            <p className="screen-sub">
+              {t(section === 'schedules' ? 'reminders.community.schedulesSub' : 'reminders.community.sub')}
+            </p>
+          )}
         </div>
       </div>
       {opened ? (
         <CalendarImportDetail list={opened} />
+      ) : section === 'schedules' ? (
+        region === 'us' ? (
+          <>
+            <CalendarImportSection title={t('reminders.community.usSchool')} onOpen={setOpened} />
+            <NflImportSection title={t('reminders.community.nfl')} onOpen={setOpened} />
+          </>
+        ) : (
+          <section className="empty-state">
+            <p>{t('reminders.community.schedulesEmpty')}</p>
+          </section>
+        )
       ) : (
         <>
           {region === 'us' && (
-            <>
-              <HolidayCatalog title={t('reminders.community.usHolidays2026')} listId={US_HOLIDAY_LIST_ID} today={today} />
-              <CalendarImportSection title={t('reminders.community.usSchool')} onOpen={setOpened} />
-              <NflImportSection title={t('reminders.community.nfl')} onOpen={setOpened} />
-            </>
+            <HolidayCatalog title={t('reminders.community.usHolidays2026')} listId={US_HOLIDAY_LIST_ID} today={today} />
           )}
           <HolidayCatalog title={t('reminders.community.inHolidays2026')} listId={INDIA_HOLIDAY_LIST_ID} today={today} />
         </>

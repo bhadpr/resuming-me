@@ -2,6 +2,7 @@ import { lazy, Suspense, useCallback, useEffect, useMemo, useRef, useState } fro
 import { Capacitor } from '@capacitor/core'
 import { Navigate, useLocation, useNavigate, useSearchParams } from 'react-router-dom'
 import { useAuth, useProfileSync } from '../hooks/useAuth'
+import { describeError } from '../lib/describeError'
 import { createSupabaseClient, sendQuery } from '../lib/supabase'
 import {
   accountGap,
@@ -1004,12 +1005,15 @@ export function AppShell() {
       return
     }
     if (view?.name === 'reminderCommunity') {
-      trackPageView('/reminders/community', 'Community reminders')
+      trackPageView(
+        view.section === 'schedules' ? '/reminders/schedules' : '/reminders/holidays',
+        view.section === 'schedules' ? 'Schedules' : 'Holidays',
+      )
       return
     }
     if (view?.name === 'reminders') {
       trackPageView(
-        view.edit ? '/reminders/edit' : view.reminderId ? '/reminders/view' : '/reminders/new',
+        view.meetup ? '/reminders/meetup' : view.edit ? '/reminders/edit' : view.reminderId ? '/reminders/view' : '/reminders/new',
         'Reminder',
       )
       return
@@ -1209,7 +1213,7 @@ export function AppShell() {
           : await listActivities(true),
       )
     } catch (err) {
-      setError(err instanceof Error ? err.message : 'Save failed')
+      setError(describeError(err, 'Save failed'))
     } finally {
       setSaving(false)
     }
@@ -1233,7 +1237,7 @@ export function AppShell() {
         navigate('/numbers')
       }
     } catch (err) {
-      setError(err instanceof Error ? err.message : 'Save failed')
+      setError(describeError(err, 'Save failed'))
     } finally {
       setSaving(false)
     }
@@ -1257,7 +1261,7 @@ export function AppShell() {
       navigate('/numbers')
       await refreshTodayData(await listActivities(true))
     } catch (err) {
-      setError(err instanceof Error ? err.message : 'Save failed')
+      setError(describeError(err, 'Save failed'))
     } finally {
       setSaving(false)
     }
@@ -2085,9 +2089,17 @@ export function AppShell() {
                       setError(null)
                       navigate('/reminders/new')
                     }}
-                    onAddCommunity={() => {
+                    onAddMeetup={() => {
                       setError(null)
-                      navigate('/reminders/community')
+                      navigate('/reminders/meetup')
+                    }}
+                    onAddHolidays={() => {
+                      setError(null)
+                      navigate('/reminders/holidays')
+                    }}
+                    onAddSchedule={() => {
+                      setError(null)
+                      navigate('/reminders/schedules')
                     }}
                     onOpen={(reminder) => {
                       setError(null)
@@ -2107,6 +2119,7 @@ export function AppShell() {
                 {view?.name === 'reminderCommunity' && (
                   <CommunityRemindersPage
                     today={reminderState.today}
+                    section={view.section}
                     addedIds={addedCommunityIds(reminderState.reminders)}
                     onAdd={async (item) => {
                       const input = communityReminderInput(item, locale)
@@ -2134,6 +2147,7 @@ export function AppShell() {
                       navigateBack(navigate, view.edit && view.reminderId ? `/reminders/${view.reminderId}` : '/reminders')
                     }
                     prefill={reminderPrefillFrom(location.state)}
+                    meetup={view.meetup === true || undefined}
                     onAlertOff={(reminder, alertOff) => void reminderState.setAlertOff(reminder, alertOff)}
                     shareFor={(reminder) =>
                       user ? (
@@ -2157,6 +2171,13 @@ export function AppShell() {
                       setSaving(true)
                       setError(null)
                       try {
+                        if (!reminderId && view.meetup) {
+                          const saved = await reminderState.addMeetup(input)
+                          if (saved === 'full') return 'full'
+                          void askForReminderAlerts(input)
+                          navigate(`/reminders/${saved.id}`, { replace: true, state: { reminderShare: true } })
+                          return
+                        }
                         if (reminderId) {
                           await reminderState.update(reminderId, input)
                         } else if ((await reminderState.add(input)) === 'full') {

@@ -21,7 +21,72 @@ export type PhoneStepsWeek =
   | { status: 'needs-permission' }
 
 export function phoneStepsSupported(): boolean {
-  return Capacitor.getPlatform() === 'android'
+  const platform = Capacitor.getPlatform()
+  return platform === 'android' || platform === 'ios'
+}
+
+/** Apple Health never says the person refused. A refusal arrives as zero steps. */
+export function appleStepRead(available: boolean, asked: boolean, steps: number): PhoneSteps {
+  if (!available) return { status: 'unavailable' }
+  if (!asked) return { status: 'needs-permission' }
+  return { status: 'count', steps: Math.max(0, Math.round(steps)) }
+}
+
+export function fillStepDays(days: readonly StepDay[], now: Date, count: number): StepDay[] {
+  const today = todayLocalDate(now)
+  const byDate = new Map(days.map((day) => [day.date, day.steps]))
+  return Array.from({ length: count }, (_, index) => {
+    const date = addDays(today, index - count + 1)
+    return { date, steps: Math.max(0, Math.round(byDate.get(date) ?? 0)) }
+  })
+}
+
+export function showAppleZeroStepsHint(platform: string, steps: number): boolean {
+  return platform === 'ios' && steps === 0
+}
+
+export function showAppleZeroWeekHint(platform: string, days: readonly { steps: number }[]): boolean {
+  return platform === 'ios' && days.some((day) => day.steps === 0)
+}
+
+async function requestAppleSteps(now: Date): Promise<PhoneSteps> {
+  try {
+    const { HealthSteps } = await import('./healthStepsPlugin')
+    const { available } = await HealthSteps.availability()
+    if (!available) {
+      track('health_permission', { kind: 'steps', result: 'unavailable' })
+      return { status: 'unavailable' }
+    }
+    await HealthSteps.requestAuthorization()
+    track('health_permission', { kind: 'steps', result: 'granted' })
+    const result = await readAppleSteps(now, 1)
+    return result.status === 'days' ? { status: 'unavailable' } : result
+  } catch {
+    track('health_permission', { kind: 'steps', result: 'unavailable' })
+    return { status: 'unavailable' }
+  }
+}
+
+async function readAppleSteps(now: Date, count: number): Promise<PhoneSteps | PhoneStepsWeek> {
+  try {
+    const { HealthSteps } = await import('./healthStepsPlugin')
+    const { available } = await HealthSteps.availability()
+    const { asked } = await HealthSteps.authorization()
+    if (!available) return count === 1 ? appleStepRead(false, asked, 0) : { status: 'unavailable' }
+    if (!asked) return count === 1 ? appleStepRead(true, false, 0) : { status: 'needs-permission' }
+    const today = todayLocalDate(now)
+    const [year, month, day] = addDays(today, 1 - count).split('-').map(Number)
+    const start = new Date(year, month - 1, day)
+    const { days } = await HealthSteps.query({
+      start: start.toISOString(),
+      end: now.toISOString(),
+    })
+    const filled = fillStepDays(days, now, count)
+    if (count === 1) return { status: 'count', steps: filled[0]?.steps ?? 0 }
+    return { status: 'days', days: filled }
+  } catch {
+    return { status: 'unavailable' }
+  }
 }
 
 function localDayRange(now: Date): { start: string; end: string } {
@@ -70,9 +135,13 @@ async function aggregateDays(
   )
 }
 
-/** Today's steps from Health Connect. Web and iPhone stay unavailable. */
+/** Today's steps from Health Connect on Android, or Apple Health on iPhone. */
 export async function readPhoneSteps(now = new Date()): Promise<PhoneSteps> {
-  if (!phoneStepsSupported()) return { status: 'unavailable' }
+  if (Capacitor.getPlatform() === 'ios') {
+    const result = await readAppleSteps(now, 1)
+    return result.status === 'days' ? { status: 'unavailable' } : result
+  }
+  if (Capacitor.getPlatform() !== 'android') return { status: 'unavailable' }
   try {
     const { HealthConnect } = await import('@devmaxime/capacitor-health-connect')
     const { availability } = await HealthConnect.checkAvailability()
@@ -86,7 +155,8 @@ export async function readPhoneSteps(now = new Date()): Promise<PhoneSteps> {
 }
 
 export async function requestPhoneSteps(now = new Date()): Promise<PhoneSteps> {
-  if (!phoneStepsSupported()) return { status: 'unavailable' }
+  if (Capacitor.getPlatform() === 'ios') return requestAppleSteps(now)
+  if (Capacitor.getPlatform() !== 'android') return { status: 'unavailable' }
   try {
     const { HealthConnect } = await import('@devmaxime/capacitor-health-connect')
     const { availability } = await HealthConnect.checkAvailability()
@@ -112,7 +182,11 @@ export async function requestPhoneSteps(now = new Date()): Promise<PhoneSteps> {
  * up to 30 days before Steps was first allowed, so a week needs no extra permission.
  */
 export async function readPhoneStepsWeek(now = new Date(), count = 7): Promise<PhoneStepsWeek> {
-  if (!phoneStepsSupported()) return { status: 'unavailable' }
+  if (Capacitor.getPlatform() === 'ios') {
+    const result = await readAppleSteps(now, count)
+    return result.status === 'count' ? { status: 'unavailable' } : result
+  }
+  if (Capacitor.getPlatform() !== 'android') return { status: 'unavailable' }
   try {
     const { HealthConnect } = await import('@devmaxime/capacitor-health-connect')
     const { availability } = await HealthConnect.checkAvailability()

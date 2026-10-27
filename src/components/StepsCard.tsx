@@ -1,9 +1,10 @@
+import { Capacitor } from '@capacitor/core'
 import { useEffect, useState } from 'react'
 import { habitArtFor } from '../data/habitArt'
 import { useLocale } from '../hooks/useLocale'
 import { useThemedArt } from '../hooks/useThemedArt'
 import { todayLocalDate } from '../lib/dates'
-import { readPhoneSteps, requestPhoneSteps, type PhoneSteps } from '../lib/healthSteps'
+import { readPhoneSteps, requestPhoneSteps, showAppleZeroStepsHint, type PhoneSteps } from '../lib/healthSteps'
 import { formatStepCount } from '../lib/steps'
 import { StepsWeek } from './StepsWeek'
 
@@ -77,6 +78,9 @@ export function StepsCard({
           </span>
           {phoneState === 'unavailable' && (
             <span className="activity-desc">{t('today.stepsFromPhone')}</span>
+          )}
+          {fromPhone && !weekOpen && showAppleZeroStepsHint(Capacitor.getPlatform(), phoneSteps) && (
+            <span className="activity-desc">{t('today.stepsNone')}</span>
           )}
         </span>
         {showPhoneButton && (

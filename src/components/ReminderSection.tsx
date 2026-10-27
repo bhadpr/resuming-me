@@ -6,6 +6,7 @@ import {
   formatReminderTime,
   isFollowedListReminder,
   isSharedEventGone,
+  reminderListKind,
   tomorrowOf,
   type Reminder,
 } from '../lib/reminderSchedule'
@@ -162,11 +163,12 @@ interface ReminderListSectionProps {
   loading: boolean
   error: string | null
   onAdd: () => void
+  onAddMeetup?: () => void
   onOpen: (reminder: Reminder) => void
   /** Signed in only: guests cannot make shared events. */
   onShare?: (reminder: Reminder) => void
-  /** Opens the page where several community days can be chosen together. */
-  onAddCommunity?: () => void
+  onAddHolidays?: () => void
+  onAddSchedule?: () => void
 }
 
 /** Not yet shared, or shared by this account and still on. Copies from others are not shared on. */
@@ -195,6 +197,7 @@ function ReminderDayGroup({
       <ul className="activity-list">
         {group.items.map((reminder) => {
           const shareable = onShare != null && canShareFromList(reminder, today)
+          const kind = reminderListKind(reminder)
           return (
             <li key={reminder.id} className="reminder-list-item">
               <button
@@ -205,7 +208,20 @@ function ReminderDayGroup({
                 <ReminderKindMark kind={reminder.kind} photo={reminderPhotoSrc(reminder, LIST_PHOTO_SIDE)} />
                 <span className="activity-meta">
                   <span className="activity-name reminder-text-line">{reminder.text}</span>
-                  <span className="activity-desc">{reminderWhen(reminder, today, locale, t)}</span>
+                  <span className="reminder-when-line">
+                    {kind && (
+                      <span className={`badge reminder-source reminder-source-${kind}`}>
+                        {t(
+                          kind === 'meetup'
+                            ? 'reminders.sourceMeetup'
+                            : kind === 'holiday'
+                              ? 'reminders.sourceHoliday'
+                              : 'reminders.sourceSchedule',
+                        )}
+                      </span>
+                    )}
+                    <span className="activity-desc">{reminderWhen(reminder, today, locale, t)}</span>
+                  </span>
                 </span>
                 <span className="activity-chevron" aria-hidden>
                   <Icon name="chevron" />
@@ -237,9 +253,11 @@ export function ReminderListSection({
   loading,
   error,
   onAdd,
+  onAddMeetup,
   onOpen,
   onShare,
-  onAddCommunity,
+  onAddHolidays,
+  onAddSchedule,
 }: ReminderListSectionProps) {
   const { locale, t } = useLocale()
   const tomorrow = tomorrowOf(today)
@@ -248,6 +266,7 @@ export function ReminderListSection({
   const { isOpen, toggle } = useClosedMonths(
     laterMonths.map((month) => month.key),
     today,
+    true,
   )
   const dayGroups = (items: Reminder[]): { key: string; label: string; items: Reminder[] }[] => {
     const groups: { key: string; label: string; items: Reminder[] }[] = []
@@ -277,13 +296,27 @@ export function ReminderListSection({
         </div>
       </div>
 
-      <div className="reminder-add-actions">
-        <button type="button" className="btn btn-primary" onClick={onAdd}>
-          {t('reminders.add')}
+      <div className="reminder-add-grid">
+        <button type="button" className="btn btn-primary reminder-add-tile" onClick={onAdd}>
+          <span className="reminder-add-kicker">{t('reminders.tileAdd')}</span>
+          <span className="reminder-add-label">{t('reminders.tileReminder')}</span>
         </button>
-        {onAddCommunity && (
-          <button type="button" className="btn btn-secondary" onClick={onAddCommunity}>
-            {t('reminders.community.open')}
+        {onAddMeetup && (
+          <button type="button" className="btn btn-secondary reminder-add-tile" onClick={onAddMeetup}>
+            <span className="reminder-add-kicker">{t('reminders.tileAdd')}</span>
+            <span className="reminder-add-label">{t('reminders.tileMeetup')}</span>
+          </button>
+        )}
+        {onAddHolidays && (
+          <button type="button" className="btn btn-secondary reminder-add-tile" onClick={onAddHolidays}>
+            <span className="reminder-add-kicker">{t('reminders.tileAdd')}</span>
+            <span className="reminder-add-label">{t('reminders.tileHolidays')}</span>
+          </button>
+        )}
+        {onAddSchedule && (
+          <button type="button" className="btn btn-secondary reminder-add-tile" onClick={onAddSchedule}>
+            <span className="reminder-add-kicker">{t('reminders.tileAdd')}</span>
+            <span className="reminder-add-label">{t('reminders.tileSchedule')}</span>
           </button>
         )}
       </div>

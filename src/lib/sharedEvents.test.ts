@@ -46,6 +46,10 @@ function event(patch: Partial<SharedEvent> = {}): SharedEvent {
     kind: 'event',
     status: 'active',
     takingAdds: true,
+    description: null,
+    photoPath: null,
+    meetup: false,
+    remindBefore: false,
     ...patch,
   }
 }

@@ -1,9 +1,11 @@
+import { Capacitor } from '@capacitor/core'
 import { useEffect, useState } from 'react'
 import { useLocale } from '../hooks/useLocale'
 import { parseLocalDate, todayLocalDate } from '../lib/dates'
 import {
   readPhoneStepsWeek,
   requestPhoneSteps,
+  showAppleZeroWeekHint,
   summarizeStepWeek,
   type PhoneStepsWeek,
 } from '../lib/healthSteps'
@@ -118,6 +120,9 @@ export function StepsWeek({
           <> · {t('today.stepsWeekAverage', { value: formatStepCount(summary.average, locale) })}</>
         )}
       </p>
+      {showAppleZeroWeekHint(Capacitor.getPlatform(), week.days) && (
+        <p className="activity-desc">{t('today.stepsNone')}</p>
+      )}
     </section>
   )
 }

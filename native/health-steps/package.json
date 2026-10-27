@@ -1,0 +1,24 @@
+{
+  "name": "@cheerfulgames/health-steps",
+  "version": "0.0.1",
+  "private": true,
+  "type": "module",
+  "description": "Read step counts from Apple Health",
+  "main": "src/index.js",
+  "types": "src/index.d.ts",
+  "files": [
+    "src/",
+    "ios/",
+    "CheerfulgamesHealthSteps.podspec"
+  ],
+  "capacitor": {
+    "ios": {
+      "src": "ios"
+    }
+  },
+  "license": "UNLICENSED",
+  "repository": {
+    "type": "git",
+    "url": "https://github.com/bhadpr/resuming-me"
+  }
+}

@@ -537,6 +537,8 @@ export interface Database {
           taking_adds: boolean
           created_at: string
           updated_at: string
+          meetup: boolean
+          remind_before: boolean
         }
         Insert: {
           id?: string
@@ -554,12 +556,22 @@ export interface Database {
           taking_adds?: boolean
           created_at?: string
           updated_at?: string
+          meetup?: boolean
+          remind_before?: boolean
         }
         Update: {
           code?: string
           status?: string
           taking_adds?: boolean
           photo_path?: string | null
+          text?: string
+          description?: string | null
+          day?: string
+          hour?: number | null
+          minute?: number | null
+          time_zone?: string
+          kind?: string
+          remind_before?: boolean
         }
         Relationships: []
       }
@@ -1087,6 +1099,8 @@ export interface Database {
           taking_adds: boolean
           description: string | null
           photo_path: string | null
+          meetup: boolean
+          remind_before: boolean
         }[]
       }
       follow_shared_event: {
@@ -1099,7 +1113,20 @@ export interface Database {
       }
       shared_event_statuses: {
         Args: { p_ids: string[] }
-        Returns: { id: string; status: string; photo_path: string | null }[]
+        Returns: {
+          id: string
+          status: string
+          photo_path: string | null
+          meetup: boolean
+          text: string | null
+          description: string | null
+          day: string
+          hour: number | null
+          minute: number | null
+          time_zone: string
+          remind_before: boolean
+          kind: string
+        }[]
       }
       my_shared_event: {
         Args: { p_event_id: string }

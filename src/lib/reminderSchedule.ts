@@ -40,7 +40,7 @@ export interface Reminder {
   /** The day the current repeat was last marked done. Today shows it as done until tomorrow. */
   lastDoneOn?: string | null
   doneAt: string | null
-  /** Set on the organizer's reminder and on every copy of a shared event. Such a reminder is not edited. */
+  /** Set on the organizer's reminder and on every copy of a shared event. A regular share is not edited. A meetup still is. */
   sharedEventId?: string | null
   /** The community reminder this was picked from, so the list can show it as added. */
   communityId?: string | null
@@ -60,6 +60,8 @@ export interface Reminder {
   sharedPhotoPath?: string | null
   /** This account made the shared event, so it can share it again. Copies from others are false. */
   sharedByMe?: boolean
+  /** A meetup the organizer can still change. Accepted phones follow the new day and time. */
+  meetup?: boolean
 }
 
 export type SharedReminderStatus = 'active' | 'cancelled' | 'switched_off'
@@ -69,6 +71,21 @@ export function isFollowedListReminder(
   reminder: Pick<Reminder, 'sharedListItemId' | 'sharedListId'>,
 ): boolean {
   return Boolean(reminder.sharedListItemId || reminder.sharedListId)
+}
+
+const HOLIDAY_LIST_IDS = new Set([
+  'a11ce001-0000-4111-8001-000000000001',
+  'a11ce002-0000-4111-8001-000000000002',
+])
+
+/** How a reminder should be marked on the list. A personal one stays unmarked. */
+export function reminderListKind(
+  reminder: Pick<Reminder, 'meetup' | 'communityId' | 'sharedListItemId' | 'sharedListId'>,
+): 'meetup' | 'holiday' | 'schedule' | null {
+  if (reminder.meetup) return 'meetup'
+  if (reminder.communityId || (reminder.sharedListId && HOLIDAY_LIST_IDS.has(reminder.sharedListId))) return 'holiday'
+  if (isFollowedListReminder(reminder)) return 'schedule'
+  return null
 }
 
 /** A copy whose event the organizer cancelled or the admin switched off. */

@@ -1,5 +1,5 @@
+import { Capacitor } from '@capacitor/core'
 import type { RecordType } from '@devmaxime/capacitor-health-connect'
-import { phoneStepsSupported } from './healthSteps'
 import type { LogEntry } from './logs'
 import { track } from './track'
 
@@ -61,7 +61,7 @@ async function healthConnect() {
 let accessCheck: Promise<DistanceAccess> | null = null
 
 export function distanceAccess(): Promise<DistanceAccess> {
-  if (!DISTANCE_READS_ENABLED || !phoneStepsSupported()) return Promise.resolve('unavailable')
+  if (!DISTANCE_READS_ENABLED || Capacitor.getPlatform() !== 'android') return Promise.resolve('unavailable')
   accessCheck ??= (async (): Promise<DistanceAccess> => {
     try {
       const health = await healthConnect()

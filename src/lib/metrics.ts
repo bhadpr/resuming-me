@@ -1,3 +1,5 @@
+import { requireAccountId } from './accountId'
+import { describeError } from './describeError'
 import { createSupabaseClient } from './supabase'
 import type { Database } from '../types/database'
 import { habitTemplateId } from '../data/habitArt'
@@ -49,17 +51,18 @@ export async function listMetrics(includeArchived = false): Promise<Metric[]> {
 }
 
 export async function createMetric(
-  userId: string,
+  _userId: string,
   input: MetricInput,
 ): Promise<Metric> {
   const validationError = validateMetricInput(input)
   if (validationError) throw new Error(validationError)
 
   const client = createSupabaseClient()
+  const ownerId = await requireAccountId()
   const { data, error } = await client
     .from('metrics')
     .insert({
-      user_id: userId,
+      user_id: ownerId,
       name: input.name.trim(),
       emoji: input.emoji.trim(),
       unit: input.unit.trim(),
@@ -70,7 +73,8 @@ export async function createMetric(
     .select('*')
     .single()
 
-  if (error) throw error
+  if (error) throw new Error(describeError(error, 'Save failed'))
+  if (!data) throw new Error('Save failed')
   return data
 }
 

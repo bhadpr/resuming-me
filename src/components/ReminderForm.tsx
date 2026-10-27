@@ -22,6 +22,7 @@ import {
   formatReminderTime,
   formatShortReminderTime,
   isFollowedListReminder,
+  reminderListKind,
   isSharedEventGone,
   partOfTime,
   readPartTimes,
@@ -52,6 +53,8 @@ interface ReminderFormProps {
   onCancel: () => void
   /** Starting values for a new reminder. */
   prefill?: ReminderInput
+  /** A meetup asks for the same details, then the next screen is its link. */
+  meetup?: boolean
 }
 
 function pad(value: number): string {
@@ -99,6 +102,7 @@ export function ReminderForm({
   onSubmit,
   onCancel,
   prefill,
+  meetup = false,
 }: ReminderFormProps) {
   const { locale, t } = useLocale()
   const seed = initial ?? prefill ?? null
@@ -121,7 +125,7 @@ export function ReminderForm({
   )
   const [remindBefore, setRemindBefore] = useState(seed?.remindBefore ?? false)
   const [remindWeekBefore, setRemindWeekBefore] = useState(seed?.remindWeekBefore ?? false)
-  const [kind, setKind] = useState<ReminderKind | null>(seed?.kind ?? null)
+  const [kind, setKind] = useState<ReminderKind | null>(seed?.kind ?? (meetup ? 'event' : null))
   const [everyYear, setEveryYear] = useState(initial?.everyYear ?? false)
   const [repeat, setRepeat] = useState<ReminderRepeat | null>(initial?.repeat ?? null)
   /** Missing until the person picks an end date, so it follows the first day until then. */
@@ -178,10 +182,10 @@ export function ReminderForm({
       day: resolvedDay(),
       ...resolvedTime(),
       remindBefore: dayBeforeOn,
-      remindWeekBefore: weekBeforeOn,
-      kind: kind ?? 'other',
-      everyYear: everyYear && !repeating,
-      ...(repeat
+      remindWeekBefore: meetup ? false : weekBeforeOn,
+      kind: meetup ? (kind ?? 'event') : (kind ?? 'other'),
+      everyYear: meetup ? false : everyYear && !repeating,
+      ...(!meetup && repeat
         ? {
             repeat,
             repeatUntil,
@@ -214,7 +218,10 @@ export function ReminderForm({
         <Icon name="back" />
         {t('reminders.back')}
       </button>
-      <h2 className="form-title">{initial ? t('reminders.edit') : t('reminders.new')}</h2>
+      <h2 className="form-title">
+        {meetup && !initial ? t('reminders.meetupTitle') : initial ? t('reminders.edit') : t('reminders.new')}
+      </h2>
+      {meetup && !initial && <p className="screen-sub">{t('reminders.meetupHint')}</p>}
 
       <fieldset className="reminder-fields">
         <label className="field">
@@ -445,7 +452,7 @@ export function ReminderForm({
             {photoFailed && <p className="error">{t('reminders.photoFailed')}</p>}
             <p className="reminder-switch-hint">{t('reminders.photoHint')}</p>
 
-            {!repeating && (
+            {!meetup && !repeating && (
               <label className="reminder-switch">
                 <input type="checkbox" checked={everyYear} onChange={(event) => setEveryYear(event.target.checked)} />
                 <span>
@@ -455,7 +462,7 @@ export function ReminderForm({
               </label>
             )}
 
-            {!everyYear && (
+            {!meetup && !everyYear && (
               <>
                 <p className="reminder-question">{t('reminders.repeat')}</p>
                 <div className="reminder-choices">
@@ -520,7 +527,7 @@ export function ReminderForm({
               </label>
             )}
 
-            {canRemindWeekBefore && (
+            {canRemindWeekBefore && !meetup && (
               <label className="reminder-switch">
                 <input
                   type="checkbox"
@@ -593,7 +600,9 @@ function ReminderView({ reminder, saving, error, onDelete, onCancel, onEdit, sha
   const { locale, t } = useLocale()
   const shared = Boolean(reminder.sharedEventId)
   const followed = isFollowedListReminder(reminder)
-  const locked = shared || followed
+  const holidayList = reminderListKind(reminder) === 'holiday'
+  const organizerMeetup = Boolean(reminder.meetup && reminder.sharedByMe)
+  const locked = (shared && !organizerMeetup) || followed
   const gone = isSharedEventGone(reminder)
   const alerts = reminder.hour != null || reminder.remindBefore || reminder.remindWeekBefore
   const when = [
@@ -613,7 +622,17 @@ function ReminderView({ reminder, saving, error, onDelete, onCancel, onEdit, sha
         {t('reminders.back')}
       </button>
       <h2 className="form-title">
-        {t(followed ? 'reminders.listLockedTitle' : shared ? 'sharedEvent.lockedTitle' : 'reminders.viewTitle')}
+          {t(
+            followed
+              ? holidayList
+                ? 'reminders.listLockedHolidayTitle'
+                : 'reminders.listLockedTitle'
+              : organizerMeetup
+                ? 'reminders.meetupTitle'
+                : shared
+                  ? 'sharedEvent.lockedTitle'
+                  : 'reminders.viewTitle',
+          )}
       </h2>
 
       <EventPhoto src={reminderPhotoSrc(reminder)} alt={t('sharedEvent.photoAlt')} />
@@ -640,11 +659,13 @@ function ReminderView({ reminder, saving, error, onDelete, onCancel, onEdit, sha
       {locked && (
         <p className="reminder-locked">
           <Icon name="lock" size={20} />
-          <span>{t(followed ? 'reminders.listLocked' : 'sharedEvent.locked')}</span>
+          <span>
+            {t(followed ? (holidayList ? 'reminders.listLockedHoliday' : 'reminders.listLocked') : 'sharedEvent.locked')}
+          </span>
         </p>
       )}
 
-      {locked && !gone && alerts && onAlertOff && (
+      {(locked || organizerMeetup) && !gone && alerts && onAlertOff && (
         <label className="reminder-switch">
           <input
             type="checkbox"
@@ -683,6 +704,8 @@ interface ReminderEditorProps {
   /** The edit screen for reminderId, rather than its view. */
   editing?: boolean
   onEdit?: (reminder: Reminder) => void
+  /** A new meetup: same details, then the link. */
+  meetup?: boolean
 }
 
 /** A reminder's view, its edit screen, the add screen, and the not-found state when an old link points nowhere. */
@@ -701,6 +724,7 @@ export function ReminderEditor({
   onAlertOff,
   editing = false,
   onEdit,
+  meetup = false,
 }: ReminderEditorProps) {
   const { t } = useLocale()
   const stored = reminderId ? (reminders.find((item) => item.id === reminderId) ?? null) : null
@@ -718,7 +742,8 @@ export function ReminderEditor({
     )
   }
 
-  if (reminder && (!editing || reminder.sharedEventId || isFollowedListReminder(reminder))) {
+  const organizerMeetup = Boolean(reminder?.meetup && reminder.sharedByMe)
+  if (reminder && (!editing || (Boolean(reminder.sharedEventId) && !organizerMeetup) || isFollowedListReminder(reminder))) {
     return (
       <ReminderView
         key={reminder.id}
@@ -744,6 +769,7 @@ export function ReminderEditor({
       onSubmit={onSubmit}
       onCancel={onCancel}
       prefill={reminder ? undefined : prefill}
+      meetup={meetup || organizerMeetup}
     />
   )
 }

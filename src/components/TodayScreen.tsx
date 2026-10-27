@@ -1035,7 +1035,7 @@ function TodayActivityRow({
                 setShowManual((open) => !open)
               }}
             >
-              Log minutes
+              {t('today.logMinutes')}
             </button>
           )}
           {showMore && (
@@ -1071,18 +1071,20 @@ function TodayActivityRow({
           <input
             className="field-input field-input-sm"
             type="number"
+            inputMode="numeric"
             min={1}
             step={1}
-            placeholder="Minutes"
+            placeholder={t('today.minutes')}
             value={manualMinutes}
             onChange={(e) => setManualMinutes(e.target.value)}
-            aria-label={`Minutes for ${activity.name}`}
+            aria-label={t('today.minutes')}
+            enterKeyHint="done"
           />
           <button type="submit" className="btn btn-primary btn-today" disabled={busy || !manualMinutes}>
-            Add
+            {t('today.addMinutes')}
           </button>
           <button type="button" className="today-extra-btn" onClick={() => setShowManual(false)}>
-            Cancel
+            {t('today.cancel')}
           </button>
         </form>
       )}

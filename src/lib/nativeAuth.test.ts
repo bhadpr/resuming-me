@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest'
-import { parseAuthCallbackUrl } from './nativeAuth'
+import { oauthSessionCancelled, parseAuthCallbackUrl } from './nativeAuth'
 
 describe('parseAuthCallbackUrl', () => {
   it('reads PKCE code from a custom-scheme callback', () => {
@@ -18,6 +18,11 @@ describe('parseAuthCallbackUrl', () => {
     expect(parsed.accessToken).toBe('tok')
     expect(parsed.refreshToken).toBe('ref')
     expect(parsed.code).toBeNull()
+  })
+
+  it('treats a closed sign-in window as a cancel', () => {
+    expect(oauthSessionCancelled(new Error('cancel'))).toBe(true)
+    expect(oauthSessionCancelled(new Error('Sign-in did not return'))).toBe(false)
   })
 
   it('reads OAuth error query params', () => {

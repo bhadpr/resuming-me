@@ -228,7 +228,8 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     if (error) throw error
     if (native) {
       if (!data.url) throw new Error('Apple sign-in did not return a URL')
-      await openNativeOAuthUrl(data.url)
+      const callback = await openNativeOAuthUrl(data.url)
+      if (callback) await completeNativeAuthCallback(client, callback)
     }
   }, [])
 
@@ -245,7 +246,8 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     if (error) throw error
     if (native) {
       if (!data.url) throw new Error('Google sign-in did not return a URL')
-      await openNativeOAuthUrl(data.url)
+      const callback = await openNativeOAuthUrl(data.url)
+      if (callback) await completeNativeAuthCallback(client, callback)
     }
   }, [])
 

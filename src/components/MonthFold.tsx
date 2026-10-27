@@ -4,17 +4,17 @@ import { monthTitle, monthsClosedByDefault } from '../lib/monthFold'
 import { Icon } from './Icon'
 
 /** Remembers which months the person closed. Resets when the set of months changes. */
-export function useClosedMonths(keys: readonly string[], today: string): {
+export function useClosedMonths(keys: readonly string[], today: string, closeAfter = false): {
   isOpen: (key: string) => boolean
   toggle: (key: string) => void
 } {
-  const signature = `${today}:${keys.join('|')}`
+  const signature = `${today}:${closeAfter ? 'after' : 'open'}:${keys.join('|')}`
   const [state, setState] = useState(() => ({
     signature,
-    closed: monthsClosedByDefault(keys, today),
+    closed: monthsClosedByDefault(keys, today, closeAfter),
   }))
   if (state.signature !== signature) {
-    setState({ signature, closed: monthsClosedByDefault(keys, today) })
+    setState({ signature, closed: monthsClosedByDefault(keys, today, closeAfter) })
   }
 
   function toggle(key: string) {

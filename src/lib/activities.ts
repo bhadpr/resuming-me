@@ -1,3 +1,5 @@
+import { SIGN_IN_AGAIN, requireAccountId } from './accountId'
+import { describeError } from './describeError'
 import { createSupabaseClient } from './supabase'
 import { todayLocalDate, yesterdayLocalDate } from './dates'
 import type { ActivityType, TrackingMode } from '../types/database'
@@ -138,7 +140,7 @@ export async function getActivity(id: string): Promise<Activity | null> {
 }
 
 export async function createActivity(
-  userId: string,
+  _userId: string,
   input: ActivityInput,
 ): Promise<Activity> {
   const validationError = validateActivityInput(input)
@@ -146,7 +148,8 @@ export async function createActivity(
 
   const client = createSupabaseClient()
   const today = todayLocalDate()
-  const row = toInsertRow(userId, input, today)
+  const ownerId = await requireAccountId()
+  const row = toInsertRow(ownerId, input, today)
 
   const { data: activity, error } = await client
     .from('activities')
@@ -154,19 +157,31 @@ export async function createActivity(
     .select('*')
     .single()
 
-  if (error) throw error
+  if (error) {
+    const message = describeError(error, 'Save failed')
+    if (message.includes('user_id_fkey')) {
+      await client.auth.signOut({ scope: 'local' })
+      throw new Error(SIGN_IN_AGAIN)
+    }
+    throw new Error(message)
+  }
+  if (!activity) throw new Error('Save failed')
 
-  const { error: historyError } = await client.from('activity_target_history').insert({
-    activity_id: activity.id,
-    user_id: userId,
-    target_value: activity.target_value,
-    target_unit: activity.target_unit,
-    weekly_target: activity.weekly_target,
-    effective_from: today,
-    effective_until: null,
-  })
+  // The habit row is the goal. A history miss must not look like the save failed.
+  try {
+    await client.from('activity_target_history').insert({
+      activity_id: activity.id,
+      user_id: ownerId,
+      target_value: activity.target_value,
+      target_unit: activity.target_unit,
+      weekly_target: activity.weekly_target,
+      effective_from: today,
+      effective_until: null,
+    })
+  } catch {
+    /* the goal is already stored */
+  }
 
-  if (historyError) throw historyError
   return activity
 }
 

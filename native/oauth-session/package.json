@@ -1,0 +1,24 @@
+{
+  "name": "@cheerfulgames/oauth-session",
+  "version": "0.0.1",
+  "private": true,
+  "type": "module",
+  "description": "iPhone sign-in window that returns to the app",
+  "main": "src/index.js",
+  "types": "src/index.d.ts",
+  "files": [
+    "src/",
+    "ios/",
+    "CheerfulgamesOauthSession.podspec"
+  ],
+  "capacitor": {
+    "ios": {
+      "src": "ios"
+    }
+  },
+  "license": "UNLICENSED",
+  "repository": {
+    "type": "git",
+    "url": "https://github.com/bhadpr/resuming-me"
+  }
+}

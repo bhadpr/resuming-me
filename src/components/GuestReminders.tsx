@@ -1,5 +1,5 @@
 import { useEffect, useState } from 'react'
-import { useNavigate } from 'react-router-dom'
+import { Link, useNavigate } from 'react-router-dom'
 import { useLocale } from '../hooks/useLocale'
 import { addedCommunityIds, communityReminderInput } from '../lib/communityReminders'
 import { todayLocalDate } from '../lib/dates'
@@ -7,6 +7,7 @@ import {
   addGuestReminder,
   loadGuestDraft,
   removeGuestReminder,
+  setGuestStep,
   updateGuestReminder,
   type GuestDraft,
 } from '../lib/guestDraft'
@@ -18,6 +19,7 @@ import { track } from '../lib/track'
 import { CommunityRemindersPage } from './CommunityRemindersPage'
 import { ReminderEditor } from './ReminderForm'
 import { GuestSaveWidget } from './GuestSaveWidget'
+import { Icon } from './Icon'
 import { ReminderListSection } from './ReminderSection'
 
 export function GuestReminderEditor({ reminderId, editing = false }: { reminderId?: string; editing?: boolean }) {
@@ -81,6 +83,31 @@ export function GuestReminderEditor({ reminderId, editing = false }: { reminderI
   )
 }
 
+export function GuestMeetupSignIn() {
+  const navigate = useNavigate()
+  const { t } = useLocale()
+  return (
+    <div className="activity-form reminder-form">
+      <button type="button" className="btn btn-ghost btn-sm back-btn" onClick={() => navigateBack(navigate, '/reminders')}>
+        <Icon name="back" />
+        {t('reminders.back')}
+      </button>
+      <h2 className="form-title">{t('reminders.meetupTitle')}</h2>
+      <p className="screen-sub">{t('reminders.meetupSignIn')}</p>
+      <Link
+        className="btn btn-primary"
+        to="/start?step=8"
+        onClick={() => {
+          const draft = loadGuestDraft()
+          if (draft) setGuestStep(draft, 8)
+        }}
+      >
+        {t('reminders.meetupSignInButton')}
+      </Link>
+    </div>
+  )
+}
+
 export function GuestReminderList() {
   const navigate = useNavigate()
   const [draft, setDraft] = useState<GuestDraft | null>(() => loadGuestDraft())
@@ -102,14 +129,16 @@ export function GuestReminderList() {
         loading={false}
         error={null}
         onAdd={() => navigate('/reminders/new')}
+        onAddMeetup={() => navigate('/reminders/meetup')}
         onOpen={(reminder) => navigate(`/reminders/${reminder.id}`)}
-        onAddCommunity={() => navigate('/reminders/community')}
+        onAddHolidays={() => navigate('/reminders/holidays')}
+        onAddSchedule={() => navigate('/reminders/schedules')}
       />
     </>
   )
 }
 
-export function GuestCommunityReminders() {
+export function GuestCommunityReminders({ section }: { section: 'holidays' | 'schedules' }) {
   const { locale } = useLocale()
   const [draft, setDraft] = useState<GuestDraft | null>(() => loadGuestDraft())
   useEffect(() => {
@@ -122,6 +151,7 @@ export function GuestCommunityReminders() {
   return (
     <CommunityRemindersPage
       today={todayLocalDate()}
+      section={section}
       addedIds={addedCommunityIds(draft.reminders)}
       onAdd={async (item) => {
         const current = loadGuestDraft()

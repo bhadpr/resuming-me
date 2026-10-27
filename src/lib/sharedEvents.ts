@@ -1,5 +1,5 @@
 import { parseLocalDate } from './dates'
-import { addEventPhoto, removeEventPhoto } from './eventPhotos'
+import { addEventPhoto, compressEventPhoto, removeEventPhoto } from './eventPhotos'
 import { localeTag, translate, type Locale } from './i18n'
 import { PLAY_PACKAGE } from './marketing'
 import {
@@ -37,6 +37,9 @@ export interface SharedEvent {
   kind: ReminderKind
   status: SharedEventStatus
   takingAdds: boolean
+  /** The organizer can change the day and time, and accepted phones follow. */
+  meetup: boolean
+  remindBefore: boolean
 }
 
 /** Why sharing or adding did not work. */
@@ -368,6 +371,7 @@ export async function createSharedEvent(
   reminder: Reminder,
   from: string | null,
   photo: Blob | null = null,
+  options?: { meetup?: boolean; remindBefore?: boolean },
 ): Promise<{ id: string; code: string; photoPath: string | null; photoFailed: boolean }> {
   const text = cleanReminderText(reminder.text)
   const description = cleanReminderDescription(reminder.description)
@@ -386,6 +390,8 @@ export async function createSharedEvent(
         minute: reminder.hour == null ? null : reminder.minute,
         time_zone: deviceTimeZone(),
         kind: reminderKindOf(reminder.kind),
+        meetup: options?.meetup === true,
+        remind_before: options?.remindBefore === true,
       })
       .select('id, code')
       .single()
@@ -424,6 +430,39 @@ export async function getSharedEvent(code: string): Promise<SharedEvent | null> 
     kind: reminderKindOf(row.kind),
     status: statusOf(row.status),
     takingAdds: row.taking_adds,
+    meetup: row.meetup === true,
+    remindBefore: row.remind_before === true,
+  }
+}
+
+/** Writes the organizer's new day and time onto the meetup everyone already added. */
+export async function updateMeetupEvent(eventId: string, input: ReminderInput): Promise<void> {
+  const text = cleanReminderText(input.text)
+  const description = cleanReminderDescription(input.description)
+  if (hasWebLink(text) || hasWebLink(description)) throw new SharedEventError('links')
+  const client = createSupabaseClient()
+  const { error } = await client
+    .from('shared_events')
+    .update({
+      text,
+      description,
+      day: input.day,
+      hour: input.hour,
+      minute: input.hour == null ? null : input.minute,
+      time_zone: deviceTimeZone(),
+      kind: reminderKindOf(input.kind),
+      remind_before: input.remindBefore === true,
+    })
+    .eq('id', eventId)
+  if (error) throw new SharedEventError(issueFromError(error))
+  if (input.photo) {
+    const blob = await compressEventPhoto(input.photo.blob)
+    await addEventPhoto(eventId, blob)
+    return
+  }
+  if (input.photo === null) {
+    const { error: clearError } = await client.from('shared_events').update({ photo_path: null }).eq('id', eventId)
+    if (clearError) throw new SharedEventError(issueFromError(clearError))
   }
 }
 

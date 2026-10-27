@@ -14,6 +14,8 @@ import {
 } from '../lib/dailyDigest'
 import {
   hasExactAlarms,
+  notificationsAreDenied,
+  openAppNotificationSettings,
   requestDailyDigestPermission,
   requestExactAlarms,
   scheduleTestDigest,
@@ -218,6 +220,7 @@ export function SettingsScreen({
   const [permissionError, setPermissionError] = useState<string | null>(null)
   const [testNotice, setTestNotice] = useState<string | null>(null)
   const [exactDenied, setExactDenied] = useState(false)
+  const [iosAlertsOff, setIosAlertsOff] = useState(false)
   const [exportBusy, setExportBusy] = useState(false)
   const [exportNotice, setExportNotice] = useState<string | null>(null)
   const [exportError, setExportError] = useState<string | null>(null)
@@ -259,6 +262,39 @@ export function SettingsScreen({
     void hasExactAlarms().then((granted) => setExactDenied(!granted))
   }, [digest.enabled])
 
+  useEffect(() => {
+    if (Capacitor.getPlatform() !== 'ios') return
+    let cancelled = false
+    let remove = () => {}
+    const check = () => {
+      void notificationsAreDenied()
+        .then((denied) => {
+          if (!cancelled) setIosAlertsOff(denied)
+        })
+        .catch(() => {
+          if (!cancelled) setIosAlertsOff(false)
+        })
+    }
+    check()
+    void import('@capacitor/app').then(({ App }) =>
+      App.addListener('appStateChange', ({ isActive }) => {
+        if (isActive) check()
+      }).then((handle) => {
+        if (cancelled) {
+          void handle.remove()
+          return
+        }
+        remove = () => {
+          void handle.remove()
+        }
+      }),
+    )
+    return () => {
+      cancelled = true
+      remove()
+    }
+  }, [])
+
   async function updateDigest(patch: Partial<DailyDigestPrefs>) {
     const previous = digestRef.current
     let next: DailyDigestPrefs = { ...previous, ...patch }
@@ -290,9 +326,11 @@ export function SettingsScreen({
         digestRef.current = reverted
         setDigest(reverted)
         saveDailyDigestPrefs(reverted)
+        setIosAlertsOff(Capacitor.getPlatform() === 'ios')
         setPermissionError(t('settings.notifOff'))
         return
       }
+      setIosAlertsOff(false)
       const exact = await requestExactAlarms()
       setExactDenied(!exact)
     } catch (err) {
@@ -313,6 +351,8 @@ export function SettingsScreen({
       await scheduleTestDigest()
       setTestNotice(t('settings.testSent'))
     } catch (err) {
+      const denied = await notificationsAreDenied().catch(() => false)
+      if (denied) setIosAlertsOff(true)
       setPermissionError(
         err instanceof Error ? err.message : t('settings.testFailed'),
       )
@@ -476,7 +516,18 @@ export function SettingsScreen({
             </div>
           )}
 
-          {permissionError && <p className="error">{permissionError}</p>}
+          {(permissionError || iosAlertsOff) && (
+            <p className="error">{permissionError ?? t('settings.notifOff')}</p>
+          )}
+          {Capacitor.getPlatform() === 'ios' && (iosAlertsOff || permissionError === t('settings.notifOff')) && (
+            <button
+              type="button"
+              className="btn btn-ghost btn-sm"
+              onClick={() => void openAppNotificationSettings()}
+            >
+              {t('settings.notifSettings')}
+            </button>
+          )}
         </div>
       </SettingsPanel>
       )}

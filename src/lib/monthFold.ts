@@ -26,15 +26,20 @@ export function monthTitle(key: string, locale: Locale): string {
 }
 
 /**
- * Past months start closed, so the eye lands on this month and what follows.
+ * Past months start closed, so the eye lands on this month.
+ * Later months stay open unless closeAfter is set.
  * A list that is entirely in the past keeps its latest month open.
  */
-export function monthsClosedByDefault(keys: readonly string[], today: string): Set<string> {
+export function monthsClosedByDefault(
+  keys: readonly string[],
+  today: string,
+  closeAfter = false,
+): Set<string> {
   const current = today.slice(0, 7)
   const ahead = keys.some((key) => key >= current)
   if (!ahead) {
     const latest = keys[keys.length - 1]
     return new Set(keys.filter((key) => key !== latest))
   }
-  return new Set(keys.filter((key) => key < current))
+  return new Set(keys.filter((key) => key < current || (closeAfter && key > current)))
 }

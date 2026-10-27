@@ -36,7 +36,8 @@ import {
   updateReminder,
 } from '../lib/reminders'
 import { refreshFollowedReminders } from '../lib/followedLists'
-import { forgetSharedReminder } from '../lib/sharedEvents'
+import { createMeetup } from '../lib/meetup'
+import { forgetSharedReminder, updateMeetupEvent } from '../lib/sharedEvents'
 import { track } from '../lib/track'
 
 export function useReminders(userId: string | undefined) {
@@ -180,8 +181,35 @@ export function useReminders(userId: string | undefined) {
     }
   }
 
+  /** Saves a meetup and its link. 'full' when no more open reminders fit. */
+  async function addMeetup(input: ReminderInput): Promise<Reminder | 'full'> {
+    if (!userId) throw new Error('Sign in to make the link.')
+    if (full) return 'full'
+    try {
+      const saved = await createMeetup(userId, input)
+      setReminders((current) => [...current, saved])
+      track('reminder_added', {
+        has_time: input.hour != null,
+        day_before: input.remindBefore === true,
+        kind: saved.kind,
+        every_year: false,
+        repeat: 'none',
+        signed_in: true,
+        photo: saved.photoPath != null,
+        meetup: true,
+      })
+      return saved
+    } catch (err) {
+      if (err instanceof ReminderCapError) return 'full'
+      throw err
+    }
+  }
+
   async function update(id: string, input: ReminderInput): Promise<void> {
     const before = reminders.find((item) => item.id === id)
+    if (before?.meetup && before.sharedByMe && before.sharedEventId) {
+      await updateMeetupEvent(before.sharedEventId, input)
+    }
     const detach = Boolean(
       before?.sharedListItemId &&
         (before.text !== cleanReminderText(input.text) ||
@@ -267,6 +295,7 @@ export function useReminders(userId: string | undefined) {
     busyId,
     reload,
     add,
+    addMeetup,
     update,
     remove,
     markDone,

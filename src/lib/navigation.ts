@@ -20,9 +20,9 @@ export type AppView =
   | { name: 'numbers'; screen: 'form'; metricId?: string }
   | { name: 'numbers'; screen: 'detail'; metricId: string }
   | { name: 'medicines'; medicineId?: string }
-  | { name: 'reminders'; reminderId?: string; edit?: boolean }
+  | { name: 'reminders'; reminderId?: string; edit?: boolean; meetup?: boolean }
   | { name: 'reminderList' }
-  | { name: 'reminderCommunity' }
+  | { name: 'reminderCommunity'; section: 'holidays' | 'schedules' }
   | { name: 'insights' }
   | { name: 'review'; weekStart: string }
   | { name: 'settings'; page?: 'reminders' }
@@ -56,7 +56,10 @@ const APP_ROUTES: Array<{ pattern: string; parse: (params: Record<string, string
     parse: (p) => ({ name: 'medicines', medicineId: p.id }),
   },
   { pattern: '/reminders/new', parse: () => ({ name: 'reminders' }) },
-  { pattern: '/reminders/community', parse: () => ({ name: 'reminderCommunity' }) },
+  { pattern: '/reminders/meetup', parse: () => ({ name: 'reminders', meetup: true }) },
+  { pattern: '/reminders/holidays', parse: () => ({ name: 'reminderCommunity', section: 'holidays' }) },
+  { pattern: '/reminders/schedules', parse: () => ({ name: 'reminderCommunity', section: 'schedules' }) },
+  { pattern: '/reminders/community', parse: () => ({ name: 'reminderCommunity', section: 'holidays' }) },
   {
     pattern: '/reminders/:id/edit',
     parse: (p) => ({ name: 'reminders', reminderId: p.id, edit: true }),

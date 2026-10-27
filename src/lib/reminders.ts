@@ -14,6 +14,7 @@ import {
   uploadReminderPhoto,
   withReminderPhotoUrls,
 } from './reminderPhotos'
+import { planMeetupRefresh, type MeetupSource } from './meetupSync'
 import { withListPhotos } from './sharedLists'
 import { createSupabaseClient } from './supabase'
 import {
@@ -76,17 +77,72 @@ async function ownedSharedEventIds(ids: string[]): Promise<Set<string>> {
   return new Set((data ?? []).map((row) => row.id))
 }
 
+function meetupSource(row: {
+  id: string
+  status: string
+  photo_path: string | null
+  meetup: boolean
+  text: string | null
+  description: string | null
+  day: string
+  hour: number | null
+  minute: number | null
+  time_zone: string
+  remind_before: boolean
+  kind: string
+}): MeetupSource {
+  const status = row.status === 'cancelled' || row.status === 'switched_off' ? row.status : 'active'
+  return {
+    id: row.id,
+    meetup: row.meetup === true,
+    text: row.text,
+    description: row.description ?? null,
+    day: row.day.slice(0, 10),
+    hour: row.hour,
+    minute: row.minute,
+    timeZone: row.time_zone,
+    remindBefore: row.remind_before === true,
+    photoPath: isEventPhotoPath(row.photo_path) ? row.photo_path : null,
+    kind: reminderKindOf(row.kind),
+    status,
+  }
+}
+
+/** Writes meetup changes onto this account's copies. Done and alert off stay as they are. */
+async function persistMeetupUpdates(updates: ReturnType<typeof planMeetupRefresh>): Promise<void> {
+  if (updates.length === 0) return
+  const client = createSupabaseClient()
+  const { data: auth } = await client.auth.getSession()
+  if (!auth.session) return
+  for (const update of updates) {
+    const { error } = await client
+      .from('reminders')
+      .update({
+        text: update.text,
+        description: update.description,
+        day: update.day,
+        hour: update.hour,
+        minute: update.minute,
+        remind_before: update.remindBefore,
+        kind: update.kind,
+      })
+      .eq('id', update.reminderId)
+    if (error) return
+  }
+}
+
 /** Fills in each shared reminder's event status and whether this account made it. Offline, the list comes back as it was. */
 export async function withSharedStatuses<T extends Reminder>(list: readonly T[]): Promise<T[]> {
   const ids = [...new Set(list.map((item) => item.sharedEventId).filter((id): id is string => Boolean(id)))]
   if (ids.length === 0) return [...list]
   try {
+    const client = createSupabaseClient()
     const [{ data, error }, owned] = await Promise.all([
-      createSupabaseClient().rpc('shared_event_statuses', { p_ids: ids }),
+      client.rpc('shared_event_statuses', { p_ids: ids }),
       ownedSharedEventIds(ids).catch(() => new Set<string>()),
     ])
     const rows = new Map(error ? [] : (data ?? []).map((row) => [row.id, row]))
-    return list.map((item) => {
+    const withStatus = list.map((item) => {
       if (!item.sharedEventId) return item
       const row = rows.get(item.sharedEventId)
       const next = row?.status
@@ -95,7 +151,28 @@ export async function withSharedStatuses<T extends Reminder>(list: readonly T[])
         ...item,
         ...(known ? { sharedStatus: next } : {}),
         ...(row ? { sharedPhotoPath: isEventPhotoPath(row.photo_path) ? row.photo_path : null } : {}),
+        ...(row ? { meetup: row.meetup === true } : {}),
         sharedByMe: owned.has(item.sharedEventId),
+      }
+    })
+    const sources = [...rows.values()].filter((row) => row.meetup).map(meetupSource)
+    const updates = planMeetupRefresh(withStatus, sources)
+    if (updates.length === 0) return withStatus
+    await persistMeetupUpdates(updates).catch(() => {})
+    const byId = new Map(updates.map((update) => [update.reminderId, update]))
+    return withStatus.map((item) => {
+      const update = byId.get(item.id)
+      if (!update) return item
+      return {
+        ...item,
+        text: update.text,
+        description: update.description,
+        day: update.day,
+        hour: update.hour,
+        minute: update.minute,
+        remindBefore: update.remindBefore,
+        kind: update.kind,
+        sharedPhotoPath: update.sharedPhotoPath,
       }
     })
   } catch {

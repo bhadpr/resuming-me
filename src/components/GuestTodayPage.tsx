@@ -90,6 +90,8 @@ export function GuestTodayPage() {
   const [paused, setPaused] = useState(false)
   const [note, setNote] = useState<string | null>(null)
   const [videoId, setVideoId] = useState<string | null>(null)
+  const [manualFor, setManualFor] = useState<string | null>(null)
+  const [manualMinutes, setManualMinutes] = useState('')
   const startedAt = useRef<string | null>(null)
   const tickAt = useRef<number | null>(null)
   const finished = useRef(false)
@@ -161,6 +163,33 @@ export function GuestTodayPage() {
     setRunningId(null)
     setPaused(false)
     setElapsed(0)
+  }
+
+  function logMinutes(activity: GuestActivity) {
+    const minutes = Number(manualMinutes)
+    if (!Number.isFinite(minutes) || minutes <= 0) return
+    const current = draftRef.current
+    if (!current) return
+    const seconds = Math.round(minutes * 60)
+    if (seconds < 1) return
+    setDraft(
+      appendGuestLog(current, {
+        localActivityId: activity.localId,
+        startedAt: new Date().toISOString(),
+        durationSeconds: seconds,
+        date: today,
+        kind: 'session',
+      }),
+    )
+    trackGuestLog(activity, 'session', Math.round(minutes))
+    undoToast.show(formatSessionUndoMessage(activity.name, seconds), () => {
+      const latest = draftRef.current
+      if (!latest) return
+      setDraft(removeLastGuestLog(latest, activity.localId, 'session'))
+      track('log_undone', { kind: 'session', signed_in: false })
+    })
+    setManualFor(null)
+    setManualMinutes('')
   }
 
   useEffect(() => {
@@ -407,21 +436,74 @@ export function GuestTodayPage() {
               ) : null}
             </div>
           ) : null}
-          {canShowVideo && (
+          {(canShowVideo || !skipped) && (
             <div className="today-extra">
+              {canShowVideo && (
+                <button
+                  type="button"
+                  className="today-extra-btn today-watch"
+                  aria-expanded={showVideo}
+                  onClick={() =>
+                    setVideoId((current) =>
+                      current === activity.localId ? null : activity.localId,
+                    )
+                  }
+                >
+                  {showVideo ? t('today.hideVideo') : t('today.video')}
+                </button>
+              )}
+              {!skipped && (
+                <button
+                  type="button"
+                  className="today-extra-btn"
+                  aria-expanded={manualFor === activity.localId}
+                  onClick={() => {
+                    setManualMinutes('')
+                    setManualFor((current) =>
+                      current === activity.localId ? null : activity.localId,
+                    )
+                  }}
+                >
+                  {t('today.logMinutes')}
+                </button>
+              )}
+            </div>
+          )}
+          {manualFor === activity.localId && !skipped && (
+            <form
+              className="metric-log-form today-log-form"
+              onSubmit={(event) => {
+                event.preventDefault()
+                logMinutes(activity)
+              }}
+            >
+              <input
+                className="field-input field-input-sm"
+                type="number"
+                inputMode="numeric"
+                min={1}
+                step={1}
+                placeholder={t('today.minutes')}
+                value={manualMinutes}
+                onChange={(event) => setManualMinutes(event.target.value)}
+                aria-label={t('today.minutes')}
+                enterKeyHint="done"
+              />
+              <button
+                type="submit"
+                className="btn btn-primary btn-today"
+                disabled={!manualMinutes}
+              >
+                {t('today.addMinutes')}
+              </button>
               <button
                 type="button"
-                className="today-extra-btn today-watch"
-                aria-expanded={showVideo}
-                onClick={() =>
-                  setVideoId((current) =>
-                    current === activity.localId ? null : activity.localId,
-                  )
-                }
+                className="today-extra-btn"
+                onClick={() => setManualFor(null)}
               >
-                {showVideo ? t('today.hideVideo') : t('today.video')}
+                {t('today.cancel')}
               </button>
-            </div>
+            </form>
           )}
           {canShowVideo && showVideo && (
             <HabitVideoPlaceholder

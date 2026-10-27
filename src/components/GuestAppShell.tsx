@@ -1,5 +1,5 @@
 import { useEffect } from 'react'
-import { useLocation } from 'react-router-dom'
+import { useLocation, useNavigate } from 'react-router-dom'
 import { useLocale } from '../hooks/useLocale'
 import {
   guestMedicineSchedules,
@@ -13,6 +13,7 @@ import { mealMessageKey } from '../lib/medicineFormat'
 import { listenForMedicineNotificationActions, syncMedicineNotifications } from '../lib/medicineNotifications'
 import { MEDICINE_REMINDER_CHANGED } from '../lib/medicineReminderState'
 import { parseAppPath, stashAuthNext, tabFromView, type AppTab } from '../lib/navigation'
+import { listenForDigestNotificationTap } from '../lib/localNotifications'
 import {
   listenForReminderNotificationActions,
   reminderAlertText,
@@ -26,7 +27,7 @@ import { BrandTitle } from './BrandTitle'
 import { BottomNav } from './BottomNav'
 import { GuestActivityScreen } from './GuestActivityScreen'
 import { GuestActivitiesPage, GuestVitalsPage } from './GuestLibrary'
-import { GuestCommunityReminders, GuestReminderEditor, GuestReminderList } from './GuestReminders'
+import { GuestCommunityReminders, GuestMeetupSignIn, GuestReminderEditor, GuestReminderList } from './GuestReminders'
 import { InsightsHeaderButton } from './InsightsHeaderButton'
 import { GuestInsightsPage } from './GuestInsightsPage'
 import { GuestTodayPage } from './GuestTodayPage'
@@ -49,6 +50,7 @@ export function GuestAppShell() {
   const { t } = useLocale()
   useGuestMedicineAlarms()
   useGuestReminderAlerts()
+  useGuestNotificationOpen()
   const view = parseAppPath(location.pathname)
   const tab = guestTabFromPath(location.pathname)
   useDocumentMeta({ title: `${t(TAB_LABEL_KEYS[tab])} · Resuming`, noindex: true })
@@ -67,11 +69,12 @@ export function GuestAppShell() {
         </div>
       </header>
       <main className="app-main">
-        {view?.name === 'reminders' && (
+        {view?.name === 'reminders' && view.meetup && <GuestMeetupSignIn />}
+        {view?.name === 'reminders' && !view.meetup && (
           <GuestReminderEditor key={view.reminderId ?? 'new'} reminderId={view.reminderId} editing={view.edit === true} />
         )}
         {view?.name === 'reminderList' && <GuestReminderList />}
-        {view?.name === 'reminderCommunity' && <GuestCommunityReminders />}
+        {view?.name === 'reminderCommunity' && <GuestCommunityReminders section={view.section} />}
         {tab === 'today' && <GuestTodayPage />}
         {view?.name === 'activities' && view.screen === 'list' && <GuestActivitiesPage />}
         {view?.name === 'activities' && view.screen === 'detail' && (
@@ -131,6 +134,23 @@ function useGuestMedicineAlarms(): void {
     window.addEventListener(MEDICINE_REMINDER_CHANGED, sync)
     return () => window.removeEventListener(MEDICINE_REMINDER_CHANGED, sync)
   }, [t])
+}
+
+function useGuestNotificationOpen(): void {
+  const navigate = useNavigate()
+
+  useEffect(() => {
+    let cancelled = false
+    let remove = () => {}
+    void listenForDigestNotificationTap(() => navigate('/today')).then((next) => {
+      if (cancelled) next()
+      else remove = next
+    })
+    return () => {
+      cancelled = true
+      remove()
+    }
+  }, [navigate])
 }
 
 function useGuestReminderAlerts(): void {

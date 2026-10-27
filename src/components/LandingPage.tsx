@@ -71,6 +71,7 @@ export function LandingPage({
       await (method === 'apple' ? onApple() : onSignIn())
     } catch (err) {
       setError(err instanceof Error ? err.message : 'Sign-in failed')
+    } finally {
       setSigningIn(null)
     }
   }

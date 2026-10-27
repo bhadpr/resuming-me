@@ -537,6 +537,7 @@ function normalizeGuestReminders(list: unknown, now = Date.now()): Reminder[] {
       ...(typeof item.communityId === 'string' ? { communityId: item.communityId } : {}),
       ...(isEventPhotoPath(item.communityPhotoPath) ? { communityPhotoPath: item.communityPhotoPath } : {}),
       ...(item.alertOff === true ? { alertOff: true } : {}),
+      ...(item.meetup === true ? { meetup: true } : {}),
       ...(item.sharedStatus === 'active' || item.sharedStatus === 'cancelled' || item.sharedStatus === 'switched_off'
         ? { sharedStatus: item.sharedStatus }
         : {}),
@@ -752,9 +753,32 @@ export function saveGuestSharedStatuses(draft: GuestDraft, updated: readonly Rem
     if (!item.sharedEventId || !fresh) return item
     const status = fresh.sharedStatus ?? item.sharedStatus
     const photo = fresh.sharedPhotoPath === undefined ? item.sharedPhotoPath : fresh.sharedPhotoPath
-    if (status === item.sharedStatus && photo === item.sharedPhotoPath) return item
+    const follow =
+      !item.doneAt && fresh.meetup
+        ? {
+            text: fresh.text,
+            description: fresh.description ?? null,
+            day: fresh.day,
+            hour: fresh.hour,
+            minute: fresh.minute,
+            remindBefore: fresh.remindBefore,
+            kind: fresh.kind,
+            meetup: true as const,
+          }
+        : null
+    const sameDetails =
+      !follow ||
+      (item.text === follow.text &&
+        (item.description ?? null) === follow.description &&
+        item.day === follow.day &&
+        item.hour === follow.hour &&
+        (item.minute ?? null) === follow.minute &&
+        item.remindBefore === follow.remindBefore &&
+        item.kind === follow.kind &&
+        item.meetup === true)
+    if (status === item.sharedStatus && photo === item.sharedPhotoPath && sameDetails) return item
     changed = true
-    return { ...item, sharedStatus: status, sharedPhotoPath: photo }
+    return { ...item, ...(follow ?? {}), sharedStatus: status, sharedPhotoPath: photo }
   })
   if (!changed) return draft
   const next = saveGuestDraft({ ...draft, reminders })

@@ -133,6 +133,7 @@ export function SharedEventPage({ code }: { code: string }) {
       hour: local?.hour ?? found.hour,
       minute: local?.minute ?? found.minute,
       kind: found.kind,
+      remindBefore: found.remindBefore,
       sharedEventId: found.id,
     }
     let destination: string | null = null
