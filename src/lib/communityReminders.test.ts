@@ -6,10 +6,13 @@ import {
   communityReminderInput,
   communityTitle,
   communityToShow,
+  holidayArtUrl,
   holidayInRegion,
+  reminderShownPhoto,
   upcomingCommunity,
   type CommunityReminder,
 } from './communityReminders'
+import type { Reminder } from './reminderSchedule'
 
 const PHOTO = '0b6f6a3e-5a7d-4c1e-9f1a-2b3c4d5e6f70/1f2e3d4c-5b6a-4789-8abc-def012345678.jpg'
 
@@ -172,6 +175,38 @@ describe('what people see', () => {
     expect(shown.find((row) => row.day === '2026-11-08')?.id).toBe('admin-diwali')
     expect(shown.find((row) => row.day === '2027-10-29')?.titles.en).toBe('Diwali')
     expect(shown.filter((row) => row.titles.en === 'Veterans Day')).toHaveLength(2)
+  })
+})
+
+describe('holiday pictures on a reminder row', () => {
+  function holiday(text: string, day: string, extra: Partial<Reminder> = {}): Reminder {
+    return {
+      id: 'r',
+      text,
+      day,
+      hour: null,
+      minute: null,
+      remindBefore: true,
+      kind: 'event',
+      everyYear: false,
+      doneAt: null,
+      sharedListId: 'a11ce001-0000-4111-8001-000000000001',
+      ...extra,
+    }
+  }
+
+  it('uses the clay picture for a holiday, including a translated name', () => {
+    const thanks = communityToShow([], '2026-10-01', 80).find((row) => row.titles.en === 'Thanksgiving' && row.day === '2026-11-26')
+    expect(holidayArtUrl('Thanksgiving', '2026-11-26')).toBe('/community/sm/thanksgiving.jpg')
+    expect(thanks?.titles.hi).toBeTruthy()
+    expect(holidayArtUrl(thanks?.titles.hi ?? '', thanks?.day ?? '')).toBe('/community/sm/thanksgiving.jpg')
+    expect(reminderShownPhoto(holiday('Christmas', '2026-12-25'))).toBe('/community/sm/christmas.jpg')
+    expect(holidayArtUrl('Independence Day', '2026-08-15')).toBe('/community/sm/in-independence.jpg')
+    expect(holidayArtUrl('Independence Day', '2027-07-04')).toBe('/community/sm/independence.jpg')
+  })
+
+  it('leaves a personal reminder on its own picture', () => {
+    expect(reminderShownPhoto(holiday('Dinner', '2026-12-25', { sharedListId: undefined }))).toBeNull()
   })
 })
 

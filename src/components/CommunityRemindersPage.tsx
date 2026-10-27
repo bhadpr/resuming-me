@@ -5,7 +5,7 @@ import type { CommunityReminder } from '../lib/communityReminders'
 import { navigateBack } from '../lib/navigation'
 import { communityRegion } from '../lib/schoolZip'
 import { INDIA_HOLIDAY_LIST_ID, US_HOLIDAY_LIST_ID, type SharedList } from '../lib/sharedLists'
-import { CalendarImportDetail, CalendarImportSection, NflImportSection } from './CalendarImports'
+import { CalendarImportDetail, CalendarImportSection, CricketImportSection, LeagueImportSection, NflImportSection } from './CalendarImports'
 import { HolidayCatalog } from './HolidayCatalog'
 import { Icon } from './Icon'
 
@@ -57,7 +57,14 @@ export function CommunityRemindersPage({
           <>
             <CalendarImportSection title={t('reminders.community.usSchool')} onOpen={setOpened} />
             <NflImportSection title={t('reminders.community.nfl')} onOpen={setOpened} />
+            <LeagueImportSection league="nba" title={t('reminders.community.nba')} onOpen={setOpened} />
+            <LeagueImportSection league="nhl" title={t('reminders.community.nhl')} onOpen={setOpened} />
+            <LeagueImportSection league="mlb" title={t('reminders.community.mlb')} onOpen={setOpened} />
+            <LeagueImportSection league="mls" title={t('reminders.community.mls')} onOpen={setOpened} />
+            <CricketImportSection title={t('reminders.community.cricket')} onOpen={setOpened} />
           </>
+        ) : region === 'in' ? (
+          <CricketImportSection title={t('reminders.community.cricket')} onOpen={setOpened} />
         ) : (
           <section className="empty-state">
             <p>{t('reminders.community.schedulesEmpty')}</p>

@@ -1,4 +1,5 @@
 import { useEffect, useRef, useState, type CSSProperties, type ReactNode } from 'react'
+import { AddHabitPicker, CustomHabitSetup } from './AddHabitPicker'
 import { useNavigate } from 'react-router-dom'
 import { ACTIVITY_TEMPLATES, HABIT_GROUPS, activityInputFromTemplate, templateById } from '../../data/activityTemplates'
 import { HABIT_ART, habitArtFor, habitSizeArtFor } from '../../data/habitArt'
@@ -7,10 +8,10 @@ import { HabitMark } from '../HabitMark'
 import { AppleMark } from '../AppleMark'
 import { HabitVideoPlaceholder } from '../HabitVideoPlaceholder'
 import { GoalTargetPicker, StandardVitalTarget, WeightTargetField } from '../GoalTargetPicker'
-import { MEDICINES_ENABLED } from '../../config'
+import { APPLE_SIGN_IN, MEDICINES_ENABLED, ONBOARDING_MEDICINE, ONBOARDING_PRANAYAM } from '../../config'
 import { formatReminderClock } from '../../lib/checkinPrefs'
 import { addDays, todayLocalDate } from '../../lib/dates'
-import { LIST_PHOTO_SIDE, reminderPhotoSrc } from '../../lib/eventPhotoUrl'
+import { reminderShownPhoto } from '../../lib/communityReminders'
 import { parseTimeInput } from '../../lib/dailyDigest'
 import { enableDailyDigestFromOnboarding } from '../../lib/localNotifications'
 import {
@@ -65,8 +66,12 @@ import { HolidayAsk } from './HolidayAsk'
 import { ReminderEditor } from '../ReminderForm'
 import { ReminderKindMark } from '../ReminderKindIcon'
 import { onboardingHolidayList } from '../../lib/onboardingHoliday'
+import { isIndiaTimeZone, isUsTimeZone } from '../../lib/schoolZip'
 import { importSharedList } from '../../lib/importSharedList'
-import { type SharedList } from '../../lib/sharedLists'
+import { listCricketTeamsForSearch, listNflTeamsForSearch, type SharedList } from '../../lib/sharedLists'
+import { CRICKET_TEAMS, cricketTeamByName, writeCricketSearch } from '../../lib/cricketSearch'
+import { NFL_TEAMS, nflTeamByName, writeNflSearch } from '../../lib/nflSearch'
+import { NflMark } from '../NflMark'
 import { askForReminderAlerts } from '../../lib/reminderNotifications'
 import {
   formatReminderDay,
@@ -282,11 +287,14 @@ function listedMinutes(activity: GuestActivity): GuestActivity {
 function welcomePhases(): readonly (readonly StartPickPhase[])[] {
   return [
     ['workout', 'workouts', 'workoutDetail'],
-    ['pranayam', 'pranayams', 'pranayamDetail'],
-    ...(MEDICINES_ENABLED ? [['ask', 'medicine', 'medicines'] as const] : []),
-    ...(onboardingHolidayList() ? [['reminderCommunity'] as const] : []),
-    ['reminderAsk', 'reminder', 'reminders'],
+    ...(ONBOARDING_PRANAYAM ? [['pranayam', 'pranayams', 'pranayamDetail'] as const] : []),
+    ...(ONBOARDING_MEDICINE && MEDICINES_ENABLED ? [['ask', 'medicine', 'medicines'] as const] : []),
     ['vitals', 'vitalPicks', 'targets', 'activities'],
+    ...(onboardingHolidayList() ? [['reminderCommunity'] as const] : []),
+    ['meetupAsk', 'meetup'],
+    ...(isUsTimeZone() ? [['nflAsk', 'nfl'] as const] : []),
+    ...(isIndiaTimeZone() ? [['cricketAsk', 'cricket'] as const] : []),
+    ['reminderAsk', 'reminder', 'reminders'],
   ]
 }
 
@@ -294,15 +302,32 @@ function welcomeQuestionCount(): number {
   return welcomePhases().length + 2
 }
 
-/** The question after pranayam: medicine where it is offered, otherwise the holiday list. */
-function afterPranayam(): StartPickPhase {
-  if (MEDICINES_ENABLED) return 'ask'
-  return onboardingHolidayList() ? 'reminderCommunity' : 'reminderAsk'
+/** Workout is done. Pranayam is next only while that question is on. */
+function afterWorkout(): StartPickPhase {
+  return ONBOARDING_PRANAYAM ? 'pranayam' : afterPranayam()
 }
 
-/** Holiday catalogs only exist for a US or India clock. Everywhere else, skip the question. */
+/** Where a no, or a finished pranayam, goes next. */
+function afterPranayam(): StartPickPhase {
+  if (ONBOARDING_MEDICINE && MEDICINES_ENABLED) return 'ask'
+  return 'vitals'
+}
+
+/** Vitals are done. Holidays come next where that list exists. */
+function afterVitals(): StartPickPhase {
+  return onboardingHolidayList() ? 'reminderCommunity' : 'meetupAsk'
+}
+
+/** Holidays are done, or there is no holiday list for this clock. */
 function afterHolidaySetup(): StartPickPhase {
-  return onboardingHolidayList() ? 'reminderCommunity' : 'reminderAsk'
+  return 'meetupAsk'
+}
+
+/** A meetup answer is done. NFL is next on a US clock, cricket on an India clock. */
+function afterMeetup(): StartPickPhase {
+  if (isUsTimeZone()) return 'nflAsk'
+  if (isIndiaTimeZone()) return 'cricketAsk'
+  return 'reminderAsk'
 }
 
 /** One dot per welcome question. Follow-up screens stay on their question's dot. */
@@ -513,6 +538,8 @@ export function StartFlow({
   const [trackChoice, setTrackChoice] = useState<TypedTracking>('checkbox')
   const [trackThen, setTrackThen] = useState<'stay' | 'continue'>('stay')
   const [exploreMore, setExploreMore] = useState(false)
+  const [openHabit, setOpenHabit] = useState<string | null>(null)
+  const [customHabit, setCustomHabit] = useState<GuestActivity | null>(null)
   const [reassurance, setReassurance] = useState<string | null>(null)
   const [googleBusy, setGoogleBusy] = useState(false)
   const [nudgeTimes, setNudgeTimes] = useState<string[]>(() => {
@@ -525,6 +552,12 @@ export function StartFlow({
   const [practiceOn, setPracticeOn] = useState(false)
   const [practiceElapsed, setPracticeElapsed] = useState(0)
   const [practicePaused, setPracticePaused] = useState(false)
+  const [nflTeam, setNflTeam] = useState('')
+  const [nflBusy, setNflBusy] = useState(false)
+  const [nflMissing, setNflMissing] = useState(false)
+  const [cricketTeam, setCricketTeam] = useState('')
+  const [cricketBusy, setCricketBusy] = useState(false)
+  const [cricketMissing, setCricketMissing] = useState(false)
   const practiceStarted = useRef<string | null>(null)
   const practiceTick = useRef<number | null>(null)
   const practiceDone = useRef(false)
@@ -559,6 +592,29 @@ export function StartFlow({
 
   useEffect(() => {
     if (draft.pickPhase !== 'reminderCommunity' || onboardingHolidayList()) return
+    persist({ ...draft, pickPhase: afterHolidaySetup() })
+  }, [draft])
+
+  useEffect(() => {
+    const phase = draft.pickPhase
+    const hiddenPranayam =
+      !ONBOARDING_PRANAYAM &&
+      (phase === 'pranayam' || phase === 'pranayams' || phase === 'pranayamDetail')
+    const hiddenMedicine =
+      (!ONBOARDING_MEDICINE || !MEDICINES_ENABLED) &&
+      (phase === 'ask' || phase === 'medicine' || phase === 'medicines')
+    if (hiddenPranayam || hiddenMedicine) persist({ ...draft, pickPhase: 'vitals' })
+  }, [draft])
+
+  useEffect(() => {
+    if (draft.pickPhase !== 'nflAsk' && draft.pickPhase !== 'nfl') return
+    if (isUsTimeZone()) return
+    persist({ ...draft, pickPhase: 'reminderAsk' })
+  }, [draft])
+
+  useEffect(() => {
+    if (draft.pickPhase !== 'cricketAsk' && draft.pickPhase !== 'cricket') return
+    if (isIndiaTimeZone()) return
     persist({ ...draft, pickPhase: 'reminderAsk' })
   }, [draft])
 
@@ -567,7 +623,7 @@ export function StartFlow({
   }
 
   function skipHolidays() {
-    persist(saveGuestDraft({ ...draft, pickPhase: 'reminderAsk' }))
+    persist(saveGuestDraft({ ...draft, pickPhase: afterHolidaySetup() }))
   }
 
   async function acceptHolidays(list: SharedList, remindBefore: boolean): Promise<'ok' | 'full'> {
@@ -581,8 +637,82 @@ export function StartFlow({
       persist(saveGuestDraft({ ...latest, pickPhase: 'reminderCommunity' }))
       return 'full'
     }
-    persist(saveGuestDraft({ ...latest, pickPhase: 'reminderAsk' }))
+    persist(saveGuestDraft({ ...latest, pickPhase: afterHolidaySetup() }))
     return 'ok'
+  }
+
+  async function addNflTeam() {
+    const name = nflTeam.trim()
+    if (!name || nflBusy) return
+    setNflBusy(true)
+    setNflMissing(false)
+    writeNflSearch(name)
+    try {
+      const lists = await listNflTeamsForSearch(name)
+      const list = lists[0]
+      if (!list) {
+        setNflMissing(true)
+        return
+      }
+      const skip = new Set(
+        draft.reminders.map((item) => item.sharedListItemId).filter((id): id is string => Boolean(id)),
+      )
+      const result = await importSharedList(list, null, skip, true)
+      const latest = loadGuestDraft() ?? draft
+      if (result === 'full' || result === 'none') {
+        setNflMissing(true)
+        persist(saveGuestDraft({ ...latest, pickPhase: 'nfl' }))
+        return
+      }
+      persist(saveGuestDraft({ ...latest, pickPhase: 'reminderAsk' }))
+    } catch {
+      setNflMissing(true)
+    } finally {
+      setNflBusy(false)
+    }
+  }
+
+  async function addCricketTeam() {
+    const name = cricketTeam.trim()
+    if (!name || cricketBusy) return
+    setCricketBusy(true)
+    setCricketMissing(false)
+    writeCricketSearch(name)
+    try {
+      const lists = await listCricketTeamsForSearch(name)
+      const list = lists[0]
+      if (!list) {
+        setCricketMissing(true)
+        return
+      }
+      const skip = new Set(
+        draft.reminders.map((item) => item.sharedListItemId).filter((id): id is string => Boolean(id)),
+      )
+      const result = await importSharedList(list, null, skip, true)
+      const latest = loadGuestDraft() ?? draft
+      if (result === 'full' || result === 'none') {
+        setCricketMissing(true)
+        persist(saveGuestDraft({ ...latest, pickPhase: 'cricket' }))
+        return
+      }
+      persist(saveGuestDraft({ ...latest, pickPhase: 'reminderAsk' }))
+    } catch {
+      setCricketMissing(true)
+    } finally {
+      setCricketBusy(false)
+    }
+  }
+
+  function beforeVitals(): StartPickPhase {
+    if (ONBOARDING_MEDICINE && MEDICINES_ENABLED) {
+      return draft.medicines.length > 0 ? 'medicines' : 'ask'
+    }
+    if (ONBOARDING_PRANAYAM) return pranayamPhase(draft)
+    return draft.activities.some((item) => isWorkoutTemplate(item.templateId)) ? 'workouts' : 'workout'
+  }
+
+  function finishWelcome(base: GuestDraft = draft) {
+    persist(setGuestStep(base, 4))
   }
 
   function finishStep(step: number, choices: string, next: GuestDraft) {
@@ -653,19 +783,50 @@ export function StartFlow({
     return activity.targetValue != null && activity.targetValue > 0 ? activity : null
   }
 
+  function commitAdd(activity: GuestActivity) {
+    const next = upsertGuestActivity(draft, activity)
+    if (next === draft) return
+    trackCreated(activity)
+    finishStep(1, choiceCode([activity.templateId ?? 'custom']), next)
+    setPending(null)
+    setCustomHabit(null)
+    setOpenHabit(null)
+    setTargetText('')
+    const historyIndex = (window.history.state as { idx?: number } | null)?.idx ?? 0
+    if (historyIndex > 0) navigate(-1)
+    else navigate(isGuestVital(activity) ? '/numbers' : '/activities')
+  }
+
   function saveAdd() {
     if (!pending) return
     const ready = pendingWithTarget(pending)
     if (!ready) return
-    const next = upsertGuestActivity(draft, ready)
-    if (next === draft) return
-    trackCreated(ready)
-    finishStep(1, choiceCode([ready.templateId ?? 'custom']), next)
-    setPending(null)
-    setTargetText('')
-    const historyIndex = (window.history.state as { idx?: number } | null)?.idx ?? 0
-    if (historyIndex > 0) navigate(-1)
-    else navigate(isGuestVital(ready) ? '/numbers' : '/activities')
+    commitAdd(ready)
+  }
+
+  function pickAddCadence(id: string, cadence: WeekCadence) {
+    const activity = activityFromTemplate(id)
+    if (!activity) return
+    const next = applyWeekCadence(activity, cadence)
+    setOpenHabit(null)
+    if (isDailyGoalHabit(next) || activitySizeControl(next)) {
+      setTargetText('')
+      setPending(isDailyGoalHabit(next) ? { ...next, targetValue: null } : next)
+      return
+    }
+    commitAdd(next)
+  }
+
+  function continueCustom() {
+    if (!customHabit) return
+    const habit = customHabit
+    setCustomHabit(null)
+    if (isDailyGoalHabit(habit) || activitySizeControl(habit)) {
+      setTargetText('')
+      setPending(isDailyGoalHabit(habit) ? { ...habit, targetValue: null } : habit)
+      return
+    }
+    commitAdd(habit)
   }
 
   function pickAddGoal(value: number) {
@@ -733,13 +894,13 @@ export function StartFlow({
       }
       return removeGuestActivity(current, activity.localId)
     }, draft)
-    persist({ ...next, pickPhase: 'pranayam' })
+    persist({ ...next, pickPhase: afterWorkout() })
   }
 
   function openWorkoutDetails(base: GuestDraft) {
     const list = workoutDetailList(base.activities)
     if (list.length === 0) {
-      persist({ ...base, pickPhase: 'pranayam' })
+      persist({ ...base, pickPhase: afterWorkout() })
       return
     }
     const snapped = list.reduce(
@@ -753,7 +914,7 @@ export function StartFlow({
   function continueWorkouts() {
     const chosen = selectedWorkouts(draft.activities)
     if (chosen.length === 0) {
-      persist({ ...draft, pickPhase: 'pranayam' })
+      persist({ ...draft, pickPhase: afterWorkout() })
       return
     }
     openWorkoutDetails(draft)
@@ -768,7 +929,7 @@ export function StartFlow({
       persist({ ...nextDraft, pickPhase: 'workoutDetail' })
       return
     }
-    persist({ ...nextDraft, pickPhase: 'pranayam' })
+    persist({ ...nextDraft, pickPhase: afterWorkout() })
   }
 
   function backWorkoutDetail() {
@@ -786,12 +947,12 @@ export function StartFlow({
   function finishVitals(base: GuestDraft) {
     const list = targetActivities(base.activities)
     if (list.length === 0) {
-      persist(setGuestStep(base, 4))
+      persist({ ...base, pickPhase: afterVitals() })
       return
     }
     setTargetIndex(0)
     setTargetText(initialTargetText(list[0]))
-    persist(setGuestStep({ ...base, pickPhase: 'targets' }, 1))
+    persist({ ...base, pickPhase: 'targets' })
   }
 
   function declineVitals() {
@@ -832,15 +993,7 @@ export function StartFlow({
       persist({ ...nextDraft, pickPhase: 'targets' })
       return
     }
-    persist(
-      setGuestStep(
-        {
-          ...nextDraft,
-          pickPhase: selectedVitals(nextDraft.activities).length > 0 ? 'vitalPicks' : 'vitals',
-        },
-        4,
-      ),
-    )
+    persist({ ...nextDraft, pickPhase: afterVitals() })
   }
 
   function backTarget() {
@@ -896,6 +1049,11 @@ export function StartFlow({
     return tracking ? withTracking(activity, tracking) : activity
   }
 
+  function withChosenIcon(activity: GuestActivity): GuestActivity {
+    if (activity.icon) return activity
+    return { ...activity, icon: 'walk', emoji: templateById('walk')?.emoji ?? activity.emoji }
+  }
+
   function trackTypedHabit(name: string, tracking: TypedTracking | null) {
     track('activity_created', {
       template_id: 'custom',
@@ -920,8 +1078,7 @@ export function StartFlow({
     }
     if (adding) {
       setCustomName('')
-      setTargetText('')
-      setPending(typedHabitActivity(name, null))
+      setCustomHabit(withChosenIcon(typedHabitActivity(name, null)))
       return
     }
     const next = draftWithTypedHabit(draft, name, null)
@@ -935,8 +1092,7 @@ export function StartFlow({
     if (trackName == null) return
     if (adding) {
       setCustomName('')
-      setTargetText('')
-      setPending(typedHabitActivity(trackName, trackChoice))
+      setCustomHabit(withChosenIcon(typedHabitActivity(trackName, trackChoice)))
       setTrackName(null)
       return
     }
@@ -1156,7 +1312,7 @@ export function StartFlow({
     if (draft.pickPhase !== 'workoutDetail' || adding) return
     const list = workoutDetailList(draft.activities)
     if (list.length === 0) {
-      persist({ ...draft, pickPhase: 'pranayam' })
+      persist({ ...draft, pickPhase: afterWorkout() })
       return
     }
     if (workoutIndex >= list.length) setWorkoutIndex(list.length - 1)
@@ -1168,17 +1324,7 @@ export function StartFlow({
     if (list.length === 0) {
       // Steps leaves this list once its goal is saved. Stepping again would
       // write a new draft forever and freeze the page.
-      if (draft.step !== 4) {
-        persist(
-          setGuestStep(
-            {
-              ...draft,
-              pickPhase: selectedVitals(draft.activities).length > 0 ? 'vitalPicks' : 'vitals',
-            },
-            4,
-          ),
-        )
-      }
+      persist({ ...draft, pickPhase: afterVitals() })
       return
     }
     if (targetIndex >= list.length) setTargetIndex(list.length - 1)
@@ -1364,19 +1510,11 @@ export function StartFlow({
               return
             }
             if (!adding && draft.step === 4) {
-              const targets = targetActivities(draft.activities)
-              if (targets.length > 0) {
-                const last = targets.length - 1
-                setTargetIndex(last)
-                setTargetText(initialTargetText(targets[last]))
-                persist(setGuestStep({ ...draft, pickPhase: 'targets' }, 1))
-                return
-              }
               persist(
                 setGuestStep(
                   {
                     ...draft,
-                    pickPhase: selectedVitals(draft.activities).length > 0 ? 'vitalPicks' : 'vitals',
+                    pickPhase: openReminders.length > 0 ? 'reminders' : 'reminderAsk',
                   },
                   1,
                 ),
@@ -1466,7 +1604,7 @@ export function StartFlow({
               type="button"
               className="btn btn-secondary"
               onClick={() =>
-                persist({ ...draft, pickPhase: afterHolidaySetup(), medicineDaily: false, medicines: [] })
+                persist({ ...draft, pickPhase: 'vitals', medicineDaily: false, medicines: [] })
               }
             >
               {t('start.no')}
@@ -1545,7 +1683,7 @@ export function StartFlow({
           <button
             type="button"
             className="btn btn-primary"
-            onClick={() => persist({ ...draft, pickPhase: afterHolidaySetup(), medicineDaily: true })}
+            onClick={() => persist({ ...draft, pickPhase: 'vitals', medicineDaily: true })}
           >
             {t('start.continue')}
           </button>
@@ -1560,13 +1698,7 @@ export function StartFlow({
             onClick={() =>
               persist({
                 ...draft,
-                pickPhase: holidayOffer
-                  ? 'reminderCommunity'
-                  : !MEDICINES_ENABLED
-                    ? pranayamPhase(draft)
-                    : draft.medicines.length > 0
-                      ? 'medicines'
-                      : 'ask',
+                pickPhase: isUsTimeZone() ? 'nflAsk' : isIndiaTimeZone() ? 'cricketAsk' : 'meetupAsk',
               })
             }
           >
@@ -1593,7 +1725,7 @@ export function StartFlow({
             <button
               type="button"
               className="btn btn-secondary"
-              onClick={() => persist({ ...draft, pickPhase: 'vitals' })}
+              onClick={() => finishWelcome()}
             >
               {t('start.no')}
             </button>
@@ -1609,11 +1741,7 @@ export function StartFlow({
             onClick={() =>
               persist({
                 ...draft,
-                pickPhase: !MEDICINES_ENABLED
-                  ? pranayamPhase(draft)
-                  : draft.medicines.length > 0
-                    ? 'medicines'
-                    : 'ask',
+                pickPhase: selectedVitals(draft.activities).length > 0 ? 'vitalPicks' : 'vitals',
               })
             }
           >
@@ -1671,7 +1799,7 @@ export function StartFlow({
           <ul className="start-medicine-list">
             {openReminders.map((reminder) => (
               <li key={reminder.id} className="start-medicine-row">
-                <ReminderKindMark kind={reminder.kind} photo={reminderPhotoSrc(reminder, LIST_PHOTO_SIDE)} />
+                <ReminderKindMark kind={reminder.kind} photo={reminderShownPhoto(reminder)} />
                 <span className="activity-meta">
                   <span className="activity-name">{reminder.text}</span>
                   <span className="activity-desc">{reminderWhen(reminder)}</span>
@@ -1691,9 +1819,225 @@ export function StartFlow({
           <button
             type="button"
             className="btn btn-primary"
-            onClick={() => persist({ ...draft, pickPhase: 'vitals' })}
+            onClick={() => finishWelcome()}
           >
             {t('start.continue')}
+          </button>
+        </>
+      )}
+
+      {draft.step === 1 && !trackName && !adding && draft.pickPhase === 'meetupAsk' && (
+        <>
+          <button
+            type="button"
+            className="btn btn-ghost start-back"
+            onClick={() =>
+              persist({
+                ...draft,
+                pickPhase: holidayOffer
+                  ? 'reminderCommunity'
+                  : selectedVitals(draft.activities).length > 0
+                    ? 'vitalPicks'
+                    : 'vitals',
+              })
+            }
+          >
+            <Icon name="back" />
+            {t('start.back')}
+          </button>
+          <h2 className="screen-heading start-medicine-title">{t('start.meetupAsk')}</h2>
+          <p className="screen-sub">{t('start.meetupLike')}</p>
+          <div className="start-yes-no">
+            <button
+              type="button"
+              className="btn btn-primary"
+              onClick={() => persist({ ...draft, pickPhase: 'meetup' })}
+            >
+              {t('landing.yes')}
+            </button>
+            <button
+              type="button"
+              className="btn btn-secondary"
+              onClick={() => persist({ ...draft, pickPhase: afterMeetup() })}
+            >
+              {t('start.no')}
+            </button>
+          </div>
+        </>
+      )}
+
+      {draft.step === 1 && !trackName && !adding && draft.pickPhase === 'meetup' && (
+        <ReminderEditor
+          meetup
+          reminders={draft.reminders}
+          today={today}
+          loading={false}
+          saving={false}
+          error={null}
+          onCancel={() => persist({ ...draft, pickPhase: 'meetupAsk' })}
+          onSubmit={async (input) => {
+            const next = addGuestReminder(draft, { ...input, meetup: true, kind: 'event' })
+            if (!next) return 'full'
+            track('reminder_added', {
+              has_time: input.hour != null,
+              day_before: input.remindBefore === true,
+              kind: 'event',
+              every_year: false,
+              signed_in: false,
+            })
+            void askForReminderAlerts(input)
+            persist(saveGuestDraft({ ...next, pickPhase: afterMeetup() }))
+          }}
+          onDelete={async () => {}}
+        />
+      )}
+
+      {draft.step === 1 && !trackName && !adding && draft.pickPhase === 'nflAsk' && isUsTimeZone() && (
+        <>
+          <button
+            type="button"
+            className="btn btn-ghost start-back"
+            onClick={() => persist({ ...draft, pickPhase: 'meetupAsk' })}
+          >
+            <Icon name="back" />
+            {t('start.back')}
+          </button>
+          <h2 className="screen-heading start-medicine-title">{t('start.nflAsk')}</h2>
+          <p className="screen-sub">{t('start.nflLike')}</p>
+          <div className="start-yes-no">
+            <button
+              type="button"
+              className="btn btn-primary"
+              onClick={() => persist({ ...draft, pickPhase: 'nfl' })}
+            >
+              {t('landing.yes')}
+            </button>
+            <button
+              type="button"
+              className="btn btn-secondary"
+              onClick={() => persist({ ...draft, pickPhase: 'reminderAsk' })}
+            >
+              {t('start.no')}
+            </button>
+          </div>
+        </>
+      )}
+
+      {draft.step === 1 && !trackName && !adding && draft.pickPhase === 'nfl' && isUsTimeZone() && (
+        <>
+          <button
+            type="button"
+            className="btn btn-ghost start-back"
+            onClick={() => persist({ ...draft, pickPhase: 'nflAsk' })}
+          >
+            <Icon name="back" />
+            {t('start.back')}
+          </button>
+          <h2 className="screen-heading start-medicine-title">{t('start.nflPick')}</h2>
+          {nflTeamByName(nflTeam) && <NflMark team={nflTeamByName(nflTeam)!} size="hero" />}
+          <label className="field">
+            <span className="field-label">{t('reminders.community.teamHint')}</span>
+            <select
+              className="field-input"
+              value={nflTeam}
+              onChange={(event) => {
+                setNflTeam(event.target.value)
+                setNflMissing(false)
+              }}
+            >
+              <option value="">{t('reminders.community.teamChoose')}</option>
+              {NFL_TEAMS.map((team) => (
+                <option key={team.name} value={team.name}>
+                  {team.name}
+                </option>
+              ))}
+            </select>
+          </label>
+          {nflMissing && (
+            <p className="error">{t('reminders.community.teamNone', { query: nflTeam || 'NFL' })}</p>
+          )}
+          <button
+            type="button"
+            className="btn btn-primary"
+            disabled={!nflTeam || nflBusy}
+            onClick={() => void addNflTeam()}
+          >
+            {t('start.nflAdd')}
+          </button>
+        </>
+      )}
+
+      {draft.step === 1 && !trackName && !adding && draft.pickPhase === 'cricketAsk' && isIndiaTimeZone() && (
+        <>
+          <button
+            type="button"
+            className="btn btn-ghost start-back"
+            onClick={() => persist({ ...draft, pickPhase: 'meetupAsk' })}
+          >
+            <Icon name="back" />
+            {t('start.back')}
+          </button>
+          <h2 className="screen-heading start-medicine-title">{t('start.cricketAsk')}</h2>
+          <p className="screen-sub">{t('start.cricketLike')}</p>
+          <div className="start-yes-no">
+            <button
+              type="button"
+              className="btn btn-primary"
+              onClick={() => persist({ ...draft, pickPhase: 'cricket' })}
+            >
+              {t('landing.yes')}
+            </button>
+            <button
+              type="button"
+              className="btn btn-secondary"
+              onClick={() => persist({ ...draft, pickPhase: 'reminderAsk' })}
+            >
+              {t('start.no')}
+            </button>
+          </div>
+        </>
+      )}
+
+      {draft.step === 1 && !trackName && !adding && draft.pickPhase === 'cricket' && isIndiaTimeZone() && (
+        <>
+          <button
+            type="button"
+            className="btn btn-ghost start-back"
+            onClick={() => persist({ ...draft, pickPhase: 'cricketAsk' })}
+          >
+            <Icon name="back" />
+            {t('start.back')}
+          </button>
+          <h2 className="screen-heading start-medicine-title">{t('start.cricketPick')}</h2>
+          {cricketTeamByName(cricketTeam) && <NflMark team={cricketTeamByName(cricketTeam)!} size="hero" />}
+          <label className="field">
+            <span className="field-label">{t('reminders.community.teamHint')}</span>
+            <select
+              className="field-input"
+              value={cricketTeam}
+              onChange={(event) => {
+                setCricketTeam(event.target.value)
+                setCricketMissing(false)
+              }}
+            >
+              <option value="">{t('reminders.community.teamChoose')}</option>
+              {CRICKET_TEAMS.map((team) => (
+                <option key={team.name} value={team.name}>
+                  {team.name}
+                </option>
+              ))}
+            </select>
+          </label>
+          {cricketMissing && (
+            <p className="error">{t('reminders.community.cricketNone', { query: cricketTeam || 'Cricket' })}</p>
+          )}
+          <button
+            type="button"
+            className="btn btn-primary"
+            disabled={!cricketTeam || cricketBusy}
+            onClick={() => void addCricketTeam()}
+          >
+            {t('start.cricketAdd')}
           </button>
         </>
       )}
@@ -1821,9 +2165,7 @@ export function StartFlow({
           <button
             type="button"
             className="btn btn-ghost start-back"
-            onClick={() =>
-              persist({ ...draft, pickPhase: openReminders.length > 0 ? 'reminders' : 'reminderAsk' })
-            }
+            onClick={() => persist({ ...draft, pickPhase: beforeVitals() })}
           >
             <Icon name="back" />
             {t('start.back')}
@@ -1959,7 +2301,21 @@ export function StartFlow({
         )
       })()}
 
-      {draft.step === 1 && !trackName && (adding ? !addingVitals && !pending : draft.pickPhase === 'activities') && (
+      {draft.step === 1 && !trackName && adding && !addingVitals && !pending && customHabit && (
+        <CustomHabitSetup
+          habit={customHabit}
+          onChange={setCustomHabit}
+          onBack={() => setCustomHabit(null)}
+          onContinue={continueCustom}
+          continueLabel={
+            isDailyGoalHabit(customHabit) || activitySizeControl(customHabit)
+              ? t('start.continue')
+              : t('start.save')
+          }
+        />
+      )}
+
+      {draft.step === 1 && !trackName && (adding ? !addingVitals && !pending && !customHabit : draft.pickPhase === 'activities') && (
         <>
           {adding ? (
             <button
@@ -2007,8 +2363,45 @@ export function StartFlow({
                 ))}
             </div>
           )}
+          {adding ? (
+            <>
+              <form
+                className="start-type"
+                onSubmit={(event) => {
+                  event.preventDefault()
+                  addCustomHabit()
+                }}
+              >
+                <label className="field">
+                  <span className="visually-hidden">{t('start.name')}</span>
+                  <input
+                    className="field-input"
+                    value={customName}
+                    onChange={(event) => setCustomName(event.target.value)}
+                    placeholder={t('start.typePlaceholder')}
+                    maxLength={60}
+                    enterKeyHint="done"
+                  />
+                </label>
+                <button
+                  type="submit"
+                  className="btn btn-secondary"
+                  disabled={!customName.trim() || selectionFull(null, false)}
+                >
+                  {t('start.addName')}
+                </button>
+              </form>
+              <AddHabitPicker
+                takenIds={new Set(draft.activities.map((activity) => activity.templateId).filter((id): id is string => id != null))}
+                openId={openHabit}
+                disabled={selectionFull(null, false)}
+                onToggle={(id) => setOpenHabit((current) => (current === id ? null : id))}
+                onCadence={pickAddCadence}
+              />
+            </>
+          ) : (
           <div className="start-featured">
-            {(adding ? START_FEATURED.filter((item) => !isVitalTemplate(item.id)) : START_FEATURED).map((item) => {
+            {START_FEATURED.map((item) => {
               const existing = draft.activities.find((activity) => activity.templateId === item.id)
               const kept = Boolean(existing && adding && keptIds.current?.has(existing.localId))
               if (kept) return null
@@ -2021,7 +2414,7 @@ export function StartFlow({
                   className={`start-featured-option${selected ? ' is-selected' : ''}`}
                   disabled={full}
                   aria-pressed={adding ? undefined : selected}
-                  onClick={() => (adding ? openAddDetail(item.id) : toggleTemplate(item.id))}
+                  onClick={() => toggleTemplate(item.id)}
                 >
                   <HabitMark templateId={item.id} />
                   <span>{t(item.labelKey)}</span>
@@ -2029,6 +2422,9 @@ export function StartFlow({
               )
             })}
           </div>
+          )}
+          {!adding && (
+          <>
           <button
             type="button"
             className="btn btn-ghost start-explore"
@@ -2150,6 +2546,8 @@ export function StartFlow({
             )}
           </div>
           )}
+          </>
+          )}
           {!adding && (
             <div className="start-flow-footer">
               <button
@@ -2182,7 +2580,13 @@ export function StartFlow({
             </h1>
             {(weight || goal) && (
               <p className="screen-sub start-detail-name">
-                <HabitMark templateId={pending.templateId} name={name} emoji={pending.emoji} />
+                <HabitMark
+                  templateId={pending.templateId}
+                  name={name}
+                  emoji={pending.emoji}
+                  icon={pending.icon}
+                  photo={pending.photo}
+                />
                 {name}
               </p>
             )}
@@ -2274,6 +2678,8 @@ export function StartFlow({
                 templateId={sizeActivity.templateId}
                 name={visibleName(sizeActivity, locale)}
                 emoji={sizeActivity.emoji}
+                icon={sizeActivity.icon}
+                photo={sizeActivity.photo}
               />
               <span>{visibleName(sizeActivity, locale)}</span>
             </legend>
@@ -2320,29 +2726,33 @@ export function StartFlow({
             ) : (
               <p className="screen-sub">{t('start.checkOff')}</p>
             )}
-            <span className="field-label habit-often">{t('start.often')}</span>
-            <div
-              className="choice-grid choice-grid-cadence"
-              role="group"
-              aria-label={t('start.cadence', { name: visibleName(sizeActivity, locale) })}
-            >
-              {WEEK_CADENCE.map((option) => (
-                <button
-                  key={option.id}
-                  type="button"
-                  className={`choice-tile choice-tile-stack ${sizeCadence === option.id ? 'choice-tile-selected' : ''}`}
-                  aria-label={option.id === 'daily' ? t('cadence.daily') : option.id === 'once' ? t('cadence.onceLabel') : t('cadence.twiceLabel')}
-                  onClick={() => setWeekCadence(sizeActivity.localId, option.id)}
+            {!(adding && addSizing) && (
+              <>
+                <span className="field-label habit-often">{t('start.often')}</span>
+                <div
+                  className="choice-grid choice-grid-cadence"
+                  role="group"
+                  aria-label={t('start.cadence', { name: visibleName(sizeActivity, locale) })}
                 >
-                  <span className="choice-tile-primary">
-                    {option.id === 'daily' ? t('cadence.daily') : option.id === 'once' ? t('cadence.once') : t('cadence.twice')}
-                  </span>
-                  {option.secondary ? (
-                    <span className="choice-tile-secondary">{t('cadence.week')}</span>
-                  ) : null}
-                </button>
-              ))}
-            </div>
+                  {WEEK_CADENCE.map((option) => (
+                    <button
+                      key={option.id}
+                      type="button"
+                      className={`choice-tile choice-tile-stack ${sizeCadence === option.id ? 'choice-tile-selected' : ''}`}
+                      aria-label={option.id === 'daily' ? t('cadence.daily') : t('cadence.onceLabel')}
+                      onClick={() => setWeekCadence(sizeActivity.localId, option.id)}
+                    >
+                      <span className="choice-tile-primary">
+                        {option.id === 'daily' ? t('cadence.daily') : t('cadence.once')}
+                      </span>
+                      {option.secondary ? (
+                        <span className="choice-tile-secondary">{t('cadence.week')}</span>
+                      ) : null}
+                    </button>
+                  ))}
+                </div>
+              </>
+            )}
           </fieldset>
           <button
             type="button"
@@ -2483,25 +2893,27 @@ export function StartFlow({
               })),
               ...openReminders.map((reminder) => ({
                 id: `r-${reminder.id}`,
-                mark: <ReminderKindMark kind={reminder.kind} photo={reminderPhotoSrc(reminder, LIST_PHOTO_SIDE)} />,
+                mark: <ReminderKindMark kind={reminder.kind} photo={reminderShownPhoto(reminder)} />,
                 label: reminder.text,
               })),
             ].slice(0, 8)}
           />
           <div className="sign-in-stack">
-            <button
-              type="button"
-              className="btn btn-apple"
-              disabled={googleBusy}
-              onClick={() => {
-                track('signin_method_clicked', { method: 'apple' })
-                setGoogleBusy(true)
-                void onApple().finally(() => setGoogleBusy(false))
-              }}
-            >
-              <AppleMark />
-              {t('landing.signInApple')}
-            </button>
+            {APPLE_SIGN_IN && (
+              <button
+                type="button"
+                className="btn btn-apple"
+                disabled={googleBusy}
+                onClick={() => {
+                  track('signin_method_clicked', { method: 'apple' })
+                  setGoogleBusy(true)
+                  void onApple().finally(() => setGoogleBusy(false))
+                }}
+              >
+                <AppleMark />
+                {t('landing.signInApple')}
+              </button>
+            )}
             <button
               type="button"
               className="btn btn-primary"

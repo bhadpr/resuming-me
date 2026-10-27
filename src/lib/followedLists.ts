@@ -1,9 +1,10 @@
 import { holidayCopyText } from './communityReminders'
+import { todayLocalDate } from './dates'
 import { reminderClock } from './listClock'
 import { isEventPhotoPath } from './eventPhotoUrl'
 import { getLocale } from './i18n'
 import { ReminderCapError, addReminder, deleteReminder } from './reminders'
-import { REMINDER_OPEN_MAX, type Reminder } from './reminderSchedule'
+import { REMINDER_OPEN_MAX, listLeadMinutes, type Reminder } from './reminderSchedule'
 import { createSupabaseClient } from './supabase'
 
 /** One day on a calendar the person still follows. */
@@ -60,6 +61,7 @@ export function planFollowedListRefresh(
   reminders: readonly FollowedCopy[],
   days: readonly FollowedDay[],
   loadedListIds: ReadonlySet<string>,
+  today = todayLocalDate(),
 ): FollowedListPlan {
   const daysById = new Map(days.map((day) => [day.id, day]))
   const held = new Set(
@@ -97,9 +99,15 @@ export function planFollowedListRefresh(
   }
 
   const removing = new Set(removeIds)
-  let room = REMINDER_OPEN_MAX - reminders.filter((item) => !item.doneAt && !removing.has(item.id)).length
+  let room =
+    REMINDER_OPEN_MAX -
+    reminders.filter((item) => {
+      if (item.doneAt || removing.has(item.id)) return false
+      if (item.day < today && (item.sharedListItemId || item.sharedListId)) return false
+      return true
+    }).length
   const add: FollowedDay[] = []
-  const fresh = [...days].filter((day) => loadedListIds.has(day.listId) && !held.has(day.id))
+  const fresh = [...days].filter((day) => loadedListIds.has(day.listId) && !held.has(day.id) && day.day >= today)
   fresh.sort((a, b) => a.day.localeCompare(b.day) || a.text.localeCompare(b.text))
   for (const day of fresh) {
     if (room <= 0) break
@@ -238,6 +246,7 @@ export async function refreshFollowedReminders(userId: string, reminders: Remind
             sharedListId: day.listId,
             listPhotoPath: day.photoPath,
             remindBefore: day.remindBefore,
+            remindLeadMinutes: day.hour == null ? null : listLeadMinutes(reminders, day.listId),
           }),
         )
       } catch (err) {

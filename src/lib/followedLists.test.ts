@@ -52,6 +52,12 @@ describe('planFollowedListRefresh', () => {
     expect(plan.add).toEqual([])
   })
 
+  it('does not add a community day that has already passed', () => {
+    const veterans: FollowedDay = { ...teacher, id: 'veterans', text: 'Veterans Day · No school', day: '2026-11-11' }
+    const plan = planFollowedListRefresh([], [veterans], new Set([listId]), '2026-11-12')
+    expect(plan.add).toEqual([])
+  })
+
   it('drops a day the calendar removed and adds a new one', () => {
     const veterans: FollowedDay = { ...teacher, id: 'veterans', text: 'Veterans Day · No school', day: '2026-11-11' }
     const plan = planFollowedListRefresh([copy()], [veterans], new Set([listId]))

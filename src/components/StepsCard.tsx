@@ -1,11 +1,11 @@
 import { Capacitor } from '@capacitor/core'
-import { useEffect, useState } from 'react'
+import { useEffect, useId, useState, type FormEvent } from 'react'
 import { habitArtFor } from '../data/habitArt'
 import { useLocale } from '../hooks/useLocale'
 import { useThemedArt } from '../hooks/useThemedArt'
 import { todayLocalDate } from '../lib/dates'
 import { readPhoneSteps, requestPhoneSteps, showAppleZeroStepsHint, type PhoneSteps } from '../lib/healthSteps'
-import { formatStepCount } from '../lib/steps'
+import { formatStepCount, loadTypedSteps, parseStepAmount, saveTypedSteps } from '../lib/steps'
 import { StepsWeek } from './StepsWeek'
 
 type PhoneState = PhoneSteps['status'] | 'unknown'
@@ -20,10 +20,14 @@ export function StepsCard({
 }) {
   const { t, locale } = useLocale()
   const themed = useThemedArt()
+  const fieldId = useId()
   const [phoneSteps, setPhoneSteps] = useState<number | null>(null)
   const [phoneState, setPhoneState] = useState<PhoneState>('unknown')
   const [asking, setAsking] = useState(false)
   const [weekOpen, setWeekOpen] = useState(false)
+  const [typed, setTyped] = useState<number | null>(() => loadTypedSteps(today))
+  const [draft, setDraft] = useState('')
+  const [revision, setRevision] = useState(0)
 
   useEffect(() => {
     let cancelled = false
@@ -35,6 +39,21 @@ export function StepsCard({
       cancelled = true
     }
   }, [today])
+
+  useEffect(() => {
+    setTyped(loadTypedSteps(today))
+    setDraft('')
+  }, [today])
+
+  function saveTyped(event: FormEvent) {
+    event.preventDefault()
+    const amount = parseStepAmount(draft)
+    if (amount == null) return
+    saveTypedSteps(today, amount)
+    setTyped(amount)
+    setDraft('')
+    setRevision((value) => value + 1)
+  }
 
   function applyPhone(result: PhoneSteps) {
     if (result.status === 'count') {
@@ -56,8 +75,11 @@ export function StepsCard({
   }
 
   const fromPhone = phoneState === 'count' && phoneSteps != null
-  const countLabel = fromPhone ? formatStepCount(phoneSteps, locale) : '—'
+  const onWebsite = phoneState === 'unavailable'
+  const shown = fromPhone ? phoneSteps : typed
+  const countLabel = shown == null ? '—' : formatStepCount(shown, locale)
   const showPhoneButton = phoneState === 'needs-permission' || phoneState === 'denied'
+  const canOpen = fromPhone || onWebsite
   const art = habitArtFor({ templateId: 'steps' })
 
   return (
@@ -69,14 +91,14 @@ export function StepsCard({
       <div className="today-row-main">
         <span className="activity-meta">
           <span className="activity-desc">
-            {fromPhone
-              ? t('today.stepsToday', {
+            {shown == null
+              ? t('today.goalSteps', { goal: formatStepCount(goal, locale) })
+              : t('today.stepsToday', {
                   value: countLabel,
                   goal: formatStepCount(goal, locale),
-                })
-              : t('today.goalSteps', { goal: formatStepCount(goal, locale) })}
+                })}
           </span>
-          {phoneState === 'unavailable' && (
+          {onWebsite && typed == null && !weekOpen && (
             <span className="activity-desc">{t('today.stepsFromPhone')}</span>
           )}
           {fromPhone && !weekOpen && showAppleZeroStepsHint(Capacitor.getPlatform(), phoneSteps) && (
@@ -96,7 +118,7 @@ export function StepsCard({
           </span>
         )}
       </div>
-      {fromPhone && (
+      {canOpen && (
         <div className="today-extra">
           <button
             type="button"
@@ -108,7 +130,29 @@ export function StepsCard({
           </button>
         </div>
       )}
-      {fromPhone && weekOpen && <StepsWeek goal={goal} heading={false} />}
+      {canOpen && weekOpen && onWebsite && (
+        <form className="steps-card-form" onSubmit={saveTyped}>
+          <label className="steps-card-label" htmlFor={fieldId}>
+            {t('today.stepsType')}
+          </label>
+          <input
+            id={fieldId}
+            className="field-input"
+            inputMode="numeric"
+            autoComplete="off"
+            value={draft}
+            onChange={(event) => setDraft(event.target.value)}
+          />
+          <div className="steps-card-save">
+            <button type="submit" className="btn btn-primary" disabled={parseStepAmount(draft) == null}>
+              {t('today.stepsSave')}
+            </button>
+          </div>
+        </form>
+      )}
+      {canOpen && weekOpen && (
+        <StepsWeek goal={goal} heading={false} typed={onWebsite} revision={revision} />
+      )}
     </li>
   )
 }

@@ -168,6 +168,16 @@ describe('onboarding flow copy', () => {
     ])
   })
 
+  it('offers a count habit 5, 10, 20, 50, and 100', () => {
+    expect(
+      activitySizeControl({
+        trackingMode: 'count',
+        type: 'daily',
+        targetUnit: null,
+      })?.steps,
+    ).toEqual([5, 10, 20, 50, 100])
+  })
+
   it('does not offer minutes for a daily checkbox', () => {
     expect(
       activitySizeControl({ trackingMode: 'checkbox', type: 'daily', targetUnit: 'minutes' }),

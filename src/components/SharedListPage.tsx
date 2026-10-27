@@ -10,8 +10,19 @@ import { MonthFold, useClosedMonths } from './MonthFold'
 import { addGuestReminder, ensureGuestDraft, loadGuestDraft } from '../lib/guestDraft'
 import { askForReminderAlerts } from '../lib/reminderNotifications'
 import { ReminderCapError, addReminder } from '../lib/reminders'
-import { formatReminderDay, formatReminderTime, readPartTimes, type ReminderInput } from '../lib/reminderSchedule'
+import {
+  formatReminderDay,
+  formatReminderTime,
+  readPartTimes,
+  remindLeadFor,
+  type RemindLeadMinutes,
+  type ReminderInput,
+} from '../lib/reminderSchedule'
+import { LeadMinutesChoice } from './LeadMinutesChoice'
 import { EventPhoto } from './ReminderKindIcon'
+import { cricketTeamByName } from '../lib/cricketSearch'
+import { nflTeamByName } from '../lib/nflSearch'
+import { NflMark } from './NflMark'
 import { listPhotoUrl } from '../lib/eventPhotoUrl'
 import {
   acceptedSharedListItemIds,
@@ -50,14 +61,10 @@ function ListMonths({
   months,
   today,
   saved,
-  picked,
-  onToggle,
 }: {
   months: { key: string; items: SharedListItem[] }[]
   today: string
   saved: Set<string>
-  picked: Set<string>
-  onToggle: (id: string) => void
 }) {
   const { locale, t } = useLocale()
   const { isOpen, toggle } = useClosedMonths(
@@ -75,24 +82,15 @@ function ListMonths({
           onToggle={() => toggle(month.key)}
         >
           <ul className="shared-list-items">
-            {month.items.map((item) =>
-              saved.has(item.id) ? (
-                <li key={item.id} className="shared-list-item shared-list-item-saved">
-                  <span>{item.text}</span>
-                  <span className="analytics-stat-hint">
-                    {whenLabel(item, today, locale)} · {t('sharedList.already')}
-                  </span>
-                </li>
-              ) : (
-                <li key={item.id} className="shared-list-item">
-                  <label>
-                    <input type="checkbox" checked={picked.has(item.id)} onChange={() => onToggle(item.id)} />
-                    <span>{item.text}</span>
-                    <span className="analytics-stat-hint">{whenLabel(item, today, locale)}</span>
-                  </label>
-                </li>
-              ),
-            )}
+            {month.items.map((item) => (
+              <li key={item.id} className="shared-list-item shared-list-item-saved">
+                <span>{item.text}</span>
+                <span className="analytics-stat-hint">
+                  {whenLabel(item, today, locale)}
+                  {saved.has(item.id) ? ` · ${t('sharedList.already')}` : ''}
+                </span>
+              </li>
+            ))}
           </ul>
         </MonthFold>
       ))}
@@ -110,9 +108,9 @@ export function SharedListPage({ code }: { code: string }) {
   const [load, setLoad] = useState<Load>({ state: 'loading' })
   const [attempt, setAttempt] = useState(0)
   const [saved, setSaved] = useState<Set<string>>(new Set())
-  const [picked, setPicked] = useState<Set<string>>(new Set())
   const [adding, setAdding] = useState(false)
   const [dayBeforeChoice, setDayBeforeChoice] = useState<boolean | null>(null)
+  const [lead, setLead] = useState<RemindLeadMinutes | null>(null)
   const [issueKey, setIssueKey] = useState<string | null>(null)
   const list = load.state === 'ready' ? load.list : null
   const today = todayLocalDate()
@@ -161,16 +159,13 @@ export function SharedListPage({ code }: { code: string }) {
           .filter((id): id is string => typeof id === 'string' && ids.includes(id)),
       )
       setSaved(have)
-      setPicked(new Set(ids.filter((id) => !have.has(id))))
       return
     }
     let live = true
     acceptedSharedListItemIds(ids)
       .then((have) => {
         if (!live) return
-        const savedIds = new Set(have)
-        setSaved(savedIds)
-        setPicked(new Set(ids.filter((id) => !savedIds.has(id))))
+        setSaved(new Set(have))
       })
       .catch(() => {})
     return () => {
@@ -178,17 +173,8 @@ export function SharedListPage({ code }: { code: string }) {
     }
   }, [list, user, authLoading])
 
-  function toggle(id: string) {
-    setPicked((current) => {
-      const next = new Set(current)
-      if (next.has(id)) next.delete(id)
-      else next.add(id)
-      return next
-    })
-  }
-
   async function accept(found: SharedList) {
-    const chosen = found.items.filter((item) => picked.has(item.id) && !saved.has(item.id))
+    const chosen = found.items.filter((item) => !saved.has(item.id))
     if (chosen.length === 0) {
       setIssueKey('sharedList.noneChosen')
       return
@@ -212,6 +198,7 @@ export function SharedListPage({ code }: { code: string }) {
           sharedListId: found.id,
           listPhotoPath: found.photoPath,
           remindBefore: dayBeforeChoice ?? found.remindBefore,
+          remindLeadMinutes: remindLeadFor({ hour: item.hour, remindLeadMinutes: lead }),
         }
         if (input.hour != null || input.remindBefore) timed = input
         if (user) {
@@ -246,7 +233,6 @@ export function SharedListPage({ code }: { code: string }) {
         }
       }
       setSaved(newlySaved)
-      setPicked((current) => new Set([...current].filter((id) => !newlySaved.has(id))))
       if (created > 0) {
         track('shared_list_added', { count: created, signed_in: Boolean(user) })
         if (timed) void askForReminderAlerts(timed)
@@ -296,26 +282,22 @@ export function SharedListPage({ code }: { code: string }) {
   }
 
   const open = list.items.filter((item) => !saved.has(item.id))
-  const allPicked = open.length > 0 && open.every((item) => picked.has(item.id))
+  const timed = open.some((item) => item.hour != null && item.minute != null)
   const evening = readPartTimes().evening
   const months = groupByMonth(list.items)
+  const team = nflTeamByName(list.title) ?? cricketTeamByName(list.title)
 
   return (
     <section className="shared-event">
       <p className="shared-event-intro">{t('sharedList.intro')}</p>
-      <EventPhoto src={listPhotoUrl(list.photoPath)} alt={list.title} />
+      {team ? <NflMark team={team} size="hero" /> : <EventPhoto src={listPhotoUrl(list.photoPath)} alt={list.title} />}
       <h1 className="screen-heading">{list.title}</h1>
-      <ListMonths
-        months={months}
-        today={today}
-        saved={saved}
-        picked={picked}
-        onToggle={toggle}
-      />
+      <ListMonths months={months} today={today} saved={saved} />
       {open.length === 0 ? (
         <p className="shared-event-status">{t('sharedList.allSaved')}</p>
       ) : (
         <>
+          {timed && <LeadMinutesChoice minutes={lead} onChange={setLead} />}
           <label className="reminder-switch">
             <input
               type="checkbox"
@@ -332,7 +314,7 @@ export function SharedListPage({ code }: { code: string }) {
             </span>
           </label>
           <button type="button" className="btn btn-primary" disabled={adding} onClick={() => void accept(list)}>
-            {adding ? t('sharedList.accepting') : allPicked ? t('sharedList.acceptAll') : t('sharedList.acceptSelected')}
+            {adding ? t('sharedList.accepting') : t('sharedList.acceptAll')}
           </button>
         </>
       )}

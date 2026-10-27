@@ -4,9 +4,39 @@ import { effectiveReminder, repeatDoneOn, repeatIssue, type ReminderRepeat } fro
 
 export const REMINDER_TEXT_MAX = 120
 export const REMINDER_DESCRIPTION_MAX = 500
-export const REMINDER_OPEN_MAX = 100
+export const REMINDER_OPEN_MAX = 200
 /** Done reminders older than this are not loaded. Today only needs today's. */
 export const REMINDER_DONE_KEEP_MS = 36 * 60 * 60 * 1000
+
+/** Extra alerts offered when a reminder has a clock time. */
+export const REMIND_LEAD_MINUTES = [15, 30, 60] as const
+export type RemindLeadMinutes = (typeof REMIND_LEAD_MINUTES)[number]
+
+export function remindLeadMinutesOf(value: unknown): RemindLeadMinutes | null {
+  return value === 15 || value === 30 || value === 60 ? value : null
+}
+
+/** The early ping, only while the reminder has a clock time. */
+export function remindLeadFor(input: {
+  hour: number | null
+  remindLeadMinutes?: unknown
+}): RemindLeadMinutes | null {
+  if (input.hour == null) return null
+  return remindLeadMinutesOf(input.remindLeadMinutes)
+}
+
+/** The early ping already chosen for one followed schedule, so a new game uses it too. */
+export function listLeadMinutes(
+  reminders: readonly Pick<Reminder, 'sharedListId' | 'hour' | 'remindLeadMinutes'>[],
+  listId: string,
+): RemindLeadMinutes | null {
+  for (const item of reminders) {
+    if (item.sharedListId !== listId) continue
+    const lead = remindLeadFor(item)
+    if (lead) return lead
+  }
+  return null
+}
 
 export interface Reminder {
   id: string
@@ -28,6 +58,8 @@ export interface Reminder {
   remindBefore: boolean
   /** An evening alert a week before. */
   remindWeekBefore?: boolean
+  /** An extra alert this many minutes before the clock time. Null means only at the time. */
+  remindLeadMinutes?: RemindLeadMinutes | null
   kind: ReminderKind
   /** Done makes next year's copy. */
   everyYear: boolean
@@ -117,6 +149,7 @@ export interface ReminderInput {
   minute: number | null
   remindBefore?: boolean
   remindWeekBefore?: boolean
+  remindLeadMinutes?: RemindLeadMinutes | null
   kind?: ReminderKind
   everyYear?: boolean
   repeat?: ReminderRepeat | null
@@ -130,6 +163,8 @@ export interface ReminderInput {
   sharedListId?: string | null
   listPhotoPath?: string | null
   alertOff?: boolean
+  /** A meetup. The organizer can change the day, and accepted phones follow it. */
+  meetup?: boolean
 }
 
 /** Only changes the icon. A reminder with no kind chosen is Other. */
@@ -159,6 +194,7 @@ export function nextYearCopy(reminder: Reminder): ReminderInput {
     minute: reminder.minute,
     remindBefore: reminder.remindBefore,
     ...(reminder.remindWeekBefore ? { remindWeekBefore: true } : {}),
+    ...(remindLeadFor(reminder) ? { remindLeadMinutes: remindLeadFor(reminder) } : {}),
     kind: reminder.kind,
     everyYear: true,
   }
@@ -231,6 +267,9 @@ export function reminderPrefillFrom(state: unknown): ReminderInput | undefined {
     minute: timed ? value.minute! : null,
     remindBefore: value.remindBefore === true,
     ...(value.remindWeekBefore === true ? { remindWeekBefore: true } : {}),
+    ...(remindLeadFor({ hour: timed ? value.hour! : null, remindLeadMinutes: value.remindLeadMinutes })
+      ? { remindLeadMinutes: remindLeadFor({ hour: timed ? value.hour! : null, remindLeadMinutes: value.remindLeadMinutes }) }
+      : {}),
     kind: reminderKindOf(value.kind),
   }
 }
@@ -262,18 +301,38 @@ function byDayThenTime(a: Reminder, b: Reminder): number {
   return a.hour - b.hour || (a.minute ?? 0) - (b.minute ?? 0)
 }
 
-/** Open reminders for today, including earlier days that are still open. A cancelled event leaves after its day. */
+/** A meetup, a holiday, or a community calendar day. Once that day passes, it is gone. */
+export function reminderExpires(
+  reminder: Pick<Reminder, 'meetup' | 'communityId' | 'sharedListItemId' | 'sharedListId'>,
+): boolean {
+  return reminderListKind(reminder) != null
+}
+
+/**
+ * The reminder as it should be shown today.
+ * A meetup, holiday, or community day keeps its date, so a past one can be dropped.
+ * A personal reminder that was not marked done moves onto today.
+ */
+function shownReminder<T extends Reminder>(reminder: T, today: string): T {
+  const current = effectiveReminder(reminder, today)
+  if (current.doneAt || current.day >= today || reminderExpires(current) || isSharedEventGone(current)) {
+    return current
+  }
+  return { ...current, day: today }
+}
+
+/** Open reminders for today. A past meetup, holiday, or community day is left out. */
 export function remindersForToday(list: readonly Reminder[], today: string): Reminder[] {
   return list
-    .map((item) => effectiveReminder(item, today))
-    .filter((item) => !item.doneAt && item.day <= today && !(item.day < today && isSharedEventGone(item)))
+    .map((item) => shownReminder(item, today))
+    .filter((item) => !item.doneAt && item.day === today)
     .sort(byDayThenTime)
 }
 
 /** Reminders marked done today, newest first. */
 export function remindersDoneToday(list: readonly Reminder[], today: string): Reminder[] {
   return list
-    .map((item) => effectiveReminder(item, today))
+    .map((item) => shownReminder(item, today))
     .filter((item) => doneDay(item) === today || (!item.doneAt && repeatDoneOn(item, today)))
     .sort((a, b) => (b.doneAt ?? '').localeCompare(a.doneAt ?? ''))
 }
@@ -281,13 +340,18 @@ export function remindersDoneToday(list: readonly Reminder[], today: string): Re
 /** Open reminders after today, by date. */
 export function remindersComingUp(list: readonly Reminder[], today: string): Reminder[] {
   return list
-    .map((item) => effectiveReminder(item, today))
+    .map((item) => shownReminder(item, today))
     .filter((item) => !item.doneAt && item.day > today)
     .sort(byDayThenTime)
 }
 
-export function openReminderCount(list: readonly Reminder[]): number {
-  return list.filter((item) => !item.doneAt).length
+/** Open reminders that still take a slot. A meetup, holiday, or community day that has passed does not. */
+export function openReminderCount(list: readonly Reminder[], today = todayLocalDate()): number {
+  return list.filter((item) => {
+    const current = effectiveReminder(item, today)
+    if (current.doneAt) return false
+    return !(reminderExpires(current) && current.day < today)
+  }).length
 }
 
 export function tomorrowOf(today: string): string {

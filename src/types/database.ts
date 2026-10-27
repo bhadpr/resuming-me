@@ -348,6 +348,7 @@ export interface Database {
           minute: number | null
           remind_before: boolean
           remind_week_before: boolean
+          remind_lead_minutes: number | null
           kind: string
           every_year: boolean
           repeat_every: string | null
@@ -375,6 +376,7 @@ export interface Database {
           minute?: number | null
           remind_before?: boolean
           remind_week_before?: boolean
+          remind_lead_minutes?: number | null
           kind?: string
           every_year?: boolean
           repeat_every?: string | null
@@ -400,6 +402,7 @@ export interface Database {
           minute?: number | null
           remind_before?: boolean
           remind_week_before?: boolean
+          remind_lead_minutes?: number | null
           kind?: string
           every_year?: boolean
           repeat_every?: string | null
@@ -539,6 +542,7 @@ export interface Database {
           updated_at: string
           meetup: boolean
           remind_before: boolean
+          remind_lead_minutes: number | null
         }
         Insert: {
           id?: string
@@ -558,6 +562,7 @@ export interface Database {
           updated_at?: string
           meetup?: boolean
           remind_before?: boolean
+          remind_lead_minutes?: number | null
         }
         Update: {
           code?: string
@@ -572,6 +577,7 @@ export interface Database {
           time_zone?: string
           kind?: string
           remind_before?: boolean
+          remind_lead_minutes?: number | null
         }
         Relationships: []
       }
@@ -1101,6 +1107,7 @@ export interface Database {
           photo_path: string | null
           meetup: boolean
           remind_before: boolean
+          remind_lead_minutes: number | null
         }[]
       }
       follow_shared_event: {
@@ -1125,6 +1132,7 @@ export interface Database {
           minute: number | null
           time_zone: string
           remind_before: boolean
+          remind_lead_minutes: number | null
           kind: string
         }[]
       }

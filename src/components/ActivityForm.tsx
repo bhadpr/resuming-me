@@ -258,11 +258,7 @@ function CatalogHabitEdit({
                   onClick={() => setCadence(option.id)}
                 >
                   <span className="choice-tile-primary">
-                    {option.id === 'daily'
-                      ? t('cadence.daily')
-                      : option.id === 'once'
-                        ? t('cadence.once')
-                        : t('cadence.twice')}
+                    {option.id === 'daily' ? t('cadence.daily') : t('cadence.once')}
                   </span>
                   {option.secondary ? <span className="choice-tile-secondary">{t('cadence.week')}</span> : null}
                 </button>

@@ -25,7 +25,7 @@ import {
   type SharedEventIssue,
 } from '../lib/sharedEvents'
 import { track } from '../lib/track'
-import { Icon } from './Icon'
+import { Icon, WhatsAppIcon } from './Icon'
 
 interface ShareReminderProps {
   reminder: Reminder
@@ -282,6 +282,7 @@ export function ShareReminder({ reminder, userId, today, onShared, onStatus, onR
               disabled={busy}
               onClick={() => void share()}
             >
+              {!busy && <WhatsAppIcon />}
               {busy ? t('sharedEvent.sharing') : t('sharedEvent.share')}
             </button>
 
@@ -403,7 +404,7 @@ export function ShareReminder({ reminder, userId, today, onShared, onStatus, onR
       <p className="share-event-note">{t('sharedEvent.inviteBody')}</p>
       {!setup ? (
         <button type="button" className="btn btn-secondary share-event-btn" onClick={() => setSetup(true)}>
-          <Icon name="share" />
+          <WhatsAppIcon />
           {t('sharedEvent.share')}
         </button>
       ) : (
@@ -430,6 +431,7 @@ export function ShareReminder({ reminder, userId, today, onShared, onStatus, onR
           </p>
           {issue && <p className="error">{t(issueKey(issue))}</p>}
           <button type="button" className="btn btn-primary share-event-btn" disabled={busy} onClick={() => void share()}>
+            {!busy && <WhatsAppIcon />}
             {busy ? t('sharedEvent.sharing') : t('sharedEvent.share')}
           </button>
           <button

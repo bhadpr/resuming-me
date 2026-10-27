@@ -95,7 +95,12 @@ function ItemList({
                   const detail = guestDetail(activity, t)
                   const inner = (
                     <>
-                      <HabitMark name={visibleName(activity, locale)} templateId={activity.templateId} />
+                      <HabitMark
+                        name={visibleName(activity, locale)}
+                        templateId={activity.templateId}
+                        icon={activity.icon}
+                        photo={activity.photo}
+                      />
                       <span className="activity-meta">
                         <span className="activity-name">
                           {visibleName(activity, locale)}
@@ -197,7 +202,7 @@ export function GuestVitalsPage() {
     <>
       {draft && <GuestSaveWidget draft={draft} />}
       <ItemList
-        title={t('nav.vitals')}
+        title={t('list.vitalHeading')}
         sub={t('list.vitalSub')}
         empty={t('list.vitalEmpty')}
         emptyIcon="metrics"

@@ -32,6 +32,7 @@ import {
   type GuestDraft,
 } from './guestDraft'
 import { addDays, todayLocalDate } from './dates'
+import { REMINDER_OPEN_MAX } from './reminderSchedule'
 
 function memoryStorage() {
   const store = new Map<string, string>()
@@ -381,6 +382,28 @@ describe('guest draft storage', () => {
     expect(JSON.parse(storage.getItem(GUEST_DRAFT_KEY) ?? '{}').activities).toHaveLength(1)
   })
 
+  it('keeps clipart and a small photo on a named habit', () => {
+    memoryStorage()
+    const photo = `data:image/jpeg;base64,${'A'.repeat(80)}`
+    const draft = saveGuestDraft({
+      ...createGuestDraft(new Date('2026-10-03T12:00:00.000Z'), 'UTC'),
+      activities: [{ ...activity('temple', 'Temple'), icon: 'prayer', photo }],
+    })
+    expect(draft.activities[0]).toMatchObject({ icon: 'prayer', photo })
+
+    const dropped = saveGuestDraft({
+      ...createGuestDraft(new Date('2026-10-03T12:00:00.000Z'), 'UTC'),
+      activities: [
+        { ...activity('bad', 'Temple'), icon: 'nope', photo: 'data:image/png;base64,abc' },
+        { ...activity('walk', 'Walking'), templateId: 'walk', icon: 'prayer', photo },
+      ],
+    })
+    expect(dropped.activities[0]?.icon).toBeUndefined()
+    expect(dropped.activities[0]?.photo).toBeUndefined()
+    expect(dropped.activities[1]?.icon).toBeUndefined()
+    expect(dropped.activities[1]?.photo).toBeUndefined()
+  })
+
   it('keeps an old Guitar pick selected as Music', () => {
     const storage = memoryStorage()
     const draft = createGuestDraft(new Date(), 'UTC')
@@ -600,10 +623,10 @@ describe('guest reminders', () => {
     expect(saved.reminders[0].repeat).toBeUndefined()
   })
 
-  it('stops at 100 open reminders', () => {
+  it('stops at the open reminder cap', () => {
     memoryStorage()
     let draft = ensureGuestDraft('UTC')
-    for (let index = 0; index < 100; index += 1) {
+    for (let index = 0; index < REMINDER_OPEN_MAX; index += 1) {
       draft = addGuestReminder(draft, { text: `Item ${index}`, day: '2026-10-06', hour: null, minute: null })!
     }
     expect(addGuestReminder(draft, { text: 'One more', day: '2026-10-06', hour: null, minute: null })).toBeNull()

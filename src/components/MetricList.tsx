@@ -36,7 +36,7 @@ export function MetricList({
     <div className="activity-list-screen">
       <div className="screen-heading">
         <div>
-          <h2>{t('nav.vitals')}</h2>
+          <h2>{t('list.vitalHeading')}</h2>
           <p className="screen-sub">{t('list.vitalSub')}</p>
         </div>
         <button type="button" className="btn btn-primary btn-compact" onClick={onAdd}>

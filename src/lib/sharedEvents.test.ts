@@ -50,6 +50,7 @@ function event(patch: Partial<SharedEvent> = {}): SharedEvent {
     photoPath: null,
     meetup: false,
     remindBefore: false,
+    remindLeadMinutes: null,
     ...patch,
   }
 }
@@ -89,6 +90,7 @@ describe('replacementReminder', () => {
       hour: 19,
       minute: 0,
       remindBefore: true,
+      remindLeadMinutes: null,
       kind: 'event',
     })
   })

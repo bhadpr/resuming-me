@@ -28,6 +28,7 @@ function reminder(id: string, day: string, extra: Partial<Reminder> = {}): Remin
 
 const copy: ReminderAlertCopy = {
   now: 'Now',
+  lead: (minutes) => `In ${minutes} minutes`,
   dayBefore: (item) => (item.hour == null ? 'Tomorrow' : `Tomorrow ${item.hour}`),
   weekBefore: (item) => (item.hour == null ? 'In a week' : `In a week ${item.hour}`),
 }
@@ -60,6 +61,42 @@ describe('planReminderAlerts', () => {
       at: new Date(2026, 9, 6, 11, 30),
     })
     expect(alerts[1].id).toBe(REMINDER_NOTIFICATION_ID_BASE + 1)
+  })
+
+  it('adds an alert before a timed reminder and still rings at the time', () => {
+    const alerts = planReminderAlerts(
+      [reminder('class', '2026-10-06', { hour: 18, minute: 0, remindLeadMinutes: 15 })],
+      [],
+      now,
+      evening,
+      copy,
+    )
+    expect(alerts.map((alert) => [alert.kind, alert.at, alert.body])).toEqual([
+      ['lead', new Date(2026, 9, 6, 17, 45), 'In 15 minutes'],
+      ['time', new Date(2026, 9, 6, 18, 0), 'Now'],
+    ])
+  })
+
+  it('skips the early alert once that minute has passed', () => {
+    const alerts = planReminderAlerts(
+      [reminder('class', '2026-10-06', { hour: 10, minute: 10, remindLeadMinutes: 30 })],
+      [],
+      now,
+      evening,
+      copy,
+    )
+    expect(alerts.map((alert) => alert.kind)).toEqual(['time'])
+  })
+
+  it('has no early alert without a clock time', () => {
+    const alerts = planReminderAlerts(
+      [reminder('holiday', '2026-10-08', { remindLeadMinutes: 15 })],
+      [],
+      now,
+      evening,
+      copy,
+    )
+    expect(alerts).toHaveLength(0)
   })
 
   it('adds an evening alert a week before when asked, and skips one that has passed', () => {
@@ -174,7 +211,7 @@ describe('untimedReminderNames', () => {
       ],
       '2026-10-06',
     )
-    expect(names).toEqual(['From before', 'Post office'])
+    expect(names).toEqual(['Post office', 'From before'])
   })
 
   it('leaves out silenced and cancelled shared reminders', () => {

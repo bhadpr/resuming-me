@@ -166,6 +166,8 @@ export function GuestActivityScreen({
           }),
         )
       }}
+      icon={activity.icon}
+      photo={activity.photo}
       onRescheduleDeadline={async (newDeadline) => {
         const current = loadGuestDraft()
         if (!current) return

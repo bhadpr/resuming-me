@@ -14,6 +14,7 @@ import {
   remindersComingUp,
   remindersDoneToday,
   remindersForToday,
+  openReminderCount,
   reminderListKind,
   validateReminder,
   type Reminder,
@@ -142,12 +143,22 @@ describe('reminder lists', () => {
     reminder('done-yesterday', '2026-10-05', { doneAt: localIso('2026-10-05', 20) }),
   ]
 
-  it('keeps earlier open days on Today, timed before any time', () => {
-    expect(remindersForToday(list, today).map((item) => item.id)).toEqual([
-      'earlier',
-      'timed-today',
-      'any-today',
-    ])
+  it('moves an undone personal reminder onto today, timed before any time', () => {
+    const shown = remindersForToday(list, today)
+    expect(shown.map((item) => item.id)).toEqual(['timed-today', 'any-today', 'earlier'])
+    expect(shown.find((item) => item.id === 'earlier')?.day).toBe(today)
+  })
+
+  it('drops a meetup, holiday, or community day once that day has passed', () => {
+    const passed = [
+      reminder('meetup', '2026-10-04', { meetup: true }),
+      reminder('holiday', '2026-10-05', { communityId: 'diwali' }),
+      reminder('game', '2026-10-04', { sharedListId: 'seahawks', sharedListItemId: 'game-1' }),
+      reminder('personal', '2026-10-04'),
+      reminder('meetup-today', today, { meetup: true }),
+    ]
+    expect(remindersForToday(passed, today).map((item) => item.id)).toEqual(['personal', 'meetup-today'])
+    expect(openReminderCount(passed, today)).toBe(2)
   })
 
   it('keeps a cancelled shared event on its day, then lets it go', () => {
@@ -157,7 +168,7 @@ describe('reminder lists', () => {
       reminder('off-earlier', '2026-10-05', { sharedEventId: 'e3', sharedStatus: 'switched_off' }),
       reminder('active-earlier', '2026-10-05', { sharedEventId: 'e4', sharedStatus: 'active' }),
     ]
-    expect(remindersForToday(shared, today).map((item) => item.id)).toEqual(['active-earlier', 'cancelled-today'])
+    expect(remindersForToday(shared, today).map((item) => item.id)).toEqual(['cancelled-today', 'active-earlier'])
   })
 
   it('lists only what was done today', () => {

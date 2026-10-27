@@ -10,7 +10,11 @@ import {
   tomorrowOf,
   type Reminder,
 } from '../lib/reminderSchedule'
-import { LIST_PHOTO_SIDE, reminderPhotoSrc } from '../lib/eventPhotoUrl'
+import { reminderShownPhoto } from '../lib/communityReminders'
+import { cricketTeamForGame } from '../lib/cricketSearch'
+import { leagueTeamForGame } from '../lib/leagueTeams'
+import { nflTeamForGame } from '../lib/nflSearch'
+import { NflMark } from './NflMark'
 import { groupByMonth } from '../lib/monthFold'
 import { MonthFold, useClosedMonths } from './MonthFold'
 import { repeatSummary } from '../lib/reminderRepeat'
@@ -40,6 +44,16 @@ function reminderWhen(
   return parts.join(' · ')
 }
 
+/** A followed NFL game uses that team's mark. Everything else keeps its own picture. */
+function ReminderPicture({ reminder }: { reminder: Reminder }) {
+  const team =
+    reminderListKind(reminder) === 'schedule'
+      ? (nflTeamForGame(reminder.text) ?? cricketTeamForGame(reminder.text) ?? leagueTeamForGame(reminder.text))
+      : null
+  if (team) return <NflMark team={team} />
+  return <ReminderKindMark kind={reminder.kind} photo={reminderShownPhoto(reminder)} />
+}
+
 interface ReminderRowProps {
   reminder: Reminder
   today: string
@@ -57,7 +71,7 @@ export function ReminderRow({ reminder, today, busy, onDone, onSkip, onMove, onC
   return (
     <li className="today-row today-row-stack today-row-compact item-kind-reminder">
       <div className="today-row-head">
-        <ReminderKindMark kind={reminder.kind} photo={reminderPhotoSrc(reminder, LIST_PHOTO_SIDE)} />
+        <ReminderPicture reminder={reminder} />
         <span className="activity-name reminder-text-line">{reminder.text}</span>
       </div>
       <div className="today-row-main">
@@ -131,7 +145,7 @@ export function ReminderDoneRow({
   return (
     <li className="today-row today-row-stack today-row-compact today-row-done item-kind-reminder">
       <div className="today-row-head">
-        <ReminderKindMark kind={reminder.kind} photo={reminderPhotoSrc(reminder, LIST_PHOTO_SIDE)} />
+        <ReminderPicture reminder={reminder} />
         <span className="activity-name reminder-text-line reminder-struck">{reminder.text}</span>
       </div>
       <div className="today-row-main">
@@ -154,8 +168,48 @@ export function ReminderDoneRow({
   )
 }
 
+export function ReminderAddTiles({
+  onAdd,
+  onAddMeetup,
+  onAddHolidays,
+  onAddSchedule,
+}: {
+  onAdd: () => void
+  onAddMeetup?: () => void
+  onAddHolidays?: () => void
+  onAddSchedule?: () => void
+}) {
+  const { t } = useLocale()
+  return (
+    <div className="reminder-add-grid">
+      <button type="button" className="btn btn-primary reminder-add-tile" onClick={onAdd}>
+        <span className="reminder-add-kicker">{t('reminders.tileAdd')}</span>
+        <span className="reminder-add-label">{t('reminders.tileReminder')}</span>
+      </button>
+      {onAddMeetup && (
+        <button type="button" className="btn btn-secondary reminder-add-tile" onClick={onAddMeetup}>
+          <span className="reminder-add-kicker">{t('reminders.tileAdd')}</span>
+          <span className="reminder-add-label">{t('reminders.tileMeetup')}</span>
+        </button>
+      )}
+      {onAddHolidays && (
+        <button type="button" className="btn btn-secondary reminder-add-tile" onClick={onAddHolidays}>
+          <span className="reminder-add-kicker">{t('reminders.tileAdd')}</span>
+          <span className="reminder-add-label">{t('reminders.tileHolidays')}</span>
+        </button>
+      )}
+      {onAddSchedule && (
+        <button type="button" className="btn btn-secondary reminder-add-tile" onClick={onAddSchedule}>
+          <span className="reminder-add-kicker">{t('reminders.tileAdd')}</span>
+          <span className="reminder-add-label">{t('reminders.tileSchedule')}</span>
+        </button>
+      )}
+    </div>
+  )
+}
+
 interface ReminderListSectionProps {
-  /** Open reminders for today. Earlier days still open are dropped here; they stay on Today. */
+  /** Open reminders for today. A personal one that was not marked done is already on today. */
   dueNow: Reminder[]
   /** Open reminders after today, by date. */
   later: Reminder[]
@@ -205,7 +259,7 @@ function ReminderDayGroup({
                 className={`activity-row item-kind-reminder${shareable ? ' reminder-row-shareable' : ''}`}
                 onClick={() => onOpen(reminder)}
               >
-                <ReminderKindMark kind={reminder.kind} photo={reminderPhotoSrc(reminder, LIST_PHOTO_SIDE)} />
+                <ReminderPicture reminder={reminder} />
                 <span className="activity-meta">
                   <span className="activity-name reminder-text-line">{reminder.text}</span>
                   <span className="reminder-when-line">
@@ -296,30 +350,12 @@ export function ReminderListSection({
         </div>
       </div>
 
-      <div className="reminder-add-grid">
-        <button type="button" className="btn btn-primary reminder-add-tile" onClick={onAdd}>
-          <span className="reminder-add-kicker">{t('reminders.tileAdd')}</span>
-          <span className="reminder-add-label">{t('reminders.tileReminder')}</span>
-        </button>
-        {onAddMeetup && (
-          <button type="button" className="btn btn-secondary reminder-add-tile" onClick={onAddMeetup}>
-            <span className="reminder-add-kicker">{t('reminders.tileAdd')}</span>
-            <span className="reminder-add-label">{t('reminders.tileMeetup')}</span>
-          </button>
-        )}
-        {onAddHolidays && (
-          <button type="button" className="btn btn-secondary reminder-add-tile" onClick={onAddHolidays}>
-            <span className="reminder-add-kicker">{t('reminders.tileAdd')}</span>
-            <span className="reminder-add-label">{t('reminders.tileHolidays')}</span>
-          </button>
-        )}
-        {onAddSchedule && (
-          <button type="button" className="btn btn-secondary reminder-add-tile" onClick={onAddSchedule}>
-            <span className="reminder-add-kicker">{t('reminders.tileAdd')}</span>
-            <span className="reminder-add-label">{t('reminders.tileSchedule')}</span>
-          </button>
-        )}
-      </div>
+      <ReminderAddTiles
+        onAdd={onAdd}
+        onAddMeetup={onAddMeetup}
+        onAddHolidays={onAddHolidays}
+        onAddSchedule={onAddSchedule}
+      />
 
       {error && <p className="error">{error}</p>}
 

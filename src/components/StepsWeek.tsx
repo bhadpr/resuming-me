@@ -10,17 +10,22 @@ import {
   type PhoneStepsWeek,
 } from '../lib/healthSteps'
 import { localeTag } from '../lib/i18n'
-import { formatStepCount } from '../lib/steps'
+import { formatStepCount, loadTypedStepDays } from '../lib/steps'
 
 /** Daily step totals from Health Connect against the goal. */
 export function StepsWeek({
   goal,
   heading = true,
   days = 7,
+  typed = false,
+  revision = 0,
 }: {
   goal: number
   heading?: boolean
   days?: number
+  /** Website counts the person typed. The phone chart stays on the app. */
+  typed?: boolean
+  revision?: number
 }) {
   const { t, locale } = useLocale()
   const [week, setWeek] = useState<PhoneStepsWeek | null>(null)
@@ -28,6 +33,10 @@ export function StepsWeek({
   const [tick, setTick] = useState(0)
 
   useEffect(() => {
+    if (typed) {
+      setWeek({ status: 'days', days: loadTypedStepDays(new Date(), days) })
+      return
+    }
     let cancelled = false
     void readPhoneStepsWeek(new Date(), days).then((next) => {
       if (!cancelled) setWeek(next)
@@ -40,7 +49,7 @@ export function StepsWeek({
       cancelled = true
       document.removeEventListener('visibilitychange', onVisible)
     }
-  }, [tick, days])
+  }, [tick, days, typed, revision])
 
   async function connect() {
     setAsking(true)

@@ -4,7 +4,7 @@ import { addGuestReminder, ensureGuestDraft, loadGuestDraft, removeGuestReminder
 import { getLocale } from './i18n'
 import { askForReminderAlerts } from './reminderNotifications'
 import { ReminderCapError, addReminder, deleteReminder } from './reminders'
-import { announceRemindersChanged, type ReminderInput } from './reminderSchedule'
+import { announceRemindersChanged, remindLeadFor, type RemindLeadMinutes, type ReminderInput } from './reminderSchedule'
 import { acceptSharedList, type SharedList } from './sharedLists'
 import { createSupabaseClient } from './supabase'
 import { track } from './track'
@@ -19,6 +19,7 @@ export async function importSharedList(
   userId: string | null,
   skipIds: ReadonlySet<string>,
   remindBefore = list.remindBefore,
+  remindLeadMinutes: RemindLeadMinutes | null = null,
 ): Promise<'ok' | 'full' | 'none'> {
   const chosen = list.items.filter((item) => !skipIds.has(item.id))
   if (chosen.length === 0) return 'none'
@@ -37,6 +38,7 @@ export async function importSharedList(
       sharedListId: list.id,
       listPhotoPath: list.photoPath,
       remindBefore,
+      remindLeadMinutes: remindLeadFor({ hour: clock.hour, remindLeadMinutes }),
     }
     if (input.hour != null || input.remindBefore) timed = input
     if (userId) {

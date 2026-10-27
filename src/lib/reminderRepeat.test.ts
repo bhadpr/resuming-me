@@ -212,7 +212,7 @@ describe('reminder lists', () => {
 })
 
 describe('alerts for a repeat', () => {
-  const copy = { now: 'Now', dayBefore: () => 'Tomorrow' }
+  const copy = { now: 'Now', lead: () => 'Soon', dayBefore: () => 'Tomorrow', weekBefore: () => 'Week' }
   const evening = { hour: 18, minute: 0 }
   const now = new Date(2026, 9, 14, 8, 0)
 

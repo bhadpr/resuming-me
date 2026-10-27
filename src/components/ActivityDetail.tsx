@@ -89,6 +89,9 @@ interface ActivityDetailProps {
   onPause?: (duration: PauseDuration) => Promise<void>
   onResume?: () => Promise<void>
   onShrink?: (value: number) => void
+  /** Clipart or photo for a habit named on this device. */
+  icon?: string | null
+  photo?: string | null
 }
 
 export function ActivityDetail({
@@ -112,6 +115,8 @@ export function ActivityDetail({
   onPause,
   onResume,
   onShrink,
+  icon = null,
+  photo = null,
 }: ActivityDetailProps) {
   const { locale, t } = useLocale()
   const name = visibleName(activity, locale)
@@ -210,7 +215,7 @@ export function ActivityDetail({
       </button>
 
       <div className="ad-hero">
-        <HabitMark name={name} templateId={activity.template_id} />
+        <HabitMark name={name} templateId={activity.template_id} icon={icon} photo={photo} />
         <div className="ad-hero-text">
           <h2>{name}</h2>
           <p className="screen-sub">{describeActivity(activity)}</p>

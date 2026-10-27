@@ -4,6 +4,9 @@ import { getOrCreateAnonId } from './track'
 import { LIST_PHOTO_BUCKET, isEventPhotoPath } from './eventPhotoUrl'
 import { cleanReminderText, REMINDER_TEXT_MAX } from './reminderSchedule'
 import { parseZipCodes } from './schoolZip'
+import { cricketSearchKey, cricketTeamByName } from './cricketSearch'
+import { loadGuestDraft } from './guestDraft'
+import { leagueSearchKey, leagueTeams, type LeagueId } from './leagueTeams'
 import { nflSearchKey } from './nflSearch'
 import { createSupabaseClient } from './supabase'
 import type { Database } from '../types/database'
@@ -465,6 +468,115 @@ export async function listNflTeamsForSearch(raw: string): Promise<SharedList[]> 
   if (!lists?.length) return []
   const items = await itemsForLists(lists.map((row) => row.id))
   return lists.map((row) => fromList(row, items)).filter((list) => list.items.length > 0)
+}
+
+/** Cricket teams whose search keys include this name or short code. */
+export async function listCricketTeamsForSearch(raw: string): Promise<SharedList[]> {
+  const key = cricketSearchKey(raw)
+  if (!key) return []
+  const client = createSupabaseClient()
+  const { data: lists, error } = await client
+    .from('shared_lists')
+    .select('*')
+    .eq('status', 'active')
+    .contains('search_keys', [key])
+    .order('title', { ascending: true })
+  if (error) throw error
+  if (!lists?.length) return []
+  const items = await itemsForLists(lists.map((row) => row.id))
+  return lists
+    .map((row) => fromList(row, items))
+    .filter((list) => list.items.length > 0 && cricketTeamByName(list.title))
+}
+
+/** One league's teams whose search keys include this city, name, or short code. */
+export async function listLeagueTeamsForSearch(league: LeagueId, raw: string): Promise<SharedList[]> {
+  const key = leagueSearchKey(raw)
+  if (!key) return []
+  const names = new Set(leagueTeams(league).map((team) => team.name))
+  const client = createSupabaseClient()
+  const { data: lists, error } = await client
+    .from('shared_lists')
+    .select('*')
+    .eq('status', 'active')
+    .contains('search_keys', [key])
+    .order('title', { ascending: true })
+  if (error) throw error
+  if (!lists?.length) return []
+  const matched = lists.filter((row) => names.has(row.title))
+  if (!matched.length) return []
+  const items = await itemsForLists(matched.map((row) => row.id))
+  return matched.map((row) => fromList(row, items)).filter((list) => list.items.length > 0)
+}
+
+const ADDED_SCHEDULES_KEY = 'resuming-added-schedules'
+
+/** Teams this browser has added. The reminder rows are the backup. */
+export function readAddedScheduleIds(): string[] {
+  try {
+    const raw = localStorage.getItem(ADDED_SCHEDULES_KEY)
+    const parsed = raw ? (JSON.parse(raw) as unknown) : []
+    if (!Array.isArray(parsed)) return []
+    return [...new Set(parsed.filter((id): id is string => typeof id === 'string' && id.length > 0))]
+  } catch {
+    return []
+  }
+}
+
+export function rememberAddedSchedule(id: string): void {
+  const ids = readAddedScheduleIds()
+  if (ids.includes(id)) return
+  try {
+    localStorage.setItem(ADDED_SCHEDULES_KEY, JSON.stringify([...ids, id]))
+  } catch {
+    // The row still shows until this page is left.
+  }
+}
+
+export function forgetAddedSchedule(id: string): void {
+  const ids = readAddedScheduleIds().filter((item) => item !== id)
+  try {
+    localStorage.setItem(ADDED_SCHEDULES_KEY, JSON.stringify(ids))
+  } catch {
+    // The row is already gone for this visit.
+  }
+}
+
+/** Schedules this person already added, limited to the given team names. */
+export async function listFollowedSchedules(userId: string | null, titles: ReadonlySet<string>): Promise<SharedList[]> {
+  if (titles.size === 0) return []
+  const saved = userId ? await savedSharedListIds() : guestSharedListIds()
+  const ids = [...new Set([...saved, ...readAddedScheduleIds()])]
+  const lists = await Promise.all(ids.map((id) => getSharedListById(id).catch(() => null)))
+  return lists
+    .filter((list): list is SharedList => list != null && titles.has(list.title))
+    .sort((a, b) => a.title.localeCompare(b.title))
+}
+
+function guestSharedListIds(): string[] {
+  const ids = (loadGuestDraft()?.reminders ?? [])
+    .map((reminder) => reminder.sharedListId)
+    .filter((id): id is string => typeof id === 'string' && id.length > 0)
+  return [...new Set(ids)]
+}
+
+async function savedSharedListIds(): Promise<string[]> {
+  const client = createSupabaseClient()
+  const ids = new Set<string>()
+  for (let from = 0; ; from += 1000) {
+    const { data, error } = await client
+      .from('reminders')
+      .select('shared_list_id')
+      .not('shared_list_id', 'is', null)
+      .range(from, from + 999)
+    if (error) throw error
+    const page = data ?? []
+    for (const row of page) {
+      if (typeof row.shared_list_id === 'string' && row.shared_list_id.length > 0) ids.add(row.shared_list_id)
+    }
+    if (page.length < 1000) break
+  }
+  return [...ids]
 }
 
 export async function listSharedListsForAdmin(): Promise<SharedList[]> {

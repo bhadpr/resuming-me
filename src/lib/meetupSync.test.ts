@@ -31,6 +31,7 @@ function source(patch: Partial<MeetupSource> = {}): MeetupSource {
     minute: 20,
     timeZone: 'America/Los_Angeles',
     remindBefore: true,
+    remindLeadMinutes: null,
     photoPath: null,
     kind: 'event',
     status: 'active',

@@ -1,6 +1,12 @@
 import { addDays, parseLocalDate, todayLocalDate } from './dates'
 import { effectiveReminder, isRepeating, upcomingOccurrences } from './reminderRepeat'
-import { announceRemindersChanged, reminderAlerts, remindersForToday, type Reminder } from './reminderSchedule'
+import {
+  announceRemindersChanged,
+  remindLeadFor,
+  reminderAlerts,
+  remindersForToday,
+  type Reminder,
+} from './reminderSchedule'
 
 export const REMINDER_NOTIFICATION_ID_BASE = 9000
 /** Only the soonest alerts are armed. The rest are armed on a later app open. */
@@ -9,7 +15,7 @@ export const REMINDER_SNOOZE_MS = 60 * 60 * 1000
 
 const SNOOZE_STORAGE_KEY = 'resuming-reminder-snoozes'
 
-export type ReminderAlertKind = 'time' | 'before' | 'week' | 'snooze'
+export type ReminderAlertKind = 'time' | 'lead' | 'before' | 'week' | 'snooze'
 
 export interface ReminderAlert {
   id: number
@@ -28,6 +34,8 @@ export interface ReminderSnooze {
 export interface ReminderAlertCopy {
   /** Body of the alert at the reminder's time, and after In 1 hour. */
   now: string
+  /** Body of the alert a few minutes before the clock time. */
+  lead: (minutes: number) => string
   /** Body of the evening alert, given the reminder. */
   dayBefore: (reminder: Reminder) => string
   /** Body of the alert a week ahead, given the reminder. */
@@ -38,6 +46,20 @@ function atClock(day: string, hour: number, minute: number): Date {
   const at = parseLocalDate(day)
   at.setHours(hour, minute, 0, 0)
   return at
+}
+
+function pushLead(
+  alerts: Array<Omit<ReminderAlert, 'id'>>,
+  reminder: Reminder,
+  day: string,
+  now: Date,
+  copy: ReminderAlertCopy,
+): void {
+  const lead = remindLeadFor(reminder)
+  if (reminder.hour == null || reminder.minute == null || !lead) return
+  const at = new Date(atClock(day, reminder.hour, reminder.minute).getTime() - lead * 60_000)
+  if (at <= now) return
+  alerts.push({ reminderId: reminder.id, kind: 'lead', at, title: reminder.text, body: copy.lead(lead) })
 }
 
 /** Every alert that should be armed now, soonest first, with notification ids. */
@@ -58,6 +80,7 @@ export function planReminderAlerts(
       // A repeat rings at its time on each of its next few days, and has no evening-before alert.
       if (reminder.hour != null && reminder.minute != null) {
         for (const day of upcomingOccurrences(reminder)) {
+          pushLead(alerts, reminder, day, now, copy)
           const at = atClock(day, reminder.hour, reminder.minute)
           if (at > now) {
             alerts.push({ reminderId: reminder.id, kind: 'time', at, title: reminder.text, body: copy.now })
@@ -67,6 +90,7 @@ export function planReminderAlerts(
       continue
     }
     if (reminder.hour != null && reminder.minute != null) {
+      pushLead(alerts, reminder, reminder.day, now, copy)
       const at = atClock(reminder.day, reminder.hour, reminder.minute)
       if (at > now) {
         alerts.push({ reminderId: reminder.id, kind: 'time', at, title: reminder.text, body: copy.now })

@@ -1,5 +1,5 @@
 import { useEffect, useRef, useState, type FormEvent } from 'react'
-import { Link } from 'react-router-dom'
+import { Link, useNavigate } from 'react-router-dom'
 import { todayLocalDate } from '../lib/dates'
 import { canLogPastGoal, stacksSessionMinutes } from '../lib/dayStatus'
 import {
@@ -23,6 +23,7 @@ import { formatCompletedUndoMessage, formatCountUndoMessage, formatSessionUndoMe
 import { HabitVideoPlaceholder } from './HabitVideoPlaceholder'
 import { MedicineDoseRow } from './MedicineDoses'
 import { ReminderDoneRow, ReminderRow } from './ReminderSection'
+import { MinuteLogPop, TodayAdds } from './TodayScreen'
 import { StepsCard } from './StepsCard'
 import { TodayByTime, type TodayTimedItem } from './TodayByTime'
 import { activityPeriod, periodForHour } from '../lib/dayPeriod'
@@ -83,6 +84,7 @@ function trackGuestLog(
 
 export function GuestTodayPage() {
   const { t, locale } = useLocale()
+  const navigate = useNavigate()
   const undoToast = useUndoToast()
   const [draft, setDraft] = useState<GuestDraft | null>(() => loadGuestDraft())
   const [runningId, setRunningId] = useState<string | null>(null)
@@ -91,7 +93,6 @@ export function GuestTodayPage() {
   const [note, setNote] = useState<string | null>(null)
   const [videoId, setVideoId] = useState<string | null>(null)
   const [manualFor, setManualFor] = useState<string | null>(null)
-  const [manualMinutes, setManualMinutes] = useState('')
   const startedAt = useRef<string | null>(null)
   const tickAt = useRef<number | null>(null)
   const finished = useRef(false)
@@ -165,8 +166,7 @@ export function GuestTodayPage() {
     setElapsed(0)
   }
 
-  function logMinutes(activity: GuestActivity) {
-    const minutes = Number(manualMinutes)
+  function logMinutes(activity: GuestActivity, minutes: number) {
     if (!Number.isFinite(minutes) || minutes <= 0) return
     const current = draftRef.current
     if (!current) return
@@ -189,7 +189,6 @@ export function GuestTodayPage() {
       track('log_undone', { kind: 'session', signed_in: false })
     })
     setManualFor(null)
-    setManualMinutes('')
   }
 
   useEffect(() => {
@@ -343,6 +342,8 @@ export function GuestTodayPage() {
               templateId={activity.templateId}
               name={visibleName(activity, locale)}
               emoji={activity.emoji}
+              icon={activity.icon}
+              photo={activity.photo}
             />
             <span className="activity-name">{visibleName(activity, locale)}</span>
             <StatusMark live={isRunning && !paused} paused={isRunning && paused} />
@@ -456,13 +457,7 @@ export function GuestTodayPage() {
                 <button
                   type="button"
                   className="today-extra-btn"
-                  aria-expanded={manualFor === activity.localId}
-                  onClick={() => {
-                    setManualMinutes('')
-                    setManualFor((current) =>
-                      current === activity.localId ? null : activity.localId,
-                    )
-                  }}
+                  onClick={() => setManualFor(activity.localId)}
                 >
                   {t('today.logMinutes')}
                 </button>
@@ -470,40 +465,10 @@ export function GuestTodayPage() {
             </div>
           )}
           {manualFor === activity.localId && !skipped && (
-            <form
-              className="metric-log-form today-log-form"
-              onSubmit={(event) => {
-                event.preventDefault()
-                logMinutes(activity)
-              }}
-            >
-              <input
-                className="field-input field-input-sm"
-                type="number"
-                inputMode="numeric"
-                min={1}
-                step={1}
-                placeholder={t('today.minutes')}
-                value={manualMinutes}
-                onChange={(event) => setManualMinutes(event.target.value)}
-                aria-label={t('today.minutes')}
-                enterKeyHint="done"
-              />
-              <button
-                type="submit"
-                className="btn btn-primary btn-today"
-                disabled={!manualMinutes}
-              >
-                {t('today.addMinutes')}
-              </button>
-              <button
-                type="button"
-                className="today-extra-btn"
-                onClick={() => setManualFor(null)}
-              >
-                {t('today.cancel')}
-              </button>
-            </form>
+            <MinuteLogPop
+              onClose={() => setManualFor(null)}
+              onAdd={(minutes) => logMinutes(activity, minutes)}
+            />
           )}
           {canShowVideo && showVideo && (
             <HabitVideoPlaceholder
@@ -533,6 +498,8 @@ export function GuestTodayPage() {
             templateId={activity.templateId}
             name={visibleName(activity, locale)}
             emoji={activity.emoji}
+            icon={activity.icon}
+            photo={activity.photo}
           />
           <span className="activity-name">{visibleName(activity, locale)}</span>
         </div>
@@ -715,28 +682,28 @@ export function GuestTodayPage() {
                 {t('landing.getStarted')}
               </Link>
               <p className="empty-state-or">{t('today.or')}</p>
-              <div className="today-add-row">
-                <Link className="btn btn-secondary today-add" to="/start?step=1&add=1">
-                  {t('today.add')}
-                </Link>
-                <Link className="btn btn-secondary today-add" to="/reminders/new">
-                  {t('reminders.add')}
-                </Link>
-              </div>
+              <TodayAdds
+                onAddActivity={() => navigate('/start?step=1&add=1')}
+                onAddVital={() => navigate('/start?step=1&add=1&vital=1')}
+                onAddReminder={() => navigate('/reminders/new')}
+                onAddMeetup={() => navigate('/reminders/meetup')}
+                onAddHolidays={() => navigate('/reminders/holidays')}
+                onAddSchedule={() => navigate('/reminders/schedules')}
+              />
             </section>
           ) : (
             <TodayByTime items={timedItems} listClassName="today-list today-guest-list" />
           )}
 
           {timedItems.length > 0 && (
-            <div className="today-add-row">
-              <Link className="btn btn-secondary today-add" to="/start?step=1&add=1">
-                {t('today.add')}
-              </Link>
-              <Link className="btn btn-secondary today-add" to="/reminders/new">
-                {t('reminders.add')}
-              </Link>
-            </div>
+            <TodayAdds
+              onAddActivity={() => navigate('/start?step=1&add=1')}
+              onAddVital={() => navigate('/start?step=1&add=1&vital=1')}
+              onAddReminder={() => navigate('/reminders/new')}
+              onAddMeetup={() => navigate('/reminders/meetup')}
+              onAddHolidays={() => navigate('/reminders/holidays')}
+              onAddSchedule={() => navigate('/reminders/schedules')}
+            />
           )}
           {undoToast.toast && (
             <Toast message={undoToast.toast.message} onUndo={() => void undoToast.undo()} />
@@ -820,7 +787,13 @@ function NumberVitalRow({
       className={`today-row today-row-stack today-row-compact item-kind-vital ${paired && !skipped ? 'today-row-entry' : ''} ${reading || skipped ? 'today-row-done' : ''}`}
     >
       <div className="today-row-head">
-        <HabitMark templateId={activity.templateId} name={visibleName(activity, locale)} emoji={activity.emoji} />
+        <HabitMark
+          templateId={activity.templateId}
+          name={visibleName(activity, locale)}
+          emoji={activity.emoji}
+          icon={activity.icon}
+          photo={activity.photo}
+        />
         <span className="activity-name">{visibleName(activity, locale)}</span>
       </div>
       <form className={`today-row-main ${paired ? 'vital-entry' : ''}`} onSubmit={handleSubmit}>

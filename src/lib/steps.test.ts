@@ -1,9 +1,11 @@
 import { afterEach, describe, expect, it, vi } from 'vitest'
+import { todayLocalDate } from './dates'
 import {
   DEFAULT_STEP_GOAL,
   formatStepCount,
   isDailyStepsMetric,
   loadStepGoal,
+  loadTypedStepDays,
   loadTypedSteps,
   parseStepAmount,
   parseStepGoal,
@@ -67,6 +69,16 @@ describe('step goal and typed count', () => {
     expect(loadTypedSteps('2026-10-02')).toBeNull()
     saveTypedSteps('2026-10-02', 4280)
     expect(loadTypedSteps('2026-10-02')).toBe(4280)
+  })
+
+  it('fills the week around today, and leaves untyped days at zero', () => {
+    memoryStorage()
+    const today = todayLocalDate()
+    saveTypedSteps(today, 1000)
+    const days = loadTypedStepDays()
+    expect(days).toHaveLength(7)
+    expect(days.at(-1)).toEqual({ date: today, steps: 1000 })
+    expect(days[0]?.steps).toBe(0)
   })
 })
 

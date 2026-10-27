@@ -79,6 +79,16 @@ export function loadTypedSteps(date: string): number | null {
   return value == null ? null : value
 }
 
+/** Seven local days ending today. A day with no typed count is zero. */
+export function loadTypedStepDays(now = new Date(), count = 7): { date: string; steps: number }[] {
+  const today = todayLocalDate(now)
+  const counts = readCounts()
+  return Array.from({ length: count }, (_, index) => {
+    const date = addDays(today, index - count + 1)
+    return { date, steps: counts[date] ?? 0 }
+  })
+}
+
 export function saveTypedSteps(date: string, steps: number): void {
   const parsed = parseStepAmount(String(steps))
   if (parsed == null) return

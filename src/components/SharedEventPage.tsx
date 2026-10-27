@@ -134,6 +134,7 @@ export function SharedEventPage({ code }: { code: string }) {
       minute: local?.minute ?? found.minute,
       kind: found.kind,
       remindBefore: found.remindBefore,
+      remindLeadMinutes: found.remindLeadMinutes,
       sharedEventId: found.id,
     }
     let destination: string | null = null

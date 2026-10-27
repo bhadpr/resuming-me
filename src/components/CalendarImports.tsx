@@ -6,21 +6,49 @@ import { LIST_PHOTO_SIDE, listPhotoUrl } from '../lib/eventPhotoUrl'
 import { loadGuestDraft } from '../lib/guestDraft'
 import { importSharedList, removeImportedSharedList } from '../lib/importSharedList'
 import { reminderClock } from '../lib/listClock'
-import { nflSearchKey, readNflSearch, writeNflSearch } from '../lib/nflSearch'
-import { isUsTimeZone, parseZipCodes, readSchoolZip, writeSchoolZip } from '../lib/schoolZip'
+import {
+  CRICKET_TEAMS,
+  cricketTeamByName,
+  cricketTeamName,
+  readCricketSearch,
+  writeCricketSearch,
+} from '../lib/cricketSearch'
+import {
+  leagueTeamByName,
+  leagueTeamName,
+  leagueTeams,
+  readLeagueSearch,
+  writeLeagueSearch,
+  type LeagueId,
+} from '../lib/leagueTeams'
+import { NFL_TEAMS, nflTeamByName, nflTeamName, readNflSearch, writeNflSearch } from '../lib/nflSearch'
+import { NflMark } from './NflMark'
+import { isIndiaTimeZone, isUsTimeZone, parseZipCodes, readSchoolZip, writeSchoolZip } from '../lib/schoolZip'
 import { todayLocalDate } from '../lib/dates'
 import { localeTag, type Locale } from '../lib/i18n'
 import { groupByMonth } from '../lib/monthFold'
 import { formatReminderTime } from '../lib/reminderSchedule'
 import { MonthFold, SectionFold, useClosedMonths } from './MonthFold'
 import { DayBeforeChoice } from './DayBeforeChoice'
+import { LeadMinutesChoice } from './LeadMinutesChoice'
+import type { RemindLeadMinutes } from '../lib/reminderSchedule'
 import {
   acceptedSharedListItemIds,
+  listCricketTeamsForSearch,
+  listLeagueTeamsForSearch,
   listNflTeamsForSearch,
   listSchoolCalendarsForZip,
+  sharedListUrl,
   type SharedList,
 } from '../lib/sharedLists'
+import { whatsAppShareUrl } from '../lib/sharedEvents'
 import { EventPhoto } from './ReminderKindIcon'
+import { WhatsAppIcon } from './Icon'
+import { TeamScheduleSection } from './TeamScheduleSection'
+
+function listHasClock(list: SharedList): boolean {
+  return list.items.some((item) => item.hour != null && item.minute != null)
+}
 
 function schoolDayLabel(day: string, locale: Locale): string {
   const [year, month, date] = day.split('-').map(Number)
@@ -178,7 +206,7 @@ export function CalendarImportSection({
   const matched = zip && lists ? lists.filter((list) => list.zipCodes.includes(zip)) : null
 
   return (
-    <SectionFold title={title ?? t('reminders.community.calendars')}>
+    <SectionFold title={title ?? t('reminders.community.calendars')} defaultOpen={false}>
       <p className="analytics-stat-hint">{t('reminders.community.zipHint')}</p>
       {editing ? (
         <form
@@ -279,6 +307,8 @@ export function CalendarImportDetail({ list }: { list: SharedList }) {
   const [done, setDone] = useState(false)
   const [message, setMessage] = useState<string | null>(null)
   const [dayBefore, setDayBefore] = useState(true)
+  const [lead, setLead] = useState<RemindLeadMinutes | null>(null)
+  const timed = listHasClock(list)
   const already = saved != null && list.items.every((item) => saved.has(item.id))
 
   async function yes() {
@@ -286,7 +316,7 @@ export function CalendarImportDetail({ list }: { list: SharedList }) {
     setBusy(true)
     setMessage(null)
     try {
-      const result = await importSharedList(list, user?.id ?? null, saved, dayBefore)
+      const result = await importSharedList(list, user?.id ?? null, saved, dayBefore, timed ? lead : null)
       if (result === 'full') {
         setMessage(t('sharedList.full'))
         return
@@ -330,9 +360,28 @@ export function CalendarImportDetail({ list }: { list: SharedList }) {
     todayLocalDate(),
   )
 
+  const team = nflTeamByName(list.title) ?? cricketTeamByName(list.title) ?? leagueTeamByName(list.title)
   return (
     <div className="calendar-import-detail">
-      <EventPhoto className="school-days-logo" src={listPhotoUrl(list.photoPath, undefined, LIST_PHOTO_SIDE)} alt="" />
+      {team ? (
+        <NflMark team={team} size="hero" />
+      ) : (
+        <EventPhoto className="school-days-logo" src={listPhotoUrl(list.photoPath, undefined, LIST_PHOTO_SIDE)} alt="" />
+      )}
+      <a
+        className="btn btn-secondary community-continue"
+        href={whatsAppShareUrl(
+          t(team ? 'sharedList.shareMessage' : 'sharedList.shareSchoolMessage', {
+            title: list.title,
+            url: sharedListUrl(list.code),
+          }),
+        )}
+        target="_blank"
+        rel="noreferrer"
+      >
+        <WhatsAppIcon />
+        {t('sharedEvent.share')}
+      </a>
       <div className="month-folds">
         {months.map((month) => (
           <MonthFold
@@ -373,6 +422,7 @@ export function CalendarImportDetail({ list }: { list: SharedList }) {
           </MonthFold>
         ))}
       </div>
+      {!added && timed && <LeadMinutesChoice minutes={lead} onChange={setLead} />}
       {!added && <DayBeforeChoice checked={dayBefore} onChange={setDayBefore} />}
       <button
         type="button"
@@ -389,7 +439,7 @@ export function CalendarImportDetail({ list }: { list: SharedList }) {
   )
 }
 
-/** NFL teams for a US time zone. A city, team, or short code chooses which lists appear. */
+/** NFL teams for a US time zone. Added teams stay listed while the menu picks another. */
 export function NflImportSection({
   onOpen,
   title,
@@ -397,179 +447,69 @@ export function NflImportSection({
   onOpen: (list: SharedList) => void
   title?: string
 }) {
-  const us = isUsTimeZone()
-  const { user, loading: authLoading } = useAuth()
   const { t } = useLocale()
-  const navigate = useNavigate()
-  const [query, setQuery] = useState<string | null>(() => readNflSearch())
-  const [draft, setDraft] = useState(() => readNflSearch() ?? '')
-  const [editing, setEditing] = useState(() => readNflSearch() == null)
-  const [queryError, setQueryError] = useState<string | null>(null)
-  const [lists, setLists] = useState<SharedList[] | null>(null)
-  const [loadFailed, setLoadFailed] = useState(false)
-  const [busyId, setBusyId] = useState<string | null>(null)
-  const [message, setMessage] = useState<string | null>(null)
-  const [imported, setImported] = useState<string[]>([])
-  const [dayBefore, setDayBefore] = useState<Record<string, boolean>>({})
-  const { saved, forget } = useSavedItemIds(lists?.flatMap((list) => list.items.map((item) => item.id)) ?? [])
-
-  useEffect(() => {
-    if (!us || !query) return
-    let live = true
-    setLists(null)
-    setLoadFailed(false)
-    listNflTeamsForSearch(query)
-      .then((found) => {
-        if (live) setLists(found)
-      })
-      .catch(() => {
-        if (live) setLoadFailed(true)
-      })
-    return () => {
-      live = false
-    }
-  }, [us, query])
-
-  function saveQuery() {
-    const key = nflSearchKey(draft)
-    if (!key) {
-      setQueryError(t('reminders.community.teamInvalid'))
-      return
-    }
-    const shown = draft.trim().replace(/\s+/g, ' ')
-    writeNflSearch(shown)
-    setQuery(shown)
-    setDraft(shown)
-    setEditing(false)
-    setQueryError(null)
-  }
-
-  async function yes(list: SharedList) {
-    if (authLoading || busyId) return
-    setBusyId(list.id)
-    setMessage(null)
-    try {
-      const result = await importSharedList(list, user?.id ?? null, saved ?? new Set(), dayBefore[list.id] ?? true)
-      if (result === 'full') {
-        setMessage(t('sharedList.full'))
-        return
-      }
-      if (result === 'ok') {
-        navigate('/reminders', { replace: true })
-        return
-      }
-      setImported((current) => [...current, list.id])
-    } catch (err) {
-      const unavailable = err instanceof Error && err.message.includes('shared_list_unavailable')
-      setMessage(t(unavailable ? 'sharedList.unavailable' : 'sharedList.addFailed'))
-    } finally {
-      setBusyId(null)
-    }
-  }
-
-  async function remove(list: SharedList) {
-    if (authLoading || busyId) return
-    setBusyId(list.id)
-    setMessage(null)
-    try {
-      await removeImportedSharedList(list, user?.id ?? null)
-      setImported((current) => current.filter((id) => id !== list.id))
-      forget(list.items.map((item) => item.id))
-    } catch {
-      setMessage(t('reminders.community.removeFailed'))
-    } finally {
-      setBusyId(null)
-    }
-  }
-
-  if (!us) return null
-
   return (
-    <SectionFold title={title ?? t('reminders.community.nfl')}>
-      <p className="analytics-stat-hint">{t('reminders.community.teamHint')}</p>
-      {editing ? (
-        <form
-          className="school-zip"
-          onSubmit={(event) => {
-            event.preventDefault()
-            saveQuery()
-          }}
-        >
-          <input
-            className="field-input"
-            autoComplete="off"
-            maxLength={40}
-            aria-label={t('reminders.community.teamLabel')}
-            value={draft}
-            onChange={(event) => setDraft(event.target.value)}
-          />
-          <button type="submit" className="btn btn-primary">
-            {t('reminders.community.teamSave')}
-          </button>
-        </form>
-      ) : (
-        <div className="school-zip">
-          <span className="school-zip-saved">{query}</span>
-          <button
-            type="button"
-            className="btn btn-secondary"
-            onClick={() => {
-              setDraft(query ?? '')
-              setEditing(true)
-              setQueryError(null)
-            }}
-          >
-            {t('reminders.community.zipChange')}
-          </button>
-        </div>
-      )}
-      {queryError && <p className="error">{queryError}</p>}
-      {!query ? null : loadFailed ? (
-        <p className="error">{t('reminders.community.calendarsError')}</p>
-      ) : lists === null || saved === null ? (
-        <p className="muted-center">{t('reminders.loading')}</p>
-      ) : lists.length === 0 ? (
-        <p className="muted-center">{t('reminders.community.teamNone', { query })}</p>
-      ) : (
-        <ul className="calendar-import-list">
-          {lists.map((list) => {
-            const done = imported.includes(list.id) || list.items.every((item) => saved.has(item.id))
-            const count = list.items.length
-            return (
-              <li key={list.id} className="calendar-import-row">
-                <div className="calendar-import-main">
-                  <button type="button" className="calendar-import-link" onClick={() => onOpen(list)}>
-                    <EventPhoto plain className="event-photo-thumb" src={listPhotoUrl(list.photoPath, undefined, LIST_PHOTO_SIDE)} alt="" />
-                    <span className="calendar-import-copy">
-                      <span className="calendar-import-title">{list.title}</span>
-                      <span className="calendar-import-count">
-                        {count === 1 ? t('reminders.community.day') : t('reminders.community.days', { count })}
-                      </span>
-                    </span>
-                  </button>
-                  <button
-                    type="button"
-                    className={`btn calendar-import-yes ${done ? 'btn-secondary' : 'btn-primary'}`}
-                    disabled={busyId != null || authLoading}
-                    onClick={() => void (done ? remove(list) : yes(list))}
-                  >
-                    {busyId === list.id
-                      ? t(done ? 'reminders.community.removing' : 'sharedList.accepting')
-                      : t(done ? 'reminders.community.remove' : 'reminders.community.add')}
-                  </button>
-                </div>
-                {!done && (
-                  <DayBeforeChoice
-                    checked={dayBefore[list.id] ?? true}
-                    onChange={(value) => setDayBefore((current) => ({ ...current, [list.id]: value }))}
-                  />
-                )}
-              </li>
-            )
-          })}
-        </ul>
-      )}
-      {message && <p className="error">{message}</p>}
-    </SectionFold>
+    <TeamScheduleSection
+      offered={isUsTimeZone()}
+      title={title ?? t('reminders.community.nfl')}
+      teams={NFL_TEAMS}
+      restore={() => nflTeamName(readNflSearch())}
+      remember={writeNflSearch}
+      resolve={nflTeamName}
+      load={listNflTeamsForSearch}
+      missing={(query) => t('reminders.community.teamNone', { query })}
+      onOpen={onOpen}
+    />
   )
 }
+
+/** Cricket teams on a US or India clock. Added teams stay listed while the menu picks another. */
+export function CricketImportSection({
+  onOpen,
+  title,
+}: {
+  onOpen: (list: SharedList) => void
+  title?: string
+}) {
+  const { t } = useLocale()
+  return (
+    <TeamScheduleSection
+      offered={isUsTimeZone() || isIndiaTimeZone()}
+      title={title ?? t('reminders.community.cricket')}
+      teams={CRICKET_TEAMS}
+      restore={() => cricketTeamName(readCricketSearch())}
+      remember={writeCricketSearch}
+      resolve={cricketTeamName}
+      load={listCricketTeamsForSearch}
+      missing={(query) => t('reminders.community.cricketNone', { query })}
+      onOpen={onOpen}
+    />
+  )
+}
+
+/** NBA, NHL, MLB, or MLS. Added teams stay listed while the menu picks another. */
+export function LeagueImportSection({
+  league,
+  title,
+  onOpen,
+}: {
+  league: LeagueId
+  title: string
+  onOpen: (list: SharedList) => void
+}) {
+  const { t } = useLocale()
+  return (
+    <TeamScheduleSection
+      offered={isUsTimeZone()}
+      title={title}
+      teams={leagueTeams(league)}
+      restore={() => leagueTeamName(league, readLeagueSearch(league))}
+      remember={(name) => writeLeagueSearch(league, name)}
+      resolve={(name) => leagueTeamName(league, name)}
+      load={(name) => listLeagueTeamsForSearch(league, name)}
+      missing={(query) => t('reminders.community.leagueNone', { query })}
+      onOpen={onOpen}
+    />
+  )
+}
+

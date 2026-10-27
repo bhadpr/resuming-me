@@ -1,5 +1,31 @@
 import { ACTIVITY_TEMPLATES } from './activityTemplates'
 
+/** Clipart a person can put on a habit they name themselves. */
+export const CUSTOM_HABIT_ART = [
+  'walk',
+  'running',
+  'exercise',
+  'stretching',
+  'meditate',
+  'prayer',
+  'reading',
+  'writing',
+  'music',
+  'painting',
+  'dancing',
+  'water',
+  'study',
+  'language',
+  'journaling',
+  'sleep_hours',
+] as const
+
+export function customHabitIcon(value: unknown): (typeof CUSTOM_HABIT_ART)[number] | null {
+  return typeof value === 'string' && (CUSTOM_HABIT_ART as readonly string[]).includes(value)
+    ? (value as (typeof CUSTOM_HABIT_ART)[number])
+    : null
+}
+
 /** Illustrations for habits that have a picture. Other habits keep their emoji. */
 export const HABIT_ART: Record<string, string> = {
   exercise: '/habits/strength.webp',

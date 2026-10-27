@@ -1,6 +1,6 @@
 import { compressEventPhoto } from './eventPhotos'
 import { addReminder, deleteReminder } from './reminders'
-import type { Reminder, ReminderInput } from './reminderSchedule'
+import { remindLeadFor, type Reminder, type ReminderInput } from './reminderSchedule'
 import { createSharedEvent } from './sharedEvents'
 
 /**
@@ -19,6 +19,7 @@ export async function createMeetup(userId: string, input: ReminderInput): Promis
     const made = await createSharedEvent(userId, saved, null, photo, {
       meetup: true,
       remindBefore: input.remindBefore === true,
+      remindLeadMinutes: remindLeadFor(input),
     })
     return {
       ...saved,

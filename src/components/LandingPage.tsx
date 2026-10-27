@@ -15,6 +15,7 @@ import { track } from '../lib/track'
 import { useLocale } from '../hooks/useLocale'
 import { LanguagePicker } from './LanguagePicker'
 import { AppleMark } from './AppleMark'
+import { APPLE_SIGN_IN } from '../config'
 
 function LandingBrand() {
   return (
@@ -140,15 +141,17 @@ export function LandingPage({
           <p className="landing-actions-note">{t('landing.noAccount')}</p>
           <div className="landing-signin">
             <p className="landing-signin-heading">{t('landing.haveAccount')}</p>
-            <button
-              type="button"
-              className="btn btn-apple"
-              onClick={() => void handleSignIn('apple')}
-              disabled={signingIn !== null}
-            >
-              <AppleMark />
-              {signingIn === 'apple' ? t('landing.redirecting') : t('landing.signInApple')}
-            </button>
+            {APPLE_SIGN_IN && (
+              <button
+                type="button"
+                className="btn btn-apple"
+                onClick={() => void handleSignIn('apple')}
+                disabled={signingIn !== null}
+              >
+                <AppleMark />
+                {signingIn === 'apple' ? t('landing.redirecting') : t('landing.signInApple')}
+              </button>
+            )}
             <button
               type="button"
               className="btn btn-secondary"

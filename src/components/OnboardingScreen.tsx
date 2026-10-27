@@ -635,7 +635,6 @@ function TimesStep({
     period === 'week'
       ? [
           { times: 1, title: 'Once a week', meta: 'One session is enough' },
-          { times: 2, title: 'Twice a week', meta: 'A light weekly target' },
           { times: 3, title: 'Three times a week', meta: 'A bit more often' },
         ]
       : [
@@ -644,7 +643,7 @@ function TimesStep({
           { times: 3, title: 'Three times a day', meta: 'A bit more often' },
         ]
   const max = period === 'week' ? 7 : 8
-  const [times, setTimes] = useState(2)
+  const [times, setTimes] = useState(period === 'week' ? 1 : 2)
   const [custom, setCustom] = useState('')
   const usingCustom = custom.trim() !== '' && Number(custom) > 0
   const chosen = usingCustom ? Number(custom) : times

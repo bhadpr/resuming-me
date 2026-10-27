@@ -1,3 +1,5 @@
+import { MLB_TITLES, MLS_TITLES, NBA_TITLES, NHL_TITLES } from './leagueTitles'
+
 // resuming.me Worker. Static files and the single-page app come from ./dist.
 // Only /e/<code> and /c/<code> run here first, so WhatsApp's link preview shows the
 // event or the reminder list, not the generic Resuming card.
@@ -98,21 +100,118 @@ function preview(row: SharedEventRow | null): { title: string; description: stri
   }
 }
 
-function listPreview(title: string | null): { title: string; description: string } {
+const NFL_TITLES = new Set([
+  'Arizona Cardinals',
+  'Atlanta Falcons',
+  'Baltimore Ravens',
+  'Buffalo Bills',
+  'Carolina Panthers',
+  'Chicago Bears',
+  'Cincinnati Bengals',
+  'Cleveland Browns',
+  'Dallas Cowboys',
+  'Denver Broncos',
+  'Detroit Lions',
+  'Green Bay Packers',
+  'Houston Texans',
+  'Indianapolis Colts',
+  'Jacksonville Jaguars',
+  'Kansas City Chiefs',
+  'Las Vegas Raiders',
+  'Los Angeles Chargers',
+  'Los Angeles Rams',
+  'Miami Dolphins',
+  'Minnesota Vikings',
+  'New England Patriots',
+  'New Orleans Saints',
+  'New York Giants',
+  'New York Jets',
+  'Philadelphia Eagles',
+  'Pittsburgh Steelers',
+  'San Francisco 49ers',
+  'Seattle Seahawks',
+  'Tampa Bay Buccaneers',
+  'Tennessee Titans',
+  'Washington Commanders',
+])
+
+const CRICKET_TITLES = new Set([
+  'Afghanistan',
+  'Australia',
+  'Bangladesh',
+  'England',
+  'India',
+  'Ireland',
+  'New Zealand',
+  'Pakistan',
+  'South Africa',
+  'Sri Lanka',
+  'West Indies',
+  'Zimbabwe',
+])
+
+type ListKind = 'nfl' | 'nba' | 'nhl' | 'mlb' | 'mls' | 'cricket' | 'school'
+
+const LIST_CARD: Record<ListKind, { image: string; description: string }> = {
+  nfl: {
+    image: 'https://resuming.me/og-nfl.jpg',
+    description: 'Add the whole schedule and get reminders.',
+  },
+  nba: {
+    image: 'https://resuming.me/og-nba.jpg',
+    description: 'Add the whole schedule and get reminders.',
+  },
+  nhl: {
+    image: 'https://resuming.me/og-nhl.jpg',
+    description: 'Add the whole schedule and get reminders.',
+  },
+  mlb: {
+    image: 'https://resuming.me/og-mlb.jpg',
+    description: 'Add the whole schedule and get reminders.',
+  },
+  mls: {
+    image: 'https://resuming.me/og-mls.jpg',
+    description: 'Add the whole schedule and get reminders.',
+  },
+  cricket: {
+    image: 'https://resuming.me/og-cricket.jpg',
+    description: 'Add the whole schedule and get reminders.',
+  },
+  school: {
+    image: 'https://resuming.me/og-school.jpg',
+    description: 'Add the school calendar and get reminders.',
+  },
+}
+
+function listKind(title: string, zipCodes: string[]): ListKind | null {
+  if (zipCodes.some((zip) => /^\d{5}$/.test(zip))) return 'school'
+  if (CRICKET_TITLES.has(title)) return 'cricket'
+  if (NFL_TITLES.has(title)) return 'nfl'
+  if (NBA_TITLES.has(title)) return 'nba'
+  if (NHL_TITLES.has(title)) return 'nhl'
+  if (MLB_TITLES.has(title)) return 'mlb'
+  if (MLS_TITLES.has(title)) return 'mls'
+  return null
+}
+
+function listPreview(title: string | null, kind: ListKind | null): { title: string; description: string } {
   if (!title) {
     return { title: 'List not available · Resuming', description: 'This list is no longer available.' }
   }
   return {
     title,
-    description: 'A list of reminders. Tap to add them on Resuming.',
+    description: kind ? LIST_CARD[kind].description : 'A list of reminders. Tap to add them on Resuming.',
   }
 }
 
-async function fetchList(env: Env, code: string): Promise<{ title: string; photo: string | null } | null> {
+async function fetchList(
+  env: Env,
+  code: string,
+): Promise<{ title: string; photo: string | null; kind: ListKind | null } | null> {
   if (!env.SUPABASE_URL || !env.SUPABASE_ANON_KEY) return null
   try {
     const response = await fetch(
-      `${env.SUPABASE_URL.replace(/\/+$/, '')}/rest/v1/shared_lists?code=eq.${encodeURIComponent(code)}&status=eq.active&select=title,photo_path`,
+      `${env.SUPABASE_URL.replace(/\/+$/, '')}/rest/v1/shared_lists?code=eq.${encodeURIComponent(code)}&status=eq.active&select=title,photo_path,zip_codes`,
       {
         headers: {
           apikey: env.SUPABASE_ANON_KEY,
@@ -122,15 +221,18 @@ async function fetchList(env: Env, code: string): Promise<{ title: string; photo
       },
     )
     if (!response.ok) return null
-    const rows = (await response.json()) as { title?: string; photo_path?: string | null }[]
+    const rows = (await response.json()) as { title?: string; photo_path?: string | null; zip_codes?: string[] | null }[]
     const title = rows[0]?.title?.replace(/\s+/g, ' ').trim()
     if (!title) return null
+    const zipCodes = (rows[0]?.zip_codes ?? []).filter((zip): zip is string => typeof zip === 'string')
+    const kind = listKind(title, zipCodes)
     const path = rows[0]?.photo_path ?? ''
-    const photo =
-      env.SUPABASE_URL && PHOTO_PATH.test(path)
+    const photo = kind
+      ? LIST_CARD[kind].image
+      : env.SUPABASE_URL && PHOTO_PATH.test(path)
         ? `${env.SUPABASE_URL.replace(/\/+$/, '')}/storage/v1/object/public/list-photos/${path}`
         : null
-    return { title, photo }
+    return { title, photo, kind }
   } catch {
     return null
   }
@@ -142,6 +244,7 @@ function rewritePreview(
   description: string,
   pageUrl: string,
   photo: string | null,
+  sized = false,
 ): Response {
   const set = (value: string) => ({
     element(element: RewriterElement) {
@@ -159,8 +262,13 @@ function rewritePreview(
     rewriter = rewriter
       .on('meta[property="og:image"]', set(photo))
       .on('meta[name="twitter:image"]', set(photo))
-      .on('meta[property="og:image:width"]', drop)
-      .on('meta[property="og:image:height"]', drop)
+    rewriter = sized
+      ? rewriter
+          .on('meta[property="og:image:width"]', set('1200'))
+          .on('meta[property="og:image:height"]', set('630'))
+      : rewriter
+          .on('meta[property="og:image:width"]', drop)
+          .on('meta[property="og:image:height"]', drop)
   }
 
   const rewritten = rewriter
@@ -211,8 +319,15 @@ export default {
     if (!listMatch) return page
     const code = listMatch[1].toLowerCase()
     const list = await fetchList(env, code)
-    const card = listPreview(list?.title ?? null)
-    return rewritePreview(page, card.title, card.description, `https://resuming.me/c/${code}`, list?.photo ?? null)
+    const card = listPreview(list?.title ?? null, list?.kind ?? null)
+    return rewritePreview(
+      page,
+      card.title,
+      card.description,
+      `https://resuming.me/c/${code}`,
+      list?.photo ?? null,
+      list?.kind != null,
+    )
   },
 }
 

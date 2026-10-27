@@ -1,5 +1,5 @@
 import { localEventTime } from './sharedEvents'
-import type { Reminder, ReminderKind, SharedReminderStatus } from './reminderSchedule'
+import { remindLeadFor, type RemindLeadMinutes, type Reminder, type ReminderKind, type SharedReminderStatus } from './reminderSchedule'
 
 /** What the server currently says about one shared event. */
 export type MeetupSource = {
@@ -12,6 +12,7 @@ export type MeetupSource = {
   minute: number | null
   timeZone: string
   remindBefore: boolean
+  remindLeadMinutes: RemindLeadMinutes | null
   photoPath: string | null
   kind: ReminderKind
   status: SharedReminderStatus
@@ -25,6 +26,7 @@ export type MeetupUpdate = {
   hour: number | null
   minute: number | null
   remindBefore: boolean
+  remindLeadMinutes: RemindLeadMinutes | null
   kind: ReminderKind
   sharedPhotoPath: string | null
 }
@@ -59,6 +61,7 @@ export function planMeetupRefresh(
       hour: local?.hour ?? event.hour,
       minute: local?.minute ?? event.minute,
       remindBefore: event.remindBefore,
+      remindLeadMinutes: remindLeadFor(event),
       kind: event.kind,
       sharedPhotoPath: event.photoPath,
     }
@@ -68,6 +71,7 @@ export function planMeetupRefresh(
       reminder.day === next.day &&
       sameClock(reminder, next) &&
       reminder.remindBefore === next.remindBefore &&
+      remindLeadFor(reminder) === next.remindLeadMinutes &&
       reminder.kind === next.kind &&
       (reminder.sharedPhotoPath ?? null) === next.sharedPhotoPath
     if (same) continue

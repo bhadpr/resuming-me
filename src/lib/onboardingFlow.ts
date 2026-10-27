@@ -229,7 +229,7 @@ export function durationChipParts(minutes: number): { primary: string; secondary
   if (minutes === 120) return { primary: '2', secondary: t('unit.hours') }
   return { primary: String(minutes), secondary: t('unit.mins') }
 }
-export const COUNT_STEPS = [1, 2, 3, 4, 5] as const
+export const COUNT_STEPS = [5, 10, 20, 50, 100] as const
 /** 250 ml each, so 8 glasses is the common 2,000 ml day. */
 export const WATER_ML_PER_GLASS = 250
 export const WATER_GLASS_NOTE = `One glass is ${WATER_ML_PER_GLASS} ml.`
@@ -544,7 +544,7 @@ export type SizeControl = {
 /**
  * What step 3 can shrink. A checkbox has no size.
  * Water's glass goal is chosen on the previous screen.
- * How often (daily, once a week, twice a week) is a separate choice.
+ * How often (daily or once a week) is a separate choice.
  * Timers and minute-blocks are minutes. Counts are a number.
  */
 export function activitySizeControl(
@@ -577,10 +577,10 @@ export function activitySizeControl(
 export const WEEK_CADENCE = [
   { id: 'daily', label: 'Daily', primary: 'Daily', secondary: null },
   { id: 'once', label: 'Once a week', primary: 'Once', secondary: 'a week' },
-  { id: 'twice', label: 'Twice a week', primary: 'Twice', secondary: 'a week' },
 ] as const
 
-export type WeekCadence = (typeof WEEK_CADENCE)[number]['id']
+/** `twice` stays so a habit saved earlier still reads as twice a week until it is changed. */
+export type WeekCadence = (typeof WEEK_CADENCE)[number]['id'] | 'twice'
 
 export function weekCadenceOf(
   activity: Pick<GuestActivity, 'type' | 'weeklyTarget'>,

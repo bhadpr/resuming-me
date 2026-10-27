@@ -59,6 +59,7 @@ export function reminderAlertText(locale: Locale): { copy: ReminderAlertCopy; la
   return {
     copy: {
       now: translate(locale, 'reminders.alertNow'),
+      lead: (minutes) => translate(locale, 'reminders.alertLead', { count: minutes }),
       dayBefore: (reminder) =>
         reminder.hour != null && reminder.minute != null
           ? translate(locale, 'reminders.alertTomorrowAt', {

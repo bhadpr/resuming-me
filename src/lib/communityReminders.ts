@@ -1,8 +1,9 @@
-import { COMMUNITY_PHOTO_BUCKET, isEventPhotoPath } from './eventPhotoUrl'
+import { COMMUNITY_PHOTO_BUCKET, isEventPhotoPath, LIST_PHOTO_SIDE, reminderPhotoSrc } from './eventPhotoUrl'
 import { LOCALES, type Locale } from './i18n'
 import {
   cleanReminderText,
   reminderKindOf,
+  reminderListKind,
   type Reminder,
   type ReminderInput,
   type ReminderKind,
@@ -461,8 +462,35 @@ export function festivalOf(item: Pick<CommunityReminder, 'titles' | 'festival'>)
 
 /** The festival for a list day, so India and US Independence Day keep their own pictures. */
 export function holidayFestival(text: string, day: string): string | null {
-  const exact = SUGGESTED_COMMUNITY.find((item) => item.day === day && item.titles.en === text)
-  return exact?.festival ?? festivalOf({ titles: { en: text } })
+  const exact = SUGGESTED_COMMUNITY.find(
+    (item) => item.day === day && Object.values(item.titles).some((title) => title === text),
+  )
+  if (exact) return exact.festival ?? festivalKey(exact.titles.en ?? '')
+  return festivalOf({ titles: { en: text } })
+}
+
+/** The small clay picture for a holiday row. Null when this day has no picture. */
+export function holidayArtUrl(text: string, day: string): string | null {
+  const key = holidayFestival(text, day)
+  return key ? `/community/sm/${key}.jpg` : null
+}
+
+/** A row picture: the person's own photo, then the holiday's clay picture, then the list logo. */
+export function reminderShownPhoto(reminder: Reminder, width = LIST_PHOTO_SIDE): string | null {
+  const own = reminderPhotoSrc(
+    {
+      photoData: reminder.photoData,
+      photoUrl: reminder.photoUrl,
+      sharedPhotoPath: reminder.sharedPhotoPath,
+    },
+    width,
+  )
+  if (own) return own
+  if (reminderListKind(reminder) === 'holiday') {
+    const art = holidayArtUrl(reminder.text, reminder.day)
+    if (art) return art
+  }
+  return reminderPhotoSrc(reminder, width)
 }
 
 /** The name a phone keeps. A known holiday uses the person's language. Anything else stays as written. */

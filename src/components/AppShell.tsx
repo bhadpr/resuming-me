@@ -1019,7 +1019,7 @@ export function AppShell() {
       return
     }
     if (tab === 'today') trackPageView('/today', 'Today')
-    else if (tab === 'activities') trackPageView('/activities', 'Activity')
+    else if (tab === 'activities') trackPageView('/activities', 'Habits')
     else if (tab === 'reminders') trackPageView('/reminders', 'Reminders')
     else if (tab === 'metrics') trackPageView('/numbers', 'Health')
     else if (tab === 'insights') {
@@ -2020,7 +2020,6 @@ export function AppShell() {
                     onRescheduleDeadline={handleRescheduleDeadline}
                     onSkipToday={handleSkipToday}
                     onUnskip={(row) => void handleUnskip(row)}
-                    onPauseHabit={(row, duration) => void handlePauseActivity(duration, row.activity.id)}
                     onTakeRestDay={() => void handleTakeRestDay()}
                     isRestDay={dayStatusOpts.restDates.has(today)}
                     hasActivities={activeActivityCount > 0}
@@ -2036,6 +2035,10 @@ export function AppShell() {
                     onAddActivity={() => {
                       setError(null)
                       navigate('/activities/new')
+                    }}
+                    onAddVital={() => {
+                      setError(null)
+                      navigate('/numbers/new')
                     }}
                     onGetStarted={() => navigate('/start?step=1&force=1')}
                     moment={moment}
@@ -2073,6 +2076,18 @@ export function AppShell() {
                     onAddReminder={() => {
                       setError(null)
                       navigate('/reminders/new')
+                    }}
+                    onAddMeetup={() => {
+                      setError(null)
+                      navigate('/reminders/meetup')
+                    }}
+                    onAddHolidays={() => {
+                      setError(null)
+                      navigate('/reminders/holidays')
+                    }}
+                    onAddSchedule={() => {
+                      setError(null)
+                      navigate('/reminders/schedules')
                     }}
                     onOpenInsights={() => navigate('/insights')}
                   />

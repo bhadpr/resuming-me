@@ -1,6 +1,7 @@
 import { useRef, useState, type FormEvent, type ReactNode } from 'react'
 import { addDays } from '../lib/dates'
-import { LIST_PHOTO_SIDE, reminderPhotoSrc } from '../lib/eventPhotoUrl'
+import { reminderPhotoSrc } from '../lib/eventPhotoUrl'
+import { reminderShownPhoto } from '../lib/communityReminders'
 import { prepareReminderPhoto } from '../lib/reminderPhotos'
 import { useLocale } from '../hooks/useLocale'
 import { localeTag, type Locale } from '../lib/i18n'
@@ -26,7 +27,10 @@ import {
   isSharedEventGone,
   partOfTime,
   readPartTimes,
+  remindLeadFor,
+  remindLeadMinutesOf,
   tomorrowOf,
+  type RemindLeadMinutes,
   validateReminder,
   type Reminder,
   type ReminderInput,
@@ -37,6 +41,7 @@ import {
 } from '../lib/reminderSchedule'
 import { formatSharedWhen } from '../lib/sharedEvents'
 import { AppAlertsNote } from './AppAlertsNote'
+import { LeadMinutesChoice } from './LeadMinutesChoice'
 import { Icon } from './Icon'
 import { EventPhoto, ReminderKindMark } from './ReminderKindIcon'
 
@@ -124,6 +129,7 @@ export function ReminderForm({
     seed?.hour != null ? `${pad(seed.hour)}:${pad(seed.minute ?? 0)}` : '10:00',
   )
   const [remindBefore, setRemindBefore] = useState(seed?.remindBefore ?? false)
+  const [leadMinutes, setLeadMinutes] = useState<RemindLeadMinutes | null>(() => remindLeadMinutesOf(seed?.remindLeadMinutes))
   const [remindWeekBefore, setRemindWeekBefore] = useState(seed?.remindWeekBefore ?? false)
   const [kind, setKind] = useState<ReminderKind | null>(seed?.kind ?? (meetup ? 'event' : null))
   const [everyYear, setEveryYear] = useState(initial?.everyYear ?? false)
@@ -139,7 +145,8 @@ export function ReminderForm({
       Boolean(seed?.everyYear) ||
       Boolean(initial?.repeat) ||
       Boolean(seed?.remindBefore) ||
-      Boolean(seed?.remindWeekBefore),
+      Boolean(seed?.remindWeekBefore) ||
+      remindLeadMinutesOf(seed?.remindLeadMinutes) != null,
   )
   const [manualDate, setManualDate] = useState(false)
   const [manualTime, setManualTime] = useState(false)
@@ -182,6 +189,7 @@ export function ReminderForm({
       day: resolvedDay(),
       ...resolvedTime(),
       remindBefore: dayBeforeOn,
+      remindLeadMinutes: remindLeadFor({ hour: resolvedTime().hour, remindLeadMinutes: leadMinutes }),
       remindWeekBefore: meetup ? false : weekBeforeOn,
       kind: meetup ? (kind ?? 'event') : (kind ?? 'other'),
       everyYear: meetup ? false : everyYear && !repeating,
@@ -353,6 +361,8 @@ export function ReminderForm({
             }}
           />
         )}
+
+        {timeChoice !== 'any' && <LeadMinutesChoice minutes={leadMinutes} onChange={setLeadMinutes} />}
 
         <button
           type="button"
@@ -604,13 +614,15 @@ function ReminderView({ reminder, saving, error, onDelete, onCancel, onEdit, sha
   const organizerMeetup = Boolean(reminder.meetup && reminder.sharedByMe)
   const locked = (shared && !organizerMeetup) || followed
   const gone = isSharedEventGone(reminder)
-  const alerts = reminder.hour != null || reminder.remindBefore || reminder.remindWeekBefore
+  const lead = remindLeadFor(reminder)
+  const alerts = reminder.hour != null || reminder.remindBefore || reminder.remindWeekBefore || lead != null
   const when = [
     formatSharedWhen(reminder, locale),
     reminder.everyYear ? t('reminders.everyYear') : null,
     repeatSummary(reminder, locale, t),
     reminder.remindWeekBefore ? t('reminders.weekBeforeShort') : null,
     reminder.remindBefore ? t('reminders.dayBeforeShort') : null,
+    lead ? t('reminders.leadShort', { count: lead }) : null,
   ]
     .filter(Boolean)
     .join(' · ')
@@ -638,7 +650,7 @@ function ReminderView({ reminder, saving, error, onDelete, onCancel, onEdit, sha
       <EventPhoto src={reminderPhotoSrc(reminder)} alt={t('sharedEvent.photoAlt')} />
 
       <div className="reminder-summary">
-        <ReminderKindMark kind={reminder.kind} photo={reminderPhotoSrc(reminder, LIST_PHOTO_SIDE)} />
+        <ReminderKindMark kind={reminder.kind} photo={reminderShownPhoto(reminder)} />
         <div className="reminder-summary-body">
           <p className="reminder-summary-text">{reminder.text}</p>
           <p className="reminder-summary-when">{when}</p>

@@ -1,4 +1,6 @@
 import { templateById } from '../data/activityTemplates'
+import { customHabitIcon } from '../data/habitArt'
+import { MEDICINES_ENABLED, ONBOARDING_MEDICINE, ONBOARDING_PRANAYAM } from '../config'
 import {
   dosesOnDate,
   medicineSystemOf,
@@ -17,8 +19,10 @@ import {
   isDay,
   isFollowedListReminder,
   isNextYearCopyOf,
+  listLeadMinutes,
   nextYearCopy,
   openReminderCount,
+  remindLeadFor,
   reminderKindOf,
   type Reminder,
   type ReminderInput,
@@ -38,7 +42,6 @@ import {
 import { sessionProgressLabel } from './timer'
 import type { HabitMeasure } from './habitKind'
 import type { ActivityType, TrackingMode } from '../types/database'
-import { MEDICINES_ENABLED } from '../config'
 
 export const GUEST_DRAFT_KEY = 'resuming-guest-draft'
 /** How many habits a guest draft can hold. The first screen still starts with three. */
@@ -76,6 +79,10 @@ export type GuestActivity = {
   goalSteps?: number[] | null
   /** Hidden from Today. The habit stays in Activity. */
   archived?: boolean
+  /** Clipart chosen for a habit they named. Catalog habits use their own picture. */
+  icon?: string | null
+  /** Their own photo, already shrunk, kept on this device. */
+  photo?: string | null
 }
 
 export type GuestLog = {
@@ -121,6 +128,12 @@ export type StartPickPhase =
   | 'reminderCommunity'
   | 'reminder'
   | 'reminders'
+  | 'meetupAsk'
+  | 'meetup'
+  | 'nflAsk'
+  | 'nfl'
+  | 'cricketAsk'
+  | 'cricket'
   | 'pranayam'
   | 'pranayams'
   | 'pranayamDetail'
@@ -140,6 +153,12 @@ const PICK_PHASES: readonly StartPickPhase[] = [
   'reminderCommunity',
   'reminder',
   'reminders',
+  'meetupAsk',
+  'meetup',
+  'nflAsk',
+  'nfl',
+  'cricketAsk',
+  'cricket',
   'pranayam',
   'pranayams',
   'pranayamDetail',
@@ -160,8 +179,17 @@ function normalizePickPhase(stored: string | undefined): StartPickPhase {
   if (stored === 'heartfulness' || stored === 'practices' || stored === 'practiceDetail') return 'vitals'
   if (stored === 'stepGoal') return 'workouts'
   const phase = PICK_PHASES.find((item) => item === stored) ?? FIRST_PICK_PHASE
-  if (!MEDICINES_ENABLED && (phase === 'ask' || phase === 'medicine' || phase === 'medicines')) {
-    return 'reminderAsk'
+  if (
+    !ONBOARDING_PRANAYAM &&
+    (phase === 'pranayam' || phase === 'pranayams' || phase === 'pranayamDetail')
+  ) {
+    return 'vitals'
+  }
+  if (
+    (!ONBOARDING_MEDICINE || !MEDICINES_ENABLED) &&
+    (phase === 'ask' || phase === 'medicine' || phase === 'medicines')
+  ) {
+    return 'vitals'
   }
   return phase
 }
@@ -330,6 +358,8 @@ function normalizeActivity(activity: GuestActivity): GuestActivity {
     template != null &&
     templateId === 'stretching' &&
     activity.name.trim().toLowerCase() === 'stretching'
+  const icon = templateId ? null : customHabitIcon(activity.icon)
+  const photo = templateId || !isReminderPhotoData(activity.photo) ? null : activity.photo
   return {
     ...activity,
     name: renamed || labelRefresh ? template!.label : sanitizeActivityName(activity.name),
@@ -338,6 +368,8 @@ function normalizeActivity(activity: GuestActivity): GuestActivity {
     templateId,
     why: clip(activity.why, GUEST_WHY_MAX),
     usuallyWhen: clip(activity.usuallyWhen, GUEST_WHEN_MAX),
+    icon: icon ?? undefined,
+    photo: photo ?? undefined,
   }
 }
 
@@ -527,6 +559,9 @@ function normalizeGuestReminders(list: unknown, now = Date.now()): Reminder[] {
       minute: timed ? item.minute! : null,
       remindBefore: item.remindBefore === true,
       ...(item.remindWeekBefore === true ? { remindWeekBefore: true } : {}),
+      ...(remindLeadFor({ hour: timed ? item.hour! : null, remindLeadMinutes: item.remindLeadMinutes })
+        ? { remindLeadMinutes: remindLeadFor({ hour: timed ? item.hour! : null, remindLeadMinutes: item.remindLeadMinutes }) }
+        : {}),
       kind: reminderKindOf(item.kind),
       everyYear: item.everyYear === true,
       doneAt,
@@ -574,6 +609,7 @@ function newGuestReminder(input: ReminderInput): Reminder {
     minute: input.hour == null ? null : input.minute,
     remindBefore: input.remindBefore === true,
     ...(input.remindWeekBefore === true ? { remindWeekBefore: true } : {}),
+    ...(remindLeadFor(input) ? { remindLeadMinutes: remindLeadFor(input) } : {}),
     kind: reminderKindOf(input.kind),
     everyYear: input.everyYear === true && !input.repeat,
     ...(isReminderRepeat(input.repeat) && input.repeatUntil
@@ -589,6 +625,7 @@ function newGuestReminder(input: ReminderInput): Reminder {
     ...(input.sharedListItemId ? { sharedListItemId: input.sharedListItemId } : {}),
     ...(input.sharedListId ? { sharedListId: input.sharedListId } : {}),
     ...(isEventPhotoPath(input.listPhotoPath) ? { listPhotoPath: input.listPhotoPath } : {}),
+    ...(input.meetup === true ? { meetup: true } : {}),
     ...(input.communityId ? { communityId: input.communityId } : {}),
     ...(isEventPhotoPath(input.communityPhotoPath) ? { communityPhotoPath: input.communityPhotoPath } : {}),
   }
@@ -661,6 +698,7 @@ const MANAGED_REMINDER_FIELDS = [
   'lastDoneOn',
   'remindBefore',
   'remindWeekBefore',
+  'remindLeadMinutes',
   'photoData',
   'sharedListItemId',
   'sharedListId',
@@ -737,6 +775,7 @@ async function refreshGuestFollowedListsOnce(): Promise<void> {
         sharedListId: day.listId,
         listPhotoPath: day.photoPath,
         remindBefore: day.remindBefore,
+        remindLeadMinutes: day.hour == null ? null : listLeadMinutes(latest.reminders, day.listId),
       }),
     )
   }
@@ -762,6 +801,7 @@ export function saveGuestSharedStatuses(draft: GuestDraft, updated: readonly Rem
             hour: fresh.hour,
             minute: fresh.minute,
             remindBefore: fresh.remindBefore,
+            remindLeadMinutes: fresh.remindLeadMinutes ?? null,
             kind: fresh.kind,
             meetup: true as const,
           }
@@ -774,6 +814,7 @@ export function saveGuestSharedStatuses(draft: GuestDraft, updated: readonly Rem
         item.hour === follow.hour &&
         (item.minute ?? null) === follow.minute &&
         item.remindBefore === follow.remindBefore &&
+        (item.remindLeadMinutes ?? null) === (follow.remindLeadMinutes ?? null) &&
         item.kind === follow.kind &&
         item.meetup === true)
     if (status === item.sharedStatus && photo === item.sharedPhotoPath && sameDetails) return item

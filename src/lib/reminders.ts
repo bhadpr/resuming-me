@@ -23,6 +23,7 @@ import {
   cleanReminderText,
   nextYearCopy,
   nextYearDay,
+  remindLeadFor,
   reminderKindOf,
   type Reminder,
   type ReminderInput,
@@ -50,6 +51,7 @@ function fromRow(row: ReminderRow): Reminder {
     minute: row.minute,
     remindBefore: row.remind_before ?? false,
     remindWeekBefore: row.remind_week_before ?? false,
+    remindLeadMinutes: remindLeadFor({ hour: row.hour, remindLeadMinutes: row.remind_lead_minutes }),
     kind: reminderKindOf(row.kind),
     everyYear: row.every_year ?? false,
     repeat: isReminderRepeat(row.repeat_every) ? row.repeat_every : null,
@@ -89,6 +91,7 @@ function meetupSource(row: {
   minute: number | null
   time_zone: string
   remind_before: boolean
+  remind_lead_minutes: number | null
   kind: string
 }): MeetupSource {
   const status = row.status === 'cancelled' || row.status === 'switched_off' ? row.status : 'active'
@@ -102,6 +105,7 @@ function meetupSource(row: {
     minute: row.minute,
     timeZone: row.time_zone,
     remindBefore: row.remind_before === true,
+    remindLeadMinutes: remindLeadFor({ hour: row.hour, remindLeadMinutes: row.remind_lead_minutes }),
     photoPath: isEventPhotoPath(row.photo_path) ? row.photo_path : null,
     kind: reminderKindOf(row.kind),
     status,
@@ -124,6 +128,7 @@ async function persistMeetupUpdates(updates: ReturnType<typeof planMeetupRefresh
         hour: update.hour,
         minute: update.minute,
         remind_before: update.remindBefore,
+        remind_lead_minutes: update.remindLeadMinutes,
         kind: update.kind,
       })
       .eq('id', update.reminderId)
@@ -171,6 +176,7 @@ export async function withSharedStatuses<T extends Reminder>(list: readonly T[])
         hour: update.hour,
         minute: update.minute,
         remindBefore: update.remindBefore,
+        remindLeadMinutes: update.remindLeadMinutes,
         kind: update.kind,
         sharedPhotoPath: update.sharedPhotoPath,
       }
@@ -273,6 +279,7 @@ export async function addReminder(
       minute: input.hour == null ? null : input.minute,
       remind_before: input.remindBefore === true,
       remind_week_before: input.remindWeekBefore === true,
+      remind_lead_minutes: remindLeadFor(input),
       kind: reminderKindOf(input.kind),
       every_year: input.everyYear === true && !input.repeat,
       ...repeatColumns(input),
@@ -338,6 +345,7 @@ export async function updateReminder(
       minute: input.hour == null ? null : input.minute,
       remind_before: input.remindBefore === true,
       remind_week_before: input.remindWeekBefore === true,
+      remind_lead_minutes: remindLeadFor(input),
       kind: reminderKindOf(input.kind),
       every_year: input.everyYear === true && !input.repeat,
       ...repeatColumns(input),

@@ -5,7 +5,6 @@ import {
   communityTitle,
   COMMUNITY_LIST_MAX,
   festivalOf,
-  holidayFestival,
   listCommunityReminders,
   type CommunityReminder,
 } from '../lib/communityReminders'
@@ -47,11 +46,7 @@ const FESTIVAL_ART: Record<string, string> = {
   gandhi: '/community/gandhi.jpg',
 }
 
-/** The clay picture for a holiday list day, small enough for the five-across row. */
-export function holidayArtUrl(text: string, day: string): string | null {
-  const key = holidayFestival(text, day)
-  return key && FESTIVAL_ART[key] ? `/community/sm/${key}.jpg` : null
-}
+export { holidayArtUrl } from '../lib/communityReminders'
 
 function shortDay(day: string, locale: Locale): string {
   return parseLocalDate(day).toLocaleDateString(localeTag(locale), { day: 'numeric', month: 'short', year: '2-digit' })

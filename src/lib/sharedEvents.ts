@@ -6,7 +6,9 @@ import {
   cleanReminderDescription,
   cleanReminderText,
   formatReminderTime,
+  remindLeadFor,
   reminderKindOf,
+  type RemindLeadMinutes,
   type Reminder,
   type ReminderInput,
   type ReminderKind,
@@ -40,6 +42,7 @@ export interface SharedEvent {
   /** The organizer can change the day and time, and accepted phones follow. */
   meetup: boolean
   remindBefore: boolean
+  remindLeadMinutes: RemindLeadMinutes | null
 }
 
 /** Why sharing or adding did not work. */
@@ -74,6 +77,7 @@ export function replacementReminder(reminder: Reminder): ReminderInput {
     hour: reminder.hour,
     minute: reminder.minute,
     remindBefore: reminder.remindBefore,
+    remindLeadMinutes: remindLeadFor(reminder),
     kind: reminder.kind,
   }
 }
@@ -371,7 +375,7 @@ export async function createSharedEvent(
   reminder: Reminder,
   from: string | null,
   photo: Blob | null = null,
-  options?: { meetup?: boolean; remindBefore?: boolean },
+  options?: { meetup?: boolean; remindBefore?: boolean; remindLeadMinutes?: RemindLeadMinutes | null },
 ): Promise<{ id: string; code: string; photoPath: string | null; photoFailed: boolean }> {
   const text = cleanReminderText(reminder.text)
   const description = cleanReminderDescription(reminder.description)
@@ -392,6 +396,10 @@ export async function createSharedEvent(
         kind: reminderKindOf(reminder.kind),
         meetup: options?.meetup === true,
         remind_before: options?.remindBefore === true,
+        remind_lead_minutes: remindLeadFor({
+          hour: reminder.hour,
+          remindLeadMinutes: options?.remindLeadMinutes,
+        }),
       })
       .select('id, code')
       .single()
@@ -432,6 +440,7 @@ export async function getSharedEvent(code: string): Promise<SharedEvent | null> 
     takingAdds: row.taking_adds,
     meetup: row.meetup === true,
     remindBefore: row.remind_before === true,
+    remindLeadMinutes: remindLeadFor({ hour: row.hour, remindLeadMinutes: row.remind_lead_minutes }),
   }
 }
 
@@ -452,6 +461,7 @@ export async function updateMeetupEvent(eventId: string, input: ReminderInput): 
       time_zone: deviceTimeZone(),
       kind: reminderKindOf(input.kind),
       remind_before: input.remindBefore === true,
+      remind_lead_minutes: remindLeadFor(input),
     })
     .eq('id', eventId)
   if (error) throw new SharedEventError(issueFromError(error))
