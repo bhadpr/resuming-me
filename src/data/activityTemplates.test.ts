@@ -12,7 +12,7 @@ describe('activity templates', () => {
     expect(HABIT_GROUPS.map((group) => group.title)).toEqual([
       'Fitness',
       'Pranayam',
-      'Heartfulness',
+      'Meditation',
       'Learn',
       'Creativity',
     ])
@@ -25,10 +25,7 @@ describe('activity templates', () => {
       'Kapalabhati',
       'Anuloma Viloma',
       'Bhramari',
-      'Relaxation',
       'Meditation',
-      'Rejuvenation',
-      'Prayer',
       'Reading',
       'Writing',
       'Language',
@@ -66,12 +63,12 @@ describe('activity templates', () => {
 
 describe('groupByHabitGroup', () => {
   it('follows the catalog order and puts unknown habits last', () => {
-    const items = [{ id: 'own' }, { id: 'prayer' }, { id: 'walk' }, { id: 'bhastrika' }, { id: 'running' }]
+    const items = [{ id: 'own' }, { id: 'meditate' }, { id: 'walk' }, { id: 'bhastrika' }, { id: 'running' }]
     const groups = groupByHabitGroup(items, (item) => (item.id === 'own' ? null : item.id))
     expect(groups.map((group) => [group.title, group.items.map((item) => item.id)])).toEqual([
       ['Fitness', ['walk', 'running']],
       ['Pranayam', ['bhastrika']],
-      ['Heartfulness', ['prayer']],
+      ['Meditation', ['meditate']],
       ['Other', ['own']],
     ])
   })

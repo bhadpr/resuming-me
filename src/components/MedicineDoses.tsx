@@ -3,6 +3,7 @@ import { useLocale } from '../hooks/useLocale'
 import { isDoseFinished, type DueDose } from '../lib/medicineSchedule'
 import { MedicineThumb } from './MedicineThumb'
 import { SkipLink, UndoSkipButton } from './TodaySkip'
+import { TaggedName } from './TodayKindTag'
 
 /** One dose of one medicine on Today. A medicine taken three times a day shows three of these. */
 export function MedicineDoseRow({
@@ -28,7 +29,9 @@ export function MedicineDoseRow({
     >
       <div className="today-row-head">
         <MedicineThumb photo={dose.photoUrl} system={dose.system ?? null} className="medicine-card-photo" />
-        <span className={`activity-name ${finished ? 'reminder-struck' : ''}`.trim()}>{dose.name}</span>
+        <TaggedName kind="medicine">
+          <span className={finished ? 'reminder-struck' : undefined}>{dose.name}</span>
+        </TaggedName>
       </div>
       <div className="today-row-main">
         <span className="activity-meta">
@@ -43,7 +46,7 @@ export function MedicineDoseRow({
           ) : (
             <button
               type="button"
-              className={`btn btn-today ${finished ? 'btn-secondary' : 'btn-primary'}`}
+              className={`btn btn-today ${finished ? 'btn-secondary' : 'btn-done'}`}
               disabled={busy}
               onClick={() => onToggle(dose)}
             >

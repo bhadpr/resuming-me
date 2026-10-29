@@ -1,4 +1,4 @@
-import { SIGN_IN_AGAIN, requireAccountId } from './accountId'
+import { SIGN_IN_AGAIN, clearAccountIdCache, requireAccountId } from './accountId'
 import { describeError } from './describeError'
 import { createSupabaseClient } from './supabase'
 import { todayLocalDate, yesterdayLocalDate } from './dates'
@@ -160,6 +160,7 @@ export async function createActivity(
   if (error) {
     const message = describeError(error, 'Save failed')
     if (message.includes('user_id_fkey')) {
+      clearAccountIdCache()
       await client.auth.signOut({ scope: 'local' })
       throw new Error(SIGN_IN_AGAIN)
     }

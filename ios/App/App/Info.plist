@@ -33,6 +33,8 @@
 	</array>
 	<key>NSHealthShareUsageDescription</key>
 	<string>Resuming reads your steps to show them on Today.</string>
+	<key>NSHealthUpdateUsageDescription</key>
+	<string>Resuming does not save anything to Apple Health. It only reads your steps to show them on Today.</string>
 	<key>ITSAppUsesNonExemptEncryption</key>
 	<false/>
 	<key>LSRequiresIPhoneOS</key>

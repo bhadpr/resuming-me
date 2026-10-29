@@ -5,7 +5,8 @@ import type { Database } from '../types/database'
 import { habitTemplateId } from '../data/habitArt'
 import { t } from './i18n'
 import { standardVitalTarget } from './onboardingFlow'
-import { vitalTarget } from './vitalTargets'
+import { setVitalNote, vitalNote, vitalTarget } from './vitalTargets'
+import { vitalKey } from './vitalKey'
 
 export type Metric = Database['public']['Tables']['metrics']['Row']
 
@@ -15,6 +16,18 @@ export interface MetricInput {
   unit: string
   templateId?: string | null
   nameOverridden?: boolean
+  /** The person's own line for this vital. */
+  description?: string | null
+}
+
+export function cleanVitalDescription(value: string | null | undefined): string | null {
+  const next = value?.replace(/\s+/g, ' ').trim().slice(0, 80) ?? ''
+  return next || null
+}
+
+function columnMissing(error: { message?: string; code?: string } | null): boolean {
+  if (!error) return false
+  return error.code === 'PGRST204' || /schema cache|does not exist/i.test(error.message ?? '')
 }
 
 export const STARTER_METRICS: MetricInput[] = [
@@ -59,23 +72,43 @@ export async function createMetric(
 
   const client = createSupabaseClient()
   const ownerId = await requireAccountId()
-  const { data, error } = await client
-    .from('metrics')
-    .insert({
-      user_id: ownerId,
-      name: input.name.trim(),
-      emoji: input.emoji.trim(),
-      unit: input.unit.trim(),
-      archived: false,
-      template_id: input.templateId ?? null,
-      name_overridden: input.nameOverridden ?? false,
-    })
-    .select('*')
-    .single()
+  const description =
+    input.description === undefined ? undefined : cleanVitalDescription(input.description)
+  const key = vitalKey({ templateId: input.templateId, name: input.name })
+  if (key) {
+    const { data: existingRows } = await client
+      .from('metrics')
+      .select('*')
+      .eq('user_id', ownerId)
+      .eq('archived', false)
+    const match = (existingRows ?? []).find((row) => vitalKey(row) === key)
+    if (match) return updateMetric(match, input)
+  }
+
+  const base = {
+    user_id: ownerId,
+    name: input.name.trim(),
+    emoji: input.emoji.trim(),
+    unit: input.unit.trim(),
+    archived: false,
+    template_id: input.templateId ?? null,
+    name_overridden: input.nameOverridden ?? false,
+  }
+  const row = {
+    ...base,
+    ...(description === undefined ? {} : { description }),
+  }
+  let { data, error } = await client.from('metrics').insert(row).select('*').single()
+  if (error && columnMissing(error)) {
+    const retry = await client.from('metrics').insert(base).select('*').single()
+    data = retry.data
+    error = retry.error
+  }
 
   if (error) throw new Error(describeError(error, 'Save failed'))
   if (!data) throw new Error('Save failed')
-  return data
+  if (description) setVitalNote(data.id, description)
+  return description === undefined ? data : { ...data, description: data.description ?? description }
 }
 
 export async function updateMetric(
@@ -86,21 +119,31 @@ export async function updateMetric(
   if (validationError) throw new Error(validationError)
 
   const client = createSupabaseClient()
-  const { data, error } = await client
+  const description =
+    input.description === undefined ? undefined : cleanVitalDescription(input.description)
+  const base = {
+    name: input.name.trim(),
+    emoji: input.emoji.trim(),
+    unit: input.unit.trim(),
+    template_id: input.templateId ?? existing.template_id ?? null,
+    name_overridden: input.nameOverridden ?? existing.name_overridden ?? false,
+  }
+  let { data, error } = await client
     .from('metrics')
-    .update({
-      name: input.name.trim(),
-      emoji: input.emoji.trim(),
-      unit: input.unit.trim(),
-      template_id: input.templateId ?? existing.template_id ?? null,
-      name_overridden: input.nameOverridden ?? existing.name_overridden ?? false,
-    })
+    .update(description === undefined ? base : { ...base, description })
     .eq('id', existing.id)
     .select('*')
     .single()
+  if (error && columnMissing(error)) {
+    const retry = await client.from('metrics').update(base).eq('id', existing.id).select('*').single()
+    data = retry.data
+    error = retry.error
+  }
 
   if (error) throw error
-  return data
+  if (!data) throw new Error('Save failed')
+  if (description !== undefined) setVitalNote(existing.id, description)
+  return description === undefined ? data : { ...data, description: data.description ?? description }
 }
 
 export async function archiveMetric(id: string): Promise<void> {
@@ -135,10 +178,12 @@ export function formatMetricReading(
 }
 
 export function describeMetric(metric: Metric): string {
+  const note = cleanVitalDescription(metric.description) ?? vitalNote(metric.id)
+  if (note) return note
+  const target = metric.target_value ?? vitalTarget(metric.id)
+  if (target != null) return t('start.targetValue', { value: String(target), unit: metric.unit })
   const standard = standardVitalTarget(metric.template_id ?? habitTemplateId({ name: metric.name }))
   if (standard) return t(standard)
-  const target = vitalTarget(metric.id)
-  if (target != null) return t('start.targetValue', { value: String(target), unit: metric.unit })
   if (isBloodPressure(metric)) return 'Upper and lower, in mmHg'
   return `Logged in ${metric.unit}`
 }

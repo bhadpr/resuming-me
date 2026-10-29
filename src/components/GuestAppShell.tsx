@@ -26,7 +26,7 @@ import { useDocumentMeta } from '../hooks/useDocumentMeta'
 import { BrandTitle } from './BrandTitle'
 import { BottomNav } from './BottomNav'
 import { GuestActivityScreen } from './GuestActivityScreen'
-import { GuestActivitiesPage, GuestVitalsPage } from './GuestLibrary'
+import { GuestActivitiesPage, GuestVitalScreen, GuestVitalsPage } from './GuestLibrary'
 import { GuestCommunityReminders, GuestMeetupSignIn, GuestReminderEditor, GuestReminderList } from './GuestReminders'
 import { InsightsHeaderButton } from './InsightsHeaderButton'
 import { GuestInsightsPage } from './GuestInsightsPage'
@@ -83,7 +83,14 @@ export function GuestAppShell() {
         {view?.name === 'activities' && view.screen === 'form' && (
           <GuestActivityScreen mode="form" activityId={view.activityId} />
         )}
-        {tab === 'metrics' && <GuestVitalsPage />}
+        {view?.name === 'numbers' && view.screen === 'list' && <GuestVitalsPage />}
+        {view?.name === 'numbers' && view.screen === 'detail' && (
+          <GuestVitalScreen key={view.metricId} mode="detail" activityId={view.metricId} />
+        )}
+        {view?.name === 'numbers' && view.screen === 'form' && view.metricId && (
+          <GuestVitalScreen key={view.metricId} mode="form" activityId={view.metricId} />
+        )}
+        {view?.name === 'numbers' && view.screen === 'form' && !view.metricId && <GuestVitalsPage />}
         {tab === 'insights' && <GuestInsightsPage />}
       </main>
       <BottomNav tab={tab} />

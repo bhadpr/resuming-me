@@ -5,7 +5,7 @@ import { useLocale } from '../hooks/useLocale'
 import { holidayCopyText } from '../lib/communityReminders'
 import { loadGuestDraft } from '../lib/guestDraft'
 import { localeTag, type Locale } from '../lib/i18n'
-import { importSharedList, removeImportedSharedList } from '../lib/importSharedList'
+import { importSharedList, messageForSharedListAdd, removeImportedSharedList } from '../lib/importSharedList'
 import { acceptedSharedListItemIds, getSharedListById, type SharedList } from '../lib/sharedLists'
 import { holidayArtUrl } from './CommunityReminderPicker'
 import { DayBeforeChoice } from './DayBeforeChoice'
@@ -115,8 +115,7 @@ export function HolidayCatalog({ title, listId, today }: { title: string; listId
       }
       setDone(true)
     } catch (err) {
-      const unavailable = err instanceof Error && err.message.includes('shared_list_unavailable')
-      setMessage(t(unavailable ? 'sharedList.unavailable' : 'sharedList.addFailed'))
+      setMessage(messageForSharedListAdd(err, t('sharedList.addFailed'), t('sharedList.unavailable')))
     } finally {
       setBusy(false)
     }
@@ -140,7 +139,7 @@ export function HolidayCatalog({ title, listId, today }: { title: string; listId
   }
 
   return (
-    <SectionFold title={title} defaultOpen>
+    <SectionFold title={title} defaultOpen={false}>
       {loadFailed ? (
         <p className="error">{t('reminders.community.error')}</p>
       ) : !ready ? (

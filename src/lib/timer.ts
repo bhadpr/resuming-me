@@ -42,6 +42,22 @@ export function sessionEntriesInWindow(
   )
 }
 
+/** The session Undo should remove: the latest one in the window. */
+export function latestSessionEntry(
+  entries: LogEntry[],
+  activityId: string,
+  from: string,
+  to: string,
+): LogEntry | null {
+  const sessions = sessionEntriesInWindow(entries, activityId, from, to)
+  if (sessions.length === 0) return null
+  return [...sessions].sort((a, b) => {
+    const aKey = a.started_at || a.created_at
+    const bKey = b.started_at || b.created_at
+    return aKey < bKey ? 1 : aKey > bKey ? -1 : 0
+  })[0]
+}
+
 /** Weekly timer: each session meeting the per-session duration target counts as 1. */
 export function countQualifyingSessions(
   entries: LogEntry[],

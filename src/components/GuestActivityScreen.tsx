@@ -92,7 +92,9 @@ export function GuestActivityScreen({
             const next = activityFromInput(input, activity ?? undefined)
             const saved = upsertGuestActivity(current, next)
             refresh(saved)
-            if (saved.activities.some((item) => item.localId === next.localId)) {
+            if (!activity) {
+              navigate('/activities')
+            } else if (saved.activities.some((item) => item.localId === next.localId)) {
               navigate(`/activities/${next.localId}`)
             }
           }}

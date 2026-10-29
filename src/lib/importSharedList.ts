@@ -1,4 +1,6 @@
+import { SIGN_IN_AGAIN, dropLocalSignIn, requireAccountId } from './accountId'
 import { holidayCopyText } from './communityReminders'
+import { describeError } from './describeError'
 import { reminderClock } from './listClock'
 import { addGuestReminder, ensureGuestDraft, loadGuestDraft, removeGuestReminder } from './guestDraft'
 import { getLocale } from './i18n'
@@ -13,6 +15,35 @@ function isDuplicate(err: unknown): boolean {
   return typeof err === 'object' && err != null && (err as { code?: string }).code === '23505'
 }
 
+/** The stored sign-in is not an account the server still has. */
+export function accountIsGone(err: unknown): boolean {
+  const message = describeError(err, '')
+  return (
+    message.includes('_user_id_fkey') ||
+    message.includes('profiles_id_fkey') ||
+    message === SIGN_IN_AGAIN
+  )
+}
+
+/** Leave the dead sign-in after this tap finishes, so the phone list can open first. */
+function releaseDeadSignIn(): void {
+  window.setTimeout(() => {
+    void dropLocalSignIn()
+  }, 0)
+}
+
+/** The sentence to show when a community list does not land on the phone. */
+export function messageForSharedListAdd(
+  err: unknown,
+  connectionMessage: string,
+  unavailableMessage: string,
+): string {
+  const message = describeError(err, connectionMessage)
+  if (message.includes('shared_list_unavailable')) return unavailableMessage
+  if (/fetch|network|load failed/i.test(message)) return connectionMessage
+  return message
+}
+
 /** Copies every day that is not already saved. One tap, the whole list. */
 export async function importSharedList(
   list: SharedList,
@@ -23,7 +54,25 @@ export async function importSharedList(
 ): Promise<'ok' | 'full' | 'none'> {
   const chosen = list.items.filter((item) => !skipIds.has(item.id))
   if (chosen.length === 0) return 'none'
-  await acceptSharedList(list.id)
+  let ownerId: string | null = null
+  if (userId) {
+    try {
+      ownerId = await requireAccountId()
+    } catch (err) {
+      if (!accountIsGone(err)) throw err
+      releaseDeadSignIn()
+    }
+  }
+  try {
+    await acceptSharedList(list.id)
+  } catch (err) {
+    if (ownerId && accountIsGone(err)) {
+      releaseDeadSignIn()
+      ownerId = null
+    } else if (ownerId || describeError(err, '').includes('shared_list_unavailable')) {
+      throw err
+    }
+  }
   let created = 0
   let timed: ReminderInput | null = null
   for (const item of chosen) {
@@ -41,9 +90,9 @@ export async function importSharedList(
       remindLeadMinutes: remindLeadFor({ hour: clock.hour, remindLeadMinutes }),
     }
     if (input.hour != null || input.remindBefore) timed = input
-    if (userId) {
+    if (ownerId) {
       try {
-        await addReminder(userId, input)
+        await addReminder(ownerId, input)
         created += 1
       } catch (err) {
         if (err instanceof ReminderCapError) {
@@ -54,10 +103,12 @@ export async function importSharedList(
           return 'full'
         }
         if (isDuplicate(err)) continue
-        throw err
+        if (!accountIsGone(err)) throw err
+        releaseDeadSignIn()
+        ownerId = null
       }
-      continue
     }
+    if (ownerId) continue
     const draft = ensureGuestDraft()
     if (draft.reminders.some((reminder) => reminder.sharedListItemId === item.id)) continue
     const next = addGuestReminder(draft, input)
@@ -71,7 +122,7 @@ export async function importSharedList(
     created += 1
   }
   if (created === 0) return 'none'
-  track('shared_list_added', { count: created, signed_in: Boolean(userId) })
+  track('shared_list_added', { count: created, signed_in: Boolean(ownerId) })
   if (timed) void askForReminderAlerts(timed)
   return 'ok'
 }

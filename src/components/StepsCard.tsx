@@ -7,6 +7,8 @@ import { todayLocalDate } from '../lib/dates'
 import { readPhoneSteps, requestPhoneSteps, showAppleZeroStepsHint, type PhoneSteps } from '../lib/healthSteps'
 import { formatStepCount, loadTypedSteps, parseStepAmount, saveTypedSteps } from '../lib/steps'
 import { StepsWeek } from './StepsWeek'
+import { TaggedName } from './TodayKindTag'
+import { TodayPop } from './TodayPop'
 
 type PhoneState = PhoneSteps['status'] | 'unknown'
 
@@ -25,6 +27,7 @@ export function StepsCard({
   const [phoneState, setPhoneState] = useState<PhoneState>('unknown')
   const [asking, setAsking] = useState(false)
   const [weekOpen, setWeekOpen] = useState(false)
+  const [logOpen, setLogOpen] = useState(false)
   const [typed, setTyped] = useState<number | null>(() => loadTypedSteps(today))
   const [draft, setDraft] = useState('')
   const [revision, setRevision] = useState(0)
@@ -52,6 +55,7 @@ export function StepsCard({
     saveTypedSteps(today, amount)
     setTyped(amount)
     setDraft('')
+    setLogOpen(false)
     setRevision((value) => value + 1)
   }
 
@@ -86,7 +90,7 @@ export function StepsCard({
     <li className="today-row today-row-stack today-row-compact item-kind-activity">
       <div className="today-row-head">
         {art ? <img className="steps-card-art" src={themed(art)} alt="" /> : null}
-        <span className="activity-name">{t('today.steps')}</span>
+        <TaggedName kind="habit">{t('today.steps')}</TaggedName>
       </div>
       <div className="today-row-main">
         <span className="activity-meta">
@@ -105,6 +109,13 @@ export function StepsCard({
             <span className="activity-desc">{t('today.stepsNone')}</span>
           )}
         </span>
+        {onWebsite && (
+          <span className="today-actions">
+            <button type="button" className="btn btn-primary btn-today" onClick={() => setLogOpen(true)}>
+              {typed == null ? t('today.log') : t('today.update')}
+            </button>
+          </span>
+        )}
         {showPhoneButton && (
           <span className="today-actions">
             <button
@@ -130,28 +141,33 @@ export function StepsCard({
           </button>
         </div>
       )}
-      {canOpen && weekOpen && onWebsite && (
-        <form className="steps-card-form" onSubmit={saveTyped}>
-          <label className="steps-card-label" htmlFor={fieldId}>
-            {t('today.stepsType')}
-          </label>
-          <input
-            id={fieldId}
-            className="field-input"
-            inputMode="numeric"
-            autoComplete="off"
-            value={draft}
-            onChange={(event) => setDraft(event.target.value)}
-          />
-          <div className="steps-card-save">
-            <button type="submit" className="btn btn-primary" disabled={parseStepAmount(draft) == null}>
-              {t('today.stepsSave')}
-            </button>
-          </div>
-        </form>
-      )}
       {canOpen && weekOpen && (
         <StepsWeek goal={goal} heading={false} typed={onWebsite} revision={revision} />
+      )}
+      {logOpen && (
+        <TodayPop title={t('today.stepsType')} onClose={() => setLogOpen(false)}>
+          <form className="today-pop-form" onSubmit={saveTyped}>
+            <input
+              id={fieldId}
+              className="field-input"
+              inputMode="numeric"
+              autoComplete="off"
+              autoFocus
+              value={draft}
+              onChange={(event) => setDraft(event.target.value)}
+              aria-label={t('today.stepsType')}
+              enterKeyHint="done"
+            />
+            <div className="today-pop-actions">
+              <button type="submit" className="btn btn-primary" disabled={parseStepAmount(draft) == null}>
+                {t('today.stepsSave')}
+              </button>
+              <button type="button" className="btn btn-secondary" onClick={() => setLogOpen(false)}>
+                {t('today.cancel')}
+              </button>
+            </div>
+          </form>
+        </TodayPop>
       )}
     </li>
   )

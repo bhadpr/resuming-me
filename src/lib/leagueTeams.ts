@@ -43,17 +43,26 @@ export function leagueTeamByName(name: string): LeagueTeam | null {
 
 /** The followed team on a game line. "Boston Celtics vs Brooklyn Nets" is Boston. */
 export function leagueTeamForGame(text: string): LeagueTeam | null {
+  return leagueHitForGame(text)?.team ?? null
+}
+
+/** NBA, NHL, MLB, or MLS when the line starts with one of that league's teams. */
+export function leagueIdForGame(text: string): LeagueId | null {
+  return leagueHitForGame(text)?.id ?? null
+}
+
+function leagueHitForGame(text: string): { id: LeagueId; team: LeagueTeam } | null {
   const value = foldLeagueKey(text)
-  const hits: LeagueTeam[] = []
-  for (const teams of Object.values(LEAGUE_TEAMS)) {
-    for (const team of teams) {
+  const hits: { id: LeagueId; team: LeagueTeam }[] = []
+  for (const id of Object.keys(LEAGUE_TEAMS) as LeagueId[]) {
+    for (const team of LEAGUE_TEAMS[id]) {
       const name = foldLeagueKey(team.name)
-      if (value === name || value.startsWith(`${name} `)) hits.push(team)
+      if (value === name || value.startsWith(`${name} `)) hits.push({ id, team })
     }
   }
   if (hits.length === 0) return null
-  hits.sort((a, b) => b.name.length - a.name.length)
-  return hits[0].name.length === hits[1]?.name.length ? null : hits[0]
+  hits.sort((a, b) => b.team.name.length - a.team.name.length)
+  return hits[0].team.name.length === hits[1]?.team.name.length ? null : hits[0]
 }
 
 /** One team when a saved city, name, or short code belongs to exactly one team in this league. */

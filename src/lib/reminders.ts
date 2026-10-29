@@ -1,4 +1,6 @@
+import { SIGN_IN_AGAIN, requireAccountId } from './accountId'
 import { todayLocalDate } from './dates'
+import { describeError } from './describeError'
 import { isEventPhotoPath, isReminderPhotoData } from './eventPhotoUrl'
 import {
   completeOccurrence,
@@ -262,15 +264,16 @@ export async function getReminder(id: string): Promise<Reminder | null> {
 }
 
 export async function addReminder(
-  userId: string,
+  _userId: string,
   input: ReminderInput & { doneAt?: string | null },
 ): Promise<Reminder> {
   const client = createSupabaseClient()
-  const photo = await photoForNewReminder(userId, input)
+  const ownerId = await requireAccountId()
+  const photo = await photoForNewReminder(ownerId, input)
   const { data, error } = await client
     .from('reminders')
     .insert({
-      user_id: userId,
+      user_id: ownerId,
       text: cleanReminderText(input.text),
       description: cleanReminderDescription(input.description),
       photo_path: photo.path,
@@ -296,6 +299,10 @@ export async function addReminder(
   if (error) {
     if (photo.path && photo.path !== input.photoPath) void removeReminderPhotoIfUnused(photo.path)
     if (capError(error)) throw new ReminderCapError()
+    const message = describeError(error, '')
+    if (message.includes('reminders_user_id_fkey')) {
+      throw new Error(SIGN_IN_AGAIN)
+    }
     throw error
   }
   const saved = fromRow(data)

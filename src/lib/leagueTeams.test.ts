@@ -1,5 +1,12 @@
 import { describe, expect, it } from 'vitest'
-import { LEAGUE_TEAMS, leagueSearchKey, leagueTeamByName, leagueTeamForGame, leagueTeamName } from './leagueTeams'
+import {
+  LEAGUE_TEAMS,
+  leagueIdForGame,
+  leagueSearchKey,
+  leagueTeamByName,
+  leagueTeamForGame,
+  leagueTeamName,
+} from './leagueTeams'
 
 describe('league teams', () => {
   it('keeps every league on its own dropdown', () => {
@@ -21,5 +28,8 @@ describe('league teams', () => {
     expect(leagueTeamForGame('Boston Celtics at Chicago Bulls · Regular season - NBA Cup group game')?.abbr).toBe('BOS')
     expect(leagueTeamByName('Seattle Sounders FC')?.abbr).toBe('SEA')
     expect(leagueTeamForGame('Dinner with Sam')).toBeNull()
+    expect(leagueIdForGame('Boston Celtics vs Brooklyn Nets')).toBe('nba')
+    expect(leagueIdForGame('Seattle Sounders FC vs Portland Timbers')).toBe('mls')
+    expect(leagueIdForGame('Dinner with Sam')).toBeNull()
   })
 })

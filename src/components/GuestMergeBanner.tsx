@@ -1,8 +1,9 @@
-import { useCallback, useEffect, useState } from 'react'
+import { useCallback, useEffect } from 'react'
 import { useAuth } from '../hooks/useAuth'
 import { isSupabaseConfigured } from '../lib/supabase'
 import { loadGuestDraft, type GuestDraft } from '../lib/guestDraft'
-import { MERGE_RETRY_MESSAGE, mergeGuestDraft } from '../lib/mergeGuestDraft'
+import { accountIsGone } from '../lib/importSharedList'
+import { mergeGuestDraft } from '../lib/mergeGuestDraft'
 import { track } from '../lib/track'
 
 /** One merge per guest draft at a time, even if auth events re-run the effect. */
@@ -16,48 +17,44 @@ function mergeOnce(draft: GuestDraft): Promise<void> {
   return next
 }
 
-/** After sign-in, copy the local draft once. Keep it if the save fails. */
+/** After sign-in, copy the local draft quietly. The home screen already shows the account. */
 export function GuestMergeBanner() {
   const { user } = useAuth()
   const userId = user?.id ?? null
-  const [failed, setFailed] = useState(false)
-  const [busy, setBusy] = useState(false)
 
   const run = useCallback(async () => {
     if (!userId || !isSupabaseConfigured()) return
     const draft = loadGuestDraft()
-    if (!draft) {
-      setFailed(false)
-      return
-    }
+    if (!draft) return
     const alreadyRunning = merging.has(draft.guestId)
-    setBusy(true)
-    try {
+    const copy = async () => {
       await mergeOnce(draft)
       if (alreadyRunning) return
       track('signup_completed', {
         activities: draft.activities.length,
         resumed_in_onboarding: draft.logs.length > 0,
       })
-      setFailed(false)
-    } catch {
-      setFailed(true)
-    } finally {
-      setBusy(false)
+    }
+    try {
+      await copy()
+    } catch (err) {
+      if (accountIsGone(err)) return
+      try {
+        await mergeGuestDraft(draft)
+        track('signup_completed', {
+          activities: draft.activities.length,
+          resumed_in_onboarding: draft.logs.length > 0,
+        })
+      } catch {
+        /* the draft stays on the phone; the account is already signed in */
+      }
     }
   }, [userId])
 
   useEffect(() => {
+    if (!userId) return
     void run()
-  }, [run])
+  }, [run, userId])
 
-  if (!failed) return null
-
-  return (
-    <div className="guest-merge-banner" role="status">
-      <button type="button" className="btn btn-primary" onClick={() => void run()} disabled={busy}>
-        {busy ? 'Saving…' : MERGE_RETRY_MESSAGE}
-      </button>
-    </div>
-  )
+  return null
 }

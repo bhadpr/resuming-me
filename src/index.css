@@ -209,6 +209,21 @@ a.btn {
   opacity: 1;
 }
 
+.btn-done {
+  background: var(--color-success);
+  color: var(--color-on-status);
+  border: 0;
+  box-shadow: 0 0 0 1px color-mix(in srgb, var(--color-success) 40%, transparent);
+}
+
+.btn-done:hover:not(:disabled) {
+  background: color-mix(in srgb, var(--color-success) 82%, #000);
+}
+
+.btn-done:disabled {
+  opacity: 0.55;
+}
+
 .btn-primary {
   background: var(--color-primary);
   color: var(--color-on-primary);
@@ -3095,10 +3110,27 @@ button.community-card.community-card-picked {
   margin-top: var(--space-3);
 }
 
+.community-group + .community-group {
+  margin-top: var(--space-5);
+}
+
+.community-group-note {
+  margin: 0 0 var(--space-3);
+  color: var(--color-text-muted);
+  font-size: var(--text-sm);
+}
+
 .community-section-title {
   margin: 0;
   font-size: var(--text-md);
   font-weight: var(--weight-semibold);
+}
+
+.community-section.is-open {
+  padding: var(--space-3);
+  border: 1px solid color-mix(in srgb, var(--color-primary) 42%, var(--color-border));
+  border-radius: var(--radius-md);
+  background: color-mix(in srgb, var(--color-primary) 8%, var(--color-surface));
 }
 
 .community-section.is-open > .community-section-title {
@@ -3188,6 +3220,13 @@ button.community-card.community-card-picked {
   flex: none;
   width: auto;
   padding-inline: 1rem;
+}
+
+.calendar-import-remove {
+  flex: none;
+  width: var(--tap-min, 2.75rem);
+  height: var(--tap-min, 2.75rem);
+  padding: 0;
 }
 
 .calendar-import-added {
@@ -4398,6 +4437,25 @@ select.field-input.team-select {
   line-height: 1.15;
 }
 
+.reminder-native-pick {
+  position: relative;
+  cursor: pointer;
+}
+
+.reminder-native-input {
+  position: absolute;
+  inset: 0;
+  z-index: 1;
+  width: 100%;
+  height: 100%;
+  margin: 0;
+  padding: 0;
+  border: 0;
+  opacity: 0.02;
+  font-size: 16px;
+  cursor: pointer;
+}
+
 .reminder-kinds {
   display: grid;
   grid-template-columns: repeat(5, minmax(0, 1fr));
@@ -4693,6 +4751,14 @@ select.field-input.team-select {
   flex-shrink: 0;
 }
 
+.reminder-schedule-link {
+  display: inline-flex;
+  align-items: center;
+  min-height: 2.75rem;
+  font-weight: var(--weight-semibold);
+  color: var(--color-primary);
+}
+
 .reminder-locked,
 .share-event-note,
 .shared-event-note {
@@ -4962,6 +5028,10 @@ select.field-input.team-select {
   width: 100%;
 }
 
+.today-period + .today-adds {
+  padding-top: var(--space-4);
+}
+
 .today-adds .reminder-add-grid {
   margin: 0;
 }
@@ -5006,6 +5076,15 @@ select.field-input.team-select {
 
 .reminder-text-line {
   overflow-wrap: anywhere;
+}
+
+.reminder-list-item .reminder-text-line {
+  display: block;
+  min-width: 0;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+  overflow-wrap: normal;
 }
 
 .reminder-tags {
@@ -5742,7 +5821,22 @@ select.field-input.team-select {
 
 .today-row-head .activity-name {
   flex: 1;
+  flex-direction: column;
+  align-items: flex-start;
+  gap: 0.1rem;
   min-width: 0;
+}
+
+.today-kind-label {
+  max-width: 100%;
+  min-width: 0;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.today-kind-tag {
+  flex: none;
 }
 
 .today-row-stack > .today-extra {
@@ -6022,15 +6116,15 @@ select.field-input.team-select {
 .activity-list-screen .activity-list > li > .activity-row.item-kind-reminder::before,
 .activity-list-screen .activity-list > li > .activity-row.item-kind-vital::before {
   border-left: 0;
-  inset: 0 auto 0 50px;
+  inset: 0 auto 0 64px;
   width: min(36%, 8rem);
   border-radius: 0;
 }
 
 .activity-list-screen .activity-list > li > .activity-row > .habit-mark,
 .activity-list-screen .activity-list > li > .activity-row > .activity-emoji-art {
-  width: 50px;
-  height: 50px;
+  width: 64px;
+  height: 64px;
   align-self: center;
   border-radius: 0;
   overflow: hidden;
@@ -6253,15 +6347,30 @@ select.field-input.team-select {
 }
 
 .nfl-mark-logo {
+  position: relative;
   background: #fff;
+}
+
+/* Flags fill the tile. The tile behind them stays clear, so no white frame shows around the stripes. */
+.nfl-mark-logo.nfl-mark-flag {
+  background: transparent;
+}
+
+.activity-list-screen .activity-list > li > .activity-row > .activity-emoji-art.nfl-mark-flag {
+  align-self: stretch;
+  height: auto;
+  min-height: 64px;
+  background: transparent;
 }
 
 .activity-emoji-art.reminder-mark.nfl-mark img.nfl-mark-img,
 .activity-list-screen .activity-list > li > .activity-row > .activity-emoji-art.nfl-mark img.nfl-mark-img {
+  position: absolute;
+  inset: 0;
   mix-blend-mode: normal;
-  width: 82%;
-  height: 82%;
-  object-fit: contain;
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
 }
 
 .nfl-mark-abbr {

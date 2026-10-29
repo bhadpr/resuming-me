@@ -4,7 +4,10 @@ import { Capacitor } from '@capacitor/core'
 import { useAuth } from '../hooks/useAuth'
 import { useDocumentMeta } from '../hooks/useDocumentMeta'
 import { useLocale } from '../hooks/useLocale'
+import { dropLocalSignIn, requireAccountId } from '../lib/accountId'
 import { todayLocalDate } from '../lib/dates'
+import { describeError } from '../lib/describeError'
+import { accountIsGone, messageForSharedListAdd } from '../lib/importSharedList'
 import { groupByMonth } from '../lib/monthFold'
 import { MonthFold, useClosedMonths } from './MonthFold'
 import { addGuestReminder, ensureGuestDraft, loadGuestDraft } from '../lib/guestDraft'
@@ -112,6 +115,7 @@ export function SharedListPage({ code }: { code: string }) {
   const [dayBeforeChoice, setDayBeforeChoice] = useState<boolean | null>(null)
   const [lead, setLead] = useState<RemindLeadMinutes | null>(null)
   const [issueKey, setIssueKey] = useState<string | null>(null)
+  const [issueMessage, setIssueMessage] = useState<string | null>(null)
   const list = load.state === 'ready' ? load.list : null
   const today = todayLocalDate()
 
@@ -180,13 +184,32 @@ export function SharedListPage({ code }: { code: string }) {
       return
     }
     setIssueKey(null)
+    setIssueMessage(null)
     setAdding(true)
     const newlySaved = new Set(saved)
     let created = 0
     let capped = false
     let timed: ReminderInput | null = null
     try {
-      await acceptSharedList(found.id)
+      let ownerId: string | null = null
+      if (user) {
+        try {
+          ownerId = await requireAccountId()
+        } catch (err) {
+          if (!accountIsGone(err)) throw err
+          window.setTimeout(() => void dropLocalSignIn(), 0)
+        }
+      }
+      try {
+        await acceptSharedList(found.id)
+      } catch (err) {
+        if (ownerId && accountIsGone(err)) {
+          window.setTimeout(() => void dropLocalSignIn(), 0)
+          ownerId = null
+        } else if (ownerId || describeError(err, '').includes('shared_list_unavailable')) {
+          throw err
+        }
+      }
       for (const item of chosen) {
         const input: ReminderInput = {
           text: item.text,
@@ -201,9 +224,9 @@ export function SharedListPage({ code }: { code: string }) {
           remindLeadMinutes: remindLeadFor({ hour: item.hour, remindLeadMinutes: lead }),
         }
         if (input.hour != null || input.remindBefore) timed = input
-        if (user) {
+        if (ownerId) {
           try {
-            await addReminder(user.id, input)
+            await addReminder(ownerId, input)
             created += 1
             newlySaved.add(item.id)
           } catch (err) {
@@ -213,9 +236,13 @@ export function SharedListPage({ code }: { code: string }) {
               break
             }
             if (isDuplicate(err)) newlySaved.add(item.id)
-            else throw err
+            else if (accountIsGone(err)) {
+              window.setTimeout(() => void dropLocalSignIn(), 0)
+              ownerId = null
+            } else throw err
           }
-        } else {
+        }
+        if (!ownerId) {
           const draft = ensureGuestDraft()
           const existing = draft.reminders.find((reminder) => reminder.sharedListItemId === item.id)
           if (existing) {
@@ -234,13 +261,12 @@ export function SharedListPage({ code }: { code: string }) {
       }
       setSaved(newlySaved)
       if (created > 0) {
-        track('shared_list_added', { count: created, signed_in: Boolean(user) })
+        track('shared_list_added', { count: created, signed_in: Boolean(ownerId) })
         if (timed) void askForReminderAlerts(timed)
       }
       if (created > 0 && !capped) navigate('/reminders')
     } catch (err) {
-      const unavailable = err instanceof Error && err.message.includes('shared_list_unavailable')
-      setIssueKey(unavailable ? 'sharedList.unavailable' : 'sharedList.addFailed')
+      setIssueMessage(messageForSharedListAdd(err, t('sharedList.addFailed'), t('sharedList.unavailable')))
     } finally {
       setAdding(false)
     }
@@ -339,9 +365,8 @@ export function SharedListPage({ code }: { code: string }) {
         </a>
       )}
       {issueKey === 'sharedList.full' && <p className="error">{t('sharedList.full')}</p>}
-      {issueKey === 'sharedList.addFailed' && <p className="error">{t('sharedList.addFailed')}</p>}
       {issueKey === 'sharedList.noneChosen' && <p className="error">{t('sharedList.noneChosen')}</p>}
-      {issueKey === 'sharedList.unavailable' && <p className="error">{t('sharedList.unavailable')}</p>}
+      {issueMessage && <p className="error">{issueMessage}</p>}
       <Link className="btn btn-secondary" to={user || loadGuestDraft() ? '/reminders' : '/'}>
         {user || loadGuestDraft() ? t('sharedList.openReminders') : t('sharedList.home')}
       </Link>

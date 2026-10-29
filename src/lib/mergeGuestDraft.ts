@@ -1,3 +1,6 @@
+import { requireAccountId } from './accountId'
+import { MEDICINES_ENABLED } from '../config'
+import { describeError } from './describeError'
 import { createSupabaseClient } from './supabase'
 import { clearGuestDraft, guestDraftToPayload, type GuestDraft } from './guestDraft'
 import { listMedicines, markDoseTaken, saveMedicine } from './medicines'
@@ -5,8 +8,6 @@ import { addReminder, listReminders, ReminderCapError } from './reminders'
 import type { Reminder } from './reminderSchedule'
 import { followSharedEvent } from './sharedEvents'
 import { claimSharedListAccepts } from './sharedLists'
-
-export const MERGE_RETRY_MESSAGE = "We couldn't save that just yet — tap to retry."
 
 export { guestDraftToPayload }
 
@@ -75,8 +76,30 @@ async function mergeMedicines(userId: string, draft: GuestDraft): Promise<void> 
   }
 }
 
-function isDuplicate(err: unknown): boolean {
-  return typeof err === 'object' && err != null && (err as { code?: string }).code === '23505'
+function errorCode(err: unknown): string {
+  return typeof err === 'object' && err != null && 'code' in err ? String((err as { code?: unknown }).code ?? '') : ''
+}
+
+function errorText(err: unknown): string {
+  const details =
+    typeof err === 'object' && err != null && 'details' in err ? (err as { details?: unknown }).details : ''
+  return `${describeError(err, '')} ${typeof details === 'string' ? details : ''}`
+}
+
+/** One bad reminder must not throw away the rest of setup. Auth and network errors still stop the copy. */
+export function reminderSaveOutcome(err: unknown): 'stop' | 'skip' | 'fail' {
+  if (err instanceof ReminderCapError) return 'stop'
+  const code = errorCode(err)
+  const text = errorText(err)
+  if (code === 'P0001' && text.includes('reminders_open_cap')) return 'stop'
+  if (code === '23505') return 'skip'
+  if (text.includes('_user_id_fkey') || text.includes('profiles_id_fkey')) return 'fail'
+  if (code === '23514' || code === '22P02' || code === '23503') return 'skip'
+  return 'fail'
+}
+
+function alreadyMergedElsewhere(err: unknown): boolean {
+  return errorCode(err) === '23505' && errorText(err).includes('merged_guest_id')
 }
 
 /** A retry after a partial failure skips reminders already copied. */
@@ -94,8 +117,9 @@ async function mergeReminders(userId: string, draft: GuestDraft): Promise<void> 
     try {
       await addReminder(userId, reminder)
     } catch (err) {
-      if (err instanceof ReminderCapError) return
-      if (!isDuplicate(err)) throw err
+      const outcome = reminderSaveOutcome(err)
+      if (outcome === 'stop') return
+      if (outcome === 'fail') throw err
     }
     existing.push(reminder)
   }
@@ -113,16 +137,21 @@ export async function mergeGuestDraft(draft: GuestDraft): Promise<void> {
   }
   const client = createSupabaseClient()
   const reminders = draft.reminders ?? []
-  if (draft.medicines.length > 0 || reminders.length > 0) {
-    const { data } = await client.auth.getUser()
-    const userId = data.user?.id
-    if (!userId) throw new Error('Not signed in')
-    if (draft.medicines.length > 0) await mergeMedicines(userId, draft)
+  const medicines = MEDICINES_ENABLED ? draft.medicines : []
+  if (medicines.length > 0 || reminders.length > 0) {
+    const userId = await requireAccountId()
+    if (medicines.length > 0) await mergeMedicines(userId, draft)
     if (reminders.length > 0) await mergeReminders(userId, { ...draft, reminders })
   }
   const { error } = await client.rpc('merge_guest_draft', {
     payload: guestDraftToPayload(draft),
   })
-  if (error) throw error
+  if (error) {
+    if (alreadyMergedElsewhere(error)) {
+      clearGuestDraft()
+      return
+    }
+    throw error
+  }
   clearGuestDraft()
 }

@@ -1,5 +1,34 @@
-import { describe, it, expect } from 'vitest'
-import { validateMetricInput, STARTER_METRICS } from './metrics'
+import { describe, expect, it } from 'vitest'
+import { describeMetric, STARTER_METRICS, validateMetricInput, type Metric } from './metrics'
+
+function metric(partial: Partial<Metric> = {}): Metric {
+  return {
+    id: 'm1',
+    user_id: 'u',
+    name: 'Blood Pressure',
+    emoji: '❤️',
+    unit: 'mmHg',
+    archived: false,
+    template_id: 'blood_pressure',
+    name_overridden: false,
+    created_at: '',
+    updated_at: '',
+    ...partial,
+  }
+}
+
+describe('describeMetric', () => {
+  it('uses the person’s own description', () => {
+    expect(describeMetric(metric({ description: 'After breakfast' }))).toBe('After breakfast')
+  })
+
+  it('uses their target before the shared range', () => {
+    expect(describeMetric(metric({ target_value: 70, unit: 'kg', template_id: 'weight', name: 'Weight' }))).toBe(
+      'Target 70 kg',
+    )
+  })
+})
+
 
 describe('validateMetricInput', () => {
   it('requires name', () => {

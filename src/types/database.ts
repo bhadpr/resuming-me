@@ -199,6 +199,8 @@ export interface Database {
           archived: boolean
           template_id?: string | null
           name_overridden?: boolean
+          description?: string | null
+          target_value?: number | null
           created_at: string
           updated_at: string
         }
@@ -211,6 +213,8 @@ export interface Database {
           archived?: boolean
           template_id?: string | null
           name_overridden?: boolean
+          description?: string | null
+          target_value?: number | null
           created_at?: string
           updated_at?: string
         }
@@ -221,6 +225,8 @@ export interface Database {
           archived?: boolean
           template_id?: string | null
           name_overridden?: boolean
+          description?: string | null
+          target_value?: number | null
           updated_at?: string
         }
         Relationships: []

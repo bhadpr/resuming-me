@@ -24,7 +24,6 @@ import { formatMonthDay, freshStartCovering, listActivityComebacks, longestRetur
 import { addDays, todayLocalDate } from '../lib/dates'
 import { getDayStatus } from '../lib/dayStatus'
 import { isDeadlineOverdue } from '../lib/rollover'
-import { shrinkOffer } from '../lib/weeklyReview'
 import {
   findActivePause,
   type ActivityPauseRow,
@@ -35,8 +34,8 @@ import { MicroStepsSection } from './MicroStepsSection'
 import { ActivityInsightChart } from './ActivityInsightChart'
 import { microStepsAvailable, type MicroStep } from '../lib/microSteps'
 import { Icon } from './Icon'
-import { isDailyGoalHabit } from '../lib/onboardingFlow'
 import { habitTemplateId } from '../data/habitArt'
+import { isListedVital } from '../lib/vitalKey'
 import { tracksDistance } from '../lib/healthDistance'
 import { SessionDistanceLine, SessionDistanceSuffix } from './SessionDistance'
 import { StepsWeek } from './StepsWeek'
@@ -114,7 +113,6 @@ export function ActivityDetail({
   onBreakDown,
   onPause,
   onResume,
-  onShrink,
   icon = null,
   photo = null,
 }: ActivityDetailProps) {
@@ -190,7 +188,6 @@ export function ActivityDetail({
     }
     return days
   }, [activity, entries, today, dayStatusOpts])
-  const shrink = isDailyGoalHabit({ templateId: activity.template_id }) ? null : shrinkOffer(activity)
 
   const overdue = isDeadlineOverdue(activity, entries, today)
   const showChart = activity.type !== 'deadline' && habitTemplateId(activity) !== 'steps'
@@ -198,6 +195,8 @@ export function ActivityDetail({
   const canResume = Boolean(onResume) && Boolean(activePause)
   const showsDistance = tracksDistance(habitTemplateId(activity))
   const stepsHabit = habitTemplateId(activity) === 'steps'
+  const vitalPage = isListedVital(activity)
+  const ownDescription = vitalPage ? activity.why_matters?.trim() : ''
   const showedInWindow = seriesStats.done + seriesStats.partial
   const scheduledInWindow = showedInWindow + seriesStats.skipped + seriesStats.open
   const historyCount = historyGroups.reduce((total, group) => {
@@ -218,12 +217,14 @@ export function ActivityDetail({
         <HabitMark name={name} templateId={activity.template_id} icon={icon} photo={photo} />
         <div className="ad-hero-text">
           <h2>{name}</h2>
-          <p className="screen-sub">{describeActivity(activity)}</p>
+          <p className="screen-sub">{ownDescription || describeActivity(activity)}</p>
           {activity.archived && <span className="badge">Archived</span>}
           {activePause && <span className="badge badge-paused">{t('list.paused')}</span>}
         </div>
-        <button type="button" className="btn btn-ghost btn-sm ad-edit" onClick={onEdit} disabled={busy}>
-          Edit
+      </div>
+      <div className="detail-top-actions">
+        <button type="button" className="btn btn-primary" onClick={onEdit} disabled={busy}>
+          {t('metricDetail.edit')}
         </button>
       </div>
       {activePause?.paused_until && (
@@ -502,16 +503,6 @@ export function ActivityDetail({
             )}
           </>
         ) : null}
-        {shrink && onShrink && (
-          <button
-            type="button"
-            className="btn btn-secondary"
-            disabled={busy}
-            onClick={() => onShrink(shrink.value)}
-          >
-            Shrink to {shrink.value} {shrink.unit}
-          </button>
-        )}
 
         {activity.archived ? (
           <div className="detail-archive">

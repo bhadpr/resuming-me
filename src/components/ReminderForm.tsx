@@ -1,7 +1,9 @@
 import { useRef, useState, type FormEvent, type ReactNode } from 'react'
+import { Link } from 'react-router-dom'
 import { addDays } from '../lib/dates'
 import { reminderPhotoSrc } from '../lib/eventPhotoUrl'
 import { reminderShownPhoto } from '../lib/communityReminders'
+import { scheduleDetail } from '../lib/scheduleTag'
 import { prepareReminderPhoto } from '../lib/reminderPhotos'
 import { useLocale } from '../hooks/useLocale'
 import { localeTag, type Locale } from '../lib/i18n'
@@ -66,6 +68,12 @@ function pad(value: number): string {
   return String(value).padStart(2, '0')
 }
 
+/** iPhone can hand back seconds. The reminder stores hours and minutes. */
+function clockValue(value: string): string {
+  const match = /^(\d{2}):(\d{2})/.exec(value)
+  return match ? `${match[1]}:${match[2]}` : ''
+}
+
 function initialDay(initial: Pick<Reminder, 'day'> | null, today: string): DayChoice {
   if (!initial || initial.day === today) return 'today'
   if (initial.day === tomorrowOf(today)) return 'tomorrow'
@@ -76,15 +84,47 @@ function choiceClass(on: boolean): string {
   return `btn reminder-choice ${on ? 'btn-primary' : 'btn-secondary'}`
 }
 
-/** Opens the browser's own date or time picker. Returns false when this browser will not. */
-function openNativePicker(input: HTMLInputElement | null): boolean {
-  if (!input || typeof input.showPicker !== 'function') return false
-  try {
-    input.showPicker()
-    return true
-  } catch {
-    return false
+/**
+ * A choice chip whose tap lands on a real date or time field.
+ * iPhone will not open the wheel for a hidden field opened from another button.
+ */
+function NativeChoice({
+  selected,
+  label,
+  ariaLabel,
+  type,
+  value,
+  min,
+  max,
+  onPick,
+}: {
+  selected: boolean
+  label: string
+  ariaLabel: string
+  type: 'date' | 'time'
+  value: string
+  min?: string
+  max?: string
+  onPick: (value: string) => void
+}) {
+  function take(next: string) {
+    if (next) onPick(next)
   }
+  return (
+    <label className={`${choiceClass(selected)} reminder-native-pick`}>
+      <span>{label}</span>
+      <input
+        className="reminder-native-input"
+        type={type}
+        value={value}
+        min={min}
+        max={max}
+        aria-label={ariaLabel}
+        onInput={(event) => take(event.currentTarget.value)}
+        onChange={(event) => take(event.currentTarget.value)}
+      />
+    </label>
+  )
 }
 
 function pickedClock(value: string, locale: Parameters<typeof formatReminderTime>[2]): string {
@@ -148,10 +188,6 @@ export function ReminderForm({
       Boolean(seed?.remindWeekBefore) ||
       remindLeadMinutesOf(seed?.remindLeadMinutes) != null,
   )
-  const [manualDate, setManualDate] = useState(false)
-  const [manualTime, setManualTime] = useState(false)
-  const dateInput = useRef<HTMLInputElement>(null)
-  const timeInput = useRef<HTMLInputElement>(null)
   const photoInput = useRef<HTMLInputElement>(null)
   const photoChosen = Boolean(currentPhoto)
   const repeating = repeat !== null
@@ -249,56 +285,32 @@ export function ReminderForm({
 
         <p className="reminder-question">{t('reminders.day')}</p>
         <div className="reminder-choices">
-          {(['today', 'tomorrow', 'pick'] as const).map((choice) => (
+          {(['today', 'tomorrow'] as const).map((choice) => (
             <button
               key={choice}
               type="button"
               className={choiceClass(dayChoice === choice)}
               aria-pressed={dayChoice === choice}
-              onClick={() => {
-                if (choice !== 'pick') {
-                  setDayChoice(choice)
-                  return
-                }
-                if (!openNativePicker(dateInput.current)) {
-                  setDayChoice('pick')
-                  setManualDate(true)
-                }
-              }}
+              onClick={() => setDayChoice(choice)}
             >
-              {choice === 'pick' && dayChoice === 'pick'
-                ? pickedDayLabel(pickedDay, locale)
-                : t(choice === 'pick' ? 'reminders.pickDate' : `reminders.${choice}`)}
+              {t(`reminders.${choice}`)}
             </button>
           ))}
-        </div>
-        <input
-          ref={dateInput}
-          className="picker-proxy"
-          type="date"
-          min={today}
-          value={pickedDay}
-          tabIndex={-1}
-          aria-hidden="true"
-          onChange={(event) => {
-            if (!event.target.value) return
-            setPickedDay(event.target.value)
-            setDayChoice('pick')
-          }}
-        />
-        {manualDate && dayChoice === 'pick' && (
-          <input
-            className="field-input"
+          <NativeChoice
+            selected={dayChoice === 'pick'}
+            label={
+              dayChoice === 'pick' ? pickedDayLabel(pickedDay, locale) : t('reminders.pickDate')
+            }
+            ariaLabel={t('reminders.pickDate')}
             type="date"
             min={today}
             value={pickedDay}
-            aria-label={t('reminders.pickDate')}
-            onChange={(event) => setPickedDay(event.target.value)}
-            onClick={(event) => {
-              openNativePicker(event.currentTarget)
+            onPick={(day) => {
+              setPickedDay(day)
+              setDayChoice('pick')
             }}
           />
-        )}
+        </div>
 
         <p className="reminder-question">{t('reminders.time')}</p>
         <div className="reminder-choices">
@@ -322,45 +334,20 @@ export function ReminderForm({
               {formatShortReminderTime(parts[part].hour, parts[part].minute, locale)}
             </button>
           ))}
-          <button
-            type="button"
-            className={choiceClass(timeChoice === 'pick')}
-            aria-pressed={timeChoice === 'pick'}
-            onClick={() => {
-              if (!openNativePicker(timeInput.current)) {
-                setTimeChoice('pick')
-                setManualTime(true)
-              }
-            }}
-          >
-            {timeChoice === 'pick' ? pickedClock(pickedTime, locale) || t('reminders.pickTime') : t('reminders.pickTime')}
-          </button>
-        </div>
-        <input
-          ref={timeInput}
-          className="picker-proxy"
-          type="time"
-          value={pickedTime}
-          tabIndex={-1}
-          aria-hidden="true"
-          onChange={(event) => {
-            if (!event.target.value) return
-            setPickedTime(event.target.value)
-            setTimeChoice('pick')
-          }}
-        />
-        {manualTime && timeChoice === 'pick' && (
-          <input
-            className="field-input"
+          <NativeChoice
+            selected={timeChoice === 'pick'}
+            label={timeChoice === 'pick' ? pickedClock(pickedTime, locale) || t('reminders.pickTime') : t('reminders.pickTime')}
+            ariaLabel={t('reminders.pickTime')}
             type="time"
             value={pickedTime}
-            aria-label={t('reminders.pickTime')}
-            onChange={(event) => setPickedTime(event.target.value)}
-            onClick={(event) => {
-              openNativePicker(event.currentTarget)
+            onPick={(time) => {
+              const clock = clockValue(time)
+              if (!clock) return
+              setPickedTime(clock)
+              setTimeChoice('pick')
             }}
           />
-        )}
+        </div>
 
         {timeChoice !== 'any' && <LeadMinutesChoice minutes={leadMinutes} onChange={setLeadMinutes} />}
 
@@ -505,9 +492,6 @@ export function ReminderForm({
                       min={repeatFrom}
                       max={repeatLimit(repeatFrom)}
                       value={repeatUntil}
-                      onClick={(event) => {
-                        openNativePicker(event.currentTarget)
-                      }}
                       onChange={(event) => {
                         setPickedUntil(event.target.value || null)
                         if (issue === 'repeat') setIssue(null)
@@ -611,6 +595,11 @@ function ReminderView({ reminder, saving, error, onDelete, onCancel, onEdit, sha
   const shared = Boolean(reminder.sharedEventId)
   const followed = isFollowedListReminder(reminder)
   const holidayList = reminderListKind(reminder) === 'holiday'
+  const schedule = followed && !holidayList ? scheduleDetail(reminder.text) : null
+  const matchesTo =
+    schedule?.sport && reminder.sharedListId
+      ? `/reminders/schedules?list=${encodeURIComponent(reminder.sharedListId)}`
+      : null
   const organizerMeetup = Boolean(reminder.meetup && reminder.sharedByMe)
   const locked = (shared && !organizerMeetup) || followed
   const gone = isSharedEventGone(reminder)
@@ -638,7 +627,7 @@ function ReminderView({ reminder, saving, error, onDelete, onCancel, onEdit, sha
             followed
               ? holidayList
                 ? 'reminders.listLockedHolidayTitle'
-                : 'reminders.listLockedTitle'
+                : (schedule?.titleKey ?? 'reminders.listLockedTitle')
               : organizerMeetup
                 ? 'reminders.meetupTitle'
                 : shared
@@ -672,9 +661,24 @@ function ReminderView({ reminder, saving, error, onDelete, onCancel, onEdit, sha
         <p className="reminder-locked">
           <Icon name="lock" size={20} />
           <span>
-            {t(followed ? (holidayList ? 'reminders.listLockedHoliday' : 'reminders.listLocked') : 'sharedEvent.locked')}
+            {t(
+              followed
+                ? holidayList
+                  ? 'reminders.listLockedHoliday'
+                  : schedule?.sport
+                    ? 'reminders.listLockedSport'
+                    : 'reminders.listLocked'
+                : 'sharedEvent.locked',
+              schedule?.sport ? { name: t(schedule.titleKey) } : undefined,
+            )}
           </span>
         </p>
+      )}
+
+      {matchesTo && schedule?.team && (
+        <Link className="reminder-schedule-link" to={matchesTo}>
+          {t('reminders.allMatches', { team: schedule.team })}
+        </Link>
       )}
 
       {(locked || organizerMeetup) && !gone && alerts && onAlertOff && (

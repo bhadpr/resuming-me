@@ -22,6 +22,8 @@ import { isShareableReminder } from '../lib/sharedEvents'
 import { Icon } from './Icon'
 import { ReminderKindMark } from './ReminderKindIcon'
 import { SkipLink, UndoSkipButton } from './TodaySkip'
+import { scheduleSourceKey } from '../lib/scheduleTag'
+import { TaggedName, todayKindForReminder } from './TodayKindTag'
 
 /** Time, or any time, plus "From Tuesday" when an earlier day is still open. */
 function reminderWhen(
@@ -72,14 +74,16 @@ export function ReminderRow({ reminder, today, busy, onDone, onSkip, onMove, onC
     <li className="today-row today-row-stack today-row-compact item-kind-reminder">
       <div className="today-row-head">
         <ReminderPicture reminder={reminder} />
-        <span className="activity-name reminder-text-line">{reminder.text}</span>
+        <TaggedName kind={todayKindForReminder(reminder)} text={reminder.text} className="activity-name reminder-text-line">
+          {reminder.text}
+        </TaggedName>
       </div>
       <div className="today-row-main">
         <span className="activity-meta">
           <span className="activity-desc">{reminderWhen(reminder, today, locale, t)}</span>
         </span>
         <span className="today-actions today-actions-stack">
-          <button type="button" className="btn btn-primary btn-today" disabled={busy} onClick={onDone}>
+          <button type="button" className="btn btn-done btn-today" disabled={busy} onClick={onDone}>
             {t('reminders.done')}
           </button>
           <SkipLink disabled={busy} onSkip={onSkip} />
@@ -146,7 +150,9 @@ export function ReminderDoneRow({
     <li className="today-row today-row-stack today-row-compact today-row-done item-kind-reminder">
       <div className="today-row-head">
         <ReminderPicture reminder={reminder} />
-        <span className="activity-name reminder-text-line reminder-struck">{reminder.text}</span>
+        <TaggedName kind={todayKindForReminder(reminder)} text={reminder.text} className="activity-name reminder-text-line">
+          <span className="reminder-struck">{reminder.text}</span>
+        </TaggedName>
       </div>
       <div className="today-row-main">
         <span className="activity-meta">
@@ -188,7 +194,6 @@ export function ReminderAddTiles({
       </button>
       {onAddMeetup && (
         <button type="button" className="btn btn-secondary reminder-add-tile" onClick={onAddMeetup}>
-          <span className="reminder-add-kicker">{t('reminders.tileAdd')}</span>
           <span className="reminder-add-label">{t('reminders.tileMeetup')}</span>
         </button>
       )}
@@ -200,7 +205,6 @@ export function ReminderAddTiles({
       )}
       {onAddSchedule && (
         <button type="button" className="btn btn-secondary reminder-add-tile" onClick={onAddSchedule}>
-          <span className="reminder-add-kicker">{t('reminders.tileAdd')}</span>
           <span className="reminder-add-label">{t('reminders.tileSchedule')}</span>
         </button>
       )}
@@ -263,17 +267,17 @@ function ReminderDayGroup({
                 <span className="activity-meta">
                   <span className="activity-name reminder-text-line">{reminder.text}</span>
                   <span className="reminder-when-line">
-                    {kind && (
-                      <span className={`badge reminder-source reminder-source-${kind}`}>
-                        {t(
-                          kind === 'meetup'
-                            ? 'reminders.sourceMeetup'
-                            : kind === 'holiday'
-                              ? 'reminders.sourceHoliday'
-                              : 'reminders.sourceSchedule',
-                        )}
-                      </span>
-                    )}
+                    <span className={`badge reminder-source reminder-source-${kind ?? 'personal'}`}>
+                      {t(
+                        kind === 'meetup'
+                          ? 'reminders.sourceMeetup'
+                          : kind === 'holiday'
+                            ? 'reminders.sourceHoliday'
+                            : kind === 'schedule'
+                              ? scheduleSourceKey(reminder.text)
+                              : 'reminders.sourcePersonal',
+                      )}
+                    </span>
                     <span className="activity-desc">{reminderWhen(reminder, today, locale, t)}</span>
                   </span>
                 </span>

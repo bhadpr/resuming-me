@@ -3,7 +3,7 @@ import { useAuth } from '../hooks/useAuth'
 import { useLocale } from '../hooks/useLocale'
 import { LIST_PHOTO_SIDE, listPhotoUrl } from '../lib/eventPhotoUrl'
 import { loadGuestDraft } from '../lib/guestDraft'
-import { importSharedList, removeImportedSharedList } from '../lib/importSharedList'
+import { importSharedList, messageForSharedListAdd, removeImportedSharedList } from '../lib/importSharedList'
 import { cricketTeamByName } from '../lib/cricketSearch'
 import { leagueTeamByName } from '../lib/leagueTeams'
 import { nflTeamByName } from '../lib/nflSearch'
@@ -18,7 +18,7 @@ import {
 import { whatsAppShareUrl } from '../lib/sharedEvents'
 import { NflMark } from './NflMark'
 import { EventPhoto } from './ReminderKindIcon'
-import { WhatsAppIcon } from './Icon'
+import { Icon, WhatsAppIcon } from './Icon'
 import { SectionFold } from './MonthFold'
 import { DayBeforeChoice } from './DayBeforeChoice'
 import { LeadMinutesChoice } from './LeadMinutesChoice'
@@ -201,8 +201,7 @@ export function TeamScheduleSection({
       remember('')
       setPick([])
     } catch (err) {
-      const unavailable = err instanceof Error && err.message.includes('shared_list_unavailable')
-      setMessage(t(unavailable ? 'sharedList.unavailable' : 'sharedList.addFailed'))
+      setMessage(messageForSharedListAdd(err, t('sharedList.addFailed'), t('sharedList.unavailable')))
     } finally {
       setBusyId(null)
     }
@@ -356,20 +355,49 @@ function TeamPickRow({
               <WhatsAppIcon />
             </a>
           )}
-          <button
-            type="button"
-            className={`btn calendar-import-yes ${added ? 'btn-secondary' : 'btn-primary'}`}
-            disabled={disabled}
-            onClick={added ? onRemove : onAdd}
-          >
-            {busy
-              ? t(added ? 'reminders.community.removing' : 'sharedList.accepting')
-              : t(added ? 'reminders.community.remove' : 'reminders.community.add')}
-          </button>
+          {added ? (
+            <RemoveIconButton
+              label={busy ? t('reminders.community.removing') : t('reminders.community.remove')}
+              disabled={disabled}
+              onClick={onRemove}
+            />
+          ) : (
+            <button
+              type="button"
+              className="btn btn-primary calendar-import-yes"
+              disabled={disabled}
+              onClick={onAdd}
+            >
+              {busy ? t('sharedList.accepting') : t('reminders.community.add')}
+            </button>
+          )}
         </span>
       </div>
       {!added && timed && <LeadMinutesChoice minutes={lead} onChange={onLead} />}
       {!added && <DayBeforeChoice checked={dayBefore} onChange={onDayBefore} />}
     </li>
+  )
+}
+
+/** The X that takes a calendar back off Today. */
+export function RemoveIconButton({
+  label,
+  disabled,
+  onClick,
+}: {
+  label: string
+  disabled?: boolean
+  onClick: () => void
+}) {
+  return (
+    <button
+      type="button"
+      className="btn btn-secondary calendar-import-remove"
+      disabled={disabled}
+      aria-label={label}
+      onClick={onClick}
+    >
+      <Icon name="close" />
+    </button>
   )
 }

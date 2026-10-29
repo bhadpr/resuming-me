@@ -14,6 +14,15 @@ export async function sha256Hex(value: string): Promise<string> {
   return [...new Uint8Array(digest)].map((byte) => byte.toString(16).padStart(2, '0')).join('')
 }
 
+/** A failed Apple sign-in when this email already belongs to the Google account. */
+export function appleAccountError(error: unknown): Error {
+  const message = error instanceof Error ? error.message : 'Sign-in failed'
+  if (/already registered|already exists|already been registered|already linked/i.test(message)) {
+    return new Error('That email already uses Google. Sign in with Google to open the same account.')
+  }
+  return error instanceof Error ? error : new Error(message)
+}
+
 export function appleSignInCancelled(error: unknown): boolean {
   const message = error instanceof Error ? error.message : String(error)
   return /cancel/i.test(message) || message.includes('1001')

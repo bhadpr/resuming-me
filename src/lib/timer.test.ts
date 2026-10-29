@@ -3,6 +3,7 @@ import {
   computeElapsedSeconds,
   formatDuration,
   isTimerTargetMet,
+  latestSessionEntry,
   sessionProgressLabel,
   sumSessionSeconds,
 } from './timer'
@@ -108,5 +109,27 @@ describe('buildTodayProgress timer', () => {
     expect(rows[0].done).toBe(true)
     expect(rows[0].current).toBe(660)
     expect(rows[0].target).toBe(600)
+  })
+
+  it('undo removes the latest session, leaving a resume when time remains', () => {
+    const early = session({
+      id: 'early',
+      duration_seconds: 60,
+      started_at: '2026-08-11T08:00:00Z',
+      created_at: '2026-08-11T08:01:00Z',
+    })
+    const later = session({
+      id: 'later',
+      duration_seconds: 600,
+      started_at: '2026-08-11T09:00:00Z',
+      created_at: '2026-08-11T09:10:00Z',
+    })
+    const entries = [later, early]
+    expect(latestSessionEntry(entries, 'read', '2026-08-11', '2026-08-11')?.id).toBe('later')
+    const afterUndo = entries.filter((entry) => entry.id !== 'later')
+    const rows = buildTodayProgress([activity()], afterUndo, [], '2026-08-11')
+    expect(rows[0].done).toBe(false)
+    expect(rows[0].status).toBe('partial')
+    expect(rows[0].current).toBe(60)
   })
 })

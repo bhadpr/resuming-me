@@ -1,5 +1,6 @@
 const STORAGE_KEY = 'resuming-vital-targets'
 const DIRECTION_KEY = 'resuming-vital-directions'
+const NOTE_KEY = 'resuming-vital-notes'
 
 export type VitalDirection = 'down' | 'up'
 
@@ -56,6 +57,38 @@ export function setVitalTarget(metricId: string, value: number | null): void {
     if (current[metricId] !== next[metricId]) setVitalDirection(metricId, null)
   } catch {
     // Storage full or blocked: the vital still works without a target.
+  }
+}
+
+function loadNotes(): Record<string, string> {
+  try {
+    const parsed = JSON.parse(storage()?.getItem(NOTE_KEY) ?? '{}') as Record<string, unknown>
+    const out: Record<string, string> = {}
+    for (const [id, value] of Object.entries(parsed)) {
+      if (typeof value === 'string' && value.trim()) out[id] = value.trim()
+    }
+    return out
+  } catch {
+    return {}
+  }
+}
+
+/** The person's own line for this vital, kept with the vital id on this device. */
+export function vitalNote(metricId: string): string | null {
+  return loadNotes()[metricId] ?? null
+}
+
+export function setVitalNote(metricId: string, note: string | null): void {
+  const store = storage()
+  if (!store) return
+  const next = loadNotes()
+  const clean = note?.replace(/\s+/g, ' ').trim().slice(0, 80) ?? ''
+  if (!clean) delete next[metricId]
+  else next[metricId] = clean
+  try {
+    store.setItem(NOTE_KEY, JSON.stringify(next))
+  } catch {
+    // The vital still works without the note.
   }
 }
 

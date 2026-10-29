@@ -4,11 +4,13 @@ import {
   useContext,
   useEffect,
   useMemo,
+  useRef,
   useState,
   type ReactNode,
 } from 'react'
 import type { Session, User } from '@supabase/supabase-js'
 import { Capacitor } from '@capacitor/core'
+import { clearAccountIdCache, sessionIsGone } from '../lib/accountId'
 import {
   createSupabaseClient,
   getSupabaseConfigError,
@@ -16,6 +18,7 @@ import {
 } from '../lib/supabase'
 import { fetchIsAdmin } from '../lib/analytics'
 import {
+  appleAccountError,
   appleSignInCancelled,
   nativeAppleSignIn,
   rememberAppleSignIn,
@@ -27,6 +30,7 @@ import {
   openNativeOAuthUrl,
   parseAuthCallbackUrl,
 } from '../lib/nativeAuth'
+import { scrubErrorMessage } from '../lib/errorReporting'
 import { track } from '../lib/track'
 
 interface AuthContextValue {
@@ -81,6 +85,8 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   const [loading, setLoading] = useState(configured)
   const [authError, setAuthError] = useState<string | null>(null)
   const [isAdmin, setIsAdmin] = useState(false)
+  // The Apple sheet backgrounds the page. A stale session cleared on return must not erase the sign-in that just succeeded.
+  const suppressSignOut = useRef(false)
 
   useEffect(() => {
     if (!configured) {
@@ -90,6 +96,9 @@ export function AuthProvider({ children }: { children: ReactNode }) {
 
     const client = createSupabaseClient()
     let mounted = true
+    // The stored token can name an account the server no longer has. Ignore it until that check finishes.
+    let acceptSession = false
+    let rejectedUserId: string | null = null
 
     async function init() {
       try {
@@ -101,8 +110,19 @@ export function AuthProvider({ children }: { children: ReactNode }) {
         }
 
         if (data.session) {
-          setSession(data.session)
-          clearAuthCallbackFromUrl()
+          const { data: userData, error: userError } = await client.auth.getUser()
+          if (!mounted) return
+          // getUser drops a dead token from storage. Publish only the session that is still there.
+          const { data: after } = await client.auth.getSession()
+          if (sessionIsGone(userError) || !after.session || (!userError && !userData.user)) {
+            rejectedUserId = data.session.user.id
+            clearAccountIdCache()
+            if (after.session) await client.auth.signOut({ scope: 'local' })
+            if (mounted) setSession(null)
+          } else {
+            setSession(after.session)
+            clearAuthCallbackFromUrl()
+          }
         } else if (urlHasAuthCallback()) {
           const callback = parseAuthCallbackUrl(window.location.href)
           try {
@@ -119,6 +139,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
         if (!mounted) return
         setAuthError(err instanceof Error ? err.message : 'Auth init failed')
       } finally {
+        acceptSession = true
         if (mounted) setLoading(false)
       }
     }
@@ -129,8 +150,18 @@ export function AuthProvider({ children }: { children: ReactNode }) {
       data: { subscription },
     } = client.auth.onAuthStateChange((event, nextSession) => {
       if (!mounted) return
-      setSession(nextSession)
-      if (nextSession) {
+      if (event === 'SIGNED_OUT') {
+        if (!suppressSignOut.current) {
+          clearAccountIdCache()
+          setSession(null)
+        }
+        setLoading(false)
+        return
+      }
+      if (!acceptSession || (nextSession?.user.id && nextSession.user.id === rejectedUserId)) return
+      // Apple sign-in publishes the session itself, after the new token has settled.
+      if (!suppressSignOut.current && nextSession) {
+        setSession(nextSession)
         setAuthError(null)
         clearAuthCallbackFromUrl()
       }
@@ -138,7 +169,9 @@ export function AuthProvider({ children }: { children: ReactNode }) {
       const refreshToken = nextSession?.provider_refresh_token
       const apple = nextSession?.user.identities?.some((identity) => identity.provider === 'apple')
       if (event === 'SIGNED_IN' && refreshToken && apple) {
-        void rememberAppleSignIn(client, { refreshToken }).catch(() => {})
+        window.setTimeout(() => {
+          void rememberAppleSignIn(client, { refreshToken }).catch(() => {})
+        }, 0)
       }
     })
 
@@ -188,31 +221,68 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   const signInWithApple = useCallback(async () => {
     const client = createSupabaseClient()
     if (Capacitor.getPlatform() === 'ios') {
-      let apple
+      suppressSignOut.current = true
+      let signedIn = false
       try {
-        apple = await nativeAppleSignIn()
-      } catch (err) {
-        if (appleSignInCancelled(err)) return
-        throw err
-      }
-      const { error } = await client.auth.signInWithIdToken({
-        provider: 'apple',
-        token: apple.identityToken,
-        nonce: apple.rawNonce,
-      })
-      if (error) throw error
-      const fullName = [apple.givenName, apple.familyName].filter(Boolean).join(' ')
-      if (fullName) {
-        await client.auth.updateUser({
-          data: {
-            full_name: fullName,
-            given_name: apple.givenName,
-            family_name: apple.familyName,
-          },
+        await client.auth.signOut({ scope: 'local' })
+        let apple
+        try {
+          apple = await nativeAppleSignIn()
+        } catch (err) {
+          if (appleSignInCancelled(err)) return
+          throw err
+        }
+        const { data, error } = await client.auth.signInWithIdToken({
+          provider: 'apple',
+          token: apple.identityToken,
+          nonce: apple.rawNonce,
         })
-      }
-      if (apple.authorizationCode) {
-        void rememberAppleSignIn(client, { authorizationCode: apple.authorizationCode }).catch(() => {})
+        if (error || !data.session) throw appleAccountError(error ?? new Error('Apple sign-in did not return a session'))
+        const { data: userData, error: userError } = await client.auth.getUser()
+        if (sessionIsGone(userError) || (!userError && !userData.user)) {
+          await client.auth.signOut({ scope: 'local' })
+          throw new Error('Apple sign-in did not create an account. Try again.')
+        }
+        if (userError) throw userError
+        signedIn = true
+        setSession(data.session)
+        const fullName = [apple.givenName, apple.familyName].filter(Boolean).join(' ')
+        if (fullName) {
+          await client.auth
+            .updateUser({
+              data: {
+                full_name: fullName,
+                given_name: apple.givenName,
+                family_name: apple.familyName,
+              },
+            })
+            .catch(() => {})
+        }
+        if (apple.authorizationCode) {
+          window.setTimeout(() => {
+            void rememberAppleSignIn(client, { authorizationCode: apple.authorizationCode }).catch(() => {})
+          }, 0)
+        }
+      } catch (err) {
+        if (!appleSignInCancelled(err)) {
+          track('app_error', {
+            kind: 'error',
+            message: scrubErrorMessage(err) || 'Apple sign-in failed',
+            file: 'apple-sign-in',
+            line: null,
+            col: null,
+          })
+        }
+        throw err
+      } finally {
+        if (!signedIn) {
+          suppressSignOut.current = false
+          setSession(null)
+        } else {
+          window.setTimeout(() => {
+            suppressSignOut.current = false
+          }, 800)
+        }
       }
       return
     }
@@ -264,6 +334,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   }, [])
 
   const signOut = useCallback(async () => {
+    clearAccountIdCache()
     const client = createSupabaseClient()
     const { error } = await client.auth.signOut()
     if (error) throw error

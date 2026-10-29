@@ -108,7 +108,7 @@ export function habitYoutubeEmbedUrl(
   if (options?.autoplay) {
     params.set('autoplay', '1')
   }
-  if (options?.origin) {
+  if (options?.origin && /^https?:\/\//i.test(options.origin)) {
     params.set('origin', options.origin)
   }
   return `https://www.youtube.com/embed/${video.youtubeId}?${params.toString()}`

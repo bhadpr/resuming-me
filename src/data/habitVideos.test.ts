@@ -1,6 +1,7 @@
 import { describe, expect, it } from 'vitest'
 import {
   habitVideoFor,
+  habitYoutubeEmbedUrl,
   ownHabitVideo,
   parseYoutubeLink,
   youtubeWatchUrl,
@@ -60,5 +61,12 @@ describe('habit video choice', () => {
     expect(ownHabitVideo(null)).toBeNull()
     expect(youtubeWatchUrl(own)).toBe(`https://www.youtube.com/watch?v=${ID}&t=12s`)
     expect(youtubeWatchUrl({ youtubeId: ID })).toBe(`https://www.youtube.com/watch?v=${ID}`)
+  })
+
+  it('sends a web address as the player origin and skips the phone app address', () => {
+    const web = habitYoutubeEmbedUrl({ youtubeId: ID }, { origin: 'https://localhost' })
+    expect(web).toContain('origin=https%3A%2F%2Flocalhost')
+    const phone = habitYoutubeEmbedUrl({ youtubeId: ID }, { origin: 'capacitor://localhost' })
+    expect(phone).not.toContain('origin=')
   })
 })

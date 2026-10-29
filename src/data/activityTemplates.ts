@@ -57,7 +57,7 @@ export const ACTIVITY_TEMPLATES: readonly ActivityTemplate[] = [
 export const HABIT_GROUPS: readonly { title: string; ids: readonly string[]; icons: boolean }[] = [
   { title: 'Fitness', ids: ['walk', 'running', 'exercise', 'stretching'], icons: true },
   { title: 'Pranayam', ids: ['bhastrika', 'kapalabhati', 'anuloma_viloma', 'bhramari'], icons: false },
-  { title: 'Heartfulness', ids: ['relaxation', 'meditate', 'rejuvenation', 'prayer'], icons: true },
+  { title: 'Meditation', ids: ['meditate'], icons: true },
   { title: 'Learn', ids: ['reading', 'writing', 'language'], icons: true },
   { title: 'Creativity', ids: ['music', 'painting', 'dancing'], icons: true },
 ]

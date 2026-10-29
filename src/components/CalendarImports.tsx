@@ -4,7 +4,7 @@ import { useAuth } from '../hooks/useAuth'
 import { useLocale } from '../hooks/useLocale'
 import { LIST_PHOTO_SIDE, listPhotoUrl } from '../lib/eventPhotoUrl'
 import { loadGuestDraft } from '../lib/guestDraft'
-import { importSharedList, removeImportedSharedList } from '../lib/importSharedList'
+import { importSharedList, messageForSharedListAdd, removeImportedSharedList } from '../lib/importSharedList'
 import { reminderClock } from '../lib/listClock'
 import {
   CRICKET_TEAMS,
@@ -44,7 +44,7 @@ import {
 import { whatsAppShareUrl } from '../lib/sharedEvents'
 import { EventPhoto } from './ReminderKindIcon'
 import { WhatsAppIcon } from './Icon'
-import { TeamScheduleSection } from './TeamScheduleSection'
+import { RemoveIconButton, TeamScheduleSection } from './TeamScheduleSection'
 
 function listHasClock(list: SharedList): boolean {
   return list.items.some((item) => item.hour != null && item.minute != null)
@@ -180,8 +180,7 @@ export function CalendarImportSection({
       }
       setImported((current) => [...current, list.id])
     } catch (err) {
-      const unavailable = err instanceof Error && err.message.includes('shared_list_unavailable')
-      setMessage(t(unavailable ? 'sharedList.unavailable' : 'sharedList.addFailed'))
+      setMessage(messageForSharedListAdd(err, t('sharedList.addFailed'), t('sharedList.unavailable')))
     } finally {
       setBusyId(null)
     }
@@ -269,16 +268,26 @@ export function CalendarImportSection({
                       </span>
                     </span>
                   </button>
-                  <button
-                    type="button"
-                    className={`btn calendar-import-yes ${done ? 'btn-secondary' : 'btn-primary'}`}
-                    disabled={busyId != null || authLoading}
-                    onClick={() => void (done ? remove(list) : yes(list))}
-                  >
-                    {busyId === list.id
-                      ? t(done ? 'reminders.community.removing' : 'sharedList.accepting')
-                      : t(done ? 'reminders.community.remove' : 'reminders.community.add')}
-                  </button>
+                  {done ? (
+                    <RemoveIconButton
+                      label={
+                        busyId === list.id
+                          ? t('reminders.community.removing')
+                          : t('reminders.community.remove')
+                      }
+                      disabled={busyId != null || authLoading}
+                      onClick={() => void remove(list)}
+                    />
+                  ) : (
+                    <button
+                      type="button"
+                      className="btn btn-primary calendar-import-yes"
+                      disabled={busyId != null || authLoading}
+                      onClick={() => void yes(list)}
+                    >
+                      {busyId === list.id ? t('sharedList.accepting') : t('reminders.community.add')}
+                    </button>
+                  )}
                 </div>
                 {!done && (
                   <DayBeforeChoice
@@ -327,8 +336,7 @@ export function CalendarImportDetail({ list }: { list: SharedList }) {
       }
       setDone(true)
     } catch (err) {
-      const unavailable = err instanceof Error && err.message.includes('shared_list_unavailable')
-      setMessage(t(unavailable ? 'sharedList.unavailable' : 'sharedList.addFailed'))
+      setMessage(messageForSharedListAdd(err, t('sharedList.addFailed'), t('sharedList.unavailable')))
     } finally {
       setBusy(false)
     }
@@ -424,16 +432,22 @@ export function CalendarImportDetail({ list }: { list: SharedList }) {
       </div>
       {!added && timed && <LeadMinutesChoice minutes={lead} onChange={setLead} />}
       {!added && <DayBeforeChoice checked={dayBefore} onChange={setDayBefore} />}
-      <button
-        type="button"
-        className={`btn community-continue ${added ? 'btn-secondary' : 'btn-primary'}`}
-        disabled={busy || authLoading || saved == null}
-        onClick={() => void (added ? remove() : yes())}
-      >
-        {busy
-          ? t(busyRemove || added ? 'reminders.community.removing' : 'sharedList.accepting')
-          : t(added ? 'reminders.community.remove' : 'reminders.community.add')}
-      </button>
+      {added ? (
+        <RemoveIconButton
+          label={busyRemove || busy ? t('reminders.community.removing') : t('reminders.community.remove')}
+          disabled={busy || authLoading || saved == null}
+          onClick={() => void remove()}
+        />
+      ) : (
+        <button
+          type="button"
+          className="btn btn-primary community-continue"
+          disabled={busy || authLoading || saved == null}
+          onClick={() => void yes()}
+        >
+          {busy ? t('sharedList.accepting') : t('reminders.community.add')}
+        </button>
+      )}
       {message && <p className="error">{message}</p>}
     </div>
   )

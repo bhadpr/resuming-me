@@ -769,6 +769,42 @@ describe('guest reminders', () => {
     expect(loadGuestDraft()!.reminders[0]).toMatchObject({ sharedEventId: 'e1', alertOff: true, sharedStatus: 'cancelled' })
     expect(saveGuestSharedStatuses(draft, [{ ...draft.reminders[0], sharedStatus: 'cancelled' }])).toBe(draft)
   })
+
+  it('keeps one copy of a vital and keeps the note', () => {
+    memoryStorage()
+    const draft = createGuestDraft(new Date(), 'UTC')
+    draft.activities.push({
+      ...activity('w1', 'Weight'),
+      templateId: 'weight',
+      targetValue: 70,
+      targetUnit: 'kg',
+      trackingMode: 'checkbox',
+    })
+    draft.activities.push({
+      ...activity('w2', 'Weight'),
+      templateId: 'weight',
+      targetValue: null,
+      targetUnit: 'kg',
+      trackingMode: 'checkbox',
+      why: 'Morning weigh-in',
+    })
+    draft.readings.push({ localActivityId: 'w1', date: '2026-10-27', value: 71, secondaryValue: null })
+    const storage = memoryStorage()
+    storage.setItem(GUEST_DRAFT_KEY, JSON.stringify(draft))
+    const loaded = loadGuestDraft()
+    const weights = loaded?.activities.filter((item) => item.templateId === 'weight') ?? []
+    expect(weights).toHaveLength(1)
+    expect(weights[0]?.why).toBe('Morning weigh-in')
+    expect(loaded?.readings[0]?.localActivityId).toBe(weights[0]?.localId)
+    const again = upsertGuestActivity(loaded!, {
+      ...activity('w3', 'Weight'),
+      templateId: 'weight',
+      targetValue: 80,
+      targetUnit: 'kg',
+      trackingMode: 'checkbox',
+    })
+    expect(again.activities.filter((item) => item.templateId === 'weight')).toHaveLength(1)
+  })
 })
 
 function stored(id: string, text: string) {

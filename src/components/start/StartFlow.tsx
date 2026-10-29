@@ -291,7 +291,6 @@ function welcomePhases(): readonly (readonly StartPickPhase[])[] {
     ...(ONBOARDING_MEDICINE && MEDICINES_ENABLED ? [['ask', 'medicine', 'medicines'] as const] : []),
     ['vitals', 'vitalPicks', 'targets', 'activities'],
     ...(onboardingHolidayList() ? [['reminderCommunity'] as const] : []),
-    ['meetupAsk', 'meetup'],
     ...(isUsTimeZone() ? [['nflAsk', 'nfl'] as const] : []),
     ...(isIndiaTimeZone() ? [['cricketAsk', 'cricket'] as const] : []),
     ['reminderAsk', 'reminder', 'reminders'],
@@ -315,19 +314,20 @@ function afterPranayam(): StartPickPhase {
 
 /** Vitals are done. Holidays come next where that list exists. */
 function afterVitals(): StartPickPhase {
-  return onboardingHolidayList() ? 'reminderCommunity' : 'meetupAsk'
+  return onboardingHolidayList() ? 'reminderCommunity' : afterHolidaySetup()
 }
 
 /** Holidays are done, or there is no holiday list for this clock. */
 function afterHolidaySetup(): StartPickPhase {
-  return 'meetupAsk'
-}
-
-/** A meetup answer is done. NFL is next on a US clock, cricket on an India clock. */
-function afterMeetup(): StartPickPhase {
   if (isUsTimeZone()) return 'nflAsk'
   if (isIndiaTimeZone()) return 'cricketAsk'
   return 'reminderAsk'
+}
+
+/** The screen before the team question: holidays when this clock has a list, otherwise vitals. */
+function beforeTeamQuestion(activities: GuestActivity[]): StartPickPhase {
+  if (onboardingHolidayList()) return 'reminderCommunity'
+  return selectedVitals(activities).length > 0 ? 'vitalPicks' : 'vitals'
 }
 
 /** One dot per welcome question. Follow-up screens stay on their question's dot. */
@@ -542,6 +542,7 @@ export function StartFlow({
   const [customHabit, setCustomHabit] = useState<GuestActivity | null>(null)
   const [reassurance, setReassurance] = useState<string | null>(null)
   const [googleBusy, setGoogleBusy] = useState(false)
+  const [signInError, setSignInError] = useState<string | null>(null)
   const [nudgeTimes, setNudgeTimes] = useState<string[]>(() => {
     if (draft.reminderTimes?.length) return draft.reminderTimes
     return [draft.reminderTime ?? '19:00']
@@ -592,6 +593,11 @@ export function StartFlow({
 
   useEffect(() => {
     if (draft.pickPhase !== 'reminderCommunity' || onboardingHolidayList()) return
+    persist({ ...draft, pickPhase: afterHolidaySetup() })
+  }, [draft])
+
+  useEffect(() => {
+    if (draft.pickPhase !== 'meetupAsk' && draft.pickPhase !== 'meetup') return
     persist({ ...draft, pickPhase: afterHolidaySetup() })
   }, [draft])
 
@@ -1698,7 +1704,15 @@ export function StartFlow({
             onClick={() =>
               persist({
                 ...draft,
-                pickPhase: isUsTimeZone() ? 'nflAsk' : isIndiaTimeZone() ? 'cricketAsk' : 'meetupAsk',
+                pickPhase: isUsTimeZone()
+                  ? 'nflAsk'
+                  : isIndiaTimeZone()
+                    ? 'cricketAsk'
+                    : onboardingHolidayList()
+                      ? 'reminderCommunity'
+                      : selectedVitals(draft.activities).length > 0
+                        ? 'vitalPicks'
+                        : 'vitals',
               })
             }
           >
@@ -1826,46 +1840,6 @@ export function StartFlow({
         </>
       )}
 
-      {draft.step === 1 && !trackName && !adding && draft.pickPhase === 'meetupAsk' && (
-        <>
-          <button
-            type="button"
-            className="btn btn-ghost start-back"
-            onClick={() =>
-              persist({
-                ...draft,
-                pickPhase: holidayOffer
-                  ? 'reminderCommunity'
-                  : selectedVitals(draft.activities).length > 0
-                    ? 'vitalPicks'
-                    : 'vitals',
-              })
-            }
-          >
-            <Icon name="back" />
-            {t('start.back')}
-          </button>
-          <h2 className="screen-heading start-medicine-title">{t('start.meetupAsk')}</h2>
-          <p className="screen-sub">{t('start.meetupLike')}</p>
-          <div className="start-yes-no">
-            <button
-              type="button"
-              className="btn btn-primary"
-              onClick={() => persist({ ...draft, pickPhase: 'meetup' })}
-            >
-              {t('landing.yes')}
-            </button>
-            <button
-              type="button"
-              className="btn btn-secondary"
-              onClick={() => persist({ ...draft, pickPhase: afterMeetup() })}
-            >
-              {t('start.no')}
-            </button>
-          </div>
-        </>
-      )}
-
       {draft.step === 1 && !trackName && !adding && draft.pickPhase === 'meetup' && (
         <ReminderEditor
           meetup
@@ -1874,7 +1848,7 @@ export function StartFlow({
           loading={false}
           saving={false}
           error={null}
-          onCancel={() => persist({ ...draft, pickPhase: 'meetupAsk' })}
+          onCancel={() => persist({ ...draft, pickPhase: afterHolidaySetup() })}
           onSubmit={async (input) => {
             const next = addGuestReminder(draft, { ...input, meetup: true, kind: 'event' })
             if (!next) return 'full'
@@ -1886,7 +1860,7 @@ export function StartFlow({
               signed_in: false,
             })
             void askForReminderAlerts(input)
-            persist(saveGuestDraft({ ...next, pickPhase: afterMeetup() }))
+            persist(saveGuestDraft({ ...next, pickPhase: afterHolidaySetup() }))
           }}
           onDelete={async () => {}}
         />
@@ -1897,7 +1871,7 @@ export function StartFlow({
           <button
             type="button"
             className="btn btn-ghost start-back"
-            onClick={() => persist({ ...draft, pickPhase: 'meetupAsk' })}
+            onClick={() => persist({ ...draft, pickPhase: beforeTeamQuestion(draft.activities) })}
           >
             <Icon name="back" />
             {t('start.back')}
@@ -1972,7 +1946,7 @@ export function StartFlow({
           <button
             type="button"
             className="btn btn-ghost start-back"
-            onClick={() => persist({ ...draft, pickPhase: 'meetupAsk' })}
+            onClick={() => persist({ ...draft, pickPhase: beforeTeamQuestion(draft.activities) })}
           >
             <Icon name="back" />
             {t('start.back')}
@@ -2906,8 +2880,13 @@ export function StartFlow({
                 disabled={googleBusy}
                 onClick={() => {
                   track('signin_method_clicked', { method: 'apple' })
+                  setSignInError(null)
                   setGoogleBusy(true)
-                  void onApple().finally(() => setGoogleBusy(false))
+                  void onApple()
+                    .catch((err) => {
+                      setSignInError(err instanceof Error ? err.message : 'Sign-in failed')
+                    })
+                    .finally(() => setGoogleBusy(false))
                 }}
               >
                 <AppleMark />
@@ -2918,15 +2897,21 @@ export function StartFlow({
               type="button"
               className="btn btn-primary"
               disabled={googleBusy}
-              onClick={() => {
-                track('signin_method_clicked', { method: 'google' })
-                setGoogleBusy(true)
-                void onGoogle().finally(() => setGoogleBusy(false))
-              }}
+                onClick={() => {
+                  track('signin_method_clicked', { method: 'google' })
+                  setSignInError(null)
+                  setGoogleBusy(true)
+                  void onGoogle()
+                    .catch((err) => {
+                      setSignInError(err instanceof Error ? err.message : 'Sign-in failed')
+                    })
+                    .finally(() => setGoogleBusy(false))
+                }}
             >
               {t('landing.signInGoogle')}
             </button>
           </div>
+          {signInError && <p className="error">{signInError}</p>}
           <p className="onboarding-hint">{t('start.free')}</p>
           <button type="button" className="btn btn-ghost" onClick={() => navigate('/today')}>
             {t('start.notNow')}

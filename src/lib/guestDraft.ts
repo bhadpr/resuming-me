@@ -1,5 +1,6 @@
 import { templateById } from '../data/activityTemplates'
 import { customHabitIcon } from '../data/habitArt'
+import { isListedVital, vitalKey } from './vitalKey'
 import { MEDICINES_ENABLED, ONBOARDING_MEDICINE, ONBOARDING_PRANAYAM } from '../config'
 import {
   dosesOnDate,
@@ -326,7 +327,9 @@ export function loadGuestDraft(): GuestDraft | null {
     const normalized = normalizeDraft(parsed)
     const before = parsed.activities.map((activity) => activity.templateId).join(',')
     const after = normalized.activities.map((activity) => activity.templateId).join(',')
-    if (before !== after) {
+    const beforeIds = parsed.activities.map((activity) => activity.localId).join(',')
+    const afterIds = normalized.activities.map((activity) => activity.localId).join(',')
+    if (before !== after || beforeIds !== afterIds) {
       store.setItem(GUEST_DRAFT_KEY, JSON.stringify(normalized))
     }
     return normalized
@@ -376,6 +379,66 @@ function normalizeActivity(activity: GuestActivity): GuestActivity {
 /** Drop habits that left the catalog, such as an old Sleep selection. Custom names stay. */
 function keepCurrentHabits(activities: GuestActivity[]): GuestActivity[] {
   return activities.filter((activity) => activity.templateId == null || templateById(activity.templateId))
+}
+
+function vitalRank(activity: GuestActivity): number {
+  return (activity.archived ? 0 : 4) + (activity.why?.trim() ? 2 : 0) + (activity.targetValue != null ? 1 : 0)
+}
+
+/** One row per vital. Readings and logs from the extra copies move onto the one we keep. */
+function collapseDuplicateVitals(draft: Pick<GuestDraft, 'activities' | 'readings' | 'logs'>): {
+  activities: GuestActivity[]
+  readings: GuestReading[]
+  logs: GuestLog[]
+} {
+  const keepers = new Map<string, GuestActivity>()
+  const activities: GuestActivity[] = []
+  for (const activity of draft.activities) {
+    if (!isListedVital(activity)) {
+      activities.push(activity)
+      continue
+    }
+    const key = vitalKey(activity)
+    if (!key) {
+      activities.push(activity)
+      continue
+    }
+    const current = keepers.get(key)
+    if (!current || vitalRank(activity) > vitalRank(current)) {
+      if (current) {
+        const index = activities.findIndex((item) => item.localId === current.localId)
+        if (index >= 0) activities[index] = activity
+      } else {
+        activities.push(activity)
+      }
+      keepers.set(key, activity)
+    }
+  }
+  const alias = new Map<string, string>()
+  for (const activity of draft.activities) {
+    const key = isListedVital(activity) ? vitalKey(activity) : null
+    const keeper = key ? keepers.get(key) : null
+    if (keeper && keeper.localId !== activity.localId) alias.set(activity.localId, keeper.localId)
+  }
+  const readings: GuestReading[] = []
+  const seenReading = new Set<string>()
+  const ordered = [...draft.readings].sort((a, b) => {
+    const aKept = alias.has(a.localActivityId) ? 1 : 0
+    const bKept = alias.has(b.localActivityId) ? 1 : 0
+    return aKept - bKept
+  })
+  for (const reading of ordered) {
+    const localActivityId = alias.get(reading.localActivityId) ?? reading.localActivityId
+    const day = `${localActivityId}|${reading.date}`
+    if (seenReading.has(day)) continue
+    seenReading.add(day)
+    readings.push({ ...reading, localActivityId })
+  }
+  const logs = draft.logs.map((log) => ({
+    ...log,
+    localActivityId: alias.get(log.localActivityId) ?? log.localActivityId,
+  }))
+  return { activities, readings, logs }
 }
 
 function normalizeReminderTimes(times: unknown, fallback: string | null): string[] {
@@ -857,9 +920,15 @@ function normalizeDraft(draft: GuestDraft): GuestDraft {
   const medicines = normalizeGuestMedicines(stored)
   const { medicine: _legacyMedicine, ...withoutLegacyMedicine } = stored
   void _legacyMedicine
-  const activities = keepCurrentHabits(
+  const prepared = keepCurrentHabits(
     (draft.activities ?? []).slice(0, GUEST_MAX_ACTIVITIES).map(normalizeActivity).filter((a) => a.name),
   )
+  const collapsed = collapseDuplicateVitals({
+    activities: prepared,
+    readings: draft.readings ?? [],
+    logs: draft.logs ?? [],
+  })
+  const activities = collapsed.activities
   const ids = new Set(activities.map((activity) => activity.localId))
   return {
     ...withoutLegacyMedicine,
@@ -891,13 +960,13 @@ function normalizeDraft(draft: GuestDraft): GuestDraft {
     medicineDaily: medicines.length > 0,
     reminders: normalizeGuestReminders(draft.reminders),
     pickPhase: normalizePickPhase(draft.pickPhase),
-    readings: (draft.readings ?? []).filter(
+    readings: collapsed.readings.filter(
       (reading) =>
         ids.has(reading.localActivityId) &&
         typeof reading.date === 'string' &&
         Number.isFinite(reading.value),
     ),
-    logs: (draft.logs ?? []).filter((log) => {
+    logs: collapsed.logs.filter((log) => {
       if (!ids.has(log.localActivityId)) return false
       if (log.kind === 'count' || log.kind === 'completed') return Boolean(log.date)
       return log.durationSeconds >= 1
@@ -938,7 +1007,9 @@ export function upsertGuestActivity(draft: GuestDraft, activity: GuestActivity):
   const existing = draft.activities.findIndex((a) => a.localId === activity.localId)
   let activities = [...draft.activities]
   if (existing >= 0) activities[existing] = nextActivity
-  else if (activities.length >= GUEST_MAX_ACTIVITIES) return draft
+  else if (isListedVital(nextActivity) && activities.some((item) => vitalKey(item) === vitalKey(nextActivity))) {
+    return draft
+  } else if (activities.length >= GUEST_MAX_ACTIVITIES) return draft
   else activities = [...activities, nextActivity]
   return saveGuestDraft({ ...draft, activities })
 }

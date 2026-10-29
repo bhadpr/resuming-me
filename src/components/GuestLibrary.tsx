@@ -10,14 +10,17 @@ import { habitTemplateId } from '../data/habitArt'
 import { formatClock, mealMessageKey, systemMessageKey, weekdayShort } from '../lib/medicineFormat'
 import {
   GUEST_MAX_MEDICINES,
+  GUEST_WHY_MAX,
   loadGuestDraft,
   removeGuestMedicine,
   saveGuestDraft,
+  upsertGuestActivity,
   type GuestActivity,
   type GuestDraft,
   type GuestMedicine,
 } from '../lib/guestDraft'
-import { VITAL_GOAL_IDS, isGuestVital, standardVitalTarget } from '../lib/onboardingFlow'
+import { VITAL_GOAL_IDS, isGuestVital, parseGoalText, standardVitalTarget } from '../lib/onboardingFlow'
+import { uniqueByVitalKey } from '../lib/vitalKey'
 import { Icon, type IconName } from './Icon'
 import { GuestSaveWidget } from './GuestSaveWidget'
 
@@ -31,7 +34,23 @@ function useGuestDraft(): [GuestDraft | null, (next: GuestDraft) => void] {
   return [draft, (next) => setDraft(saveGuestDraft(next))]
 }
 
-function guestDetail(activity: GuestActivity, t: ReturnType<typeof useLocale>['t']): string {
+function guestDetail(
+  activity: GuestActivity,
+  t: ReturnType<typeof useLocale>['t'],
+  kind: 'activity' | 'vital',
+): string {
+  if (kind === 'vital') {
+    const note = activity.why?.trim()
+    if (note) return note
+    if (activity.targetValue != null) {
+      return activity.targetUnit
+        ? t('start.targetValue', { value: String(activity.targetValue), unit: activity.targetUnit })
+        : String(activity.targetValue)
+    }
+    const standard = standardVitalTarget(activity.templateId)
+    if (standard) return t(standard)
+    return ''
+  }
   const standard = standardVitalTarget(activity.templateId)
   if (standard) return t(standard)
   if (activity.type === 'deadline' && activity.deadline) return activity.deadline
@@ -92,7 +111,7 @@ function ItemList({
               {groupName ? <h3 className="today-period-title">{groupTitle(groupName, locale)}</h3> : null}
               <ul className="activity-list">
                 {list.map((activity) => {
-                  const detail = guestDetail(activity, t)
+                  const detail = guestDetail(activity, t, kind)
                   const inner = (
                     <>
                       <HabitMark
@@ -186,8 +205,10 @@ export function GuestVitalsPage() {
   const navigate = useNavigate()
   const [draft, updateDraft] = useGuestDraft()
   const [confirmDelete, setConfirmDelete] = useState<number | null>(null)
-  const vitals = (draft?.activities ?? []).filter(
-    (activity) => isGuestVital(activity) || VITAL_GOAL_IDS.has(activity.templateId ?? ''),
+  const vitals = uniqueByVitalKey(
+    (draft?.activities ?? []).filter(
+      (activity) => isGuestVital(activity) || VITAL_GOAL_IDS.has(activity.templateId ?? ''),
+    ),
   )
   const medicines = draft?.medicines ?? []
 
@@ -210,6 +231,7 @@ export function GuestVitalsPage() {
         kind="vital"
         items={vitals}
         onAdd={() => navigate('/start?step=1&add=1&vital=1')}
+        onOpen={(activity) => navigate(`/numbers/${activity.localId}`)}
       />
       {MEDICINES_ENABLED && (
         <section className="medicine-section">
@@ -276,5 +298,125 @@ export function GuestVitalsPage() {
         </section>
       )}
     </>
+  )
+}
+
+/** Guest vital detail and edit. The description is saved on this vital. */
+export function GuestVitalScreen({
+  mode,
+  activityId,
+}: {
+  mode: 'detail' | 'form'
+  activityId?: string
+}) {
+  const navigate = useNavigate()
+  const { locale, t } = useLocale()
+  const [draft, updateDraft] = useGuestDraft()
+  const activity = draft?.activities.find((item) => item.localId === activityId) ?? null
+  const [description, setDescription] = useState(activity?.why ?? '')
+  const [targetText, setTargetText] = useState(
+    activity?.targetValue != null ? String(activity.targetValue) : '',
+  )
+
+  if (!activity) {
+    return (
+      <>
+        <button type="button" className="btn btn-ghost btn-sm back-btn" onClick={() => navigate('/numbers')}>
+          <Icon name="back" />
+          {t('start.back')}
+        </button>
+        <p className="screen-sub">{t('list.missingHabit')}</p>
+      </>
+    )
+  }
+
+  const name = visibleName(activity, locale)
+
+  if (mode === 'form') {
+    const showTarget = activity.targetValue != null || activity.templateId === 'weight'
+    return (
+      <>
+        <button
+          type="button"
+          className="btn btn-ghost btn-sm back-btn"
+          onClick={() => navigate(`/numbers/${activity.localId}`)}
+        >
+          <Icon name="back" />
+          {t('start.back')}
+        </button>
+        <h2 className="form-title">{name}</h2>
+        <form
+          className="activity-form"
+          onSubmit={(event) => {
+            event.preventDefault()
+            const current = loadGuestDraft()
+            if (!current) return
+            const parsed = showTarget ? parseGoalText(activity.templateId, targetText) : null
+            const saved = upsertGuestActivity(current, {
+              ...activity,
+              why: description.trim() || null,
+              targetValue: showTarget ? (parsed ?? activity.targetValue) : activity.targetValue,
+            })
+            updateDraft(saved)
+            navigate(`/numbers/${activity.localId}`)
+          }}
+        >
+          {showTarget && (
+            <label className="field">
+              <span className="field-label">{t('start.targetOptional')}</span>
+              <input
+                className="field-input"
+                inputMode="decimal"
+                value={targetText}
+                onChange={(e) => setTargetText(e.target.value)}
+              />
+            </label>
+          )}
+          <label className="field">
+            <span className="field-label">{t('metricDetail.description')}</span>
+            <input
+              className="field-input"
+              maxLength={GUEST_WHY_MAX}
+              value={description}
+              onChange={(e) => setDescription(e.target.value)}
+            />
+          </label>
+          <div className="form-actions">
+            <button type="button" className="btn btn-ghost" onClick={() => navigate(`/numbers/${activity.localId}`)}>
+              {t('start.back')}
+            </button>
+            <button type="submit" className="btn btn-primary">
+              {t('start.save')}
+            </button>
+          </div>
+        </form>
+      </>
+    )
+  }
+
+  const detail = guestDetail(activity, t, 'vital')
+  return (
+    <div className="activity-detail metric-detail">
+      <button type="button" className="btn btn-ghost btn-sm back-btn" onClick={() => navigate('/numbers')}>
+        <Icon name="back" />
+        {t('start.back')}
+      </button>
+      <div className="detail-hero detail-hero-row">
+        <HabitMark name={name} templateId={activity.templateId} icon={activity.icon} photo={activity.photo} />
+        <div className="detail-hero-text">
+          <h2>{name}</h2>
+          {detail ? <p className="screen-sub">{detail}</p> : null}
+        </div>
+      </div>
+      <div className="detail-top-actions">
+        <button
+          type="button"
+          className="btn btn-primary"
+          onClick={() => navigate(`/numbers/${activity.localId}/edit`)}
+        >
+          {t('metricDetail.edit')}
+        </button>
+      </div>
+    </div>
   )
 }

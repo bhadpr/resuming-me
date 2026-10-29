@@ -5,6 +5,7 @@ import { useLocale } from '../hooks/useLocale'
 import { ArchivedFilter } from './ArchivedFilter'
 import { HabitMark } from './HabitMark'
 import { Icon } from './Icon'
+import { skipVitalKeys, uniqueByVitalKey, vitalKey } from '../lib/vitalKey'
 
 interface MetricListProps {
   metrics: Metric[]
@@ -31,6 +32,11 @@ export function MetricList({
   const { locale, t } = useLocale()
   const visible = showArchived ? metrics : metrics.filter((m) => !m.archived)
   const archivedCount = metrics.filter((m) => m.archived).length
+  const shownGoals = uniqueByVitalKey(goals)
+  const shownMetrics = skipVitalKeys(
+    visible,
+    new Set(shownGoals.map((activity) => vitalKey(activity)).filter((key): key is string => key != null)),
+  )
 
   return (
     <div className="activity-list-screen">
@@ -53,7 +59,7 @@ export function MetricList({
 
       {loading ? (
         <p className="muted-center">{t('list.loading')}</p>
-      ) : visible.length === 0 && goals.length === 0 ? (
+      ) : shownMetrics.length === 0 && shownGoals.length === 0 ? (
         <section className="empty-state">
           <span className="empty-state-icon"><Icon name="metrics" size={24} /></span>
           <h2>{t('list.empty')}</h2>
@@ -64,7 +70,7 @@ export function MetricList({
         </section>
       ) : (
         <ul className="activity-list">
-          {goals.map((activity) => (
+          {shownGoals.map((activity) => (
             <li key={activity.id}>
               <button
                 type="button"
@@ -74,12 +80,13 @@ export function MetricList({
                 <HabitMark name={visibleName(activity, locale)} templateId={activity.template_id} />
                 <span className="activity-meta">
                   <span className="activity-name">{visibleName(activity, locale)}</span>
-                  {activity.target_value != null && (
+                  {(activity.why_matters?.trim() || activity.target_value != null) && (
                     <span className="activity-desc">
-                      {t('start.targetValue', {
-                        value: String(activity.target_value),
-                        unit: activity.target_unit ?? '',
-                      })}
+                      {activity.why_matters?.trim() ||
+                        t('start.targetValue', {
+                          value: String(activity.target_value),
+                          unit: activity.target_unit ?? '',
+                        })}
                     </span>
                   )}
                 </span>
@@ -89,7 +96,7 @@ export function MetricList({
               </button>
             </li>
           ))}
-          {visible.map((metric) => (
+          {shownMetrics.map((metric) => (
             <li key={metric.id}>
               <button
                 type="button"

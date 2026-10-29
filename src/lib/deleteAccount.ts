@@ -1,3 +1,4 @@
+import { clearAccountIdCache } from './accountId'
 import { createSupabaseClient } from './supabase'
 import { clearLocalAppData, markAccountDeleted } from './clearLocalData'
 
@@ -29,6 +30,7 @@ export async function deleteCurrentAccount(): Promise<void> {
 
   markAccountDeleted()
   clearLocalAppData()
+  clearAccountIdCache()
   // Session may already be invalid after auth user deletion.
   try {
     await client.auth.signOut({ scope: 'local' })

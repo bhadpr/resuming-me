@@ -17,7 +17,7 @@ import {
   weightUnitOf,
   type WeightUnit,
 } from '../lib/onboardingFlow'
-import { vitalTarget } from '../lib/vitalTargets'
+import { vitalNote, vitalTarget } from '../lib/vitalTargets'
 
 const UNIT_SUGGESTIONS = ['kg', 'lb', 'hrs', 'bpm', 'score', '%', 'oz', 'glasses'] as const
 const CUSTOM_UNIT = '__custom__'
@@ -89,6 +89,9 @@ export function MetricForm({
   const editKind = initial ? habitTemplateId({ template_id: initial.template_id, name: initial.name }) : null
   const editGoal = editKind != null && isDailyGoalHabit({ templateId: editKind })
   const savedTarget = initial ? vitalTarget(initial.id) : null
+  const [description, setDescription] = useState(
+    () => initial?.description?.trim() || (initial ? vitalNote(initial.id) ?? '' : ''),
+  )
   const [goalValue, setGoalValue] = useState<number | null>(editGoal ? savedTarget : null)
   const [targetText, setTargetText] = useState(() =>
     savedTarget == null || editGoal ? '' : String(savedTarget),
@@ -131,18 +134,19 @@ export function MetricForm({
 
   async function handleSubmit(e: FormEvent) {
     e.preventDefault()
+    const next = { ...input, description: description.trim() || null }
     if (weightSetup) {
       if (typedTarget == null) return
-      await onSubmit({ ...input, unit: weightUnit }, typedTarget)
+      await onSubmit({ ...next, unit: weightUnit }, typedTarget)
       return
     }
     if (editGoal) {
       const target = typedTarget ?? goalValue
       if (target == null) return
-      await onSubmit(input, target)
+      await onSubmit(next, target)
       return
     }
-    await onSubmit(input, standard ? null : typedTarget)
+    await onSubmit(next, standard ? undefined : typedTarget)
   }
 
   function openSetup(metric: MetricInput) {
@@ -302,7 +306,7 @@ export function MetricForm({
 
   if (initial && (weightSetup || standard || editGoal)) {
     const unitChanged = weightSetup && weightUnit !== weightUnitOf(initial.unit)
-    const canSave = weightSetup ? typedTarget != null : editGoal ? (typedTarget ?? goalValue) != null : false
+    const canSave = weightSetup ? typedTarget != null : editGoal ? (typedTarget ?? goalValue) != null : true
     return (
       <form className="activity-form" onSubmit={handleSubmit}>
         {standard && <StandardVitalTarget messageKey={standard} />}
@@ -332,17 +336,25 @@ export function MetricForm({
         )}
         {unitChanged && <p className="form-hint">{t('start.pastReadings')}</p>}
 
+        <label className="field">
+          <span className="field-label">{t('metricDetail.description')}</span>
+          <input
+            className="field-input"
+            maxLength={80}
+            value={description}
+            onChange={(e) => setDescription(e.target.value)}
+          />
+        </label>
+
         {error && <p className="error">{error}</p>}
 
         <div className="form-actions activity-pick-footer">
           <button type="button" className="btn btn-ghost" onClick={onCancel} disabled={saving}>
             {standard ? t('start.back') : 'Cancel'}
           </button>
-          {!standard && (
-            <button type="submit" className="btn btn-primary" disabled={saving || !canSave}>
-              {saving ? 'Saving…' : 'Save changes'}
-            </button>
-          )}
+          <button type="submit" className="btn btn-primary" disabled={saving || !canSave}>
+            {saving ? 'Saving…' : 'Save changes'}
+          </button>
         </div>
       </form>
     )
@@ -417,6 +429,16 @@ export function MetricForm({
           value={targetText}
           onChange={(e) => setTargetText(e.target.value)}
           enterKeyHint="done"
+        />
+      </label>
+
+      <label className="field">
+        <span className="field-label">{t('metricDetail.description')}</span>
+        <input
+          className="field-input"
+          maxLength={80}
+          value={description}
+          onChange={(e) => setDescription(e.target.value)}
         />
       </label>
 

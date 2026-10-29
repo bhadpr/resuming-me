@@ -1,5 +1,6 @@
 import { describe, expect, it } from 'vitest'
-import { guestReminderAlreadySaved } from './mergeGuestDraft'
+import { ReminderCapError } from './reminders'
+import { guestReminderAlreadySaved, reminderSaveOutcome } from './mergeGuestDraft'
 
 const diwali = {
   text: 'Diwali',
@@ -30,6 +31,22 @@ describe('guestReminderAlreadySaved', () => {
         { ...diwali, text: 'Meet at the mall', communityId: null, sharedEventId: 'event-1' },
       ),
     ).toBe(true)
+  })
+
+  it('stops at the reminder cap and skips one bad row', () => {
+    expect(reminderSaveOutcome(new ReminderCapError())).toBe('stop')
+    expect(reminderSaveOutcome({ code: 'P0001', message: 'reminders_open_cap' })).toBe('stop')
+    expect(reminderSaveOutcome({ code: '23505', message: 'duplicate key' })).toBe('skip')
+    expect(
+      reminderSaveOutcome({ code: '22P02', message: 'invalid input syntax for type uuid' }),
+    ).toBe('skip')
+    expect(
+      reminderSaveOutcome({
+        code: '23503',
+        message: 'insert or update on table "reminders" violates foreign key constraint "reminders_user_id_fkey"',
+      }),
+    ).toBe('fail')
+    expect(reminderSaveOutcome(new Error('Load failed'))).toBe('fail')
   })
 
   it('still adds a different reminder', () => {

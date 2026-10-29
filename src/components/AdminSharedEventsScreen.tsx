@@ -8,6 +8,7 @@ import {
   type AdminSharedEvent,
 } from '../lib/sharedEvents'
 import { EventPhoto } from './ReminderKindIcon'
+import { SectionFold } from './MonthFold'
 
 const STATUS_LABEL: Record<AdminSharedEvent['status'], string> = {
   active: 'Active',
@@ -88,13 +89,10 @@ export function AdminSharedEventsScreen() {
           {rows.length === 0 ? (
             <p className="muted-center">No shared events yet.</p>
           ) : (
-            <ul className="admin-feedback-list">
+            <div className="month-folds">
               {rows.map((row) => (
-                <li key={row.id} className="admin-feedback-card">
-                  <div className="admin-feedback-head">
-                    <strong>{row.text}</strong>
-                    <span className="analytics-stat-hint">{formatFeedbackTime(row.createdAt)}</span>
-                  </div>
+                <SectionFold key={row.id} title={row.text} defaultOpen={false}>
+                  <span className="analytics-stat-hint">{formatFeedbackTime(row.createdAt)}</span>
                   <EventPhoto src={eventPhotoUrl(row.photoPath)} alt="Event photo" />
                   {row.description && <p className="reminder-description">{row.description}</p>}
                   <p className="admin-feedback-who">
@@ -124,9 +122,9 @@ export function AdminSharedEventsScreen() {
                       {row.status === 'switched_off' ? 'Switch back on' : 'Switch off'}
                     </button>
                   )}
-                </li>
+                </SectionFold>
               ))}
-            </ul>
+            </div>
           )}
         </>
       )}

@@ -1,7 +1,7 @@
 import { useEffect, useRef, useState, type FormEvent } from 'react'
 import { Link, useNavigate } from 'react-router-dom'
 import { todayLocalDate } from '../lib/dates'
-import { canLogPastGoal, stacksSessionMinutes } from '../lib/dayStatus'
+import { canLogPastGoal } from '../lib/dayStatus'
 import {
   countTapLabel,
   isNumberEntryVital,
@@ -16,6 +16,7 @@ import { AppAlertsNote } from './AppAlertsNote'
 import { GuestSaveWidget } from './GuestSaveWidget'
 import { TabGuide } from './TabGuide'
 import { HabitMark } from './HabitMark'
+import { TaggedName } from './TodayKindTag'
 import { Icon } from './Icon'
 import { Toast } from './Toast'
 import { useUndoToast } from '../hooks/useUndoToast'
@@ -24,6 +25,7 @@ import { HabitVideoPlaceholder } from './HabitVideoPlaceholder'
 import { MedicineDoseRow } from './MedicineDoses'
 import { ReminderDoneRow, ReminderRow } from './ReminderSection'
 import { MinuteLogPop, TodayAdds } from './TodayScreen'
+import { TodayPop } from './TodayPop'
 import { StepsCard } from './StepsCard'
 import { TodayByTime, type TodayTimedItem } from './TodayByTime'
 import { activityPeriod, periodForHour } from '../lib/dayPeriod'
@@ -164,6 +166,7 @@ export function GuestTodayPage() {
     setRunningId(null)
     setPaused(false)
     setElapsed(0)
+    setVideoId((current) => (current === activityId ? null : current))
   }
 
   function logMinutes(activity: GuestActivity, minutes: number) {
@@ -308,7 +311,6 @@ export function GuestTodayPage() {
       )
     }
     if (activity.trackingMode !== 'count' && !guestTapsDone(activity)) {
-      const stacking = stacksSessionMinutes(activity)
       const loggedSeconds = guestSessionSeconds(
         draft,
         activity.localId,
@@ -345,7 +347,7 @@ export function GuestTodayPage() {
               icon={activity.icon}
               photo={activity.photo}
             />
-            <span className="activity-name">{visibleName(activity, locale)}</span>
+            <TaggedName kind="habit">{visibleName(activity, locale)}</TaggedName>
             <StatusMark live={isRunning && !paused} paused={isRunning && paused} />
           </div>
           <div className="today-row-main">
@@ -386,20 +388,32 @@ export function GuestTodayPage() {
                   </button>
                   <button
                     type="button"
-                    className="btn btn-primary btn-today"
+                    className="btn btn-done btn-today"
                     onClick={() => finishTimer(elapsed)}
                   >
                     {t('today.done')}
                   </button>
                 </>
+              ) : progress.done ? (
+                <button
+                  type="button"
+                  className="btn btn-today btn-today-done"
+                  onClick={() => {
+                    const latest = draftRef.current
+                    if (!latest) return
+                    setDraft(removeLastGuestLog(latest, activity.localId, 'session'))
+                  }}
+                >
+                  {t('toast.undo')}
+                </button>
               ) : (
                 <button
                   type="button"
-                  className={`btn btn-today ${progress.done && !stacking ? 'btn-today-done' : 'btn-primary'}`}
-                  disabled={Boolean(runningId) || (progress.done && !stacking)}
+                  className="btn btn-primary btn-today"
+                  disabled={Boolean(runningId)}
                   onClick={() => startTimer(activity.localId)}
                 >
-                  {progress.done && !stacking ? t('today.done') : partial ? t('today.resume') : t('today.start')}
+                  {partial ? t('today.resume') : t('today.start')}
                 </button>
               )}
               {!progress.done && !isRunning && !skipped && (
@@ -501,7 +515,7 @@ export function GuestTodayPage() {
             icon={activity.icon}
             photo={activity.photo}
           />
-          <span className="activity-name">{visibleName(activity, locale)}</span>
+          <TaggedName kind="habit">{visibleName(activity, locale)}</TaggedName>
         </div>
         <div className="today-row-main">
           <span className="activity-meta">
@@ -546,7 +560,7 @@ export function GuestTodayPage() {
             ) : (
               <button
                 type="button"
-                className={`btn btn-today ${progress.done && !openEnded ? 'btn-today-done' : 'btn-primary'}`}
+                className={`btn btn-today ${tick ? (progress.done && !openEnded ? 'btn-today-done' : 'btn-done') : progress.done && !openEnded ? 'btn-today-done' : 'btn-primary'}`}
                 disabled={progress.done && !openEnded}
                 onClick={() => {
                   setDraft(appendGuestCount(draft, activity.localId, today))
@@ -734,6 +748,7 @@ function NumberVitalRow({
   const steps = activity.templateId === 'steps'
   const weight = activity.templateId === 'weight'
   const inPounds = weight && weightUnitOf(activity.targetUnit) === 'lb'
+  const [open, setOpen] = useState(false)
   const [value, setValue] = useState(reading ? String(reading.value) : '')
   const [secondary, setSecondary] = useState(
     reading?.secondaryValue == null ? '' : String(reading.secondaryValue),
@@ -751,12 +766,14 @@ function NumberVitalRow({
     if (!paired) {
       onSave(parsed, null)
       trackGuestLog(activity, 'vital', null)
+      setOpen(false)
       return
     }
     const lower = Number(secondary)
     if (secondary === '' || Number.isNaN(lower)) return
     onSave(parsed, lower)
     trackGuestLog(activity, 'vital', null)
+    setOpen(false)
   }
 
   const summary = steps
@@ -794,9 +811,9 @@ function NumberVitalRow({
           icon={activity.icon}
           photo={activity.photo}
         />
-        <span className="activity-name">{visibleName(activity, locale)}</span>
+        <TaggedName kind="vital">{visibleName(activity, locale)}</TaggedName>
       </div>
-      <form className={`today-row-main ${paired ? 'vital-entry' : ''}`} onSubmit={handleSubmit}>
+      <div className="today-row-main">
         <span className="activity-meta">
           <span className="activity-desc">{skipped ? t('today.skippedLine') : summary}</span>
         </span>
@@ -804,12 +821,32 @@ function NumberVitalRow({
           {skipped ? (
             <UndoSkipButton onUndo={onUnskip} />
           ) : (
-            <span className="today-actions-row">
+            <button type="button" className="btn btn-primary btn-today" onClick={() => setOpen(true)}>
+              {reading ? t('today.update') : t('today.log')}
+            </button>
+          )}
+          {!reading && !skipped && <SkipLink onSkip={onSkip} />}
+        </span>
+      </div>
+      {open && (
+        <TodayPop title={visibleName(activity, locale)} onClose={() => setOpen(false)}>
+          <form className="today-pop-form" onSubmit={handleSubmit}>
+            <label className="field">
+              <span className="field-label">
+                {paired
+                  ? t('today.upper')
+                  : steps
+                    ? t('today.steps')
+                    : weight
+                      ? t(inPounds ? 'today.lb' : 'today.kg')
+                      : t('today.bpm')}
+              </span>
               <input
-                className="field-input field-input-sm"
+                className="field-input"
                 type="number"
                 step="any"
                 inputMode={weight ? 'decimal' : 'numeric'}
+                autoFocus
                 placeholder={
                   paired
                     ? t('today.upper')
@@ -824,10 +861,14 @@ function NumberVitalRow({
                   paired ? 'Upper blood pressure' : steps ? 'Steps today' : weight ? 'Weight today' : 'Heart rate'
                 }
                 onChange={(event) => setValue(event.target.value)}
+                enterKeyHint="done"
               />
-              {paired && (
+            </label>
+            {paired && (
+              <label className="field">
+                <span className="field-label">{t('today.lower')}</span>
                 <input
-                  className="field-input field-input-sm"
+                  className="field-input"
                   type="number"
                   step="any"
                   inputMode="numeric"
@@ -835,20 +876,25 @@ function NumberVitalRow({
                   value={secondary}
                   aria-label="Lower blood pressure"
                   onChange={(event) => setSecondary(event.target.value)}
+                  enterKeyHint="done"
                 />
-              )}
+              </label>
+            )}
+            <div className="today-pop-actions">
               <button
                 type="submit"
-                className="btn btn-primary btn-today"
+                className="btn btn-primary"
                 disabled={value === '' || (paired && secondary === '')}
               >
                 {reading ? t('today.update') : t('today.log')}
               </button>
-            </span>
-          )}
-          {!reading && !skipped && <SkipLink onSkip={onSkip} />}
-        </span>
-      </form>
+              <button type="button" className="btn btn-secondary" onClick={() => setOpen(false)}>
+                {t('today.cancel')}
+              </button>
+            </div>
+          </form>
+        </TodayPop>
+      )}
     </li>
   )
 }

@@ -2,6 +2,7 @@ import { useEffect, useRef, useState, type ReactNode } from 'react'
 import { Capacitor } from '@capacitor/core'
 import { useTheme } from '../hooks/useTheme'
 import { useAuth } from '../hooks/useAuth'
+import { accountName } from '../lib/accountName'
 import {
   digestScheduleHint,
   formatTimeInput,
@@ -104,7 +105,6 @@ interface SettingsScreenProps {
   onOpenAnalytics2?: () => void
   onOpenFeedback?: () => void
   onOpenSharedEvents?: () => void
-  onOpenCommunity?: () => void
   onOpenSharedLists?: () => void
   onOpenGroups?: (groupId?: string) => void
   todayItems?: DigestItem[]
@@ -188,7 +188,6 @@ export function SettingsScreen({
   onOpenAnalytics2,
   onOpenFeedback,
   onOpenSharedEvents,
-  onOpenCommunity,
   onOpenSharedLists,
   onOpenGroups,
   todayItems = [],
@@ -696,7 +695,8 @@ export function SettingsScreen({
     <div className="settings-screen st">
       <header className="st-intro">
         <p className="st-intro-kicker">{user?.email ? t('settings.account') : t('settings.title')}</p>
-        <h2 className="st-intro-title">{user?.email ?? t('settings.title')}</h2>
+        <h2 className="st-intro-title">{accountName(user) ?? user?.email ?? t('settings.title')}</h2>
+        {accountName(user) && user?.email && <p className="st-intro-text">{user.email}</p>}
       </header>
 
       <SettingsPanel title={t('settings.appearance')} lead={t('settings.textSizeHint')}>
@@ -791,14 +791,6 @@ export function SettingsScreen({
                 desc="Reports, and switching an event off"
                 icon="calendar"
                 onClick={onOpenSharedEvents}
-              />
-            )}
-            {onOpenCommunity && (
-              <SettingsLink
-                title="Community reminders"
-                desc="Diwali, Christmas and other days people can pick"
-                icon="reminders"
-                onClick={onOpenCommunity}
               />
             )}
             {onOpenSharedLists && (

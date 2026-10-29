@@ -12,6 +12,11 @@ const config: CapacitorConfig = {
     backgroundColor: '#fff4e8',
     contentInset: 'never',
   },
+  server: {
+    // YouTube rejects the default capacitor:// address and shows a player configuration error.
+    iosScheme: 'https',
+    hostname: 'localhost',
+  },
   plugins: {
     LocalNotifications: {
       smallIcon: 'ic_stat_resuming',

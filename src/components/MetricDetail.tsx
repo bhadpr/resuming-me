@@ -8,8 +8,6 @@ import {
 } from '../lib/stats'
 import { HabitMark } from './HabitMark'
 import { visibleName } from '../lib/catalogName'
-import { habitTemplateId } from '../data/habitArt'
-import { standardVitalTarget } from '../lib/onboardingFlow'
 import { useLocale } from '../hooks/useLocale'
 import { VitalTrend } from './VitalTrend'
 import { formatPair, formatPairDelta } from '../lib/vitalChart'
@@ -68,13 +66,11 @@ export function MetricDetail({
         </div>
       </div>
 
-      {!standardVitalTarget(habitTemplateId(metric)) && (
-        <div className="detail-top-actions">
-          <button type="button" className="btn btn-primary" onClick={onEdit} disabled={busy}>
-            Edit
-          </button>
-        </div>
-      )}
+      <div className="detail-top-actions">
+        <button type="button" className="btn btn-primary" onClick={onEdit} disabled={busy}>
+          {t('metricDetail.edit')}
+        </button>
+      </div>
 
       <div className="segmented window-toggle">
         {([7, 30, 90] as const).map((days) => (

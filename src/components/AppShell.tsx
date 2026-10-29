@@ -114,7 +114,6 @@ import {
   formatCompletedUndoMessage,
   formatCountUndoMessage,
   formatMetricUndoMessage,
-  formatRestDayUndoMessage,
   formatSessionUndoMessage,
   formatSkipUndoMessage,
 } from '../lib/undoMessages'
@@ -124,7 +123,7 @@ import { catalogTrackId, visibleName } from '../lib/catalogName'
 import { formatLongDate, t } from '../lib/i18n'
 import { comebackGapDays, track } from '../lib/track'
 import { useLocale } from '../hooks/useLocale'
-import { targetToSeconds } from '../lib/timer'
+import { latestSessionEntry, targetToSeconds } from '../lib/timer'
 import {
   archiveActivity,
   createActivity,
@@ -172,8 +171,8 @@ import {
   queuedSessionsAsLogEntries,
   writeSessionEntry,
 } from '../lib/sessions'
-import { removeQueuedSession } from '../lib/timerStorage'
-import { addDays, startOfWeekMonday, todayLocalDate } from '../lib/dates'
+import { loadSessionQueue, removeQueuedSession } from '../lib/timerStorage'
+import { addDays, endOfMonth, endOfWeekSunday, startOfMonth, startOfWeekMonday, todayLocalDate } from '../lib/dates'
 import { buildTodayProgress, type ActivityTodayProgress } from '../lib/today'
 import {
   insertPostponedEntry,
@@ -191,9 +190,7 @@ import {
 } from '../lib/activityPauses'
 import {
   listRestDays,
-  markRestDay,
   restDayDates,
-  unmarkRestDay,
   type RestDay,
 } from '../lib/restDays'
 import {
@@ -206,6 +203,7 @@ import {
   showAppChrome,
   tabFromView,
 } from '../lib/navigation'
+import { accountFirstName } from '../lib/accountName'
 import { requestMicroSteps } from '../lib/microSteps'
 import { enableDailyDigestFromOnboarding } from '../lib/localNotifications'
 import {
@@ -791,7 +789,7 @@ export function AppShell() {
       mergedLogEntries,
       postponedEntries,
       today,
-      dayStatusOpts,
+      { ...dayStatusOpts, restDates: new Set() },
     )
   }, [activities, mergedLogEntries, postponedEntries, today, dayStatusOpts])
 
@@ -1205,7 +1203,7 @@ export function AppShell() {
         const created = await createActivity(user.id, input)
         trackActivityCreated(created)
         setActivities((prev) => [created, ...prev])
-        navigate(`/activities/${created.id}`)
+        navigate('/activities')
       }
       await refreshTodayData(
         activityScreen.name === 'form' && selectedActivity
@@ -1250,6 +1248,16 @@ export function AppShell() {
     setSaving(true)
     setError(null)
     try {
+      const already = activities.find(
+        (item) => !item.archived && habitTemplateId(item) === templateId,
+      )
+      if (already) {
+        const updated = await updateActivity(already, toActivityInput(already, goal))
+        setActivities((prev) => prev.map((item) => (item.id === updated.id ? updated : item)))
+        navigate(`/activities/${updated.id}`)
+        await refreshTodayData(await listActivities(true))
+        return
+      }
       const created = await createActivity(user.id, {
         ...activityInputFromTemplate(template),
         targetValue: goal,
@@ -1358,6 +1366,29 @@ export function AppShell() {
   }
 
   async function handleUncheck(row: ActivityTodayProgress) {
+    if (row.actionKind === 'timer') {
+      const span =
+        row.activity.type === 'weekly_n'
+          ? { from: startOfWeekMonday(today), to: endOfWeekSunday(today) }
+          : row.activity.type === 'monthly'
+            ? { from: startOfMonth(today), to: endOfMonth(today) }
+            : { from: today, to: today }
+      const latest = latestSessionEntry(
+        mergedLogEntries,
+        row.activity.id,
+        span.from,
+        span.to,
+      )
+      if (!latest) return
+      const queued = loadSessionQueue().some((item) => item.id === latest.id)
+      await undoLogEntry({
+        entryId: latest.id,
+        queued,
+        activityId: row.activity.id,
+        kind: 'session',
+      })
+      return
+    }
     setBusyId(row.activity.id)
     setError(null)
     try {
@@ -1461,28 +1492,6 @@ export function AppShell() {
     setBusyId(row.activity.id)
     try {
       for (const entryId of skipIds) await undoLogEntry({ entryId, activityId: row.activity.id })
-    } finally {
-      setBusyId(null)
-    }
-  }
-
-  async function handleTakeRestDay() {
-    if (!user) return
-    setBusyId('rest-day')
-    setError(null)
-    try {
-      const created = await markRestDay({ userId: user.id, date: today })
-      setRestDays((prev) => {
-        if (prev.some((r) => r.id === created.id)) return prev
-        return [...prev, created]
-      })
-      undoToast.show(formatRestDayUndoMessage(), async () => {
-        await unmarkRestDay(created.id)
-        setRestDays((prev) => prev.filter((r) => r.id !== created.id))
-      })
-      track('rest_day', { duration: 'today' })
-    } catch (err) {
-      setError(err instanceof Error ? err.message : 'Could not mark rest day')
     } finally {
       setBusyId(null)
     }
@@ -1867,6 +1876,12 @@ export function AppShell() {
 
       <main className="app-main">
         {!showOnboarding && <InstallPrompt />}
+        {adminPage && (
+          <button type="button" className="btn btn-ghost btn-sm back-btn" onClick={() => navigate('/settings')}>
+            <Icon name="back" />
+            {t('settings.title')}
+          </button>
+        )}
         {adminPage === 'analytics' ? (
           <Suspense fallback={<ScreenChunkFallback />}>
             <AnalyticsScreen />
@@ -1927,10 +1942,6 @@ export function AppShell() {
                   onOpenSharedEvents={() => {
                     if (!isAdmin) return
                     navigate('/admin/events')
-                  }}
-                  onOpenCommunity={() => {
-                    if (!isAdmin) return
-                    navigate('/admin/community')
                   }}
                   onOpenSharedLists={() => {
                     if (!isAdmin) return
@@ -2020,8 +2031,7 @@ export function AppShell() {
                     onRescheduleDeadline={handleRescheduleDeadline}
                     onSkipToday={handleSkipToday}
                     onUnskip={(row) => void handleUnskip(row)}
-                    onTakeRestDay={() => void handleTakeRestDay()}
-                    isRestDay={dayStatusOpts.restDates.has(today)}
+                    greetingName={accountFirstName(user)}
                     hasActivities={activeActivityCount > 0}
                     quietReentry={isQuietReentry({
                       activities,

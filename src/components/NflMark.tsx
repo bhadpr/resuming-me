@@ -11,8 +11,9 @@ export type TeamBadge = {
 export function NflMark({ team, size = 'row' }: { team: TeamBadge; size?: 'row' | 'card' | 'hero' }) {
   const sized = size === 'row' ? '' : ` nfl-mark-${size}`
   if (team.logo) {
+    const flag = team.logo.includes('/cricket/') ? ' nfl-mark-flag' : ''
     return (
-      <span className={`activity-emoji activity-emoji-art reminder-mark nfl-mark nfl-mark-logo${sized}`} aria-hidden>
+      <span className={`activity-emoji activity-emoji-art reminder-mark nfl-mark nfl-mark-logo${flag}${sized}`} aria-hidden>
         <img className="nfl-mark-img" src={team.logo} alt="" />
       </span>
     )

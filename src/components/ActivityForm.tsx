@@ -133,6 +133,7 @@ function CatalogHabitEdit({
   })
   const [weightUnit, setWeightUnit] = useState<WeightUnit>(weightUnitOf(initial.target_unit))
   const [weightText, setWeightText] = useState(initial.target_value != null ? String(initial.target_value) : '')
+  const [description, setDescription] = useState(initial.why_matters ?? '')
 
   const steps =
     control == null
@@ -143,25 +144,26 @@ function CatalogHabitEdit({
   const art = templateId ? HABIT_ART[templateId] : undefined
 
   async function save() {
+    const whyMatters = description.trim() || null
     if (weight) {
       const typed = parseGoalText(templateId, weightText)
       if (typed == null) return
-      await onSubmit({ ...base, targetValue: typed, targetUnit: weightUnit })
+      await onSubmit({ ...base, targetValue: typed, targetUnit: weightUnit, whyMatters })
       return
     }
     if (goal) {
       const typed = goalText.trim() ? parseGoalText(templateId, goalText) : null
       const value = typed ?? goalValue
       if (value == null || value <= 0) return
-      await onSubmit({ ...base, targetValue: value })
+      await onSubmit({ ...base, targetValue: value, whyMatters })
       return
     }
     if (standard) {
-      await onSubmit(base)
+      await onSubmit({ ...base, whyMatters })
       return
     }
     const paced = applyWeekCadence({ type: base.type, weeklyTarget: base.weeklyTarget }, cadence)
-    const next: ActivityInput = { ...base, type: paced.type, weeklyTarget: paced.weeklyTarget }
+    const next: ActivityInput = { ...base, type: paced.type, weeklyTarget: paced.weeklyTarget, whyMatters }
     if (control) {
       const value = sizeValue ?? control.steps[0] ?? 1
       next.targetValue = value
@@ -266,6 +268,17 @@ function CatalogHabitEdit({
             </div>
           </fieldset>
         </>
+      )}
+      {(weight || goal || standard) && (
+        <label className="field">
+          <span className="field-label">{t('metricDetail.description')}</span>
+          <input
+            className="field-input"
+            maxLength={80}
+            value={description}
+            onChange={(e) => setDescription(e.target.value)}
+          />
+        </label>
       )}
       {error && <p className="error">{error}</p>}
       <button

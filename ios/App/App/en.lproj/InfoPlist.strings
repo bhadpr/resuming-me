@@ -1,1 +1,2 @@
 "NSHealthShareUsageDescription" = "Resuming reads your steps to show them on Today.";
+"NSHealthUpdateUsageDescription" = "Resuming does not save anything to Apple Health. It only reads your steps to show them on Today.";

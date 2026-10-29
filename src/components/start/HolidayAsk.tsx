@@ -3,6 +3,7 @@ import { useLocale } from '../../hooks/useLocale'
 import { holidayArtUrl } from '../CommunityReminderPicker'
 import { DayBeforeChoice } from '../DayBeforeChoice'
 import { holidayCopyText } from '../../lib/communityReminders'
+import { messageForSharedListAdd } from '../../lib/importSharedList'
 import { localeTag, type Locale } from '../../lib/i18n'
 import { getSharedListById, type SharedList } from '../../lib/sharedLists'
 
@@ -74,8 +75,7 @@ export function HolidayAsk({
       const result = await onAccept(list, dayBefore)
       if (result === 'full') setMessage(t('reminders.full'))
     } catch (err) {
-      const unavailable = err instanceof Error && err.message.includes('shared_list_unavailable')
-      setMessage(t(unavailable ? 'sharedList.unavailable' : 'sharedList.addFailed'))
+      setMessage(messageForSharedListAdd(err, t('sharedList.addFailed'), t('sharedList.unavailable')))
     } finally {
       setBusy(false)
     }
