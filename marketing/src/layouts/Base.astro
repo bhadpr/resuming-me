@@ -8,6 +8,8 @@ interface Props {
   path: string
   /** For pages other than the home page. */
   title?: string
+  /** Social title when it should be shorter than the browser title. */
+  socialTitle?: string
   description?: string
   /** Structured data objects, written as JSON-LD. */
   jsonLd?: object[]
@@ -17,6 +19,7 @@ interface Props {
 
 const { copy, path, jsonLd = [], noindex = false } = Astro.props
 const title = Astro.props.title ?? copy.meta.title
+const socialTitle = Astro.props.socialTitle ?? copy.meta.socialTitle ?? title
 const description = Astro.props.description ?? copy.meta.description
 const canonical = new URL(path, SITE_URL).href
 /** "<" is escaped so the data can never close the script tag early. */
@@ -42,7 +45,7 @@ const ld = (data: object) => JSON.stringify(data).replace(/</g, '\\u003c')
     <link rel="preload" href="/fonts/sourcesans3-nwpStKy2OAdR1K-IwhWudF-R3w8aZejf5Hc.woff2" as="font" type="font/woff2" crossorigin />
     <meta property="og:type" content="website" />
     <meta property="og:site_name" content="Resuming" />
-    <meta property="og:title" content={title} />
+    <meta property="og:title" content={socialTitle} />
     <meta property="og:description" content={description} />
     <meta property="og:url" content={canonical} />
     <meta property="og:image" content={`${SITE_URL}/og.jpg`} />
@@ -51,7 +54,7 @@ const ld = (data: object) => JSON.stringify(data).replace(/</g, '\\u003c')
     <meta property="og:image:height" content="630" />
     <meta property="og:image:alt" content={copy.meta.imageAlt} />
     <meta name="twitter:card" content="summary_large_image" />
-    <meta name="twitter:title" content={title} />
+    <meta name="twitter:title" content={socialTitle} />
     <meta name="twitter:description" content={description} />
     <meta name="twitter:image" content={`${SITE_URL}/og.jpg`} />
     {jsonLd.map((data) => <script type="application/ld+json" set:html={ld(data)} />)}

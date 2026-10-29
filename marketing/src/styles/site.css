@@ -423,6 +423,13 @@ p {
 
 .hero h1 .accent {
   display: block;
+  margin-top: 0.35em;
+  color: var(--primary);
+  font-size: 0.5em;
+  line-height: 1.15;
+}
+
+.resume-accent {
   color: var(--primary);
 }
 
@@ -670,7 +677,12 @@ p {
 }
 
 .idea-text h2 {
-  margin-bottom: 1rem;
+  margin-bottom: 0.35rem;
+}
+
+.idea-kicker {
+  margin: 0 0 1rem;
+  font-weight: 600;
 }
 
 @media (min-width: 900px) {
@@ -1584,6 +1596,11 @@ p {
 .final h2 {
   max-width: 22ch;
   margin-inline: auto;
+}
+
+.final .final-sub {
+  margin: 0.75rem auto 0;
+  font-weight: 600;
 }
 
 .final p {

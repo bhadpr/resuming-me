@@ -89,7 +89,8 @@ export default defineConfig({
         id: '/',
         name: 'Resuming',
         short_name: 'Resuming',
-        description: 'Track your day, gently. Missed a day? Just resume.',
+        description:
+          'Your whole day in one gentle list: habits, reminders, meetups, health, holidays and games. Free, no ads.',
         theme_color: '#fff4e8',
         background_color: '#fff4e8',
         display: 'standalone',

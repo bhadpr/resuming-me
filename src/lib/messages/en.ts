@@ -31,7 +31,10 @@ export const en = {
   landing: {
     tagline: 'Missed a day?',
     taglineAccent: 'Just resume.',
-    explainer: 'A free daily app to track your habits, health and reminders.',
+    heroTitle: 'It’s your Today.',
+    heroSubtitle: 'Your whole day in one gentle list.',
+    explainer:
+      'A free daily app for your habits, reminders, meetups, health, holidays and games. Missed a day?',
     getStarted: 'Get started',
     noAccount: 'No account needed to try it.',
     getApp: 'Get the app',

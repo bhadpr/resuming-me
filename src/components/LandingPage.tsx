@@ -5,11 +5,7 @@ import { BrandTitle } from './BrandTitle'
 import { SiteFooter } from './SiteFooter'
 import { trackPageView } from '../lib/analytics'
 import { consumeAccountDeletedFlag } from '../lib/clearLocalData'
-import {
-  DEFAULT_DESCRIPTION,
-  DEFAULT_TITLE,
-  useDocumentMeta,
-} from '../hooks/useDocumentMeta'
+import { useDocumentMeta } from '../hooks/useDocumentMeta'
 import { playStoreUrl } from '../lib/marketing'
 import { track } from '../lib/track'
 import { useLocale } from '../hooks/useLocale'
@@ -49,8 +45,10 @@ export function LandingPage({
   const [accountDeleted] = useState(() => consumeAccountDeletedFlag())
 
   useDocumentMeta({
-    title: DEFAULT_TITLE,
-    description: DEFAULT_DESCRIPTION,
+    title: 'Resuming: It’s your Today · Habits & Reminders',
+    ogTitle: 'Resuming: It’s your Today',
+    description:
+      'Your whole day in one gentle list: habits, reminders, meetups, health, holidays and games. Free, no ads.',
     path: '/',
   })
 
@@ -89,10 +87,10 @@ export function LandingPage({
       <div className="landing">
         <div className="landing-card">
           <LandingBrand />
-          <p className="tagline">
-            {t('landing.tagline')}
-            <span className="tagline-accent">{t('landing.taglineAccent')}</span>
-          </p>
+          <h1 className="tagline">
+            {t('landing.heroTitle')}
+            <span className="tagline-accent">{t('landing.heroSubtitle')}</span>
+          </h1>
           <div className="notice notice-warning">
             <p>{configError ?? 'Supabase is not configured.'}</p>
           </div>
@@ -106,11 +104,13 @@ export function LandingPage({
     <div className="landing">
       <div className="landing-card">
         <LandingBrand />
-        <p className="tagline">
-          {t('landing.tagline')}
-          <span className="tagline-accent">{t('landing.taglineAccent')}</span>
+        <h1 className="tagline">
+          {t('landing.heroTitle')}
+          <span className="tagline-accent">{t('landing.heroSubtitle')}</span>
+        </h1>
+        <p className="explainer">
+          {t('landing.explainer')} <span className="resume-accent">{t('landing.taglineAccent')}</span>
         </p>
-        <p className="explainer">{t('landing.explainer')}</p>
 
         <figure className="landing-hero-figure">
           <img

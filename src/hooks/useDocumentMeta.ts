@@ -2,7 +2,7 @@ import { useEffect } from 'react'
 
 const DEFAULT_TITLE = 'Resuming: Habits & Reminders'
 const DEFAULT_DESCRIPTION =
-  'Track your day, gently. Missed a day? Just resume.'
+  'Your whole day in one gentle list: habits, reminders, meetups, health, holidays and games. Free, no ads.'
 
 function upsertMeta(attr: 'name' | 'property', key: string, content: string) {
   let el = document.head.querySelector(`meta[${attr}="${key}"]`)
@@ -26,6 +26,8 @@ function upsertLink(rel: string, href: string) {
 
 export interface DocumentMetaOptions {
   title: string
+  /** Social title when it should be shorter than the browser title. */
+  ogTitle?: string
   description?: string
   path?: string
   noindex?: boolean
@@ -37,17 +39,21 @@ export interface DocumentMetaOptions {
  */
 export function useDocumentMeta({
   title,
+  ogTitle,
   description = DEFAULT_DESCRIPTION,
   path,
   noindex = false,
 }: DocumentMetaOptions) {
   useEffect(() => {
     const prevTitle = document.title
+    const socialTitle = ogTitle ?? title
     document.title = title
     upsertMeta('name', 'description', description)
     upsertMeta('name', 'robots', noindex ? 'noindex, nofollow' : 'index, follow')
-    upsertMeta('property', 'og:title', title)
+    upsertMeta('property', 'og:title', socialTitle)
     upsertMeta('property', 'og:description', description)
+    upsertMeta('name', 'twitter:title', socialTitle)
+    upsertMeta('name', 'twitter:description', description)
     if (path != null) {
       const url = `https://resuming.me${path === '/' ? '/' : path}`
       upsertMeta('property', 'og:url', url)
@@ -57,7 +63,7 @@ export function useDocumentMeta({
     return () => {
       document.title = prevTitle
     }
-  }, [title, description, path, noindex])
+  }, [title, ogTitle, description, path, noindex])
 }
 
 export { DEFAULT_TITLE, DEFAULT_DESCRIPTION }

@@ -52,9 +52,9 @@ const stepArt = ['walking', 'water']
         <p class="eyebrow">{copy.hero.eyebrow}</p>
         <h1>
           {copy.hero.title}
-          <span class="accent">{copy.hero.titleAccent}</span>
+          <span class="accent">{copy.hero.subtitle}</span>
         </h1>
-        <p class="hero-sub">{copy.hero.sub}</p>
+        <p>{copy.hero.sub}</p>
         <p class="lead">{copy.hero.lead}</p>
         <div class="cta-row">
           {PLAY_LIVE ? (
@@ -270,7 +270,8 @@ const stepArt = ['walking', 'water']
       <figure class="idea" style="margin: 0">
         <img src="/art/window-seat.webp" alt={copy.idea.alt} width="1152" height="864" loading="lazy" />
         <figcaption class="idea-text">
-          <h2>{copy.idea.title}</h2>
+          <h2>{copy.idea.resumeLead} <span class="resume-accent">{copy.idea.resumeAccent}</span></h2>
+          <p class="idea-kicker">{copy.idea.title}</p>
           <p class="lead">{copy.idea.body}</p>
         </figcaption>
       </figure>
@@ -343,7 +344,8 @@ const stepArt = ['walking', 'water']
   <section class="section" style="padding-top: 0">
     <div class="wrap">
       <div class="final">
-        <h2>{copy.final.title}</h2>
+        <h2>{copy.final.resumeLead} <span class="resume-accent">{copy.final.resumeAccent}</span></h2>
+        <p class="final-sub">{copy.final.title}</p>
         <p class="lead">{copy.final.body}</p>
         <div class="cta-row">
           {PLAY_LIVE ? (

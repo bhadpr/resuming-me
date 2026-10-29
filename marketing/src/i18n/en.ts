@@ -3,9 +3,10 @@ export const en = {
   lang: 'en',
   dir: 'ltr',
   meta: {
-    title: 'Resuming: Free Habit, Health & Reminder App for Everyone',
+    title: 'Resuming: It’s your Today · Free Habit, Reminder & Meetup App',
+    socialTitle: 'Resuming: It’s your Today',
     description:
-      'Habits like walking, water and Pranayam. Your BP, weight and steps. Reminders for bills, doctor visits and weddings. Free, no ads, in 7 languages.',
+      'Your whole day in one gentle list: habits, reminders, meetups, health, holidays and games. Free, no ads, in 7 languages.',
     imageAlt: 'Resuming. Missed a day? Just resume. Habits, Health and Reminders, beside a painting of a woman walking toward the morning sun.',
   },
   nav: {
@@ -32,9 +33,10 @@ export const en = {
   },
   hero: {
     eyebrow: 'No ads · 7 languages · Works in your browser',
-    title: 'Missed a day?',
+    title: 'It’s your Today.',
     titleAccent: 'Just resume.',
-    sub: 'A free daily app to track your habits, health and reminders.',
+    subtitle: 'Your whole day in one gentle list.',
+    sub: 'A free daily app for your habits, reminders, meetups, health, holidays and games, all on one screen. Plan ahead for tomorrow, and if you miss a day, just resume.',
     lead: 'One gentle list for your day: a short walk, water, Pranayam, your BP, and the family’s bills, doctor visits and weddings. When life gets busy, pick up where you left off. No guilt, no broken streaks.',
     videoLabel: 'The Resuming app: ticking off water, a Kapalabhati timer, resuming a walk, and a wedding reminder with its invitation card.',
     captions: [
@@ -62,6 +64,8 @@ export const en = {
     ],
   },
   idea: {
+    resumeLead: 'Missed a day?',
+    resumeAccent: 'Just resume.',
     title: 'Starting again is the skill.',
     body: 'Most habit apps count how long you kept going. Resuming cares about how often you come back. A missed day isn’t a failure. It’s just a day. Tap Resume, and the minutes you already did are still there.',
     alt: 'A woman meditating by a sunrise window, with a glass of water, a blood pressure cuff, walking shoes, and a board of dates to remember.',
@@ -249,6 +253,8 @@ export const en = {
     ],
   },
   final: {
+    resumeLead: 'Missed a day?',
+    resumeAccent: 'Just resume.',
     title: 'Start with one small thing today.',
     body: 'A walk, a glass of water, five minutes of breathing. Resuming will be there when you come back.',
   },

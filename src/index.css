@@ -1339,7 +1339,10 @@ select.field-input.language-select {
 
 .landing .tagline .tagline-accent {
   display: block;
+  margin-top: 0.35em;
   color: var(--color-primary);
+  font-size: 0.5em;
+  line-height: 1.15;
 }
 
 :lang(hi) .landing .tagline,
@@ -1354,6 +1357,10 @@ select.field-input.language-select {
 
 .landing .explainer {
   color: var(--color-text-body);
+}
+
+.landing .explainer .resume-accent {
+  color: var(--color-primary);
 }
 
 .landing-signin-only {
