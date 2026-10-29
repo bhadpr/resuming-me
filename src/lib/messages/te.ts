@@ -38,7 +38,7 @@ export const te: DeepString<typeof en> = {
     tagline: 'ఒక రోజు తప్పిందా?',
     taglineAccent: 'మళ్లీ కొనసాగించు.',
     heroTitle: 'ఇది మీ ఈరోజు.',
-    heroSubtitle: 'మీ రోజంతా, ఒక సులభమైన జాబితాలో.',
+    heroSubtitle: 'అన్నీ, ఒక సులభమైన జాబితాలో.',
     explainer:
       'మీ అలవాట్లు, రిమైండర్లు, కలయికలు, ఆరోగ్యం, పండుగలు, ఆటల కోసం ఉచిత రోజువారీ యాప్. ఒక రోజు తప్పిందా?',
     getStarted: 'మొదలుపెట్టు',

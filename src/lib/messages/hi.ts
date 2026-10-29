@@ -38,7 +38,7 @@ export const hi: DeepString<typeof en> = {
     tagline: 'एक दिन छूट गया?',
     taglineAccent: 'बस फिर शुरू करो।',
     heroTitle: 'यह आपका आज है।',
-    heroSubtitle: 'आपका पूरा दिन, एक सहज सूची में।',
+    heroSubtitle: 'सब कुछ, एक सहज सूची में।',
     explainer:
       'आपकी आदतों, रिमाइंडर, मुलाकातों, सेहत, त्योहारों और खेलों के लिए एक मुफ़्त रोज़ाना ऐप। एक दिन छूट गया?',
     getStarted: 'शुरू करें',

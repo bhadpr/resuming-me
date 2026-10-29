@@ -6,7 +6,7 @@ export const en = {
     title: 'Resuming: It’s your Today · Free Habit, Reminder & Meetup App',
     socialTitle: 'Resuming: It’s your Today',
     description:
-      'Your whole day in one gentle list: habits, reminders, meetups, health, holidays and games. Free, no ads, in 7 languages.',
+      'Everything in one gentle list: habits, reminders, meetups, health, holidays and games. Free, no ads, in 7 languages.',
     imageAlt: 'Resuming. Missed a day? Just resume. Habits, Health and Reminders, beside a painting of a woman walking toward the morning sun.',
   },
   nav: {
@@ -35,7 +35,7 @@ export const en = {
     eyebrow: 'No ads · 7 languages · Works in your browser',
     title: 'It’s your Today.',
     titleAccent: 'Just resume.',
-    subtitle: 'Your whole day in one gentle list.',
+    subtitle: 'Everything, in one gentle list.',
     sub: 'A free daily app for your habits, reminders, meetups, health, holidays and games, all on one screen. Plan ahead for tomorrow, and if you miss a day, just resume.',
     lead: 'One gentle list for your day: a short walk, water, Pranayam, your BP, and the family’s bills, doctor visits and weddings. When life gets busy, pick up where you left off. No guilt, no broken streaks.',
     videoLabel: 'The Resuming app: ticking off water, a Kapalabhati timer, resuming a walk, and a wedding reminder with its invitation card.',

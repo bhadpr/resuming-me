@@ -32,7 +32,7 @@ export const en = {
     tagline: 'Missed a day?',
     taglineAccent: 'Just resume.',
     heroTitle: 'It’s your Today.',
-    heroSubtitle: 'Your whole day in one gentle list.',
+    heroSubtitle: 'Everything, in one gentle list.',
     explainer:
       'A free daily app for your habits, reminders, meetups, health, holidays and games. Missed a day?',
     getStarted: 'Get started',

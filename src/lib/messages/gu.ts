@@ -38,7 +38,7 @@ export const gu: DeepString<typeof en> = {
     tagline: 'એક દિવસ ચૂકી ગયા?',
     taglineAccent: 'ફરી ચાલુ રાખો.',
     heroTitle: 'આ તમારો આજે છે.',
-    heroSubtitle: 'તમારો આખો દિવસ, એક સરળ યાદીમાં.',
+    heroSubtitle: 'બધું જ, એક સરળ યાદીમાં.',
     explainer:
       'તમારી આદતો, રિમાઇન્ડર, મુલાકાતો, આરોગ્ય, તહેવારો અને રમતો માટે એક મફત દૈનિક ઍપ. એક દિવસ ચૂકી ગયા?',
     getStarted: 'શરૂ કરો',

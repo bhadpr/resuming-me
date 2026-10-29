@@ -48,7 +48,7 @@ export function LandingPage({
     title: 'Resuming: It’s your Today · Habits & Reminders',
     ogTitle: 'Resuming: It’s your Today',
     description:
-      'Your whole day in one gentle list: habits, reminders, meetups, health, holidays and games. Free, no ads.',
+      'Everything in one gentle list: habits, reminders, meetups, health, holidays and games. Free, no ads.',
     path: '/',
   })
 

@@ -38,7 +38,7 @@ export const mr: DeepString<typeof en> = {
     tagline: 'एक दिवस चुकला?',
     taglineAccent: 'पुन्हा सुरू करा.',
     heroTitle: 'हा तुमचा आज आहे.',
-    heroSubtitle: 'तुमचा संपूर्ण दिवस, एका सोप्या यादीत.',
+    heroSubtitle: 'सगळं काही, एका सोप्या यादीत.',
     explainer:
       'तुमच्या सवयी, रिमाइंडर, भेटीगाठी, आरोग्य, सण आणि खेळांसाठी एक मोफत दैनंदिन ॲप. एक दिवस चुकला?',
     getStarted: 'सुरू करा',
