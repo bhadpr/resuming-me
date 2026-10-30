@@ -60,6 +60,22 @@ const ld = (data: object) => JSON.stringify(data).replace(/</g, '\\u003c')
     {jsonLd.map((data) => <script type="application/ld+json" set:html={ld(data)} />)}
   </head>
   <body>
+    <script is:inline>
+      try {
+        var params = new URLSearchParams(location.search)
+        var keys = ['utm_source', 'utm_medium', 'utm_campaign', 'utm_content']
+        var found = {}
+        var any = false
+        for (var i = 0; i < keys.length; i++) {
+          var value = params.get(keys[i])
+          if (value) {
+            found[keys[i]] = value.slice(0, 80)
+            any = true
+          }
+        }
+        if (any) sessionStorage.setItem('resuming-utm', JSON.stringify(found))
+      } catch (e) {}
+    </script>
     <slot />
     <div class="consent" data-consent-banner role="dialog" aria-labelledby="consent-title" hidden>
       <div class="consent-text">

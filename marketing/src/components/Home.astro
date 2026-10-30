@@ -4,18 +4,29 @@ import Footer from './Footer.astro'
 import TryToday from './TryToday.astro'
 import InsightsMock from './InsightsMock.astro'
 import StepsMock from './StepsMock.astro'
+import Featured from './Featured.astro'
+import LangPick from './LangPick.astro'
+import ListMock from './ListMock.astro'
+import ZipCheck from './ZipCheck.astro'
 import { APP_URL, HERO_SCENES, LANGUAGES, PLAY_LIVE, WEB_APP_URL, playUrl } from '../site'
 import type { Copy } from '../i18n/en'
+import type { Theme } from '../themes'
 
 interface Props {
   copy: Copy
+  theme?: Theme
 }
 
-const { copy } = Astro.props
+const { copy, theme } = Astro.props
+const skip = new Set(theme ? [theme.firstSection] : [])
+const show = (id: string) => !skip.has(id)
+const themePrefix = theme ? `theme.${theme.slug}` : ''
 const lang = copy.lang
 const art = (name: string) => `/habits/${name}.webp`
 const chipArt = ['walking', 'water', 'kapalabhati', 'anuloma-viloma', 'bhramari', 'prayer', 'reading', 'meditate']
 const stepArt = ['walking', 'water']
+const holidayShot = theme?.slug === 'pranayam' || theme?.slug === 'steps' || theme?.slug === 'meetup' || theme?.slug === 'school-holidays'
+const cricketShot = holidayShot || theme?.slug === 'diwali'
 ---
 
 <a class="skip-link" href="#main">{copy.nav.skip}</a>
@@ -34,18 +45,132 @@ const stepArt = ['walking', 'water']
       <a href="#how">{copy.nav.how}</a>
       <a href="#faq">{copy.nav.faq}</a>
     </nav>
-    {PLAY_LIVE ? (
-      <a class="btn btn-play header-cta" href={playUrl('header')}>
-        <Icon name="play" />
-        {copy.cta.playSmall}
-      </a>
-    ) : (
-      <a class="btn btn-play header-cta" href={WEB_APP_URL}>{copy.cta.open}</a>
-    )}
+    <div class="header-tools">
+      <LangPick enabled={!theme || theme.languages === 'all'} />
+      {PLAY_LIVE ? (
+        <a class="btn btn-play header-cta" href={playUrl('header')}>
+          <Icon name="play" />
+          {copy.cta.playSmall}
+        </a>
+      ) : (
+        <a class="btn btn-play header-cta" href={WEB_APP_URL}>{copy.cta.open}</a>
+      )}
+    </div>
   </div>
 </header>
 
 <main id="main">
+  {theme ? (
+    <section class="hero hero-theme">
+      <div class="wrap">
+        <div>
+          <p class="eyebrow">{copy.hero.eyebrow}</p>
+          <h1
+            data-title
+            data-i18n={`${themePrefix}.h1`}
+            data-until={theme.copy.activeUntil}
+            data-after={theme.copy.h1After}
+            data-after-i18n={theme.copy.h1After ? `${themePrefix}.h1After` : undefined}
+          >{theme.copy.h1}</h1>
+          <p
+            class="lead"
+            data-meta-sub
+            data-i18n={`${themePrefix}.sub`}
+            data-until={theme.copy.activeUntil}
+            data-after={theme.copy.subAfter}
+            data-after-i18n={theme.copy.subAfter ? `${themePrefix}.subAfter` : undefined}
+          >{theme.copy.sub}</p>
+          {theme.copy.coverage && <p data-i18n={`${themePrefix}.coverage`}>{theme.copy.coverage}</p>}
+          <p data-i18n="hero.features">{copy.hero.features}</p>
+          <div class="cta-row">
+            {PLAY_LIVE ? (
+              <>
+                <a class="btn btn-play" href={playUrl(theme.slug)}>
+                  <Icon name="play" />
+                  <span><small>{copy.cta.playOn}</small>{copy.cta.playSmall}</span>
+                </a>
+                <a class="btn btn-web" href={WEB_APP_URL}>{copy.cta.web}</a>
+              </>
+            ) : (
+              <a class="btn btn-play" href={WEB_APP_URL}>{copy.cta.web}</a>
+            )}
+          </div>
+          <p class="cta-note">{copy.cta.webNote}</p>
+          {theme.showSchoolWaitlist && <ZipCheck copy={copy} />}
+        </div>
+        {theme.slug === 'cricket' && (
+          <div class="hero-visual">
+            <div class="phone">
+              <img
+                class="shot-full"
+                src="/media/cricket-reminders.webp"
+                alt="The Reminders screen with India at New Zealand, a T20 on Friday and Sunday and an ODI on Tuesday."
+                width="470"
+                height="956"
+                loading="eager"
+              />
+            </div>
+          </div>
+        )}
+        {theme.slug === 'diwali' && (
+          <div class="hero-visual">
+            <div class="phone">
+              <img
+                class="shot-full"
+                src="/media/diwali-reminder.webp"
+                alt="The Diwali reminder for Sunday, 8 November, with three lit diyas and a way to share it with a group."
+                width="470"
+                height="956"
+                loading="eager"
+              />
+            </div>
+          </div>
+        )}
+        {theme.slug === 'school-holidays' && (
+          <div class="hero-visual">
+            <div class="phone">
+              <img
+                class="shot-full"
+                src="/media/school-zip.webp"
+                alt="School calendars for ZIP 98074: Issaquah, Lake Washington, and Snoqualmie Valley."
+                width="470"
+                height="956"
+                loading="eager"
+              />
+            </div>
+          </div>
+        )}
+        {theme.slug === 'running' && (
+          <div class="hero-visual">
+            <div class="phone">
+              <img
+                class="shot-full"
+                src="/media/running-habit.webp"
+                alt="Adding a Running habit for 30 minutes, every day."
+                width="470"
+                height="956"
+                loading="eager"
+              />
+            </div>
+          </div>
+        )}
+        {theme.slug === 'nfl' && (
+          <div class="hero-visual">
+            <div class="phone">
+              <img
+                class="shot-full"
+                src="/media/nfl-seahawks.webp"
+                alt="Seattle Seahawks games on the Reminders screen, with a button to share on WhatsApp."
+                width="470"
+                height="956"
+                loading="eager"
+              />
+            </div>
+          </div>
+        )}
+      </div>
+    </section>
+  ) : (
   <section class="hero">
     <div class="wrap">
       <div>
@@ -64,10 +189,6 @@ const stepArt = ['walking', 'water']
                 <span><small>{copy.cta.playOn}</small>{copy.cta.playSmall}</span>
               </a>
               <a class="btn btn-web" href={WEB_APP_URL}>{copy.cta.web}</a>
-              <button type="button" class="btn btn-ios" disabled>
-                <Icon name="phone" />
-                <span><small>{copy.cta.iosSmall}</small>{copy.cta.iosMain}</span>
-              </button>
             </>
           ) : (
             <>
@@ -108,11 +229,48 @@ const stepArt = ['walking', 'water']
       </div>
     </div>
   </section>
+  )}
 
+  {theme && <Featured copy={copy} theme={theme} />}
+
+  {theme && (
+    <section class="section" id="how">
+      <div class="wrap">
+        <div class="section-head center">
+          <h2>{copy.how.title}</h2>
+        </div>
+        <ol class="steps">
+          {theme.copy.steps.map((step, i) => (
+            <li class="step">
+              <span class="step-num" aria-hidden="true">{i + 1}</span>
+              <div class="step-art step-resume"><Icon name="resume" /></div>
+              <h3 data-i18n={`${themePrefix}.s${i}t`}>{step.title}</h3>
+              <p data-i18n={`${themePrefix}.s${i}b`}>{step.body}</p>
+            </li>
+          ))}
+        </ol>
+      </div>
+    </section>
+  )}
+
+  {show('habits') && (
   <section class="section" id="habits">
     <div class="wrap feature">
-      <div class="feature-shots teal">
-        <div class="phone phone-sm"><img src={`/media/timer-${lang}.webp`} alt={copy.habits.shotAlt} width="576" height="1024" loading="lazy" /></div>
+      <div class:list={['feature-shots', { teal: theme?.slug !== 'nfl' && theme?.slug !== 'school-holidays' }]}>
+        {(theme?.slug === 'nfl' || theme?.slug === 'school-holidays') ? (
+          <div class="phone phone-sm">
+            <img
+              class="shot-full"
+              src="/media/running-habit.webp"
+              alt="Adding a Running habit for 30 minutes, every day."
+              width="470"
+              height="956"
+              loading="lazy"
+            />
+          </div>
+        ) : (
+          <div class="phone phone-sm"><img src={`/media/timer-${lang}.webp`} alt={copy.habits.shotAlt} width="576" height="1024" loading="lazy" /></div>
+        )}
       </div>
       <div class="feature-text">
         <span class="kicker">{copy.habits.kicker}</span>
@@ -129,7 +287,9 @@ const stepArt = ['walking', 'water']
       </div>
     </div>
   </section>
+  )}
 
+  {show('meetup') && (
   <section class="section" id="community">
     <div class="wrap feature flip">
       <div class="feature-shots">
@@ -137,9 +297,9 @@ const stepArt = ['walking', 'water']
         <div class="phone phone-sm"><img src={`/media/shared-mall-${lang}.webp`} alt={copy.community.sharedMallAlt} width="576" height="1024" loading="lazy" /></div>
       </div>
       <div class="feature-text">
-        <span class="kicker">{copy.community.kicker}</span>
-        <h2>{copy.community.title}</h2>
-        <p class="lead" style="margin-top: 1rem">{copy.community.body}</p>
+        <span class="kicker" data-i18n="home.meetup.kicker">{copy.community.kicker}</span>
+        <h2 data-i18n="home.meetup.heading">{copy.community.title}</h2>
+        <p class="lead" style="margin-top: 1rem" data-i18n="home.meetup.body">{copy.community.body}</p>
         <div class="subfeature">
           <h3><Icon name="whatsapp" />{copy.community.shareTitle}</h3>
           <p>{copy.community.shareBody}</p>
@@ -150,27 +310,42 @@ const stepArt = ['walking', 'water']
       </div>
     </div>
   </section>
+  )}
 
+  {show('calendar') && (
   <section class="section" id="calendar">
     <div class="wrap feature">
       <div class="feature-shots">
-        <div class="phone phone-sm">
-          <div class="phone-screen calendar-screen" role="img" aria-label={copy.calendar.shotAlt}>
-            <p class="calendar-screen-brand">Resuming</p>
-            <p class="calendar-screen-title">{copy.calendar.screenTitle}</p>
-            <p class="calendar-screen-sub">{copy.calendar.screenSub}</p>
-            <ul>
-              {copy.calendar.days.map((day) => (
-                <li>
-                  <img src={day.image} alt="" width="800" height="800" />
-                  <p class="calendar-screen-name">{day.name}</p>
-                  <p class="calendar-screen-day">{day.date}</p>
-                  <span class="calendar-screen-add">{copy.calendar.add}</span>
-                </li>
-              ))}
-            </ul>
+        {holidayShot ? (
+          <div class="phone phone-sm">
+            <img
+              class="shot-full"
+              src="/media/diwali-holidays.webp"
+              alt="India Holidays on the Reminders screen, with Diwali on 8 November 2026."
+              width="470"
+              height="956"
+              loading="lazy"
+            />
           </div>
-        </div>
+        ) : (
+          <div class="phone phone-sm">
+            <div class="phone-screen calendar-screen" role="img" aria-label={copy.calendar.shotAlt}>
+              <p class="calendar-screen-brand">Resuming</p>
+              <p class="calendar-screen-title">{copy.calendar.screenTitle}</p>
+              <p class="calendar-screen-sub">{copy.calendar.screenSub}</p>
+              <ul>
+                {copy.calendar.days.map((day) => (
+                  <li>
+                    <img src={day.image} alt="" width="800" height="800" />
+                    <p class="calendar-screen-name">{day.name}</p>
+                    <p class="calendar-screen-day">{day.date}</p>
+                    <span class="calendar-screen-add">{copy.calendar.add}</span>
+                  </li>
+                ))}
+              </ul>
+            </div>
+          </div>
+        )}
       </div>
       <div class="feature-text">
         <span class="kicker">{copy.calendar.kicker}</span>
@@ -179,6 +354,67 @@ const stepArt = ['walking', 'water']
       </div>
     </div>
   </section>
+  )}
+
+  {show('sports') && (
+  <section class="section" id="sports">
+    <div class="wrap feature flip">
+      <div class="feature-shots">
+        {cricketShot ? (
+          <div class="phone phone-sm">
+            <img
+              class="shot-full"
+              src="/media/cricket-reminders.webp"
+              alt="The Reminders screen with India at New Zealand, a T20 on Friday and Sunday and an ODI on Tuesday."
+              width="470"
+              height="956"
+              loading="lazy"
+            />
+          </div>
+        ) : (
+          <ListMock title={copy.sports.screenTitle} sub={copy.sports.screenSub} items={copy.sports.items} add={copy.sports.add} label={copy.sports.shotAlt} />
+        )}
+      </div>
+      <div class="feature-text">
+        <span class="kicker" data-i18n="home.sports.kicker">{copy.sports.kicker}</span>
+        <h2 data-i18n="home.sports.heading">{copy.sports.title}</h2>
+        <p class="lead" style="margin-top: 1rem" data-i18n="home.sports.body">{copy.sports.body}</p>
+        <ul class="points">
+          {copy.sports.points.map((point, i) => <li data-i18n={`home.sports.p${i}`}>{point}</li>)}
+        </ul>
+      </div>
+    </div>
+  </section>
+  )}
+
+  {show('school') && (
+  <section class="section" id="school">
+    <div class="wrap feature">
+      <div class="feature-shots">
+        <div class="phone phone-sm">
+          <img
+            class="shot-full"
+            src="/media/school-calendar.webp"
+            alt={copy.school.shotAlt}
+            width="470"
+            height="956"
+            loading="lazy"
+          />
+        </div>
+      </div>
+      <div class="feature-text">
+        <span class="kicker" data-i18n="home.school.kicker">{copy.school.kicker}</span>
+        <h2 data-i18n="home.school.heading">{copy.school.title}</h2>
+        <p class="lead" style="margin-top: 1rem" data-i18n="home.school.body">{copy.school.body}</p>
+        <ul class="points">
+          {copy.school.points.map((point, i) => <li data-i18n={`home.school.p${i}`}>{point}</li>)}
+        </ul>
+        <p class="fine" data-i18n="home.school.coverage">{copy.school.coverage}</p>
+        <p><a class="btn btn-primary" href="/school-holidays/" data-i18n="home.school.cta">{copy.school.cta}</a></p>
+      </div>
+    </div>
+  </section>
+  )}
 
   <section class="section" id="reminders">
     <div class="wrap feature flip">
@@ -210,6 +446,7 @@ const stepArt = ['walking', 'water']
     </div>
   </section>
 
+  {show('steps') && (
   <section class="section" id="steps">
     <div class="wrap feature flip">
       <div class="feature-shots sky">
@@ -226,7 +463,9 @@ const stepArt = ['walking', 'water']
       </div>
     </div>
   </section>
+  )}
 
+  {show('insights') && (
   <section class="section" id="progress">
     <div class="wrap feature">
       <div class="feature-shots mint">
@@ -242,7 +481,9 @@ const stepArt = ['walking', 'water']
       </div>
     </div>
   </section>
+  )}
 
+  {!theme && (
   <section class="section" id="how">
     <div class="wrap">
       <div class="section-head center">
@@ -264,6 +505,7 @@ const stepArt = ['walking', 'water']
       </ol>
     </div>
   </section>
+  )}
 
   <section class="section">
     <div class="wrap">
@@ -355,10 +597,6 @@ const stepArt = ['walking', 'water']
                 <span><small>{copy.cta.playOn}</small>{copy.cta.playSmall}</span>
               </a>
               <a class="btn btn-web" href={WEB_APP_URL}>{copy.cta.web}</a>
-              <button type="button" class="btn btn-ios" disabled>
-                <Icon name="phone" />
-                <span><small>{copy.cta.iosSmall}</small>{copy.cta.iosMain}</span>
-              </button>
             </>
           ) : (
             <>

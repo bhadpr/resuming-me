@@ -1,0 +1,112 @@
+---
+import { APP_STORE_URL, IOS_LIVE, WAITLIST_URL } from '../site'
+
+interface Props {
+  source?: 'iphone' | 'school_holidays_waitlist'
+}
+
+const { source = 'iphone' } = Astro.props
+const school = source === 'school_holidays_waitlist'
+const successKey = school ? 'notify.successSchool' : 'notify.success'
+const success = school
+  ? "Thanks. We'll email you when your district is added."
+  : "You're on the list. We'll email you once, on launch day."
+const label = school
+  ? "We don't have your district yet. Leave your email and we'll add it."
+  : 'Get notified when iPhone launches'
+const labelKey = school ? 'notify.zipMiss' : 'notify.label'
+---
+
+{IOS_LIVE && source === 'iphone' && APP_STORE_URL ? (
+  <a class="btn btn-ios-live" href={APP_STORE_URL}>
+    <span data-i18n="notify.appStore">Download on the App Store</span>
+  </a>
+) : (
+  <form class="ios-notify" data-waitlist data-source={source} data-url={WAITLIST_URL} novalidate>
+    <label>
+      <span data-i18n={labelKey}>{label}</span>
+      <span class="ios-notify-row">
+        <input type="email" name="email" required autocomplete="email" inputmode="email" maxlength="254" placeholder="you@email.com" data-i18n-placeholder="notify.placeholder" />
+        <button type="submit" class="btn btn-primary" data-i18n="notify.button">Notify me</button>
+      </span>
+    </label>
+    <input class="hp" type="text" name="company" tabindex="-1" autocomplete="off" aria-hidden="true" />
+    <p class="ios-notify-note" data-i18n="notify.note">One email when it's live. Nothing else.</p>
+    <p class="ios-notify-msg" data-msg role="status" aria-live="polite" hidden></p>
+    <span class="visually-hidden" data-i18n={successKey} data-copy="success">{success}</span>
+    <span class="visually-hidden" data-i18n="notify.invalid" data-copy="invalid">Please check your email address.</span>
+    <span class="visually-hidden" data-i18n="notify.error" data-copy="error">Something went wrong. Please try again.</span>
+  </form>
+)}
+
+<script>
+  const emailOk = (value: string) => /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(value) && value.length <= 254
+
+  const readUtms = () => {
+    try {
+      const raw = sessionStorage.getItem('resuming-utm')
+      return raw ? (JSON.parse(raw) as Record<string, string>) : {}
+    } catch {
+      return {}
+    }
+  }
+
+  const line = (form: HTMLFormElement, key: string) =>
+    form.querySelector<HTMLElement>(`[data-copy="${key}"]`)?.textContent?.trim() ?? ''
+
+  for (const form of document.querySelectorAll<HTMLFormElement>('[data-waitlist]')) {
+    if (form.dataset.bound === '1') continue
+    form.dataset.bound = '1'
+    const msg = form.querySelector<HTMLElement>('[data-msg]')!
+    const button = form.querySelector<HTMLButtonElement>('button[type="submit"]')!
+
+    form.addEventListener('submit', async (event) => {
+      event.preventDefault()
+      const data = new FormData(form)
+      const company = String(data.get('company') ?? '').trim()
+      const email = String(data.get('email') ?? '').trim()
+      msg.hidden = false
+      if (company) {
+        msg.textContent = line(form, 'success')
+        form.reset()
+        return
+      }
+      if (!emailOk(email)) {
+        msg.textContent = line(form, 'invalid')
+        return
+      }
+      const idle = button.textContent ?? ''
+      button.disabled = true
+      button.setAttribute('aria-busy', 'true')
+      button.textContent = '…'
+      try {
+        const utm = readUtms()
+        const response = await fetch(form.dataset.url ?? '', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({
+            email,
+            source: form.dataset.source,
+            zip: form.dataset.zip || undefined,
+            page_path: location.pathname,
+            language: document.documentElement.lang || 'en',
+            company: '',
+            utm_source: utm.utm_source,
+            utm_medium: utm.utm_medium,
+            utm_campaign: utm.utm_campaign,
+            utm_content: utm.utm_content,
+          }),
+        })
+        if (!response.ok) throw new Error('waitlist')
+        msg.textContent = line(form, 'success')
+        form.reset()
+      } catch {
+        msg.textContent = line(form, 'error')
+      } finally {
+        button.disabled = false
+        button.removeAttribute('aria-busy')
+        button.textContent = idle
+      }
+    })
+  }
+</script>

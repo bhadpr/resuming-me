@@ -1,6 +1,7 @@
 import type { APIRoute } from 'astro'
 import { en } from '../i18n/en'
 import { APP_URL, CONTACT_EMAIL, COMPANY, PLAY_LISTING_URL, PLAY_LIVE, SITE_URL, WEB_APP_URL } from '../site'
+import { THEMES } from '../themes'
 
 /** A plain summary for AI tools. It is built from the same copy and settings as the page, so it cannot drift. */
 export const GET: APIRoute = () => {
@@ -29,6 +30,7 @@ Resuming is a wellness and habit app. It is not a medical device and does not gi
 
 - [Home](${SITE_URL}/): what Resuming does, how it works, screenshots, and the questions below.
 - [About](${SITE_URL}/about/): who makes it, the idea behind it, languages, and contact.
+${THEMES.map((theme) => `- [${theme.copy.h1}](${SITE_URL}/${theme.slug}/): ${theme.copy.sub}`).join('\n')}
 - [Try it in your browser](${WEB_APP_URL}): the web app, no account needed to try.
 - [Privacy policy](${APP_URL}/privacy): what is collected and why.
 - [Terms](${APP_URL}/terms)

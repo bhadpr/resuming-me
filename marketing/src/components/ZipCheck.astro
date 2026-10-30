@@ -1,0 +1,106 @@
+---
+import Icon from './Icons.astro'
+import IosNotify from './IosNotify.astro'
+import { loadEnv } from 'vite'
+import { fileURLToPath } from 'node:url'
+import { PLAY_LIVE, WEB_APP_URL, playUrl } from '../site'
+import type { Copy } from '../i18n/en'
+
+interface Props {
+  copy: Copy
+}
+
+const { copy } = Astro.props
+const env = loadEnv('production', fileURLToPath(new URL('../../..', import.meta.url)), '')
+const schoolApi = env.VITE_SUPABASE_URL?.replace(/\/$/, '') ?? ''
+const schoolKey = env.VITE_SUPABASE_ANON_KEY ?? ''
+---
+
+<form class="zip-check" data-zip-check data-api={schoolApi} data-key={schoolKey} data-covered={copy.notify.zipCovered} novalidate>
+  <label>
+    <span data-i18n="notify.zipLabel">{copy.notify.zipLabel}</span>
+    <span class="ios-notify-row">
+      <input name="zip" inputmode="numeric" autocomplete="postal-code" maxlength="5" pattern="[0-9]{5}" required />
+      <button type="submit" class="btn btn-primary" data-i18n="notify.zipButton">{copy.notify.zipButton}</button>
+    </span>
+  </label>
+  <p class="ios-notify-msg" data-zip-msg role="status" aria-live="polite"></p>
+  <span class="visually-hidden" data-i18n="notify.zipInvalid" data-copy="zip-invalid">{copy.notify.zipInvalid}</span>
+  <span class="visually-hidden" data-i18n="notify.error" data-copy="zip-error">{copy.notify.error}</span>
+</form>
+<div data-zip-covered hidden>
+  <p class="zip-hit" data-zip-hit></p>
+  <div class="cta-row">
+    {PLAY_LIVE ? (
+      <a class="btn btn-play" href={playUrl('school-zip')}>
+        <Icon name="play" />
+        <span><small>{copy.cta.playOn}</small>{copy.cta.playSmall}</span>
+      </a>
+    ) : null}
+    <a class="btn btn-web" href={WEB_APP_URL}>{copy.cta.web}</a>
+  </div>
+</div>
+<div data-zip-miss hidden>
+  <IosNotify source="school_holidays_waitlist" />
+</div>
+
+<script>
+  const form = document.querySelector<HTMLFormElement>('[data-zip-check]')
+  if (form && form.dataset.bound !== '1') {
+    form.dataset.bound = '1'
+    const msg = form.querySelector<HTMLElement>('[data-zip-msg]')!
+    const button = form.querySelector<HTMLButtonElement>('button')!
+    const covered = document.querySelector<HTMLElement>('[data-zip-covered]')!
+    const miss = document.querySelector<HTMLElement>('[data-zip-miss]')!
+    const hit = document.querySelector<HTMLElement>('[data-zip-hit]')!
+    const text = (key: string) => form.querySelector<HTMLElement>(`[data-copy="${key}"]`)?.textContent?.trim() ?? ''
+
+    form.addEventListener('submit', async (event) => {
+      event.preventDefault()
+      const zip = String(new FormData(form).get('zip') ?? '').trim()
+      covered.hidden = true
+      miss.hidden = true
+      msg.hidden = false
+      if (!/^\d{5}$/.test(zip)) {
+        msg.textContent = text('zip-invalid')
+        return
+      }
+      const idle = button.textContent ?? ''
+      button.disabled = true
+      button.textContent = '…'
+      try {
+        const api = form.dataset.api ?? ''
+        const key = form.dataset.key ?? ''
+        if (!api || !key) throw new Error('lookup')
+        const url = new URL('/rest/v1/shared_lists', api)
+        url.searchParams.set('select', 'title')
+        url.searchParams.set('status', 'eq.active')
+        url.searchParams.set('zip_codes', `cs.{${zip}}`)
+        url.searchParams.set('search_keys', 'eq.{}')
+        url.searchParams.set('order', 'title.asc')
+        url.searchParams.set('limit', '8')
+        const response = await fetch(url, {
+          headers: { apikey: key, Authorization: `Bearer ${key}` },
+        })
+        if (!response.ok) throw new Error('lookup')
+        const rows = (await response.json()) as { title?: string }[]
+        const names = [...new Set(rows.map((row) => row.title?.trim() ?? '').filter(Boolean))]
+        if (names.length) {
+          msg.hidden = true
+          hit.textContent = (form.dataset.covered ?? 'Good news, {district} is in Resuming.').replace('{district}', names.join('; '))
+          covered.hidden = false
+        } else {
+          msg.hidden = true
+          const notify = miss.querySelector<HTMLFormElement>('[data-waitlist]')
+          if (notify) notify.dataset.zip = zip
+          miss.hidden = false
+        }
+      } catch {
+        msg.textContent = text('zip-error')
+      } finally {
+        button.disabled = false
+        button.textContent = idle
+      }
+    })
+  }
+</script>

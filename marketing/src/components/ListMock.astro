@@ -1,0 +1,33 @@
+---
+interface Item {
+  name: string
+  meta: string
+}
+interface Props {
+  title: string
+  sub: string
+  items: Item[]
+  add: string
+  label: string
+}
+const { title, sub, items, add, label } = Astro.props
+---
+
+<div class="phone phone-sm">
+  <div class="phone-screen list-screen" role="img" aria-label={label}>
+    <p class="calendar-screen-brand">Resuming</p>
+    <p class="calendar-screen-title">{title}</p>
+    <p class="calendar-screen-sub">{sub}</p>
+    <ul>
+      {items.map((item) => (
+        <li>
+          <span>
+            <p class="calendar-screen-name">{item.name}</p>
+            <p class="calendar-screen-day">{item.meta}</p>
+          </span>
+          <span class="calendar-screen-add">{add}</span>
+        </li>
+      ))}
+    </ul>
+  </div>
+</div>

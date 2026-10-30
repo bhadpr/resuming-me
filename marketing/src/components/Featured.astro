@@ -1,0 +1,114 @@
+---
+import Icon from './Icons.astro'
+import ListMock from './ListMock.astro'
+import StepsMock from './StepsMock.astro'
+import InsightsMock from './InsightsMock.astro'
+import type { Copy } from '../i18n/en'
+import type { Theme } from '../themes'
+
+interface Props {
+  copy: Copy
+  theme: Theme
+}
+
+const { copy, theme } = Astro.props
+const lang = copy.lang
+const art = (name: string) => `/habits/${name}.webp`
+const prefix = `theme.${theme.slug}`
+const text = theme.copy
+const kind = theme.firstSection
+---
+
+<section class="section" id="featured">
+  <div class="wrap feature">
+    {kind === 'habits' && (
+      <div class="feature-shots teal">
+        <div class="phone phone-sm"><img src={`/media/timer-${lang}.webp`} alt={copy.habits.shotAlt} width="576" height="1024" loading="lazy" /></div>
+      </div>
+    )}
+    {kind === 'meetup' && (
+      <div class="feature-shots">
+        <div class="phone phone-sm"><img src={`/media/shared-${lang}.webp`} alt={copy.community.sharedAlt} width="576" height="1024" loading="lazy" /></div>
+        <div class="phone phone-sm"><img src={`/media/shared-mall-${lang}.webp`} alt={copy.community.sharedMallAlt} width="576" height="1024" loading="lazy" /></div>
+      </div>
+    )}
+    {kind === 'steps' && (
+      <div class="feature-shots sky">
+        <StepsMock copy={copy.steps.mock} lang={lang} />
+      </div>
+    )}
+    {kind === 'insights' && (
+      <div class="feature-shots mint">
+        <InsightsMock copy={copy.progress.mock} lang={lang} />
+      </div>
+    )}
+    {theme.slug === 'nfl' && (
+      <div class="feature-shots">
+        <div class="phone phone-sm">
+          <img
+            class="shot-full"
+            src="/media/nfl-sports.webp"
+            alt="Follow a team: NFL, NBA, NHL, MLB, MLS and cricket."
+            width="470"
+            height="956"
+            loading="lazy"
+          />
+        </div>
+      </div>
+    )}
+    {theme.slug === 'diwali' && (
+      <div class="feature-shots">
+        <div class="phone phone-sm">
+          <img
+            class="shot-full"
+            src="/media/diwali-holidays.webp"
+            alt="India Holidays on the Reminders screen, with Diwali on 8 November 2026."
+            width="470"
+            height="956"
+            loading="lazy"
+          />
+        </div>
+      </div>
+    )}
+    {theme.slug === 'school-holidays' && (
+      <div class="feature-shots">
+        <div class="phone phone-sm">
+          <img
+            class="shot-full"
+            src="/media/school-calendar.webp"
+            alt="Lake Washington School District days off, including Veterans Day and Thanksgiving."
+            width="470"
+            height="956"
+            loading="lazy"
+          />
+        </div>
+      </div>
+    )}
+    {((kind === 'calendar' && theme.slug !== 'diwali') || (kind === 'sports' && theme.slug !== 'cricket' && theme.slug !== 'nfl')) && text.items && (
+      <div class="feature-shots">
+        <ListMock
+          title={kind === 'calendar' ? text.kicker : 'Today'}
+          sub={kind === 'calendar' ? 'Tap Add on a day you want to remember.' : kind === 'school' ? 'Days off, waiting.' : 'Team names only.'}
+          items={text.items}
+          add="Add"
+          label={text.heading}
+        />
+      </div>
+    )}
+    <div class="feature-text">
+      <span class="kicker" data-i18n={`${prefix}.kicker`}>{text.kicker}</span>
+      <h2 data-i18n={`${prefix}.heading`}>{text.heading}</h2>
+      <p class="lead" style="margin-top: 1rem" data-i18n={`${prefix}.body`}>{text.body}</p>
+      {kind === 'meetup' && (
+        <div class="subfeature">
+          <h3><Icon name="whatsapp" />{copy.community.shareTitle}</h3>
+          <p>{copy.community.shareBody}</p>
+        </div>
+      )}
+      <ul class="points">
+        {text.points.map((point, i) => <li data-i18n={`${prefix}.p${i}`}>{point}</li>)}
+      </ul>
+      {text.note && <p class="fine" data-i18n={`${prefix}.note`}>{text.note}</p>}
+    </div>
+  </div>
+</section>

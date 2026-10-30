@@ -1,0 +1,31 @@
+---
+import Base from '../layouts/Base.astro'
+import Home from '../components/Home.astro'
+import { en } from '../i18n/en'
+import { THEMES, type Theme } from '../themes'
+
+export function getStaticPaths() {
+  return THEMES.map((theme) => ({
+    params: { slug: theme.slug },
+    props: { theme },
+  }))
+}
+
+interface Props {
+  theme: Theme
+}
+
+const { theme } = Astro.props
+const title = `Resuming: ${theme.copy.h1}`
+const description = `${theme.copy.sub} Free, no ads.`
+---
+
+<Base
+  copy={en}
+  path={`/${theme.slug}/`}
+  title={title}
+  socialTitle={theme.copy.h1}
+  description={description}
+>
+  <Home copy={en} theme={theme} />
+</Base>

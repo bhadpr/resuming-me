@@ -1,0 +1,91 @@
+---
+import { LANGUAGES } from '../site'
+import { REVIEW_COPY } from '../i18n/needsReview'
+
+interface Props {
+  /** Show the picker. US-only pages leave this off. */
+  enabled?: boolean
+}
+
+const { enabled = true } = Astro.props
+---
+
+{enabled && (
+  <label class="lang-pick">
+    <span class="visually-hidden">Language</span>
+    <select data-lang-pick aria-label="Language">
+      {LANGUAGES.map((language) => (
+        <option value={language.code}>{language.name}</option>
+      ))}
+    </select>
+  </label>
+  <script id="i18n-pack" type="application/json" set:html={JSON.stringify(REVIEW_COPY).replace(/</g, '\\u003c')} />
+  <script>
+    const packEl = document.getElementById('i18n-pack')
+    const packs = packEl ? (JSON.parse(packEl.textContent || '{}') as Record<string, Record<string, string>>) : {}
+    const originals = new Map<HTMLElement, string>()
+    const placeholders = new Map<HTMLElement, string>()
+
+    const localDate = () => {
+      const now = new Date()
+      const month = String(now.getMonth() + 1).padStart(2, '0')
+      const day = String(now.getDate()).padStart(2, '0')
+      return `${now.getFullYear()}-${month}-${day}`
+    }
+
+    const nodes = () => document.querySelectorAll<HTMLElement>('[data-i18n]')
+
+    const apply = (lang: string) => {
+      const pack = packs[lang] ?? {}
+      document.documentElement.lang = lang
+      for (const el of nodes()) {
+        if (!originals.has(el)) originals.set(el, el.textContent ?? '')
+        const past = Boolean(el.dataset.until && localDate() > el.dataset.until)
+        const key = past && el.dataset.afterI18n ? el.dataset.afterI18n : el.dataset.i18n || ''
+        if (past && lang === 'en' && el.dataset.after) el.textContent = el.dataset.after
+        else if (pack[key]) el.textContent = pack[key]
+        else if (!past) el.textContent = originals.get(el) ?? ''
+        else if (el.dataset.after) el.textContent = el.dataset.after
+      }
+      for (const input of document.querySelectorAll<HTMLInputElement>('[data-i18n-placeholder]')) {
+        if (!placeholders.has(input)) placeholders.set(input, input.placeholder)
+        const key = input.dataset.i18nPlaceholder || ''
+        input.placeholder = pack[key] || placeholders.get(input) || input.placeholder
+      }
+      const pick = document.querySelector<HTMLSelectElement>('[data-lang-pick]')
+      if (pick) pick.value = lang
+      const titled = document.querySelector<HTMLElement>('h1[data-title]')
+      if (titled) {
+        const text = (titled.textContent ?? '').replace(/\s+/g, ' ').trim()
+        document.title = `Resuming: ${text}`
+        document.querySelector('meta[property="og:title"]')?.setAttribute('content', text)
+        document.querySelector('meta[name="twitter:title"]')?.setAttribute('content', text)
+      }
+      const sub = document.querySelector<HTMLElement>('[data-meta-sub]')
+      if (sub) {
+        const desc = `${(sub.textContent ?? '').replace(/\s+/g, ' ').trim()} Free, no ads.`
+        for (const sel of ['meta[name="description"]', 'meta[property="og:description"]', 'meta[name="twitter:description"]']) {
+          document.querySelector(sel)?.setAttribute('content', desc)
+        }
+      }
+      try {
+        localStorage.setItem('resuming-site-lang', lang)
+      } catch {
+        /* private mode */
+      }
+    }
+
+    const known = ['en', 'hi', 'te', 'gu', 'mr', 'ta', 'bn']
+    const saved = (() => {
+      try {
+        return localStorage.getItem('resuming-site-lang') || 'en'
+      } catch {
+        return 'en'
+      }
+    })()
+    apply(known.includes(saved) ? saved : 'en')
+    document.querySelector('[data-lang-pick]')?.addEventListener('change', (event) => {
+      apply((event.target as HTMLSelectElement).value)
+    })
+  </script>
+)}

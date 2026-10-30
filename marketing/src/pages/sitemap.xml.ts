@@ -1,8 +1,9 @@
 import type { APIRoute } from 'astro'
 import { CONTENT_UPDATED, SITE_URL } from '../site'
+import { THEMES } from '../themes'
 
 /** Every page that should be indexed. The 404 page is left out on purpose. */
-const PATHS = ['/', '/about/']
+const PATHS = ['/', '/about/', ...THEMES.map((theme) => `/${theme.slug}/`)]
 
 export const GET: APIRoute = () => {
   const urls = PATHS.map(
