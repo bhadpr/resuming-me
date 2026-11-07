@@ -41,6 +41,21 @@ const LIST_PATH = /^\/c\/([a-z0-9]{6})\/?$/i
 const CHALLENGE_PATH = /^\/t\/([abcdefghjkmnpqrstuvwxyz23456789]{12})\/?$/i
 const CHALLENGE_CARD_PATH = /^\/t\/([abcdefghjkmnpqrstuvwxyz23456789]{12})\/card\.jpg$/i
 const WALK_IMAGE = 'https://resuming.me/og-walk.jpg'
+const APPLE_APP_SITE_ASSOCIATION = {
+  applinks: {
+    apps: [],
+    details: [
+      {
+        appID: '2UK3JX39A4.com.cheerfulgames.resuming',
+        paths: ['/e/*', '/c/*', '/t/*'],
+      },
+      {
+        appIDs: ['2UK3JX39A4.com.cheerfulgames.resuming'],
+        components: [{ '/': '/e/*' }, { '/': '/c/*' }, { '/': '/t/*' }],
+      },
+    ],
+  },
+}
 const CHALLENGE_PHOTO = /^[0-9a-f-]{36}\/[a-z0-9-]{8,64}\.jpg$/
 const PHOTO_PATH = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}\/[a-z0-9-]{8,64}\.jpg$/
 
@@ -437,6 +452,17 @@ function rewritePreview(
 export default {
   async fetch(request: Request, env: Env): Promise<Response> {
     const url = new URL(request.url)
+    if (
+      url.pathname === '/.well-known/apple-app-site-association' ||
+      url.pathname === '/apple-app-site-association'
+    ) {
+      return new Response(JSON.stringify(APPLE_APP_SITE_ASSOCIATION), {
+        headers: {
+          'content-type': 'application/json',
+          'cache-control': 'public, max-age=3600',
+        },
+      })
+    }
     const cardMatch = CHALLENGE_CARD_PATH.exec(url.pathname)
     if (cardMatch) return challengeCardImage(env, cardMatch[1].toLowerCase())
 

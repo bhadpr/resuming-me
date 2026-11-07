@@ -1,4 +1,5 @@
 import { Capacitor } from '@capacitor/core'
+import { appLinkPath } from './appLink'
 import { walkingShareLines, walkingShareMessage, type WalkingScoreInput } from './challengeScore'
 import { addDays, daysBetween, todayLocalDate } from './dates'
 import type { Locale } from './i18n'
@@ -569,14 +570,9 @@ export async function takeInstallChallengeCode(
 }
 
 export function challengeCodeFromUrl(url: string): string | null {
-  try {
-    const parsed = new URL(url)
-    if (parsed.protocol !== 'https:') return null
-    if (parsed.hostname !== 'resuming.me' && parsed.hostname !== 'www.resuming.me') return null
-    const match = /^\/t\/([a-z0-9]+)\/?$/i.exec(parsed.pathname)
-    const code = match?.[1].toLowerCase() ?? ''
-    return isChallengeCode(code) ? code : null
-  } catch {
-    return null
-  }
+  const path = appLinkPath(url)
+  if (!path) return null
+  const match = /^\/t\/([a-z0-9]+)\/?$/i.exec(path)
+  const code = match?.[1].toLowerCase() ?? ''
+  return isChallengeCode(code) ? code : null
 }

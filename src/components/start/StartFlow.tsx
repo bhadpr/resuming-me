@@ -62,13 +62,11 @@ import { BrandTitle } from '../BrandTitle'
 import { MedicineForm } from '../MedicineForm'
 import { MedicineThumb } from '../MedicineThumb'
 import { Icon } from '../Icon'
-import { HolidayAsk } from './HolidayAsk'
 import { ReminderEditor } from '../ReminderForm'
 import { ReminderKindMark } from '../ReminderKindIcon'
-import { onboardingHolidayList } from '../../lib/onboardingHoliday'
 import { isIndiaTimeZone, isUsTimeZone } from '../../lib/schoolZip'
 import { importSharedList } from '../../lib/importSharedList'
-import { listCricketTeamsForSearch, listNflTeamsForSearch, type SharedList } from '../../lib/sharedLists'
+import { listCricketTeamsForSearch, listNflTeamsForSearch } from '../../lib/sharedLists'
 import { CRICKET_TEAMS, cricketTeamByName, writeCricketSearch } from '../../lib/cricketSearch'
 import { NFL_TEAMS, nflTeamByName, writeNflSearch } from '../../lib/nflSearch'
 import { NflMark } from '../NflMark'
@@ -290,7 +288,6 @@ function welcomePhases(): readonly (readonly StartPickPhase[])[] {
     ...(ONBOARDING_PRANAYAM ? [['pranayam', 'pranayams', 'pranayamDetail'] as const] : []),
     ...(ONBOARDING_MEDICINE && MEDICINES_ENABLED ? [['ask', 'medicine', 'medicines'] as const] : []),
     ['vitals', 'vitalPicks', 'targets', 'activities'],
-    ...(onboardingHolidayList() ? [['reminderCommunity'] as const] : []),
     ...(isUsTimeZone() ? [['nflAsk', 'nfl'] as const] : []),
     ...(isIndiaTimeZone() ? [['cricketAsk', 'cricket'] as const] : []),
     ['reminderAsk', 'reminder', 'reminders'],
@@ -312,21 +309,20 @@ function afterPranayam(): StartPickPhase {
   return 'vitals'
 }
 
-/** Vitals are done. Holidays come next where that list exists. */
+/** Vitals are done. Team follow or personal reminders come next. */
 function afterVitals(): StartPickPhase {
-  return onboardingHolidayList() ? 'reminderCommunity' : afterHolidaySetup()
+  return afterHolidaySetup()
 }
 
-/** Holidays are done, or there is no holiday list for this clock. */
+/** After vitals: NFL in the US, cricket in India, otherwise reminders. */
 function afterHolidaySetup(): StartPickPhase {
   if (isUsTimeZone()) return 'nflAsk'
   if (isIndiaTimeZone()) return 'cricketAsk'
   return 'reminderAsk'
 }
 
-/** The screen before the team question: holidays when this clock has a list, otherwise vitals. */
+/** Back from the team question returns to the vitals step. */
 function beforeTeamQuestion(activities: GuestActivity[]): StartPickPhase {
-  if (onboardingHolidayList()) return 'reminderCommunity'
   return selectedVitals(activities).length > 0 ? 'vitalPicks' : 'vitals'
 }
 
@@ -396,25 +392,34 @@ function PicturePick({
   id,
   name,
   selected,
+  artSrc,
   onToggle,
 }: {
   id: string
   name: string | null
   selected: boolean
+  artSrc?: string
   onToggle: () => void
 }) {
   return (
     <li>
       <button
         type="button"
-        className={`community-card picture-pick${selected ? ' community-card-added' : ''}`}
+        className={`onboarding-chip habit-tile${selected ? ' onboarding-chip-selected' : ''}`}
         aria-pressed={selected}
         onClick={onToggle}
       >
-        <span className="community-photo-frame">
-          <HabitMark templateId={id} />
+        <span
+          className={`habit-tile-icon${artSrc ? ' habit-tile-icon-art' : ''}`}
+          aria-hidden
+        >
+          {artSrc ? (
+            <img className="habit-tile-art" src={artSrc} alt="" />
+          ) : (
+            <HabitIcon id={id} />
+          )}
         </span>
-        <span className="community-name">{name ?? id}</span>
+        <span className="habit-tile-label">{name ?? id}</span>
       </button>
     </li>
   )
@@ -549,7 +554,6 @@ export function StartFlow({
   })
   const gapTimer = useRef<number | null>(null)
   const keptIds = useRef<Set<string> | null>(adding ? new Set(draft.activities.map((item) => item.localId)) : null)
-  const holidayOffer = onboardingHolidayList()
   const [practiceOn, setPracticeOn] = useState(false)
   const [practiceElapsed, setPracticeElapsed] = useState(0)
   const [practicePaused, setPracticePaused] = useState(false)
@@ -592,12 +596,7 @@ export function StartFlow({
   }, [draft.step])
 
   useEffect(() => {
-    if (draft.pickPhase !== 'reminderCommunity' || onboardingHolidayList()) return
-    persist({ ...draft, pickPhase: afterHolidaySetup() })
-  }, [draft])
-
-  useEffect(() => {
-    if (draft.pickPhase !== 'meetupAsk' && draft.pickPhase !== 'meetup') return
+    if (draft.pickPhase !== 'reminderCommunity') return
     persist({ ...draft, pickPhase: afterHolidaySetup() })
   }, [draft])
 
@@ -625,26 +624,7 @@ export function StartFlow({
   }, [draft])
 
   function persist(next: GuestDraft) {
-    onDraft(next)
-  }
-
-  function skipHolidays() {
-    persist(saveGuestDraft({ ...draft, pickPhase: afterHolidaySetup() }))
-  }
-
-  async function acceptHolidays(list: SharedList, remindBefore: boolean): Promise<'ok' | 'full'> {
-    saveGuestDraft(draft)
-    const skip = new Set(
-      draft.reminders.map((item) => item.sharedListItemId).filter((id): id is string => Boolean(id)),
-    )
-    const result = await importSharedList(list, null, skip, remindBefore)
-    const latest = loadGuestDraft() ?? draft
-    if (result === 'full') {
-      persist(saveGuestDraft({ ...latest, pickPhase: 'reminderCommunity' }))
-      return 'full'
-    }
-    persist(saveGuestDraft({ ...latest, pickPhase: afterHolidaySetup() }))
-    return 'ok'
+    onDraft(saveGuestDraft(next))
   }
 
   async function addNflTeam() {
@@ -1708,11 +1688,9 @@ export function StartFlow({
                   ? 'nflAsk'
                   : isIndiaTimeZone()
                     ? 'cricketAsk'
-                    : onboardingHolidayList()
-                      ? 'reminderCommunity'
-                      : selectedVitals(draft.activities).length > 0
-                        ? 'vitalPicks'
-                        : 'vitals',
+                    : selectedVitals(draft.activities).length > 0
+                      ? 'vitalPicks'
+                      : 'vitals',
               })
             }
           >
@@ -1734,40 +1712,19 @@ export function StartFlow({
               className="btn btn-primary"
               onClick={() => persist({ ...draft, pickPhase: 'reminder' })}
             >
-              {t('landing.yes')}
+              {t('start.reminderForYourself')}
             </button>
             <button
               type="button"
-              className="btn btn-secondary"
-              onClick={() => finishWelcome()}
+              className="btn btn-primary"
+              onClick={() => persist({ ...draft, pickPhase: 'meetup' })}
             >
+              {t('start.reminderMeetupFriend')}
+            </button>
+            <button type="button" className="btn btn-secondary" onClick={() => finishWelcome()}>
               {t('start.no')}
             </button>
           </div>
-        </>
-      )}
-
-      {draft.step === 1 && !trackName && !adding && draft.pickPhase === 'reminderCommunity' && holidayOffer && (
-        <>
-          <button
-            type="button"
-            className="btn btn-ghost start-back"
-            onClick={() =>
-              persist({
-                ...draft,
-                pickPhase: selectedVitals(draft.activities).length > 0 ? 'vitalPicks' : 'vitals',
-              })
-            }
-          >
-            <Icon name="back" />
-            {t('start.back')}
-          </button>
-          <h2 className="screen-heading start-medicine-title">
-            {t('start.holidayAsk', { name: t(holidayOffer?.titleKey ?? 'reminders.community.usHolidays2026') })}
-          </h2>
-          {holidayOffer && (
-            <HolidayAsk today={today} listId={holidayOffer.listId} onAccept={acceptHolidays} onSkip={skipHolidays} />
-          )}
         </>
       )}
 
@@ -1822,13 +1779,22 @@ export function StartFlow({
             ))}
           </ul>
           {openReminders.length < START_REMINDER_MAX && (
-            <button
-              type="button"
-              className="btn btn-secondary"
-              onClick={() => persist({ ...draft, pickPhase: 'reminder' })}
-            >
-              {t('start.addAnotherReminder')}
-            </button>
+            <>
+              <button
+                type="button"
+                className="btn btn-secondary"
+                onClick={() => persist({ ...draft, pickPhase: 'reminder' })}
+              >
+                {t('start.addAnotherReminder')}
+              </button>
+              <button
+                type="button"
+                className="btn btn-secondary"
+                onClick={() => persist({ ...draft, pickPhase: 'meetup' })}
+              >
+                {t('start.addAnotherMeetup')}
+              </button>
+            </>
           )}
           <button
             type="button"
@@ -1848,7 +1814,9 @@ export function StartFlow({
           loading={false}
           saving={false}
           error={null}
-          onCancel={() => persist({ ...draft, pickPhase: afterHolidaySetup() })}
+          onCancel={() =>
+            persist({ ...draft, pickPhase: openReminders.length > 0 ? 'reminders' : 'reminderAsk' })
+          }
           onSubmit={async (input) => {
             const next = addGuestReminder(draft, { ...input, meetup: true, kind: 'event' })
             if (!next) return 'full'
@@ -1858,9 +1826,10 @@ export function StartFlow({
               kind: 'event',
               every_year: false,
               signed_in: false,
+              meetup: true,
             })
             void askForReminderAlerts(input)
-            persist(saveGuestDraft({ ...next, pickPhase: afterHolidaySetup() }))
+            persist(saveGuestDraft({ ...next, pickPhase: 'reminders' }))
           }}
           onDelete={async () => {}}
         />
@@ -2059,7 +2028,7 @@ export function StartFlow({
           </button>
           <h1 className="screen-heading">{t('start.pranayamReady')}</h1>
           <p className="screen-sub">{t('start.pranayamSub')}</p>
-          <ul className="community-grid picture-picks">
+          <ul className="onboarding-chips habit-pick picture-picks">
             {PRANAYAM_IDS.map((id) => {
               const selected = draft.activities.some((item) => item.templateId === id)
               const name = templateLabel(id, locale)
@@ -2069,6 +2038,7 @@ export function StartFlow({
                   id={id}
                   name={name}
                   selected={selected}
+                  artSrc={HABIT_ART[id] ? themed(HABIT_ART[id]) : undefined}
                   onToggle={() => toggleTemplate(id)}
                 />
               )
@@ -2113,7 +2083,7 @@ export function StartFlow({
           </button>
           <h1 className="screen-heading">{t('start.workoutReady')}</h1>
           <p className="screen-sub">{t('start.workoutSub')}</p>
-          <ul className="community-grid picture-picks">
+          <ul className="onboarding-chips habit-pick picture-picks">
             {WORKOUT_IDS.map((id) => {
               const selected = draft.activities.some((item) => item.templateId === id)
               const name = templateLabel(id, locale)
@@ -2123,6 +2093,7 @@ export function StartFlow({
                   id={id}
                   name={name}
                   selected={selected}
+                  artSrc={HABIT_ART[id] ? themed(HABIT_ART[id]) : undefined}
                   onToggle={() => toggleTemplate(id)}
                 />
               )
@@ -2170,7 +2141,7 @@ export function StartFlow({
           </button>
           <h1 className="screen-heading">{t('start.vitalsReady')}</h1>
           <p className="screen-sub">{t('start.vitalsSub')}</p>
-          <ul className="community-grid picture-picks">
+          <ul className="onboarding-chips habit-pick picture-picks">
             {VITAL_IDS.map((id) => {
               const selected = draft.activities.some((item) => item.templateId === id)
               const name = templateLabel(id, locale)
@@ -2180,6 +2151,7 @@ export function StartFlow({
                   id={id}
                   name={name}
                   selected={selected}
+                  artSrc={HABIT_ART[id] ? themed(HABIT_ART[id]) : undefined}
                   onToggle={() => toggleTemplate(id)}
                 />
               )
@@ -2879,6 +2851,7 @@ export function StartFlow({
                 className="btn btn-apple"
                 disabled={googleBusy}
                 onClick={() => {
+                  saveGuestDraft(draft)
                   track('signin_method_clicked', { method: 'apple' })
                   setSignInError(null)
                   setGoogleBusy(true)
@@ -2898,6 +2871,7 @@ export function StartFlow({
               className="btn btn-primary"
               disabled={googleBusy}
                 onClick={() => {
+                  saveGuestDraft(draft)
                   track('signin_method_clicked', { method: 'google' })
                   setSignInError(null)
                   setGoogleBusy(true)

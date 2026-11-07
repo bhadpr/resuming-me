@@ -2,6 +2,7 @@ import { useEffect, useState } from 'react'
 import { Link, useNavigate } from 'react-router-dom'
 import { Capacitor } from '@capacitor/core'
 import { useAuth } from '../hooks/useAuth'
+import { appOpenUrl } from '../lib/appLink'
 import { useDocumentMeta } from '../hooks/useDocumentMeta'
 import { useLocale } from '../hooks/useLocale'
 import { dropLocalSignIn, requireAccountId } from '../lib/accountId'
@@ -339,7 +340,17 @@ export function SharedListPage({ code }: { code: string }) {
               </span>
             </span>
           </label>
-          <button type="button" className="btn btn-primary" disabled={adding} onClick={() => void accept(list)}>
+          {!native && isIphone() && (
+            <a className="btn btn-primary" href={appOpenUrl(`/c/${code}`)}>
+              {t('sharedList.openApp')}
+            </a>
+          )}
+          <button
+            type="button"
+            className={`btn ${!native && isIphone() ? 'btn-secondary' : 'btn-primary'}`}
+            disabled={adding}
+            onClick={() => void accept(list)}
+          >
             {adding ? t('sharedList.accepting') : t('sharedList.acceptAll')}
           </button>
         </>

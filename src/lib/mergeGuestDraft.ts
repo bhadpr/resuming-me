@@ -11,6 +11,14 @@ import { claimSharedListAccepts } from './sharedLists'
 
 export { guestDraftToPayload }
 
+/** Fired after a guest draft is copied into the signed-in account. */
+export const GUEST_DRAFT_MERGED = 'resuming:guest-draft-merged'
+
+function notifyGuestDraftMerged(): void {
+  if (typeof window === 'undefined') return
+  window.dispatchEvent(new Event(GUEST_DRAFT_MERGED))
+}
+
 function dataUrlToBlob(dataUrl: string | null | undefined): Blob | null {
   if (!dataUrl) return null
   const match = /^data:(image\/[\w+.-]+);base64,(.+)$/.exec(dataUrl)
@@ -127,7 +135,8 @@ async function mergeReminders(userId: string, draft: GuestDraft): Promise<void> 
 
 /**
  * Copy the local guest draft into the signed-in account in one RPC.
- * On failure the draft stays in localStorage.
+ * Habits merge first so a reminder hiccup cannot drop them. On RPC failure
+ * the draft stays in localStorage.
  */
 export async function mergeGuestDraft(draft: GuestDraft): Promise<void> {
   try {
@@ -136,22 +145,30 @@ export async function mergeGuestDraft(draft: GuestDraft): Promise<void> {
     /* the copies still move; only the count misses the move onto the account */
   }
   const client = createSupabaseClient()
-  const reminders = draft.reminders ?? []
-  const medicines = MEDICINES_ENABLED ? draft.medicines : []
-  if (medicines.length > 0 || reminders.length > 0) {
-    const userId = await requireAccountId()
-    if (medicines.length > 0) await mergeMedicines(userId, draft)
-    if (reminders.length > 0) await mergeReminders(userId, { ...draft, reminders })
-  }
   const { error } = await client.rpc('merge_guest_draft', {
     payload: guestDraftToPayload(draft),
   })
   if (error) {
     if (alreadyMergedElsewhere(error)) {
       clearGuestDraft()
+      notifyGuestDraftMerged()
       return
     }
     throw error
   }
+
+  const reminders = draft.reminders ?? []
+  const medicines = MEDICINES_ENABLED ? draft.medicines : []
+  if (medicines.length > 0 || reminders.length > 0) {
+    try {
+      const userId = await requireAccountId()
+      if (medicines.length > 0) await mergeMedicines(userId, draft)
+      if (reminders.length > 0) await mergeReminders(userId, { ...draft, reminders })
+    } catch {
+      /* habits already landed; reminders can be added again from the app */
+    }
+  }
+
   clearGuestDraft()
+  notifyGuestDraftMerged()
 }

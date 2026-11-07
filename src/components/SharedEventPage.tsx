@@ -2,6 +2,7 @@ import { useEffect, useState } from 'react'
 import { Link, useNavigate } from 'react-router-dom'
 import { Capacitor } from '@capacitor/core'
 import { useAuth } from '../hooks/useAuth'
+import { appOpenUrl } from '../lib/appLink'
 import { useDocumentMeta } from '../hooks/useDocumentMeta'
 import { useLocale } from '../hooks/useLocale'
 import { todayLocalDate } from '../lib/dates'
@@ -263,9 +264,14 @@ export function SharedEventPage({ code }: { code: string }) {
       ) : (
         <>
           {issueKey && <p className="error">{t(issueKey)}</p>}
+          {!native && isIphone() && (
+            <a className="btn btn-primary" href={appOpenUrl(`/e/${found.code}`)}>
+              {t('sharedEvent.openApp')}
+            </a>
+          )}
           <button
             type="button"
-            className="btn btn-primary"
+            className={`btn ${!native && isIphone() ? 'btn-secondary' : 'btn-primary'}`}
             disabled={adding || authLoading}
             onClick={() => void add(found)}
           >

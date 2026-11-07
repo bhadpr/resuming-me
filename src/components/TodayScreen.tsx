@@ -297,13 +297,13 @@ export function TodayScreen({
     return (
       <li
         key={metric.id}
-        className={`today-row today-row-stack today-row-compact item-kind-vital ${isBloodPressure(metric) && !skipped ? 'today-row-entry' : ''} ${entry || skipped ? 'today-row-done' : ''}`}
+        className={`today-row today-row-stack today-row-compact item-kind-vital ${entry || skipped ? 'today-row-done' : ''}`}
       >
         <div className="today-row-head">
           <HabitMark name={visibleName(metric, locale)} templateId={metric.template_id} />
           <TaggedName kind="vital">{visibleName(metric, locale)}</TaggedName>
         </div>
-        <div className={`today-row-main ${isBloodPressure(metric) ? 'vital-entry' : ''}`}>
+        <div className="today-row-main">
           <span className="activity-meta">
             <span className="activity-desc">
               {entry

@@ -87,6 +87,7 @@ describe('links into the app', () => {
     expect(sharedListCodeFromUrl('https://evil.example/c/ab12cd')).toBeNull()
     expect(sharedListCodeFromUrl('https://resuming.me/e/ab12cd')).toBeNull()
     expect(sharedListCodeFromUrl('https://resuming.me/c/toolong')).toBeNull()
+    expect(sharedListCodeFromUrl('com.cheerfulgames.resuming:///c/ab12cd')).toBe('ab12cd')
   })
 
   it('reads the list code from the install referrer, next to marketing codes', () => {

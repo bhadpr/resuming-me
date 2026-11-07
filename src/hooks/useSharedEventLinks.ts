@@ -8,8 +8,8 @@ import { sharedEventCodeFromUrl, takeInstallEventCode } from '../lib/sharedEvent
 import { track } from '../lib/track'
 
 /**
- * In the Android app: a resuming.me/e/<code> or /c/<code> link, or an install that came from one,
- * opens that screen. Runs before the language screen so the route waits behind it.
+ * In the iPhone or Android app: a resuming.me/e/<code>, /c/<code>, or /t/<code> link,
+ * or an install that came from one, opens that screen. Runs before the language screen so the route waits behind it.
  */
 export function useSharedEventLinks(): void {
   const navigate = useNavigate()

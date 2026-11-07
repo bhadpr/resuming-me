@@ -1,3 +1,4 @@
+import { appLinkPath } from './appLink'
 import { PLAY_PACKAGE } from './marketing'
 import { hasWebLink, SHARED_EVENT_ORIGIN, type SharedReportReason } from './sharedEvents'
 import { getOrCreateAnonId } from './track'
@@ -64,18 +65,13 @@ export function isSharedListCode(value: string): boolean {
   return /^[a-z0-9]{6}$/.test(value)
 }
 
-/** The code from a resuming.me/c/<code> link that opened the app. */
+/** The code from a resuming.me/c/<code> link, or the app's own scheme, that opened the app. */
 export function sharedListCodeFromUrl(url: string): string | null {
-  try {
-    const parsed = new URL(url)
-    if (parsed.protocol !== 'https:') return null
-    if (parsed.hostname !== 'resuming.me' && parsed.hostname !== 'www.resuming.me') return null
-    const match = /^\/c\/([a-z0-9]+)\/?$/i.exec(parsed.pathname)
-    const code = match?.[1].toLowerCase() ?? ''
-    return isSharedListCode(code) ? code : null
-  } catch {
-    return null
-  }
+  const path = appLinkPath(url)
+  if (!path) return null
+  const match = /^\/c\/([a-z0-9]+)\/?$/i.exec(path)
+  const code = match?.[1].toLowerCase() ?? ''
+  return isSharedListCode(code) ? code : null
 }
 
 /** Play hands back the referrer query string. A list uses list=<code>, so it does not look like an event. */

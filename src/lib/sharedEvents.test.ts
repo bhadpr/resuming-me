@@ -143,6 +143,7 @@ describe('links into the app', () => {
     expect(sharedEventCodeFromUrl('https://www.resuming.me/e/ab12cd/')).toBe('ab12cd')
     expect(sharedEventCodeFromUrl('https://evil.example/e/ab12cd')).toBeNull()
     expect(sharedEventCodeFromUrl('com.cheerfulgames.resuming://auth/callback?code=x')).toBeNull()
+    expect(sharedEventCodeFromUrl('com.cheerfulgames.resuming:///e/ab12cd')).toBe('ab12cd')
     expect(sharedEventCodeFromUrl('https://resuming.me/today')).toBeNull()
   })
 

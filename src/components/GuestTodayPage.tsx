@@ -801,7 +801,7 @@ function NumberVitalRow({
 
   return (
     <li
-      className={`today-row today-row-stack today-row-compact item-kind-vital ${paired && !skipped ? 'today-row-entry' : ''} ${reading || skipped ? 'today-row-done' : ''}`}
+      className={`today-row today-row-stack today-row-compact item-kind-vital ${reading || skipped ? 'today-row-done' : ''}`}
     >
       <div className="today-row-head">
         <HabitMark

@@ -64,7 +64,6 @@ import { askForReminderAlerts } from '../lib/reminderNotifications'
 import { untimedReminderNames } from '../lib/reminderAlerts'
 import { CommunityRemindersPage } from './CommunityRemindersPage'
 import { ReminderListSection } from './ReminderSection'
-import { OnboardingScreen } from './OnboardingScreen'
 import { InstallPrompt } from './InstallPrompt'
 import { BrandTitle } from './BrandTitle'
 import { BottomNav } from './BottomNav'
@@ -209,15 +208,7 @@ import {
 } from '../lib/navigation'
 import { accountFirstName } from '../lib/accountName'
 import { requestMicroSteps } from '../lib/microSteps'
-import { enableDailyDigestFromOnboarding } from '../lib/localNotifications'
-import {
-  needsOnboarding,
-  ONBOARDING_DISMISS_KEY,
-  readDismissedFlag,
-  saveDeadlineReminder,
-  writeDismissedFlag,
-  type OnboardingCompletePayload,
-} from '../lib/onboarding'
+import { GUEST_DRAFT_MERGED } from '../lib/mergeGuestDraft'
 import { readTodayCache, writeTodayCache } from '../lib/todayCache'
 import { Icon } from './Icon'
 
@@ -379,9 +370,6 @@ export function AppShell() {
   const [shrinkSnapshot, setShrinkSnapshot] = useState<Activity | null>(null)
   const [insightsMetricEntries, setInsightsMetricEntries] = useState<MetricEntry[]>([])
   const [loadingInsights, setLoadingInsights] = useState(false)
-  const [onboardingDismissed, setOnboardingDismissed] = useState(() =>
-    readDismissedFlag(ONBOARDING_DISMISS_KEY),
-  )
 
   const undoToast = useUndoToast()
 
@@ -480,6 +468,23 @@ export function AppShell() {
       }
     })()
   }, [refreshTodayData, user, hadCache])
+
+  // Guest habits merge after sign-in; reload so Today is not stuck empty.
+  useEffect(() => {
+    if (!user) return
+    async function reloadAfterGuestMerge() {
+      try {
+        const [acts, mets] = await Promise.all([listActivities(true), listMetrics(true)])
+        setActivities(acts)
+        setMetrics(mets)
+        await refreshTodayData(acts, { background: true, metricsList: mets })
+      } catch {
+        /* keep whatever is already on screen */
+      }
+    }
+    window.addEventListener(GUEST_DRAFT_MERGED, reloadAfterGuestMerge)
+    return () => window.removeEventListener(GUEST_DRAFT_MERGED, reloadAfterGuestMerge)
+  }, [refreshTodayData, user])
 
   useEffect(() => {
     if (!user) return
@@ -1776,55 +1781,10 @@ export function AppShell() {
     }
   }
 
-  async function handleOnboardingComplete(payload: OnboardingCompletePayload) {
-    if (!user) return
-    setSaving(true)
-    setError(null)
-    try {
-      for (const item of payload.activities) {
-        const created = await createActivity(user.id, item.input)
-        trackActivityCreated(created)
-        if (item.deadlineCadence) {
-          saveDeadlineReminder(created.id, item.deadlineCadence)
-        }
-      }
-      if (payload.digest.enabled) {
-        const times =
-          'times' in payload.digest && Array.isArray(payload.digest.times) && payload.digest.times.length > 0
-            ? payload.digest.times
-            : [{ hour: payload.digest.hour, minute: payload.digest.minute }]
-        await enableDailyDigestFromOnboarding(times)
-      }
-      const acts = await listActivities(true)
-      const mets = await listMetrics(true)
-      setActivities(acts)
-      setMetrics(mets)
-      writeDismissedFlag(ONBOARDING_DISMISS_KEY, true)
-      setOnboardingDismissed(true)
-      await refreshTodayData(acts)
-      navigate('/today')
-    } catch (err) {
-      setError(err instanceof Error ? err.message : 'Could not set up starters')
-    } finally {
-      setSaving(false)
-    }
-  }
-
-  function handleOnboardingSkip() {
-    writeDismissedFlag(ONBOARDING_DISMISS_KEY, true)
-    setOnboardingDismissed(true)
-    setError(null)
-  }
-
   const activeActivityCount = useMemo(
     () => activities.filter((a) => !a.archived).length,
     [activities],
   )
-
-  const showOnboarding =
-    !loadingActivities &&
-    !loadingMetrics &&
-    needsOnboarding(activeActivityCount, onboardingDismissed)
 
   const dateLabel = formatLongDate(locale)
 
@@ -1886,7 +1846,7 @@ export function AppShell() {
       </header>
 
       <main className="app-main">
-        {!showOnboarding && <InstallPrompt />}
+        <InstallPrompt />
         {adminPage && (
           <button type="button" className="btn btn-ghost btn-sm back-btn" onClick={() => navigate('/settings')}>
             <Icon name="back" />
@@ -1979,13 +1939,6 @@ export function AppShell() {
                   onReviewsOff={changeReviewsOff}
                 />
               </Suspense>
-            ) : showOnboarding ? (
-              <OnboardingScreen
-                saving={saving}
-                error={error}
-                onComplete={handleOnboardingComplete}
-                onSkip={handleOnboardingSkip}
-              />
             ) : reviewWeekStart ? (
               weeklyReview ? (
               <WeeklyReviewScreen
@@ -2707,12 +2660,12 @@ export function AppShell() {
         )}
           </>
         )}
-        {!native && !showOnboarding && <SiteFooter compact />}
+        {!native && <SiteFooter compact />}
           </>
         )}
       </main>
 
-      {showAppChrome(view) && !showOnboarding && (
+      {showAppChrome(view) && (
         <>
           {undoToast.toast && (
             <Toast

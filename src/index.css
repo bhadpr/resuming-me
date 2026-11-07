@@ -1522,7 +1522,7 @@ select.field-input.language-select {
 
 .onboarding-chips.habit-pick.landing-habit-chips {
   display: grid;
-  grid-template-columns: repeat(4, minmax(0, 1fr));
+  grid-template-columns: repeat(3, minmax(0, 1fr));
   gap: var(--space-3) var(--space-2);
   width: 100%;
   margin-bottom: 0;
@@ -2296,69 +2296,6 @@ select.field-input.language-select {
   background: color-mix(in srgb, var(--color-primary) 12%, var(--color-surface));
 }
 
-.onboarding-actions {
-  display: flex;
-  flex-direction: column;
-  gap: var(--space-2);
-  margin-top: var(--space-2);
-}
-
-.onboarding-screen {
-  display: flex;
-  flex-direction: column;
-  align-items: center;
-  text-align: center;
-  width: 100%;
-  flex: 1;
-}
-
-.onboarding-figure {
-  width: min(100%, 280px);
-  margin: 0 0 var(--space-4);
-  border-radius: var(--radius);
-  overflow: hidden;
-  border: 1px solid var(--color-border);
-}
-
-.onboarding-figure img {
-  display: block;
-  width: 100%;
-  height: 140px;
-  object-fit: cover;
-}
-
-.onboarding-screen .screen-heading {
-  justify-content: center;
-  text-align: center;
-}
-
-.onboarding-screen .screen-heading > div {
-  width: 100%;
-}
-
-.onboarding-screen .template-list,
-.onboarding-screen .field,
-.onboarding-actions {
-  width: 100%;
-}
-
-.onboarding-kicker {
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  gap: var(--space-2);
-  margin: 0 0 var(--space-1);
-  font-size: var(--text-xs);
-  letter-spacing: 0.04em;
-  text-transform: uppercase;
-  color: var(--color-text-muted);
-}
-
-.onboarding-kicker .activity-emoji-art {
-  width: 2rem;
-  height: 2rem;
-}
-
 .onboarding-chips {
   display: flex;
   flex-wrap: wrap;
@@ -2846,42 +2783,25 @@ select.field-input.language-select {
   margin-inline: auto;
 }
 
-/* Four pictures, two by two. The whole card is the button. */
+/* Small habit icons, three across (vitals, workouts, pranayam). */
 .picture-picks {
   width: 100%;
   margin: var(--space-3) 0;
+  padding: 0;
+  list-style: none;
 }
 
-.picture-picks.community-grid:has(li:nth-child(3)) {
-  max-height: none;
-  overflow: visible;
-}
-
-.picture-picks .community-photo-frame .activity-emoji-art,
-.picture-picks .community-photo-frame .habit-mark {
-  width: 100%;
-  height: 100%;
-  border-radius: inherit;
-}
-
-.picture-picks .picture-pick {
-  width: 100%;
-  cursor: pointer;
-  transition:
-    border-color 0.15s ease,
-    box-shadow 0.15s ease,
-    transform 0.15s ease;
+.picture-picks > li {
+  min-width: 0;
 }
 
 @media (hover: hover) {
-  .picture-pick:hover:not(:disabled),
   button.community-card:hover:not(:disabled) {
     border-color: var(--color-primary);
     box-shadow: 0 8px 18px color-mix(in srgb, var(--color-text) 14%, transparent);
     transform: translateY(-2px);
   }
 
-  .picture-picks .picture-pick.community-card-added:hover:not(:disabled),
   button.community-card.community-card-added:hover:not(:disabled) {
     box-shadow:
       inset 0 0 0 1px var(--color-primary),
@@ -2889,12 +2809,10 @@ select.field-input.language-select {
   }
 }
 
-.picture-pick:active:not(:disabled),
 button.community-card:active:not(:disabled) {
   transform: translateY(0);
 }
 
-.picture-picks .picture-pick.community-card-added,
 button.community-card.community-card-added {
   opacity: 1;
   border-color: var(--color-primary);
@@ -3068,6 +2986,14 @@ button.community-card.community-card-picked {
 }
 
 .reminder-community-toggle {
+  margin: 0 0 var(--space-3);
+}
+
+.reminder-sports-toggle {
+  display: flex;
+  flex-direction: column;
+  align-items: flex-start;
+  gap: var(--space-2);
   margin: 0 0 var(--space-3);
 }
 
@@ -3556,9 +3482,10 @@ select.field-input.team-select {
   margin-bottom: 0;
 }
 
+.habit-pick.onboarding-chips,
 .habit-pick .onboarding-chips {
   display: grid;
-  grid-template-columns: repeat(4, minmax(0, 1fr));
+  grid-template-columns: repeat(3, minmax(0, 1fr));
   gap: var(--space-3) var(--space-2);
 }
 
@@ -3690,18 +3617,6 @@ select.field-input.team-select {
   font-size: var(--text-sm);
   color: var(--color-text-muted);
   line-height: var(--leading-body);
-}
-
-.onboarding-added {
-  cursor: default;
-}
-
-.onboarding-screen .field-label {
-  text-align: left;
-}
-
-.onboarding-screen .field-input {
-  text-align: left;
 }
 
 .time-input {
@@ -3853,10 +3768,6 @@ select.field-input.team-select {
   flex-direction: column;
   min-height: 0;
   padding: 1rem 1rem 1.25rem;
-}
-
-.app:has(.onboarding-screen) {
-  padding-bottom: env(safe-area-inset-bottom, 0px);
 }
 
 .empty-state {
@@ -8764,8 +8675,9 @@ button.today-row {
     align-items: start;
   }
 
+  .habit-pick.onboarding-chips,
   .habit-pick .onboarding-chips {
-    grid-template-columns: repeat(6, minmax(0, 1fr));
+    grid-template-columns: repeat(3, minmax(0, 1fr));
   }
 
   .landing-card {

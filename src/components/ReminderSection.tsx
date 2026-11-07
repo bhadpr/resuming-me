@@ -7,6 +7,7 @@ import {
   isFollowedListReminder,
   isSharedEventGone,
   reminderListKind,
+  SPORTS_HIDE_AT,
   tomorrowOf,
   type Reminder,
 } from '../lib/reminderSchedule'
@@ -22,8 +23,13 @@ import { isShareableReminder } from '../lib/sharedEvents'
 import { Icon } from './Icon'
 import { ReminderKindMark } from './ReminderKindIcon'
 import { SkipLink, UndoSkipButton } from './TodaySkip'
-import { scheduleSourceKey } from '../lib/scheduleTag'
+import { scheduleDetail, scheduleSourceKey } from '../lib/scheduleTag'
 import { TaggedName, todayKindForReminder } from './TodayKindTag'
+
+/** A followed sports game, not a school day. */
+function isSportScheduleReminder(reminder: Reminder): boolean {
+  return reminderListKind(reminder) === 'schedule' && scheduleDetail(reminder.text).sport
+}
 
 /** Time, or any time, plus "From Tuesday" when an earlier day is still open. */
 function reminderWhen(
@@ -319,8 +325,16 @@ export function ReminderListSection({
 }: ReminderListSectionProps) {
   const { locale, t } = useLocale()
   const tomorrow = tomorrowOf(today)
-  const todays = dueNow.filter((reminder) => reminder.day >= today)
-  const laterMonths = groupByMonth(later)
+  const listed = [...dueNow.filter((reminder) => reminder.day >= today), ...later]
+  const sportsCount = listed.filter(isSportScheduleReminder).length
+  const canHideSports = listed.length >= SPORTS_HIDE_AT && sportsCount > 0
+  const [showSports, setShowSports] = useState(false)
+  const hideSports = canHideSports && !showSports
+  const visibleDue = dueNow.filter(
+    (reminder) => reminder.day >= today && !(hideSports && isSportScheduleReminder(reminder)),
+  )
+  const visibleLater = later.filter((reminder) => !(hideSports && isSportScheduleReminder(reminder)))
+  const laterMonths = groupByMonth(visibleLater)
   const { isOpen, toggle } = useClosedMonths(
     laterMonths.map((month) => month.key),
     today,
@@ -342,8 +356,8 @@ export function ReminderListSection({
     }
     return groups
   }
-  const todayGroup = todays.length > 0 ? { key: 'today', label: t('reminders.today'), items: todays } : null
-  const hasReminders = todayGroup != null || laterMonths.length > 0
+  const todayGroup = visibleDue.length > 0 ? { key: 'today', label: t('reminders.today'), items: visibleDue } : null
+  const hasReminders = todayGroup != null || laterMonths.length > 0 || sportsCount > 0
 
   return (
     <div className="activity-list-screen reminder-list-section">
@@ -360,6 +374,23 @@ export function ReminderListSection({
         onAddHolidays={onAddHolidays}
         onAddSchedule={onAddSchedule}
       />
+
+      {canHideSports && (
+        <div className="reminder-sports-toggle">
+          {hideSports ? (
+            <>
+              <p className="screen-sub">{t('reminders.sportsHidden', { count: String(sportsCount) })}</p>
+              <button type="button" className="btn btn-secondary btn-sm" onClick={() => setShowSports(true)}>
+                {t('reminders.showSports', { count: String(sportsCount) })}
+              </button>
+            </>
+          ) : (
+            <button type="button" className="btn btn-secondary btn-sm" onClick={() => setShowSports(false)}>
+              {t('reminders.hideSports')}
+            </button>
+          )}
+        </div>
+      )}
 
       {error && <p className="error">{error}</p>}
 

@@ -1,6 +1,7 @@
 import { parseLocalDate } from './dates'
 import { addEventPhoto, compressEventPhoto, removeEventPhoto } from './eventPhotos'
 import { localeTag, translate, type Locale } from './i18n'
+import { appLinkPath } from './appLink'
 import { PLAY_PACKAGE } from './marketing'
 import {
   cleanReminderDescription,
@@ -95,18 +96,13 @@ export function sharedEventUrl(code: string): string {
   return `${SHARED_EVENT_ORIGIN}/e/${code}`
 }
 
-/** The code from a resuming.me/e/<code> link that opened the app. */
+/** The code from a resuming.me/e/<code> link, or the app's own scheme, that opened the app. */
 export function sharedEventCodeFromUrl(url: string): string | null {
-  try {
-    const parsed = new URL(url)
-    if (parsed.protocol !== 'https:') return null
-    if (parsed.hostname !== 'resuming.me' && parsed.hostname !== 'www.resuming.me') return null
-    const match = /^\/e\/([a-z0-9]+)\/?$/i.exec(parsed.pathname)
-    const code = match?.[1].toLowerCase() ?? ''
-    return isSharedEventCode(code) ? code : null
-  } catch {
-    return null
-  }
+  const path = appLinkPath(url)
+  if (!path) return null
+  const match = /^\/e\/([a-z0-9]+)\/?$/i.exec(path)
+  const code = match?.[1].toLowerCase() ?? ''
+  return isSharedEventCode(code) ? code : null
 }
 
 /** Play hands back the referrer query string, which may also carry marketing codes. */

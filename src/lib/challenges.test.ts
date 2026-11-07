@@ -1,5 +1,6 @@
 import { describe, expect, it } from 'vitest'
 import {
+  challengeCodeFromUrl,
   challengeHasEnded,
   challengeIssue,
   challengeUrl,
@@ -14,6 +15,7 @@ import {
 describe('challenge link', () => {
   it('adds a new version when the card picture changes', () => {
     expect(challengeUrl('k7mhp3wq9rtd')).toBe('https://resuming.me/t/k7mhp3wq9rtd')
+    expect(challengeCodeFromUrl('com.cheerfulgames.resuming:///t/k7mhp3wq9rtd')).toBe('k7mhp3wq9rtd')
     expect(challengeUrl('k7mhp3wq9rtd', '85fa4b05-7820-4dbb-aded-24a6148ee9fe/f3fdb14f-0667-42ea-8243-2c63c844110e.jpg')).toBe(
       'https://resuming.me/t/k7mhp3wq9rtd?v=f3fdb14f',
     )

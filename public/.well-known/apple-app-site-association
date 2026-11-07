@@ -1,0 +1,19 @@
+{
+  "applinks": {
+    "apps": [],
+    "details": [
+      {
+        "appID": "2UK3JX39A4.com.cheerfulgames.resuming",
+        "paths": ["/e/*", "/c/*", "/t/*"]
+      },
+      {
+        "appIDs": ["2UK3JX39A4.com.cheerfulgames.resuming"],
+        "components": [
+          { "/": "/e/*" },
+          { "/": "/c/*" },
+          { "/": "/t/*" }
+        ]
+      }
+    ]
+  }
+}
