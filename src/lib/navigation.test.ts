@@ -18,6 +18,8 @@ describe('safeNextPath', () => {
 describe('parseAppPath', () => {
   it('maps app screens', () => {
     expect(parseAppPath('/today')).toEqual({ name: 'today' })
+    expect(parseAppPath('/challenges/new')).toEqual({ name: 'challengeNew' })
+    expect(parseAppPath('/challenges')).toEqual({ name: 'challengeList' })
     expect(parseAppPath('/activities')).toEqual({ name: 'activities', screen: 'list' })
     expect(parseAppPath('/activities/new')).toEqual({ name: 'activities', screen: 'form' })
     expect(parseAppPath('/activities/abc')).toEqual({

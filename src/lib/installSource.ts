@@ -26,6 +26,7 @@ function clean(value: string | null): string | null {
  */
 export function installSourceFromReferrer(referrer: string | null | undefined): InstallSource {
   const params = new URLSearchParams(referrer ?? '')
+  if (params.get('challenge')) return { source: 'walking_challenge', medium: null, content: null }
   if (params.get('event')) return { source: 'shared_event', medium: null, content: null }
   if (params.get('list')) return { source: 'shared_list', medium: null, content: null }
   const source = clean(params.get('utm_source'))

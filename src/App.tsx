@@ -19,6 +19,7 @@ import { LegalPage } from './components/LegalPage'
 import { FeedbackPage } from './components/FeedbackPage'
 import { NotFoundPage } from './components/NotFoundPage'
 import { DeleteAccountPage } from './components/DeleteAccountPage'
+import { ChallengePage } from './components/ChallengePage'
 import { SharedEventPage } from './components/SharedEventPage'
 import { SharedListPage } from './components/SharedListPage'
 import { StartPage } from './components/StartPage'
@@ -70,7 +71,9 @@ function RootLayout() {
   useSharedEventLinks()
   const { localeChosen, localeResolved } = useLocale()
   const { pathname } = useLocation()
-  const skipLanguage = !Capacitor.isNativePlatform() && (pathname.startsWith('/e/') || pathname.startsWith('/c/'))
+  const skipLanguage =
+    !Capacitor.isNativePlatform() &&
+    (pathname.startsWith('/e/') || pathname.startsWith('/c/') || pathname.startsWith('/t/'))
 
   useEffect(() => {
     if (!localeResolved) return
@@ -266,6 +269,20 @@ function SharedListRoute() {
   )
 }
 
+function ChallengeRoute() {
+  const { code = '' } = useParams()
+
+  useEffect(() => {
+    trackPageView('/t', 'challenge')
+  }, [])
+
+  return (
+    <PublicPageFrame>
+      <ChallengePage code={code.toLowerCase()} />
+    </PublicPageFrame>
+  )
+}
+
 function SharedEventRoute() {
   const { code = '' } = useParams()
 
@@ -306,6 +323,7 @@ export const appRouteObjects = [
       { path: '/feedback', element: <PublicFeedbackRoute /> },
       { path: '/delete-account', element: <PublicDeleteAccountRoute /> },
       { path: '/e/:code', element: <SharedEventRoute /> },
+      { path: '/t/:code', element: <ChallengeRoute /> },
       { path: '/c/:code', element: <SharedListRoute /> },
       {
         element: <RequireAuth />,
@@ -313,6 +331,8 @@ export const appRouteObjects = [
           {
             element: <AppShellLayout />,
             children: [
+              { path: '/challenges/new', element: <RouteSlot /> },
+              { path: '/challenges', element: <RouteSlot /> },
               { path: '/today', element: <RouteSlot /> },
               { path: '/activities', element: <RouteSlot /> },
               { path: '/activities/new', element: <RouteSlot /> },

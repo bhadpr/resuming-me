@@ -87,10 +87,10 @@ export function StepsCard({
   const art = habitArtFor({ templateId: 'steps' })
 
   return (
-    <li className="today-row today-row-stack today-row-compact item-kind-activity">
+    <li className="today-row today-row-stack today-row-compact item-kind-vital">
       <div className="today-row-head">
         {art ? <img className="steps-card-art" src={themed(art)} alt="" /> : null}
-        <TaggedName kind="habit">{t('today.steps')}</TaggedName>
+        <TaggedName kind="vital">{t('today.steps')}</TaggedName>
       </div>
       <div className="today-row-main">
         <span className="activity-meta">

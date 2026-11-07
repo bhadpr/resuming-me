@@ -1,4 +1,5 @@
 import { useEffect, useMemo, useState } from 'react'
+import { useNavigate } from 'react-router-dom'
 import { describeActivity, type Activity } from '../lib/activities'
 import { visibleName } from '../lib/catalogName'
 import { useLocale } from '../hooks/useLocale'
@@ -37,6 +38,7 @@ import { Icon } from './Icon'
 import { habitTemplateId } from '../data/habitArt'
 import { isListedVital } from '../lib/vitalKey'
 import { tracksDistance } from '../lib/healthDistance'
+import { isMeditationTemplate } from '../lib/challenges'
 import { SessionDistanceLine, SessionDistanceSuffix } from './SessionDistance'
 import { StepsWeek } from './StepsWeek'
 import { DEFAULT_STEP_GOAL } from '../lib/steps'
@@ -117,6 +119,7 @@ export function ActivityDetail({
   photo = null,
 }: ActivityDetailProps) {
   const { locale, t } = useLocale()
+  const navigate = useNavigate()
   const name = visibleName(activity, locale)
   const [confirmDelete, setConfirmDelete] = useState(false)
   const [editingId, setEditingId] = useState<string | null>(null)
@@ -195,6 +198,7 @@ export function ActivityDetail({
   const canResume = Boolean(onResume) && Boolean(activePause)
   const showsDistance = tracksDistance(habitTemplateId(activity))
   const stepsHabit = habitTemplateId(activity) === 'steps'
+  const meditationHabit = isMeditationTemplate(habitTemplateId(activity))
   const vitalPage = isListedVital(activity)
   const ownDescription = vitalPage ? activity.why_matters?.trim() : ''
   const showedInWindow = seriesStats.done + seriesStats.partial
@@ -226,6 +230,15 @@ export function ActivityDetail({
         <button type="button" className="btn btn-primary" onClick={onEdit} disabled={busy}>
           {t('metricDetail.edit')}
         </button>
+        {meditationHabit && !activity.archived && (
+          <button
+            type="button"
+            className="btn btn-secondary"
+            onClick={() => navigate('/challenges/new?measure=meditate')}
+          >
+            {t('challenge.startSit')}
+          </button>
+        )}
       </div>
       {activePause?.paused_until && (
         <p className="activity-desc">Paused until {activePause.paused_until}.</p>

@@ -28,6 +28,11 @@ describe('installSourceFromReferrer', () => {
 
   it('reads a shared event link without keeping its code', () => {
     expect(installSourceFromReferrer('event=ab12cd')).toEqual({ source: 'shared_event', medium: null, content: null })
+    expect(installSourceFromReferrer('challenge=k7mhp3wq9rtd')).toEqual({
+      source: 'walking_challenge',
+      medium: null,
+      content: null,
+    })
   })
 
   it('reads a shared list link without keeping its code', () => {

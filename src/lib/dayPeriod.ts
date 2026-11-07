@@ -65,9 +65,15 @@ export function activityPeriod(item: {
   return parseDayPeriod(item.usuallyWhen ?? item.usually_when) ?? defaultPeriodFor(item)
 }
 
-export type TodayItemKind = 'medicine' | 'activity' | 'reminder' | 'vital'
+export type TodayItemKind = 'medicine' | 'activity' | 'reminder' | 'vital' | 'challenge'
 
-const KIND_ORDER: Record<TodayItemKind, number> = { medicine: 0, activity: 1, reminder: 2, vital: 3 }
+const KIND_ORDER: Record<TodayItemKind, number> = {
+  medicine: 0,
+  activity: 1,
+  reminder: 2,
+  vital: 3,
+  challenge: 4,
+}
 
 export interface TimedItem {
   period: DayPeriod

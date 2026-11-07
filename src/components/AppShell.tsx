@@ -51,6 +51,8 @@ import { ActivityDetail } from './ActivityDetail'
 import { MetricList } from './MetricList'
 import { MetricForm } from './MetricForm'
 import { MetricDetail } from './MetricDetail'
+import { ChallengeForm } from './ChallengeForm'
+import { ChallengeRunList, ChallengeShelf } from './ChallengeToday'
 import { TodayScreen } from './TodayScreen'
 import { MedicineSection } from './MedicineSection'
 import { MedicineEditor } from './MedicineForm'
@@ -172,7 +174,9 @@ import {
   writeSessionEntry,
 } from '../lib/sessions'
 import { loadSessionQueue, removeQueuedSession } from '../lib/timerStorage'
+import { scheduleWalkingNudges } from '../lib/challengeNudges'
 import { addDays, endOfMonth, endOfWeekSunday, startOfMonth, startOfWeekMonday, todayLocalDate } from '../lib/dates'
+import { syncWalkingChallenges } from '../lib/walkingSync'
 import { buildTodayProgress, type ActivityTodayProgress } from '../lib/today'
 import {
   insertPostponedEntry,
@@ -476,6 +480,13 @@ export function AppShell() {
       }
     })()
   }, [refreshTodayData, user, hadCache])
+
+  useEffect(() => {
+    if (!user) return
+    void syncWalkingChallenges()
+      .then(() => scheduleWalkingNudges())
+      .catch(() => {})
+  }, [user])
 
   // Flush offline session queue when connectivity returns
   useEffect(() => {
@@ -2002,6 +2013,10 @@ export function AppShell() {
                   </button>
                 </section>
               )
+            ) : view?.name === 'challengeNew' ? (
+              <ChallengeForm onCancel={() => navigate('/today')} onCreated={(code) => navigate(`/t/${code}`)} />
+            ) : view?.name === 'challengeList' ? (
+              <ChallengeRunList />
             ) : (
               <>
                 {tab === 'today' && (
@@ -2248,6 +2263,7 @@ export function AppShell() {
                     navigate('/activities/new')
                   }}
                 />
+                <ChallengeShelf kind="meditate" />
               </>
             )}
 
@@ -2491,6 +2507,7 @@ export function AppShell() {
                     navigate('/numbers/new')
                   }}
                 />
+                <ChallengeShelf kind="walk" />
                 {MEDICINES_ENABLED && (
                   <MedicineSection
                     medicines={medicineState.medicines}

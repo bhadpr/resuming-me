@@ -1,0 +1,37 @@
+---
+import type { Copy } from '../i18n/en'
+
+interface Props {
+  copy: Copy['challenges']['mock']
+}
+
+const { copy } = Astro.props
+const green = 7700
+const blue = 5900
+const blueWidth = Math.round((blue / green) * 100)
+---
+
+<div class="mock-card">
+  <div class="mock-row challenge-board">
+    <div class="ins-row-head">
+      <img src="/habits/walking.webp" alt="" width="40" height="40" loading="lazy" />
+      <span>
+        <span class="today-name">{copy.heading}</span>
+        <span class="today-meta">{copy.line}</span>
+      </span>
+    </div>
+    <div class="challenge-teams" role="img" aria-label={copy.chartLabel}>
+      <div class="challenge-team">
+        <span class="challenge-name">{copy.green}</span>
+        <span class="challenge-track"><span class="challenge-fill is-green"></span></span>
+        <span class="challenge-score">{green.toLocaleString('en-US')}</span>
+      </div>
+      <div class="challenge-team">
+        <span class="challenge-name">{copy.blue}</span>
+        <span class="challenge-track"><span class="challenge-fill is-blue" style={`width: ${blueWidth}%`}></span></span>
+        <span class="challenge-score">{blue.toLocaleString('en-US')}</span>
+      </div>
+    </div>
+    <p class="ins-caption">{copy.unit}</p>
+  </div>
+</div>

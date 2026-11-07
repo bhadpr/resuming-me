@@ -132,6 +132,25 @@ export const en = {
       chartLabel: 'Steps on each of the last 7 days, with the goal line',
     },
   },
+  challenges: {
+    kicker: 'Challenges',
+    title: 'A challenge for the people you already walk with',
+    body: 'Start one from Today. Split a group into teams and see which team walks more, or add everyone’s minutes toward one shared goal. The group sees the team total, not each person’s number.',
+    points: [
+      'By team, or all together',
+      'Walking or meditation. One challenge, one of those.',
+      'The score stays hidden until 3 people have joined',
+    ],
+    note: 'Joining a walking challenge needs an Android phone with Health Connect. Anyone with the link can follow the board. A meditation challenge can be joined in the browser too.',
+    mock: {
+      heading: 'Morning walk',
+      line: 'So far: Green leads by 1,800 a day.',
+      green: 'Green',
+      blue: 'Blue',
+      unit: 'steps a day',
+      chartLabel: 'Green at 7,700 steps a day, Blue at 5,900',
+    },
+  },
   reminders: {
     kicker: 'Personal reminders',
     title: 'Your own dates, waiting on Today',

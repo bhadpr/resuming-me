@@ -25,6 +25,7 @@ Resuming is a wellness and habit app. It is not a medical device and does not gi
 - Personal reminders (bills, doctor visits, birthdays, festivals) are private and wait on Today until done. Family and community events, such as a wedding or a puja, can be shared on WhatsApp so everyone who opens the link adds it to their own reminders; only the From line the sender types is shown, never their email or phone number.
 - Insights shows each habit day by day over 7 or 30 days, including how often someone came back after a gap.
 - Vitals (blood pressure, heart rate, weight, steps, water, protein, fasting, sleep) are charted over time. Steps are read from Health Connect on Android and stay on the phone.
+- A challenge is by team or all together, for walking or for meditation. The group sees the team total, not each person's number. The score stays hidden until 3 people have joined. Joining a walking challenge needs Android with Health Connect. A meditation challenge can be joined in the browser.
 
 ## Pages
 

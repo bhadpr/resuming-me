@@ -4,6 +4,7 @@ import Footer from './Footer.astro'
 import TryToday from './TryToday.astro'
 import InsightsMock from './InsightsMock.astro'
 import StepsMock from './StepsMock.astro'
+import ChallengeMock from './ChallengeMock.astro'
 import Featured from './Featured.astro'
 import LangPick from './LangPick.astro'
 import ListMock from './ListMock.astro'
@@ -464,6 +465,23 @@ const cricketShot = holidayShot || theme?.slug === 'diwali'
     </div>
   </section>
   )}
+
+  <section class="section" id="challenges">
+    <div class="wrap feature">
+      <div class="feature-shots rose">
+        <ChallengeMock copy={copy.challenges.mock} />
+      </div>
+      <div class="feature-text">
+        <span class="kicker">{copy.challenges.kicker}</span>
+        <h2>{copy.challenges.title}</h2>
+        <p class="lead" style="margin-top: 1rem">{copy.challenges.body}</p>
+        <ul class="points">
+          {copy.challenges.points.map((point) => <li>{point}</li>)}
+        </ul>
+        <p class="fine">{copy.challenges.note}</p>
+      </div>
+    </div>
+  </section>
 
   {show('insights') && (
   <section class="section" id="progress">

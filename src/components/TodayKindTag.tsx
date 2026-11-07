@@ -3,7 +3,16 @@ import { useLocale } from '../hooks/useLocale'
 import { reminderListKind, type Reminder } from '../lib/reminderSchedule'
 import { scheduleSourceKey } from '../lib/scheduleTag'
 
-export type TodayKind = 'habit' | 'reminder' | 'meetup' | 'holiday' | 'community' | 'vital' | 'medicine'
+export type TodayKind =
+  | 'habit'
+  | 'reminder'
+  | 'meetup'
+  | 'holiday'
+  | 'community'
+  | 'vital'
+  | 'medicine'
+  | 'stepChallenge'
+  | 'sitChallenge'
 
 const TAG_KEY: Record<TodayKind, string> = {
   habit: 'list.tileHabit',
@@ -13,6 +22,8 @@ const TAG_KEY: Record<TodayKind, string> = {
   community: 'reminders.sourceSchedule',
   vital: 'list.tileVital',
   medicine: 'medicines.tag',
+  stepChallenge: 'challenge.tagSteps',
+  sitChallenge: 'challenge.tagSit',
 }
 
 /** Habit, Reminder, Meetup, Holiday, Community, Vital, or Medicine. */

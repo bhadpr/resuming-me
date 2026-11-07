@@ -1,8 +1,10 @@
 import { MLB_TITLES, MLS_TITLES, NBA_TITLES, NHL_TITLES } from './leagueTitles'
 
 // resuming.me Worker. Static files and the single-page app come from ./dist.
-// Only /e/<code> and /c/<code> run here first, so WhatsApp's link preview shows the
-// event or the reminder list, not the generic Resuming card.
+// Only /e/<code>, /c/<code>, and /t/<code> run here first, so WhatsApp's link preview
+// shows the event, the reminder list, or the walking challenge, not the generic card.
+
+import { walkingShareLines, type PaceTeam, type ScorePhase } from '../src/lib/challengeScore'
 
 interface Env {
   ASSETS: { fetch(request: Request): Promise<Response> }
@@ -36,6 +38,10 @@ interface SharedEventRow {
 
 const EVENT_PATH = /^\/e\/([a-z0-9]{6,12})\/?$/i
 const LIST_PATH = /^\/c\/([a-z0-9]{6})\/?$/i
+const CHALLENGE_PATH = /^\/t\/([abcdefghjkmnpqrstuvwxyz23456789]{12})\/?$/i
+const CHALLENGE_CARD_PATH = /^\/t\/([abcdefghjkmnpqrstuvwxyz23456789]{12})\/card\.jpg$/i
+const WALK_IMAGE = 'https://resuming.me/og-walk.jpg'
+const CHALLENGE_PHOTO = /^[0-9a-f-]{36}\/[a-z0-9-]{8,64}\.jpg$/
 const PHOTO_PATH = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}\/[a-z0-9-]{8,64}\.jpg$/
 
 /** The event's own photo for the preview, while the event is live. */
@@ -238,6 +244,130 @@ async function fetchList(
   }
 }
 
+interface ChallengeBoardRow {
+  title: string | null
+  shape: string
+  status: string
+  starts_on: string
+  team_name: string | null
+  pace: number | null
+  record_pace: number | null
+  total_steps: number | null
+  record_total: number | null
+  day_number: number | null
+  frozen_day_number: number | null
+  days_left: number | null
+  record_days_left: number | null
+  score_phase: string | null
+  joined_count: number | null
+  target: number | null
+}
+
+async function fetchChallenge(env: Env, code: string): Promise<ChallengeBoardRow[] | null> {
+  if (!env.SUPABASE_URL || !env.SUPABASE_ANON_KEY) return null
+  try {
+    const response = await fetch(`${env.SUPABASE_URL}/rest/v1/rpc/get_challenge_board`, {
+      method: 'POST',
+      headers: {
+        apikey: env.SUPABASE_ANON_KEY,
+        authorization: `Bearer ${env.SUPABASE_ANON_KEY}`,
+        'content-type': 'application/json',
+      },
+      body: JSON.stringify({ p_code: code }),
+      signal: AbortSignal.timeout(2500),
+    })
+    if (!response.ok) return null
+    return (await response.json()) as ChallengeBoardRow[]
+  } catch {
+    return null
+  }
+}
+
+async function fetchChallengePhotoPath(env: Env, code: string): Promise<string | null> {
+  if (!env.SUPABASE_URL || !env.SUPABASE_ANON_KEY) return null
+  try {
+    const response = await fetch(`${env.SUPABASE_URL}/rest/v1/rpc/challenge_card_photo`, {
+      method: 'POST',
+      headers: {
+        apikey: env.SUPABASE_ANON_KEY,
+        authorization: `Bearer ${env.SUPABASE_ANON_KEY}`,
+        'content-type': 'application/json',
+      },
+      body: JSON.stringify({ p_code: code }),
+      signal: AbortSignal.timeout(2500),
+    })
+    if (!response.ok) return null
+    const path = (await response.json()) as string | null
+    if (!path || !CHALLENGE_PHOTO.test(path)) return null
+    return path
+  } catch {
+    return null
+  }
+}
+
+function challengePhotoVersion(path: string | null): string | null {
+  const file = path?.split('/').pop()?.replace(/\.jpg$/i, '') ?? ''
+  if (!/^[a-z0-9-]{8,64}$/.test(file)) return null
+  return file.slice(0, 8)
+}
+
+/** The card picture, served from resuming.me so WhatsApp can fetch it. */
+async function challengeCardImage(env: Env, code: string): Promise<Response> {
+  const path = await fetchChallengePhotoPath(env, code)
+  const storage = env.SUPABASE_URL?.replace(/\/+$/, '')
+  if (!path || !storage) return Response.redirect(WALK_IMAGE, 302)
+  try {
+    const upstream = await fetch(`${storage}/storage/v1/object/public/challenge-photos/${path}`, {
+      signal: AbortSignal.timeout(4000),
+    })
+    if (!upstream.ok || !(upstream.headers.get('content-type') ?? '').includes('image')) {
+      return Response.redirect(WALK_IMAGE, 302)
+    }
+    return new Response(upstream.body, {
+      status: 200,
+      headers: {
+        'content-type': 'image/jpeg',
+        'cache-control': 'public, max-age=86400',
+        'x-robots-tag': 'noindex',
+      },
+    })
+  } catch {
+    return Response.redirect(WALK_IMAGE, 302)
+  }
+}
+
+function challengePreview(rows: ChallengeBoardRow[] | null): { title: string; description: string } {
+  const first = rows?.[0]
+  if (!first || first.status === 'switched_off' || first.status === 'deleted' || !first.title) {
+    return { title: 'Walking challenge · Resuming', description: 'This challenge isn’t available.' }
+  }
+  const phase = (first.score_phase ?? 'before') as ScorePhase
+  const teams: PaceTeam[] = rows!
+    .filter((row) => row.team_name)
+    .map((row) => ({ name: row.team_name as string, pace: row.pace }))
+  const lines = walkingShareLines({
+    shape: first.shape === 'together' ? 'together' : 'race',
+    phase,
+    dayNumber: first.day_number,
+    frozenDayNumber: first.frozen_day_number,
+    teams,
+    recordTeams: rows!
+      .filter((row) => row.team_name)
+      .map((row) => ({ name: row.team_name as string, pace: row.record_pace })),
+    total: first.total_steps,
+    recordTotal: first.record_total,
+    target: first.target,
+    daysLeft: first.days_left,
+    recordDaysLeft: first.record_days_left,
+    joined: first.joined_count ?? 0,
+    startsLabel: new Intl.DateTimeFormat('en-IN', { day: 'numeric', month: 'short' }).format(
+      new Date(`${first.starts_on}T12:00:00Z`),
+    ),
+  })
+  const description = lines.current
+  return { title: `${first.title} · Resuming`, description: description || first.title }
+}
+
 function rewritePreview(
   page: Response,
   title: string,
@@ -245,6 +375,9 @@ function rewritePreview(
   pageUrl: string,
   photo: string | null,
   sized = false,
+  width = '1200',
+  height = '630',
+  cacheControl = 'public, max-age=60',
 ): Response {
   const set = (value: string) => ({
     element(element: RewriterElement) {
@@ -264,8 +397,8 @@ function rewritePreview(
       .on('meta[name="twitter:image"]', set(photo))
     rewriter = sized
       ? rewriter
-          .on('meta[property="og:image:width"]', set('1200'))
-          .on('meta[property="og:image:height"]', set('630'))
+          .on('meta[property="og:image:width"]', set(width))
+          .on('meta[property="og:image:height"]', set(height))
       : rewriter
           .on('meta[property="og:image:width"]', drop)
           .on('meta[property="og:image:height"]', drop)
@@ -296,15 +429,18 @@ function rewritePreview(
     .transform(page)
 
   const response = new Response(rewritten.body, rewritten)
-  response.headers.set('cache-control', 'public, max-age=60')
+  response.headers.set('cache-control', cacheControl)
   response.headers.set('x-robots-tag', 'noindex')
   return response
 }
 
 export default {
   async fetch(request: Request, env: Env): Promise<Response> {
-    const page = await env.ASSETS.fetch(request)
     const url = new URL(request.url)
+    const cardMatch = CHALLENGE_CARD_PATH.exec(url.pathname)
+    if (cardMatch) return challengeCardImage(env, cardMatch[1].toLowerCase())
+
+    const page = await env.ASSETS.fetch(request)
     if (!(page.headers.get('content-type') ?? '').includes('text/html')) return page
 
     const eventMatch = EVENT_PATH.exec(url.pathname)
@@ -313,6 +449,29 @@ export default {
       const row = await fetchEvent(env, code)
       const card = preview(row)
       return rewritePreview(page, card.title, card.description, `https://resuming.me/e/${code}`, photoUrl(env, row))
+    }
+
+    const challengeMatch = CHALLENGE_PATH.exec(url.pathname)
+    if (challengeMatch) {
+      const code = challengeMatch[1].toLowerCase()
+      const card = challengePreview(await fetchChallenge(env, code))
+      const path = await fetchChallengePhotoPath(env, code)
+      const version = challengePhotoVersion(path)
+      const photo = version ? `https://resuming.me/t/${code}/card.jpg?v=${version}` : WALK_IMAGE
+      const shared = url.searchParams.get('v')
+      const pageUrl =
+        shared && /^[a-z0-9]{8}$/.test(shared) ? `https://resuming.me/t/${code}?v=${shared}` : `https://resuming.me/t/${code}`
+      return rewritePreview(
+        page,
+        card.title,
+        card.description,
+        pageUrl,
+        photo,
+        photo === WALK_IMAGE,
+        '1280',
+        '720',
+        'public, max-age=0, must-revalidate',
+      )
     }
 
     const listMatch = LIST_PATH.exec(url.pathname)

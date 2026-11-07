@@ -619,7 +619,7 @@ export function GuestTodayPage() {
     })),
     ...draft.activities.filter((activity) => !activity.archived).map((activity) => ({
       key: `activity-${activity.localId}`,
-      kind: isNumberEntryVital(activity) ? ('vital' as const) : ('activity' as const),
+      kind: isNumberEntryVital(activity) || isStepsHabit(activity) ? ('vital' as const) : ('activity' as const),
       period: isNumberEntryVital(activity) ? ('anytime' as const) : activityPeriod(activity),
       done: isDoneToday(activity),
       node: renderGuestActivity(activity),

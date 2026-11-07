@@ -32,6 +32,7 @@
   --kind-activity: #2f86c0;
   --kind-reminder: #d9971c;
   --kind-vital: #8a6ac8;
+  --kind-challenge: #c24b78;
   --success: #1f7f45;
   --warn: #8a4b00;
 
@@ -977,6 +978,10 @@ p {
   background: linear-gradient(160deg, #dbeaf6, color-mix(in srgb, #dbeaf6 30%, var(--bg)));
 }
 
+.feature-shots.rose {
+  background: linear-gradient(160deg, #f8e0ea, color-mix(in srgb, #f8e0ea 30%, var(--bg)));
+}
+
 .feature-shots .phone-sm + .phone-sm {
   margin-top: 3rem;
 }
@@ -1381,6 +1386,55 @@ p {
 
 .mock-row + .mock-row {
   margin-top: 0.65rem;
+}
+
+.challenge-board {
+  border-left-color: var(--kind-challenge);
+}
+
+.challenge-teams {
+  margin-top: 1rem;
+}
+
+.challenge-team {
+  display: grid;
+  grid-template-columns: 4.25rem minmax(0, 1fr) auto;
+  gap: 0.65rem;
+  align-items: center;
+}
+
+.challenge-team + .challenge-team {
+  margin-top: 0.55rem;
+}
+
+.challenge-name,
+.challenge-score {
+  color: var(--ink);
+  font-weight: 700;
+  font-variant-numeric: tabular-nums;
+}
+
+.challenge-track {
+  display: block;
+  height: 0.55rem;
+  border-radius: 999px;
+  background: color-mix(in srgb, var(--kind-challenge) 12%, var(--surface-raised));
+  overflow: hidden;
+}
+
+.challenge-fill {
+  display: block;
+  height: 100%;
+  border-radius: inherit;
+}
+
+.challenge-fill.is-green {
+  width: 100%;
+  background: #2f9a68;
+}
+
+.challenge-fill.is-blue {
+  background: #2f86c0;
 }
 
 .mock-row .mock-label {

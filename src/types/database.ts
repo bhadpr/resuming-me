@@ -1204,6 +1204,111 @@ export interface Database {
           photo_path: string | null
         }[]
       }
+      get_challenge_board: {
+        Args: { p_code: string }
+        Returns: {
+          challenge_id: string
+          board_code: string
+          title: string | null
+          shape: string
+          kind: string
+          status: string
+          time_zone: string
+          starts_on: string
+          ends_on: string
+          target: number | null
+          is_owner: boolean
+          my_team_id: string | null
+          my_team_name: string | null
+          team_id: string | null
+          team_name: string | null
+          member_count: number
+          pace: number | null
+          record_pace: number | null
+          total_steps: number | null
+          record_total: number | null
+          day_number: number | null
+          frozen_day_number: number | null
+          days_left: number | null
+          record_days_left: number | null
+          score_phase: string | null
+          joined_count: number
+          card_ready: boolean
+          my_raw: number | null
+          my_capped: number | null
+          my_day_closed: boolean
+          my_leaving_on: string | null
+          image: number | null
+          photo_path: string | null
+          card_path: string | null
+        }[]
+      }
+      save_walking_steps: {
+        Args: { p_code: string; p_days: Json }
+        Returns: undefined
+      }
+      walking_sync_days: {
+        Args: Record<string, never>
+        Returns: { code: string; time_zone: string; day: string }[]
+      }
+      my_challenge_index: {
+        Args: Record<string, never>
+        Returns: {
+          role: string
+          code: string
+          title: string
+          card_path: string | null
+          kind: string
+          starts_on: string
+          ends_on: string
+          phase: string
+        }[]
+      }
+      schedule_challenge_leave: { Args: { p_id: string }; Returns: undefined }
+      cancel_challenge_leave: { Args: { p_id: string }; Returns: undefined }
+      end_walking_challenge: { Args: { p_id: string }; Returns: undefined }
+      mark_challenge_shared: { Args: { p_id: string }; Returns: undefined }
+      set_challenge_team_images: { Args: { p_id: string; p_images: number[] }; Returns: undefined }
+      challenge_team_pictures: {
+        Args: { p_code: string }
+        Returns: { team_id: string; image: number; photo_path: string | null; card_path: string | null }[]
+      }
+      set_challenge_photos: {
+        Args: { p_id: string; p_card?: string | null; p_team_paths?: string[] | null }
+        Returns: undefined
+      }
+      challenge_card_photo: { Args: { p_code: string }; Returns: string }
+      challenge_day_history: {
+        Args: { p_code: string }
+        Returns: { kind: string; team_id: string | null; day: string; steps: number }[]
+      }
+      create_walking_challenge: {
+        Args: {
+          p_title: string
+          p_shape: string
+          p_starts_on: string
+          p_ends_on: string
+          p_target: number | null
+          p_team_names: string[]
+          p_time_zone: string
+          p_join: boolean
+          p_join_team: number
+          p_platform: string
+          p_kind?: string
+        }
+        Returns: {
+          id: string
+          code: string
+        }[]
+      }
+      join_walking_challenge: {
+        Args: { p_code: string; p_team_id: string; p_platform: string }
+        Returns: undefined
+      }
+      set_walking_challenge_status: {
+        Args: { p_id: string; p_status: string }
+        Returns: undefined
+      }
     }
     Enums: Record<string, never>
     CompositeTypes: Record<string, never>

@@ -25,10 +25,14 @@ export type AppView =
   | { name: 'reminderCommunity'; section: 'holidays' | 'schedules' }
   | { name: 'insights' }
   | { name: 'review'; weekStart: string }
+  | { name: 'challengeNew' }
+  | { name: 'challengeList' }
   | { name: 'settings'; page?: 'reminders' }
   | { name: 'admin'; page: 'analytics' | 'analytics2' | 'feedback' | 'groups' | 'events' | 'community' | 'lists'; groupId?: string }
 
 const APP_ROUTES: Array<{ pattern: string; parse: (params: Record<string, string | undefined>) => AppView }> = [
+  { pattern: '/challenges/new', parse: () => ({ name: 'challengeNew' }) },
+  { pattern: '/challenges', parse: () => ({ name: 'challengeList' }) },
   { pattern: '/today', parse: () => ({ name: 'today' }) },
   { pattern: '/activities/new', parse: () => ({ name: 'activities', screen: 'form' }) },
   {
@@ -122,7 +126,9 @@ export function showAppChrome(view: AppView | null): boolean {
     view.name === 'reminderList' ||
     view.name === 'reminderCommunity' ||
     view.name === 'insights' ||
-    view.name === 'review'
+    view.name === 'review' ||
+    view.name === 'challengeNew' ||
+    view.name === 'challengeList'
   )
 }
 

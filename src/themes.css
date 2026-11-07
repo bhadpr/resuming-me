@@ -111,6 +111,7 @@
   --kind-activity: #2f86c0;
   --kind-reminder: #d9971c;
   --kind-vital: #8a6ac8;
+  --kind-challenge: #c24b78;
 
   --shadow-btn: 0 1px 2px color-mix(in srgb, #1a1614 5%, transparent);
   --shadow-btn-hover:
@@ -152,6 +153,7 @@
   --kind-activity: #6ec6ff;
   --kind-reminder: #e0b15a;
   --kind-vital: #b49cff;
+  --kind-challenge: #f0a3c0;
 }
 
 [data-theme='dawn'] {

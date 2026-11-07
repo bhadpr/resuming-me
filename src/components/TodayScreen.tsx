@@ -1,4 +1,5 @@
 import { useEffect, useMemo, useState, type FormEvent } from 'react'
+import { useNavigate } from 'react-router-dom'
 import { TodayPop } from './TodayPop'
 import { canLogPastGoal } from '../lib/dayStatus'
 import { FASTING_HOURS_NOTE, SLEEP_HOURS_NOTE, WATER_GLASS_NOTE, countTapLabel, isNumberEntryVital, playsVideoWithTimer, showsHabitVideo } from '../lib/onboardingFlow'
@@ -34,6 +35,7 @@ import { Icon } from './Icon'
 import { SkipLink, UndoSkipButton } from './TodaySkip'
 import { useTodaySkips } from '../hooks/useTodaySkips'
 import { todayLocalDate } from '../lib/dates'
+import { useTodayChallengeItems } from './ChallengeToday'
 import { StepsCard } from './StepsCard'
 import { SessionDistanceLine } from './SessionDistance'
 import { tracksDistance } from '../lib/healthDistance'
@@ -140,24 +142,30 @@ export function TodayAdds({
   onAddSchedule?: () => void
 }) {
   const { t } = useLocale()
+  const navigate = useNavigate()
   return (
     <div className="today-adds">
-      {(onAddActivity || onAddVital) && (
-        <div className="reminder-add-grid">
-          {onAddActivity && (
-            <button type="button" className="btn btn-secondary reminder-add-tile" onClick={onAddActivity}>
-              <span className="reminder-add-kicker">{t('reminders.tileAdd')}</span>
-              <span className="reminder-add-label">{t('list.tileHabit')}</span>
-            </button>
-          )}
-          {onAddVital && (
-            <button type="button" className="btn btn-secondary reminder-add-tile" onClick={onAddVital}>
-              <span className="reminder-add-kicker">{t('reminders.tileAdd')}</span>
-              <span className="reminder-add-label">{t('list.tileVital')}</span>
-            </button>
-          )}
-        </div>
-      )}
+      <div className="reminder-add-grid">
+        {onAddActivity && (
+          <button type="button" className="btn btn-secondary reminder-add-tile" onClick={onAddActivity}>
+            <span className="reminder-add-kicker">{t('reminders.tileAdd')}</span>
+            <span className="reminder-add-label">{t('list.tileHabit')}</span>
+          </button>
+        )}
+        {onAddVital && (
+          <button type="button" className="btn btn-secondary reminder-add-tile" onClick={onAddVital}>
+            <span className="reminder-add-kicker">{t('reminders.tileAdd')}</span>
+            <span className="reminder-add-label">{t('list.tileVital')}</span>
+          </button>
+        )}
+        <button
+          type="button"
+          className="btn btn-secondary reminder-add-tile challenge-add-tile"
+          onClick={() => navigate('/challenges/new')}
+        >
+          <span className="reminder-add-label">{t('challenge.start')}</span>
+        </button>
+      </div>
       {onAddReminder && (
         <ReminderAddTiles
           onAdd={onAddReminder}
@@ -226,6 +234,7 @@ export function TodayScreen({
 }: TodayScreenProps) {
   const { t, locale } = useLocale()
   const skips = useTodaySkips(todayLocalDate())
+  const challengeItems = useTodayChallengeItems()
   const quietSuggested = quietReentry ? pickEasiestReentryRow(rows) : null
   const followUpSuggested = reentryFollowUp
     ? pickFollowUpReentryRow(
@@ -346,14 +355,14 @@ export function TodayScreen({
       : []),
     ...openRows.map((row) => ({
       key: `activity-${row.activity.id}`,
-      kind: 'activity' as const,
+      kind: row.activity.template_id === 'steps' ? ('vital' as const) : ('activity' as const),
       period: activityPeriod(row.activity),
       done: false,
       node: renderActivity(row, hero?.activity.id === row.activity.id),
     })),
     ...foldedDone.map((row) => ({
       key: `activity-${row.activity.id}`,
-      kind: 'activity' as const,
+      kind: row.activity.template_id === 'steps' ? ('vital' as const) : ('activity' as const),
       period: activityPeriod(row.activity),
       done: true,
       node: renderActivity(row),
@@ -411,6 +420,7 @@ export function TodayScreen({
       done: entry != null || skips.isSkipped(`vital:${metric.id}`),
       node: renderVital(metric, entry),
     })),
+    ...challengeItems,
   ]
 
   return (

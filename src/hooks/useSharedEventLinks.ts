@@ -2,6 +2,7 @@ import { useEffect } from 'react'
 import { Capacitor } from '@capacitor/core'
 import { useNavigate } from 'react-router-dom'
 import { readInstallAttribution } from '../lib/installReferrer'
+import { challengeCodeFromUrl, takeInstallChallengeCode } from '../lib/challenges'
 import { sharedListCodeFromUrl, takeInstallListCode } from '../lib/sharedLists'
 import { sharedEventCodeFromUrl, takeInstallEventCode } from '../lib/sharedEvents'
 import { track } from '../lib/track'
@@ -18,6 +19,12 @@ export function useSharedEventLinks(): void {
     let cancelled = false
     let remove = () => {}
 
+    const openChallenge = (code: string | null) => {
+      if (!code || cancelled) return
+      const path = `/t/${code}`
+      if (window.location.pathname !== path) navigate(path)
+    }
+
     const openEvent = (code: string | null) => {
       if (!code || cancelled) return
       const path = `/e/${code}`
@@ -33,8 +40,10 @@ export function useSharedEventLinks(): void {
     void (async () => {
       const { App } = await import('@capacitor/app')
       const handle = await App.addListener('appUrlOpen', ({ url }) => {
+        const challengeCode = challengeCodeFromUrl(url)
         const eventCode = sharedEventCodeFromUrl(url)
-        if (eventCode) openEvent(eventCode)
+        if (challengeCode) openChallenge(challengeCode)
+        else if (eventCode) openEvent(eventCode)
         else openList(sharedListCodeFromUrl(url))
       })
       if (cancelled) {
@@ -45,14 +54,20 @@ export function useSharedEventLinks(): void {
         void handle.remove()
       }
       const launch = await App.getLaunchUrl().catch(() => undefined)
+      const launchChallenge = launch?.url ? challengeCodeFromUrl(launch.url) : null
       const launchEvent = launch?.url ? sharedEventCodeFromUrl(launch.url) : null
       const launchList = launch?.url ? sharedListCodeFromUrl(launch.url) : null
-      const installEvent = launchEvent || launchList ? null : await takeInstallEventCode(readInstallAttribution)
+      const launched = Boolean(launchChallenge || launchEvent || launchList)
+      const installChallenge = launched ? null : await takeInstallChallengeCode(readInstallAttribution)
+      const installEvent =
+        launched || installChallenge ? null : await takeInstallEventCode(readInstallAttribution)
       const installList =
-        launchEvent || launchList || installEvent ? null : await takeInstallListCode(readInstallAttribution)
+        launched || installChallenge || installEvent ? null : await takeInstallListCode(readInstallAttribution)
+      if (installChallenge) track('challenge_installed')
       if (installEvent) track('shared_event_installed')
       if (installList) track('shared_list_installed')
-      if (launchEvent || installEvent) openEvent(launchEvent ?? installEvent)
+      if (launchChallenge || installChallenge) openChallenge(launchChallenge ?? installChallenge)
+      else if (launchEvent || installEvent) openEvent(launchEvent ?? installEvent)
       else openList(launchList ?? installList)
     })()
 
