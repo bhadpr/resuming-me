@@ -4,7 +4,6 @@ import { MLB_TITLES, MLS_TITLES, NBA_TITLES, NHL_TITLES } from './leagueTitles'
 // Only /e/<code>, /c/<code>, and /t/<code> run here first, so WhatsApp's link preview
 // shows the event, the reminder list, or the walking challenge, not the generic card.
 
-import { walkingShareLines, type PaceTeam, type ScorePhase } from '../src/lib/challengeScore'
 
 interface Env {
   ASSETS: { fetch(request: Request): Promise<Response> }
@@ -276,6 +275,19 @@ interface ChallengeBoardRow {
   score_phase: string | null
   joined_count: number | null
   target: number | null
+  kind: string | null
+  share_message: string | null
+}
+
+function challengeInvite(first: ChallengeBoardRow): string {
+  const title = first.title?.trim() || 'A challenge'
+  const sitting = first.kind === 'meditate'
+  if (first.shape === 'together') {
+    return sitting
+      ? `${title}. Join the group. Everyone adds their minutes.`
+      : `${title}. Join the group. Everyone adds toward one number.`
+  }
+  return sitting ? `${title}. Join a team and sit this week.` : `${title}. Join a team and walk this week.`
 }
 
 async function fetchChallenge(env: Env, code: string): Promise<ChallengeBoardRow[] | null> {
@@ -356,31 +368,8 @@ function challengePreview(rows: ChallengeBoardRow[] | null): { title: string; de
   if (!first || first.status === 'switched_off' || first.status === 'deleted' || !first.title) {
     return { title: 'Walking challenge · Resuming', description: 'This challenge isn’t available.' }
   }
-  const phase = (first.score_phase ?? 'before') as ScorePhase
-  const teams: PaceTeam[] = rows!
-    .filter((row) => row.team_name)
-    .map((row) => ({ name: row.team_name as string, pace: row.pace }))
-  const lines = walkingShareLines({
-    shape: first.shape === 'together' ? 'together' : 'race',
-    phase,
-    dayNumber: first.day_number,
-    frozenDayNumber: first.frozen_day_number,
-    teams,
-    recordTeams: rows!
-      .filter((row) => row.team_name)
-      .map((row) => ({ name: row.team_name as string, pace: row.record_pace })),
-    total: first.total_steps,
-    recordTotal: first.record_total,
-    target: first.target,
-    daysLeft: first.days_left,
-    recordDaysLeft: first.record_days_left,
-    joined: first.joined_count ?? 0,
-    startsLabel: new Intl.DateTimeFormat('en-IN', { day: 'numeric', month: 'short' }).format(
-      new Date(`${first.starts_on}T12:00:00Z`),
-    ),
-  })
-  const description = lines.current
-  return { title: `${first.title} · Resuming`, description: description || first.title }
+  const custom = first.share_message?.trim()
+  return { title: `${first.title} · Resuming`, description: custom || challengeInvite(first) }
 }
 
 function rewritePreview(

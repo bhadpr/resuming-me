@@ -2,6 +2,7 @@ import { describe, expect, it } from 'vitest'
 import {
   challengeCodeFromUrl,
   challengeHasEnded,
+  defaultChallengeShare,
   challengeIssue,
   challengeUrl,
   goalSpanOk,
@@ -19,6 +20,18 @@ describe('challenge link', () => {
     expect(challengeUrl('k7mhp3wq9rtd', '85fa4b05-7820-4dbb-aded-24a6148ee9fe/f3fdb14f-0667-42ea-8243-2c63c844110e.jpg')).toBe(
       'https://resuming.me/t/k7mhp3wq9rtd?v=f3fdb14f',
     )
+  })
+
+  it('starts a group and a team from different sentences', () => {
+    expect(
+      defaultChallengeShare({ title: 'Friend walk', shape: 'together', kind: 'walk', locale: 'en' }),
+    ).toBe('Friend walk. Join the group. Everyone adds toward one number.')
+    expect(defaultChallengeShare({ title: 'Friend walk', shape: 'race', kind: 'walk', locale: 'en' })).toBe(
+      'Friend walk. Join a team and walk this week.',
+    )
+    expect(
+      defaultChallengeShare({ title: 'Morning sit', shape: 'together', kind: 'meditate', locale: 'en' }),
+    ).toBe('Morning sit. Join the group. Everyone adds their minutes.')
   })
 })
 

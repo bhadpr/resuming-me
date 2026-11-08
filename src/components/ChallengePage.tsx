@@ -9,6 +9,7 @@ import { challengePhotoUrl } from '../lib/challengePhotos'
 import {
   boardShareMessage,
   cancelChallengeLeave,
+  defaultChallengeShare,
   challengeHasEnded,
   challengeIssue,
   challengeIssueKey,
@@ -20,6 +21,7 @@ import {
   joinWalkingChallenge,
   markChallengeShared,
   scheduleChallengeLeave,
+  setChallengeShareMessage,
   setWalkingChallengeStatus,
   teamImageSrc,
   walkingJoinGate,
@@ -44,6 +46,8 @@ export function ChallengePage({ code }: { code: string }) {
   const [confirmEmpty, setConfirmEmpty] = useState(false)
   const [busy, setBusy] = useState(false)
   const [copied, setCopied] = useState(false)
+  const [shareDraft, setShareDraft] = useState<string | null>(null)
+  const [shareFor, setShareFor] = useState('')
   const [error, setError] = useState<string | null>(null)
   const [photoNote, setPhotoNote] = useState(false)
   const [history, setHistory] = useState<ChallengeHistory>({ teams: [], mine: [] })
@@ -240,7 +244,17 @@ export function ChallengePage({ code }: { code: string }) {
   const shareLine = boardShareMessage(board, startsLabel, locale, false)
   const over = challengeHasEnded(board)
   const recordLine = board.cardReady ? boardShareMessage(board, startsLabel, locale, true) : null
-  const shareUrl = `https://wa.me/?text=${encodeURIComponent(shareLine)}`
+  const shareFallback = defaultChallengeShare({
+    title: board.title ?? '',
+    shape: board.shape,
+    kind: board.kind,
+    locale,
+  })
+  const shareDraftText =
+    shareFor === board.id && shareDraft != null ? shareDraft : (board.shareMessage ?? shareFallback)
+  const shareUrl = `https://wa.me/?text=${encodeURIComponent(
+    `${shareDraftText.trim() || shareFallback}\n${challengeUrl(board.code, board.cardPhoto)}`,
+  )}`
   const recordUrl = recordLine ? `https://wa.me/?text=${encodeURIComponent(recordLine)}` : null
   const countLabel = (value: number) => value.toLocaleString(locale)
 
@@ -452,6 +466,35 @@ export function ChallengePage({ code }: { code: string }) {
           {t('challenge.cardReady')}
         </a>
       )}
+
+      <label className="challenge-share-message">
+        <span className="field-label">{t('challenge.shareEdit')}</span>
+        <textarea
+          className="field-input"
+          maxLength={280}
+          rows={3}
+          value={shareDraftText}
+          onChange={(event) => {
+            setShareFor(board.id)
+            setShareDraft(event.target.value)
+          }}
+          onBlur={() => {
+            if (!user || !board.isOwner) return
+            const next = shareDraftText.trim()
+            const stored = board.shareMessage?.trim() ?? ''
+            const writing = !next || next === shareFallback ? '' : next
+            if (!next) setShareDraft(shareFallback)
+            if (writing === stored) return
+            setBusy(true)
+            setError(null)
+            void setChallengeShareMessage(board.id, writing)
+              .then(() => setAttempt((count) => count + 1))
+              .catch((err) => setError(t(challengeIssueKey(challengeIssue(err as { message?: string })))))
+              .finally(() => setBusy(false))
+          }}
+        />
+        <span className="shared-event-note">{t('challenge.shareHint')}</span>
+      </label>
 
       <div className="challenge-share-row">
         <button type="button" className="btn btn-secondary" onClick={() => void copyLink()}>

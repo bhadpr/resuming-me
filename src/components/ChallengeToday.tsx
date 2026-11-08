@@ -218,6 +218,11 @@ export function ChallengeShelf({
           </button>
         )}
       </div>
+      {kind != null && (
+        <p className="screen-sub challenge-shelf-sub">
+          {t(kind === 'meditate' ? 'challenge.sectionSit' : 'challenge.sectionWalk')}
+        </p>
+      )}
       {groups.map((group) => (
         <div key={group.phase} className="challenge-shelf-group">
           {grouped && <h4 className="today-period-title">{t(`challenge.${group.phase}`)}</h4>}

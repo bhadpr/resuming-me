@@ -4907,11 +4907,18 @@ select.field-input.team-select {
   align-items: center;
   justify-content: space-between;
   gap: var(--space-3);
-  margin-bottom: var(--space-2);
+  margin-bottom: var(--space-1);
 }
 
 .challenge-shelf-heading .today-period-title {
   margin: 0;
+}
+
+.challenge-shelf-sub {
+  margin: 0 0 var(--space-3);
+  font-size: var(--text-sm);
+  color: var(--color-text-muted);
+  line-height: var(--leading-body);
 }
 
 .challenge-home h4.today-period-title {
@@ -5313,6 +5320,19 @@ button.today-row {
 .shared-list-item .challenge-team-card.is-mine {
   border-color: var(--color-primary);
   background: color-mix(in srgb, var(--color-primary) 7%, var(--color-surface));
+}
+
+.challenge-share-message {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-2);
+}
+
+.challenge-share-message textarea.field-input {
+  min-height: 4.75rem;
+  padding: 0.75rem 0.875rem;
+  resize: vertical;
+  line-height: var(--leading-body);
 }
 
 .challenge-share-row {

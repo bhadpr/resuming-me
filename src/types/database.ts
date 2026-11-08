@@ -1241,7 +1241,12 @@ export interface Database {
           image: number | null
           photo_path: string | null
           card_path: string | null
+          share_message: string | null
         }[]
+      }
+      set_challenge_share_message: {
+        Args: { p_id: string; p_message: string }
+        Returns: undefined
       }
       save_walking_steps: {
         Args: { p_code: string; p_days: Json }

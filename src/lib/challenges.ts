@@ -1,8 +1,8 @@
 import { Capacitor } from '@capacitor/core'
 import { appLinkPath } from './appLink'
 import { walkingShareLines, walkingShareMessage, type WalkingScoreInput } from './challengeScore'
+import { translate, type Locale } from './i18n'
 import { addDays, daysBetween, todayLocalDate } from './dates'
-import type { Locale } from './i18n'
 import type { PhoneSteps } from './healthSteps'
 import { createSupabaseClient } from './supabase'
 
@@ -17,6 +17,7 @@ export type WalkingJoinGate = 'join' | 'confirm-empty' | 'connect' | 'blocked'
 
 export type ChallengeIssue =
   | 'name'
+  | 'message'
   | 'teams'
   | 'oneTeam'
   | 'target'
@@ -86,6 +87,8 @@ export interface ChallengeBoard {
   myLeavingOn: string | null
   /** The organizer's picture for the WhatsApp card. */
   cardPhoto: string | null
+  /** The organizer's share sentence. Empty until they rewrite the starter. */
+  shareMessage: string | null
 }
 
 export function isChallengeCode(value: string): boolean {
@@ -214,6 +217,7 @@ export function challengeIssue(error: { message?: string } | null): ChallengeIss
   if (message.includes('challenge_bad_target')) return 'target'
   if (message.includes('challenge_bad_teams')) return 'teams'
   if (message.includes('challenge_bad_title')) return 'name'
+  if (message.includes('challenge_message')) return 'message'
   if (message.includes('challenge_not_android')) return 'notAndroid'
   if (message.includes('challenge_already_joined')) return 'already'
   if (message.includes('challenge_rate_limited')) return 'rate'
@@ -268,6 +272,7 @@ interface BoardRow {
   image?: number | null
   photo_path?: string | null
   card_path?: string | null
+  share_message?: string | null
 }
 
 export async function getChallengeBoard(code: string): Promise<ChallengeBoard | null> {
@@ -337,7 +342,27 @@ export async function getChallengeBoard(code: string): Promise<ChallengeBoard | 
     myDayClosed: first.my_day_closed === true,
     myLeavingOn: first.my_leaving_on,
     cardPhoto: pictures.cardPath,
+    shareMessage: first.share_message?.trim() || null,
   }
+}
+
+/** The sentence a share starts from. A team race and a group goal read differently. */
+export function defaultChallengeShare(input: {
+  title: string
+  shape: ChallengeShape
+  kind: string
+  locale: Locale
+}): string {
+  const sitting = input.kind === 'meditate'
+  const key =
+    input.shape === 'together'
+      ? sitting
+        ? 'challenge.shareGroupSit'
+        : 'challenge.shareGroup'
+      : sitting
+        ? 'challenge.shareTeamSit'
+        : 'challenge.shareTeam'
+  return translate(input.locale, key, { title: input.title.trim() || translate(input.locale, 'challenge.pageIntro') })
 }
 
 export async function createWalkingChallenge(input: {
@@ -529,6 +554,14 @@ export async function cancelChallengeLeave(id: string): Promise<void> {
 
 export async function endWalkingChallenge(id: string): Promise<void> {
   const { error } = await createSupabaseClient().rpc('end_walking_challenge', { p_id: id })
+  if (error) throw error
+}
+
+export async function setChallengeShareMessage(id: string, message: string): Promise<void> {
+  const { error } = await createSupabaseClient().rpc('set_challenge_share_message', {
+    p_id: id,
+    p_message: message.trim(),
+  })
   if (error) throw error
 }
 

@@ -125,6 +125,11 @@ export default defineConfig({
         globIgnores: ['**/noto-sans-*.woff2'],
         // This URL is a static page for Play. The app shell must not replace it.
         navigateFallbackDenylist: [/^\/delete-account\/?$/],
+        // Take over as soon as the new copy is installed. The extra script
+        // reloads open pages so they leave the previous app shell.
+        skipWaiting: true,
+        clientsClaim: true,
+        importScripts: ['sw-extra.js'],
       },
       devOptions: {
         enabled: true,
