@@ -4314,7 +4314,10 @@ select.field-input.team-select {
 
 .reminder-text {
   resize: vertical;
-  min-height: 2.75rem;
+  height: var(--tap-min);
+  min-height: var(--tap-min);
+  line-height: 1.5;
+  padding-block: max(0px, calc((var(--tap-min) - 2px - 1.5em) / 2));
 }
 
 .reminder-description-input {
