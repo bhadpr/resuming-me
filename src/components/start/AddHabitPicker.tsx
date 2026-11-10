@@ -63,11 +63,9 @@ export function AddHabitPicker({
                             className="choice-tile choice-tile-stack"
                             onClick={() => onCadence(id, option.id)}
                           >
-                            <span className="choice-tile-primary">
-                              {option.id === 'daily' ? t('cadence.daily') : t('cadence.once')}
-                            </span>
-                            {option.secondary ? (
-                              <span className="choice-tile-secondary">{t('cadence.week')}</span>
+                            <span className="choice-tile-primary">{t(option.primaryKey)}</span>
+                            {option.secondaryKey ? (
+                              <span className="choice-tile-secondary">{t(option.secondaryKey)}</span>
                             ) : null}
                           </button>
                         ))}
@@ -208,10 +206,8 @@ export function CustomHabitSetup({
             aria-pressed={cadence === option.id}
             onClick={() => onChange(applyWeekCadence(habit, option.id))}
           >
-            <span className="choice-tile-primary">
-              {option.id === 'daily' ? t('cadence.daily') : t('cadence.once')}
-            </span>
-            {option.secondary ? <span className="choice-tile-secondary">{t('cadence.week')}</span> : null}
+            <span className="choice-tile-primary">{t(option.primaryKey)}</span>
+            {option.secondaryKey ? <span className="choice-tile-secondary">{t(option.secondaryKey)}</span> : null}
           </button>
         ))}
       </div>

@@ -575,25 +575,30 @@ export function activitySizeControl(
 }
 
 export const WEEK_CADENCE = [
-  { id: 'daily', label: 'Daily', primary: 'Daily', secondary: null },
-  { id: 'once', label: 'Once a week', primary: 'Once', secondary: 'a week' },
+  { id: 'daily', primaryKey: 'cadence.daily', secondaryKey: null, labelKey: 'cadence.daily' },
+  { id: 'once', primaryKey: 'cadence.once', secondaryKey: 'cadence.week', labelKey: 'cadence.onceLabel' },
+  { id: 'twice', primaryKey: 'cadence.twice', secondaryKey: 'cadence.week', labelKey: 'cadence.twiceLabel' },
+  { id: 'thrice', primaryKey: 'cadence.thrice', secondaryKey: 'cadence.week', labelKey: 'cadence.thriceLabel' },
 ] as const
 
-/** `twice` stays so a habit saved earlier still reads as twice a week until it is changed. */
-export type WeekCadence = (typeof WEEK_CADENCE)[number]['id'] | 'twice'
+export type WeekCadence = (typeof WEEK_CADENCE)[number]['id']
 
 export function weekCadenceOf(
   activity: Pick<GuestActivity, 'type' | 'weeklyTarget'>,
 ): WeekCadence {
   if (activity.type !== 'weekly_n') return 'daily'
-  return (activity.weeklyTarget ?? 1) >= 2 ? 'twice' : 'once'
+  const count = activity.weeklyTarget ?? 1
+  if (count >= 3) return 'thrice'
+  if (count === 2) return 'twice'
+  return 'once'
 }
 
-/** Daily clears the weekly count. Once and twice keep the session size. */
+/** Daily clears the weekly count. The week options keep the session size. */
 export function applyWeekCadence<T extends Pick<GuestActivity, 'type' | 'weeklyTarget'>>(
   activity: T,
   cadence: WeekCadence,
 ): T {
+  if (cadence === 'thrice') return { ...activity, type: 'weekly_n', weeklyTarget: 3 }
   if (cadence === 'twice') return { ...activity, type: 'weekly_n', weeklyTarget: 2 }
   if (cadence === 'once') return { ...activity, type: 'weekly_n', weeklyTarget: 1 }
   return { ...activity, type: 'daily', weeklyTarget: null }

@@ -2685,14 +2685,12 @@ export function StartFlow({
                       key={option.id}
                       type="button"
                       className={`choice-tile choice-tile-stack ${sizeCadence === option.id ? 'choice-tile-selected' : ''}`}
-                      aria-label={option.id === 'daily' ? t('cadence.daily') : t('cadence.onceLabel')}
+                      aria-label={t(option.labelKey)}
                       onClick={() => setWeekCadence(sizeActivity.localId, option.id)}
                     >
-                      <span className="choice-tile-primary">
-                        {option.id === 'daily' ? t('cadence.daily') : t('cadence.once')}
-                      </span>
-                      {option.secondary ? (
-                        <span className="choice-tile-secondary">{t('cadence.week')}</span>
+                      <span className="choice-tile-primary">{t(option.primaryKey)}</span>
+                      {option.secondaryKey ? (
+                        <span className="choice-tile-secondary">{t(option.secondaryKey)}</span>
                       ) : null}
                     </button>
                   ))}

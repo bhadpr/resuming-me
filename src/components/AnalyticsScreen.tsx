@@ -13,6 +13,7 @@ import { fetchOnboardingFunnel, type OnboardingFunnel } from '../lib/onboardingF
 import { fetchGuestJourney, type CreateCounts, type GuestJourney } from '../lib/guestJourney'
 import { fetchLoopAnalytics, type CohortRow, type ComebackLoopSummary } from '../lib/loopAnalytics'
 import { fetchReminderSummary, type ReminderSummary } from '../lib/reminderAnalytics'
+import { fetchChallengeSummary, type ChallengeSummary } from '../lib/challengeAnalytics'
 import { AnalyticsView } from './AnalyticsView'
 import { GrowthSection } from './GrowthSection'
 import { fetchSiteEvents, summarizeSiteEvents, type SiteSummary } from '../lib/siteAnalytics'
@@ -37,6 +38,8 @@ export function AnalyticsScreen() {
   const [journeyError, setJourneyError] = useState<string | null>(null)
   const [reminders, setReminders] = useState<ReminderSummary | null>(null)
   const [remindersError, setRemindersError] = useState<string | null>(null)
+  const [challenges, setChallenges] = useState<ChallengeSummary | null>(null)
+  const [challengesError, setChallengesError] = useState<string | null>(null)
   const [site, setSite] = useState<SiteSummary | null>(null)
   const [siteLoading, setSiteLoading] = useState(true)
   const [siteError, setSiteError] = useState<string | null>(null)
@@ -73,6 +76,23 @@ export function AnalyticsScreen() {
         if (!mounted) return
         setReminders(null)
         setRemindersError(err instanceof Error ? err.message : 'Could not load reminders')
+      })
+    return () => {
+      mounted = false
+    }
+  }, [window])
+
+  useEffect(() => {
+    let mounted = true
+    setChallengesError(null)
+    fetchChallengeSummary(window)
+      .then((summary) => {
+        if (mounted) setChallenges(summary)
+      })
+      .catch((err) => {
+        if (!mounted) return
+        setChallenges(null)
+        setChallengesError(err instanceof Error ? err.message : 'Could not load challenges')
       })
     return () => {
       mounted = false
@@ -223,6 +243,8 @@ export function AnalyticsScreen() {
       funnelError={funnelError}
       reminders={reminders}
       remindersError={remindersError}
+      challenges={challenges}
+      challengesError={challengesError}
       loop={loop}
       cohorts={cohorts}
       loopError={loopError}

@@ -5,7 +5,7 @@ import { effectiveReminder, repeatDoneOn, repeatIssue, type ReminderRepeat } fro
 export const REMINDER_TEXT_MAX = 120
 export const REMINDER_DESCRIPTION_MAX = 500
 export const REMINDER_OPEN_MAX = 1000
-/** On the Reminders page, sports games can be folded away once this many open reminders are listed. */
+/** On the Reminders page, sports games and holidays can be folded away once this many open reminders are listed. */
 export const SPORTS_HIDE_AT = 50
 /** Done reminders older than this are not loaded. Today only needs today's. */
 export const REMINDER_DONE_KEEP_MS = 36 * 60 * 60 * 1000

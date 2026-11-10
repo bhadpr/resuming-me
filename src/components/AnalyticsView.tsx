@@ -14,8 +14,11 @@ import type { CreateCounts, GuestJourney } from '../lib/guestJourney'
 import type { CohortRow, ComebackLoopSummary } from '../lib/loopAnalytics'
 import type { OnboardingFunnel } from '../lib/onboardingFunnel'
 import { oneTimeDoneRate, type ReminderSummary } from '../lib/reminderAnalytics'
+import type { ChallengeSummary } from '../lib/challengeAnalytics'
 import type { SiteSummary } from '../lib/siteAnalytics'
 import { Link } from 'react-router-dom'
+import { useLocale } from '../hooks/useLocale'
+import { TodayKindTag } from './TodayKindTag'
 import {
   AnalyticsPage,
   BarList,
@@ -55,6 +58,8 @@ export interface AnalyticsViewProps {
   funnelError: string | null
   reminders: ReminderSummary | null
   remindersError: string | null
+  challenges: ChallengeSummary | null
+  challengesError: string | null
   loop: ComebackLoopSummary | null
   cohorts: CohortRow[]
   loopError: string | null
@@ -69,6 +74,7 @@ const NAV = [
   { id: 'website', label: 'Website' },
   { id: 'journey', label: 'Sign-up journey' },
   { id: 'reminders', label: 'Reminders' },
+  { id: 'challenges', label: 'Challenges' },
   { id: 'growth', label: 'Growth' },
   { id: 'comeback', label: 'Comebacks' },
   { id: 'people', label: 'Accounts' },
@@ -92,8 +98,10 @@ function decimal(n: number | null): string {
 
 /** Admin analytics, page 1: how people find, join and use the app. Every block says what it counts. */
 export function AnalyticsView(props: AnalyticsViewProps) {
+  const { t } = useLocale()
   const { window: range, summary, product, site, reminders } = props
   const scope = range === '7d' ? 'Last 7 days' : 'Last 30 days'
+  const reminderTag = <span className="badge today-kind-tag today-kind-reminder">{t('reminders.tileReminder')}</span>
 
   return (
     <AnalyticsPage>
@@ -345,12 +353,40 @@ export function AnalyticsView(props: AnalyticsViewProps) {
       <Panel
         id="reminders"
         title="Reminders"
+        tags={reminderTag}
         tone="rose"
         scope={scope}
         lead="How many reminders people add, finish and share. Counts only: reminder text is never collected."
       >
         {props.remindersError && <ErrorNote>{props.remindersError}</ErrorNote>}
         {reminders ? <RemindersView reminders={reminders} /> : !props.remindersError && <Loading>Loading reminders…</Loading>}
+      </Panel>
+
+      <Panel
+        id="challenges"
+        title="Challenges"
+        tags={
+          <>
+            <TodayKindTag kind="stepChallenge" />
+            <TodayKindTag kind="sitChallenge" />
+          </>
+        }
+        tone="rose"
+        scope={scope}
+        lead="How many challenges were started, joined, and filled. Counts only: no names, steps, or minutes."
+        help={
+          <>
+            <p>A challenge counts as filled when 3 people are still in it. That is when a team score first shows.</p>
+            <p>Link opens are not counted. The steps are started, someone joined, then 3 people joined.</p>
+          </>
+        }
+      >
+        {props.challengesError && <ErrorNote>{props.challengesError}</ErrorNote>}
+        {props.challenges ? (
+          <ChallengesView challenges={props.challenges} />
+        ) : (
+          !props.challengesError && <Loading>Loading challenges…</Loading>
+        )}
       </Panel>
 
       {props.growth}
@@ -546,7 +582,7 @@ function PicksView({ creates }: { creates: CreateCounts }) {
   return (
     <>
       <Grid>
-        <Block title="Habits: from our list or their own" note="Guests and accounts together.">
+        <Block title="Habits: from our list or their own" tags={<TodayKindTag kind="habit" />} note="Guests and accounts together.">
           <Donut
             rows={[
               { key: 'list', label: 'Picked from the list', count: creates.habitsCatalog },
@@ -557,7 +593,7 @@ function PicksView({ creates }: { creates: CreateCounts }) {
             empty="No habits created yet."
           />
         </Block>
-        <Block title="Vitals: from our list or their own">
+        <Block title="Vitals: from our list or their own" tags={<TodayKindTag kind="vital" />}>
           <Donut
             rows={[
               { key: 'list', label: 'Picked from the list', count: creates.vitalsCatalog },
@@ -570,11 +606,93 @@ function PicksView({ creates }: { creates: CreateCounts }) {
         </Block>
       </Grid>
       <Grid>
-        <Block title="Most popular habits">
+        <Block title="Most popular habits" tags={<TodayKindTag kind="habit" />}>
           <BarList tone="violet" rows={named(creates.topHabits)} empty="No habits yet." />
         </Block>
-        <Block title="Most popular vitals">
+        <Block title="Most popular vitals" tags={<TodayKindTag kind="vital" />}>
           <BarList tone="teal" rows={named(creates.topVitals)} empty="No vitals yet." />
+        </Block>
+      </Grid>
+    </>
+  )
+}
+
+function ChallengesView({ challenges }: { challenges: ChallengeSummary }) {
+  const people = challenges.people === 1 ? 'person' : 'people'
+  return (
+    <>
+      <KpiGrid>
+        <Kpi
+          label="Started"
+          value={formatInt(challenges.started)}
+          hint={`${formatInt(challenges.stillGoing)} still going`}
+          tone="rose"
+          spark={challenges.perDay.map((day) => day.started)}
+        />
+        <Kpi
+          label="Joins"
+          value={formatInt(challenges.joined)}
+          hint={`by ${formatInt(challenges.people)} ${people}`}
+          tone="amber"
+          spark={challenges.perDay.map((day) => day.joined)}
+        />
+        <Kpi
+          label="Filled"
+          value={formatInt(challenges.reached3)}
+          hint="Reached 3 members"
+          tone="green"
+        />
+        <Kpi
+          label="Ended"
+          value={formatInt(challenges.ended)}
+          hint={`${formatInt(challenges.endedEarly)} ended early`}
+          tone="violet"
+        />
+      </KpiGrid>
+      <Block title="Started and joined each day" note="Rose is challenges started. Amber is people joining.">
+        <Columns
+          points={challenges.perDay.map((day, index) => ({
+            label: day.day.slice(5),
+            title: `${day.day}: ${day.started} started, ${day.joined} joined`,
+            values: [day.started, day.joined],
+            partial: index === challenges.perDay.length - 1,
+          }))}
+          series={[
+            { name: 'Started', tone: 'rose' },
+            { name: 'Joined', tone: 'amber' },
+          ]}
+          labelEvery={challenges.perDay.length > 14 ? 4 : 1}
+          empty="No challenges started in this period."
+        />
+      </Block>
+      <Block title="From a link to a full group" note="A filled challenge has 3 members, which is when the score shows.">
+        <Funnel
+          tone="rose"
+          steps={[
+            { label: 'Started', value: challenges.started },
+            { label: 'Someone joined', value: challenges.withMember },
+            { label: 'Reached 3 members', value: challenges.reached3 },
+          ]}
+        />
+      </Block>
+      <Grid>
+        <Block title="Walking or meditation">
+          <BarList
+            rows={[
+              { key: 'walk', label: <TodayKindTag kind="stepChallenge" />, count: challenges.walking },
+              { key: 'sit', label: <TodayKindTag kind="sitChallenge" />, count: challenges.meditation },
+            ]}
+            empty="No challenges started."
+          />
+        </Block>
+        <Block title="Team race or group goal">
+          <BarList
+            rows={[
+              { key: 'race', label: 'By team', count: challenges.race },
+              { key: 'together', label: 'All together', count: challenges.together },
+            ]}
+            empty="No challenges started."
+          />
         </Block>
       </Grid>
     </>

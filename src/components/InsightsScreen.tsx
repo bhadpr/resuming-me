@@ -1,4 +1,5 @@
 import { useEffect, useMemo, useRef, useState } from 'react'
+import { useNavigate } from 'react-router-dom'
 import type { Activity } from '../lib/activities'
 import type { LogEntry } from '../lib/logs'
 import { STARTER_METRICS, type Metric, type MetricInput } from '../lib/metrics'
@@ -27,6 +28,9 @@ import { StepsWeek } from './StepsWeek'
 import { VitalTrend } from './VitalTrend'
 import { formatPair, formatPairDelta } from '../lib/vitalChart'
 import { Icon } from './Icon'
+import { TaggedName } from './TodayKindTag'
+import { challengePhotoUrl } from '../lib/challengePhotos'
+import { myChallengeIndex, type ChallengeIndexRow } from '../lib/challenges'
 import './insights-ui.css'
 
 function chartTarget(activity: Activity | undefined): number | null {
@@ -84,10 +88,12 @@ export function InsightsScreen({
   slipAnswer = null,
   onOpenActivity,
 }: InsightsScreenProps) {
+  const navigate = useNavigate()
   const { locale, t } = useLocale()
   const windowWord = t(window === 'week' ? 'insights.week' : 'insights.month')
   const windowDays = INSIGHTS_WINDOW_DAYS[window]
   const [openKeys, setOpenKeys] = useState<Set<string>>(() => new Set())
+  const [challenges, setChallenges] = useState<ChallengeIndexRow[] | null>(null)
   const [phoneSteps, setPhoneSteps] = useState<PhoneStepsWeek | null>(null)
   const [didInitOpen, setDidInitOpen] = useState(false)
 
@@ -136,8 +142,16 @@ export function InsightsScreen({
   const [showComebackHelp] = useState(
     () => typeof localStorage === 'undefined' || localStorage.getItem('resuming-comeback-explained') !== '1',
   )
-  const empty =
-    !loading && activeActivities.length === 0 && activeMetrics.length === 0
+  const challengeRows = useMemo(() => {
+    if (!challenges || !insights) return []
+    return challenges.filter((row) => {
+      if (row.phase === 'later') return false
+      if (row.phase === 'soon' || row.phase === 'current') return true
+      return row.endsOn >= insights.from && row.startsOn <= insights.to
+    })
+  }, [challenges, insights])
+  const noTracked = activeActivities.length === 0 && activeMetrics.length === 0
+  const empty = !loading && noTracked && challenges !== null && challengeRows.length === 0
   const easiest = insights ? mostResumableActivity(insights.activities) : null
   const easiestActivity = easiest
     ? activities.find((activity) => activity.id === easiest.activityId)
@@ -153,6 +167,20 @@ export function InsightsScreen({
       return rateB - rateA
     })
   }, [insights])
+
+  useEffect(() => {
+    let cancelled = false
+    myChallengeIndex()
+      .then((rows) => {
+        if (!cancelled) setChallenges(rows)
+      })
+      .catch(() => {
+        if (!cancelled) setChallenges([])
+      })
+    return () => {
+      cancelled = true
+    }
+  }, [])
 
   useEffect(() => {
     if (!showPhoneSteps || !phoneStepsSupported()) return
@@ -435,9 +463,9 @@ export function InsightsScreen({
                           templateId={activity?.template_id}
                         />
                         <span className="activity-meta">
-                          <span className="activity-name">
+                          <TaggedName kind={isSteps ? 'vital' : 'habit'}>
                             {activity ? visibleName(activity, locale) : a.name}
-                          </span>
+                          </TaggedName>
                           <span className="activity-desc">
                             {phoneSummary
                               ? `${t('today.stepsWeekMet', {
@@ -549,7 +577,7 @@ export function InsightsScreen({
                       >
                         <HabitMark name={visibleName(m, locale)} templateId={m.template_id} />
                         <span className="activity-meta">
-                          <span className="activity-name">{visibleName(m, locale)}</span>
+                          <TaggedName kind="vital">{visibleName(m, locale)}</TaggedName>
                           <span className="activity-desc">
                             {phoneSummary
                               ? `${t('today.stepsWeekMet', {
@@ -599,6 +627,54 @@ export function InsightsScreen({
               </ul>
             )}
           </section>
+
+          {challengeRows.length > 0 && (
+            <section className="today-section">
+              <h3 className="section-label">{t('challenge.section')}</h3>
+              <ul className="insights-list">
+                {challengeRows.map((row) => {
+                  const start = new Intl.DateTimeFormat(locale === 'en' ? 'en-IN' : locale, {
+                    day: 'numeric',
+                    month: 'short',
+                  }).format(new Date(`${row.startsOn}T12:00:00`))
+                  const end = new Intl.DateTimeFormat(locale === 'en' ? 'en-IN' : locale, {
+                    day: 'numeric',
+                    month: 'short',
+                  }).format(new Date(`${row.endsOn}T12:00:00`))
+                  const note =
+                    row.role === 'run'
+                      ? t('challenge.ownerHint')
+                      : row.phase === 'soon'
+                        ? t('challenge.startsOn', { date: start })
+                        : row.phase === 'past'
+                          ? t('challenge.endedShort')
+                          : t('challenge.through', { start, end })
+                  return (
+                    <li key={`${row.role}:${row.code}`} className="insights-row-wrap">
+                      <button
+                        type="button"
+                        className="insights-row"
+                        onClick={() => navigate(`/t/${row.code}`)}
+                      >
+                        <img
+                          className="insights-challenge-mark"
+                          src={challengePhotoUrl(row.cardPath) ?? '/og-walk.jpg'}
+                          alt=""
+                        />
+                        <span className="activity-meta">
+                          <TaggedName kind={row.kind === 'meditate' ? 'sitChallenge' : 'stepChallenge'}>
+                            {row.title}
+                          </TaggedName>
+                          <span className="activity-desc">{note}</span>
+                        </span>
+                        <span className="insights-rate">{t('challenge.details')}</span>
+                      </button>
+                    </li>
+                  )
+                })}
+              </ul>
+            </section>
+          )}
         </>
       )}
     </div>

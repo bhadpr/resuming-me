@@ -257,6 +257,12 @@ export function ChallengePage({ code }: { code: string }) {
   )}`
   const recordUrl = recordLine ? `https://wa.me/?text=${encodeURIComponent(recordLine)}` : null
   const countLabel = (value: number) => value.toLocaleString(locale)
+  const leadText = shareLine.split('\n')[0]
+  const soFarPrefix = t('challenge.line.soFar', { line: '' }).trim()
+  const leadBare =
+    board.scorePhase === 'so_far' && leadText.startsWith(soFarPrefix)
+      ? leadText.slice(soFarPrefix.length).trim()
+      : leadText
 
   const measure = board.kind === 'meditate' ? 'minutes' : 'steps'
   const ranked = [...board.teams].sort((a, b) => (b.pace ?? -1) - (a.pace ?? -1))
@@ -297,7 +303,12 @@ export function ChallengePage({ code }: { code: string }) {
             : t('challenge.targetLine', { target: board.target.toLocaleString(locale) })}
         </p>
       )}
-      {board.scorePhase && <p className="challenge-lead">{shareLine.split('\n')[0]}</p>}
+      {board.scorePhase && leadBare && (
+        <p className="challenge-lead">
+          {board.scorePhase === 'so_far' && <span className="challenge-lead-kicker">{t('challenge.soFarLabel')}</span>}
+          <span className="challenge-lead-line">{leadBare}</span>
+        </p>
+      )}
       {over && <p className="shared-event-status">{t('challenge.ended')}</p>}
       {board.myLeavingOn && <p className="shared-event-note">{t('challenge.leaving')}</p>}
 
@@ -305,9 +316,19 @@ export function ChallengePage({ code }: { code: string }) {
         {ranked.map((team) => {
           const pace = team.pace == null ? null : publicChallengeCount(team.pace, measure)
           const width = pace == null || leaderPace === 0 ? 0 : Math.max(8, Math.round((pace / leaderPace) * 100))
+          const leaders = ranked.filter(
+            (row) => row.pace != null && publicChallengeCount(row.pace, measure) === leaderPace,
+          )
+          const isLeader = pace != null && pace === leaderPace && leaders.length === 1
+          const needs = board.shape === 'race' && pace == null ? Math.max(0, 3 - team.memberCount) : 0
           return (
             <li key={team.id} className="shared-list-item">
-              <div className={team.id === board.myTeamId ? 'challenge-team-card is-mine' : 'challenge-team-card'}>
+              <div
+                className={
+                  team.id === board.myTeamId ? 'challenge-team-card is-mine' : 'challenge-team-card'
+                }
+                style={isLeader ? { borderColor: teamColor(team.image) } : undefined}
+              >
                 <div className="challenge-score-top">
                   <span className="challenge-team-heading">
                     {!board.myTeamId && board.shape === 'race' && !stepsPending && gate !== 'blocked' && (
@@ -337,8 +358,14 @@ export function ChallengePage({ code }: { code: string }) {
                   </span>
                   {pace != null && (
                     <span className="challenge-score-value">
+                      {isLeader && <span className="challenge-score-lead">{t('challenge.leadsMark')}</span>}
                       <strong>{countLabel(pace)}</strong>
-                      <span>{t('challenge.averageLabel')}</span>
+                      <span>{t(sitting ? 'challenge.scoreUnitMinutes' : 'challenge.scoreUnit')}</span>
+                    </span>
+                  )}
+                  {needs > 0 && (
+                    <span className="challenge-score-wait">
+                      {t('challenge.scoreNeed', { count: String(needs) })}
                     </span>
                   )}
                 </div>
@@ -361,6 +388,18 @@ export function ChallengePage({ code }: { code: string }) {
             points={history.teams}
             locale={locale}
             unit={t(board.kind === 'meditate' ? 'challenge.chartMinutes' : 'challenge.chartUnit')}
+            totalLabel={t(board.shape === 'together' ? 'challenge.chartDay' : 'challenge.chartTotal')}
+            averageLabel={t('challenge.chartEach')}
+            goal={board.shape === 'together' ? board.target : null}
+            goalLabel={t('challenge.chartGoal')}
+            goalMark={t('challenge.chartGoalMark')}
+            soFarLabel={t('challenge.soFarLabel')}
+            goalOf={(total) =>
+              t('challenge.totalOf', {
+                total: total.toLocaleString(locale),
+                target: (board.target ?? 0).toLocaleString(locale),
+              })
+            }
           />
         </section>
       )}

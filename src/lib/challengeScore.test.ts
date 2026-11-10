@@ -133,6 +133,25 @@ describe('walking share lines', () => {
     expect(lines.current).toBe('Final: Blue and Green finish even.')
   })
 
+  it('names the only scored team with the pace', () => {
+    const lines = walkingShareLines({
+      shape: 'race',
+      phase: 'so_far',
+      dayNumber: 5,
+      frozenDayNumber: null,
+      teams: [
+        { name: 'Night owls', pace: 6_575 },
+        { name: 'Early birds', pace: null },
+      ],
+      total: null,
+      target: null,
+      daysLeft: null,
+      joined: 5,
+      startsLabel: '6 Nov',
+    })
+    expect(lines.current).toBe('So far, Day 5: Night owls leads at 6,600 steps a day.')
+  })
+
   it('hides the pace while fewer than three people are in', () => {
     const lines = walkingShareLines({
       shape: 'race',

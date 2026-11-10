@@ -506,11 +506,11 @@ export interface ChallengeIndexRow {
 }
 
 export interface ChallengeHistory {
-  teams: { teamId: string; day: string; steps: number }[]
+  teams: { teamId: string; day: string; steps: number; average: number | null }[]
   mine: { day: string; steps: number }[]
 }
 
-/** Team averages by day, plus the signed-in person's own steps. */
+/** Each team's daily total and per-person average, plus the signed-in person's own steps. */
 export async function getChallengeHistory(code: string): Promise<ChallengeHistory> {
   const empty = { teams: [], mine: [] }
   if (!isChallengeCode(code)) return empty
@@ -519,7 +519,12 @@ export async function getChallengeHistory(code: string): Promise<ChallengeHistor
   return {
     teams: data
       .filter((row) => row.kind === 'team' && row.team_id)
-      .map((row) => ({ teamId: row.team_id as string, day: row.day, steps: row.steps })),
+      .map((row) => ({
+        teamId: row.team_id as string,
+        day: row.day,
+        steps: row.steps,
+        average: row.average,
+      })),
     mine: data.filter((row) => row.kind === 'mine').map((row) => ({ day: row.day, steps: row.steps })),
   }
 }

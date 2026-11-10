@@ -112,7 +112,7 @@ describe('onboarding flow copy', () => {
     ).toBe('1 habit · 2 reminders')
   })
 
-  it('sets daily, once a week, or twice a week without changing the session size', () => {
+  it('sets daily, once, twice, or three times a week without changing the session size', () => {
     const painting = {
       type: 'daily' as const,
       weeklyTarget: null,
@@ -126,7 +126,10 @@ describe('onboarding flow copy', () => {
     const twice = applyWeekCadence(painting, 'twice')
     expect(twice).toMatchObject({ type: 'weekly_n', weeklyTarget: 2, targetValue: 60 })
     expect(weekCadenceOf(twice)).toBe('twice')
-    expect(applyWeekCadence(twice, 'daily')).toMatchObject({ type: 'daily', weeklyTarget: null, targetValue: 60 })
+    const thrice = applyWeekCadence(painting, 'thrice')
+    expect(thrice).toMatchObject({ type: 'weekly_n', weeklyTarget: 3, targetValue: 60 })
+    expect(weekCadenceOf(thrice)).toBe('thrice')
+    expect(applyWeekCadence(thrice, 'daily')).toMatchObject({ type: 'daily', weeklyTarget: null, targetValue: 60 })
   })
 
   it('shrinks to the smallest step', () => {

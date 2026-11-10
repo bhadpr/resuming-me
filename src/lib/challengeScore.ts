@@ -163,6 +163,8 @@ function raceSentence(
     return translate(locale, final ? 'challenge.line.finalAlone' : 'challenge.line.leadsAlone', {
       day,
       leader: leaderNames,
+      pace: amount(locale, lead, measure),
+      unit,
     })
   }
   if (rest.length === 1) {

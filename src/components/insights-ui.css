@@ -163,6 +163,23 @@
   color: var(--color-text-muted);
 }
 
+.insights-screen.in .insights-row .activity-name {
+  flex-wrap: wrap;
+  min-width: 0;
+}
+
+.insights-screen.in .insights-row .today-kind-label {
+  min-width: 0;
+}
+
+.insights-challenge-mark {
+  width: 2.75rem;
+  height: 2.75rem;
+  flex: none;
+  border-radius: var(--radius-sm);
+  object-fit: cover;
+}
+
 .insights-screen.in .insights-row .progress-bar-fill {
   background: var(--color-primary);
 }

@@ -2,6 +2,7 @@ import { createSupabaseClient } from './supabase'
 
 /** The SQL that counts these numbers. Shown if the functions are not in the database yet. */
 const MIGRATION = 'supabase/migrations/20261020120000_analytics_summaries.sql'
+const CHALLENGE_MIGRATION = 'supabase/migrations/20261129120000_challenge_analytics.sql'
 const GROWTH_MIGRATION = 'supabase/migrations/20261027140000_growth_metrics.sql'
 
 const EVENT_MIGRATION = 'supabase/migrations/20261029120000_admin_event_analytics.sql'
@@ -16,7 +17,9 @@ const EXTRAS_FUNCTIONS = ['alert_status_summary', 'event_prop_breakdown']
 
 /** Tells the admin which migration to apply when a database function is missing. */
 export function missingFunctionMessage(fn: string): string {
-  const file = GROWTH_FUNCTIONS.includes(fn)
+  const file = fn === 'challenge_analytics_summary'
+    ? CHALLENGE_MIGRATION
+    : GROWTH_FUNCTIONS.includes(fn)
     ? GROWTH_MIGRATION
     : fn === 'guest_retention_summary'
       ? RETENTION_MIGRATION
@@ -32,6 +35,7 @@ export type AnalyticsSummaryFunction =
   | 'onboarding_funnel_summary'
   | 'guest_journey_summary'
   | 'reminder_analytics_summary'
+  | 'challenge_analytics_summary'
   | 'loop_analytics_summary'
   | 'app_installs_summary'
   | 'app_errors_summary'

@@ -259,10 +259,8 @@ function CatalogHabitEdit({
                   aria-pressed={cadence === option.id}
                   onClick={() => setCadence(option.id)}
                 >
-                  <span className="choice-tile-primary">
-                    {option.id === 'daily' ? t('cadence.daily') : t('cadence.once')}
-                  </span>
-                  {option.secondary ? <span className="choice-tile-secondary">{t('cadence.week')}</span> : null}
+                  <span className="choice-tile-primary">{t(option.primaryKey)}</span>
+                  {option.secondaryKey ? <span className="choice-tile-secondary">{t(option.secondaryKey)}</span> : null}
                 </button>
               ))}
             </div>

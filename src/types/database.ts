@@ -995,6 +995,10 @@ export interface Database {
         Args: { p_days: number }
         Returns: Json
       }
+      challenge_analytics_summary: {
+        Args: { p_days: number }
+        Returns: Json
+      }
       loop_analytics_summary: {
         Args: { p_days?: number }
         Returns: Json
@@ -1285,7 +1289,7 @@ export interface Database {
       challenge_card_photo: { Args: { p_code: string }; Returns: string }
       challenge_day_history: {
         Args: { p_code: string }
-        Returns: { kind: string; team_id: string | null; day: string; steps: number }[]
+        Returns: { kind: string; team_id: string | null; day: string; steps: number; average: number | null }[]
       }
       create_walking_challenge: {
         Args: {

@@ -101,6 +101,7 @@ export function RangeToggle<T extends string | number>({
 export function Panel({
   id,
   title,
+  tags,
   lead,
   scope,
   tone = 'blue',
@@ -109,6 +110,8 @@ export function Panel({
 }: {
   id?: string
   title: string
+  /** The same kind tags Today shows on a row, such as Habit or Step Challenge. */
+  tags?: ReactNode
   lead?: ReactNode
   /** The period the numbers cover, such as "Last 7 days". */
   scope?: string
@@ -121,7 +124,10 @@ export function Panel({
     <section id={id} className="an-panel" style={toneStyle(tone)}>
       <div className="an-panel-head">
         <div className="an-panel-titlebar">
-          <h3 className="an-panel-title">{title}</h3>
+          <div className="an-panel-heading">
+            <h3 className="an-panel-title">{title}</h3>
+            {tags}
+          </div>
           {scope && <span className="an-scope">{scope}</span>}
         </div>
         {lead && <p className="an-panel-lead">{lead}</p>}
@@ -140,11 +146,14 @@ export function Panel({
 /** A smaller titled block inside a panel, such as one chart. */
 export function Block({
   title,
+  tags,
   note,
   section = false,
   children,
 }: {
   title: string
+  /** The same kind tags Today shows on a row. */
+  tags?: ReactNode
   note?: ReactNode
   /** A bigger heading for a group of charts, such as "Marketing site". */
   section?: boolean
@@ -152,7 +161,10 @@ export function Block({
 }) {
   return (
     <div className={`an-block ${section ? 'an-block-section' : ''}`}>
-      <h4 className="an-block-title">{title}</h4>
+      <div className="an-block-heading">
+        <h4 className="an-block-title">{title}</h4>
+        {tags}
+      </div>
       {note && <p className="an-block-note">{note}</p>}
       {children}
     </div>
@@ -306,7 +318,7 @@ export function BarList({
   empty = 'Nothing to show yet.',
   showShare = false,
 }: {
-  rows: Array<ChartRow & { note?: string }>
+  rows: Array<Omit<ChartRow, 'label'> & { label: ReactNode; note?: string }>
   tone?: Tone
   empty?: string
   /** Add the share of the total next to each value. */

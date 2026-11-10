@@ -31,6 +31,10 @@ function isSportScheduleReminder(reminder: Reminder): boolean {
   return reminderListKind(reminder) === 'schedule' && scheduleDetail(reminder.text).sport
 }
 
+function isHolidayReminder(reminder: Reminder): boolean {
+  return reminderListKind(reminder) === 'holiday'
+}
+
 /** Time, or any time, plus "From Tuesday" when an earlier day is still open. */
 function reminderWhen(
   reminder: Reminder,
@@ -327,13 +331,17 @@ export function ReminderListSection({
   const tomorrow = tomorrowOf(today)
   const listed = [...dueNow.filter((reminder) => reminder.day >= today), ...later]
   const sportsCount = listed.filter(isSportScheduleReminder).length
+  const holidayCount = listed.filter(isHolidayReminder).length
   const canHideSports = listed.length >= SPORTS_HIDE_AT && sportsCount > 0
+  const canHideHolidays = listed.length >= SPORTS_HIDE_AT && holidayCount > 0
   const [showSports, setShowSports] = useState(false)
+  const [showHolidays, setShowHolidays] = useState(false)
   const hideSports = canHideSports && !showSports
-  const visibleDue = dueNow.filter(
-    (reminder) => reminder.day >= today && !(hideSports && isSportScheduleReminder(reminder)),
-  )
-  const visibleLater = later.filter((reminder) => !(hideSports && isSportScheduleReminder(reminder)))
+  const hideHolidays = canHideHolidays && !showHolidays
+  const foldedAway = (reminder: Reminder) =>
+    (hideSports && isSportScheduleReminder(reminder)) || (hideHolidays && isHolidayReminder(reminder))
+  const visibleDue = dueNow.filter((reminder) => reminder.day >= today && !foldedAway(reminder))
+  const visibleLater = later.filter((reminder) => !foldedAway(reminder))
   const laterMonths = groupByMonth(visibleLater)
   const { isOpen, toggle } = useClosedMonths(
     laterMonths.map((month) => month.key),
@@ -357,7 +365,7 @@ export function ReminderListSection({
     return groups
   }
   const todayGroup = visibleDue.length > 0 ? { key: 'today', label: t('reminders.today'), items: visibleDue } : null
-  const hasReminders = todayGroup != null || laterMonths.length > 0 || sportsCount > 0
+  const hasReminders = todayGroup != null || laterMonths.length > 0 || sportsCount > 0 || holidayCount > 0
 
   return (
     <div className="activity-list-screen reminder-list-section">
@@ -368,25 +376,24 @@ export function ReminderListSection({
         </div>
       </div>
 
-      <ReminderAddTiles
-        onAdd={onAdd}
-        onAddMeetup={onAddMeetup}
-        onAddHolidays={onAddHolidays}
-        onAddSchedule={onAddSchedule}
-      />
-
-      {canHideSports && (
-        <div className="reminder-sports-toggle">
-          {hideSports ? (
-            <>
-              <p className="screen-sub">{t('reminders.sportsHidden', { count: String(sportsCount) })}</p>
-              <button type="button" className="btn btn-secondary btn-sm" onClick={() => setShowSports(true)}>
-                {t('reminders.showSports', { count: String(sportsCount) })}
-              </button>
-            </>
-          ) : (
-            <button type="button" className="btn btn-secondary btn-sm" onClick={() => setShowSports(false)}>
-              {t('reminders.hideSports')}
+      {(canHideSports || canHideHolidays) && (
+        <div className="reminder-list-toggles">
+          {canHideSports && (
+            <button type="button" className="btn btn-secondary btn-sm" onClick={() => setShowSports((open) => !open)}>
+              {hideSports
+                ? t('reminders.showSports', { count: String(sportsCount) })
+                : t('reminders.hideSports')}
+            </button>
+          )}
+          {canHideHolidays && (
+            <button
+              type="button"
+              className="btn btn-secondary btn-sm"
+              onClick={() => setShowHolidays((open) => !open)}
+            >
+              {hideHolidays
+                ? t('reminders.showHolidays', { count: String(holidayCount) })
+                : t('reminders.hideHolidays')}
             </button>
           )}
         </div>
@@ -423,6 +430,13 @@ export function ReminderListSection({
           )}
         </>
       )}
+
+      <ReminderAddTiles
+        onAdd={onAdd}
+        onAddMeetup={onAddMeetup}
+        onAddHolidays={onAddHolidays}
+        onAddSchedule={onAddSchedule}
+      />
     </div>
   )
 }
