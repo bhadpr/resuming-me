@@ -1,4 +1,4 @@
-import { COMPANY, CONTACT_EMAIL, LANGUAGES, PLAY_LISTING_URL, PLAY_LIVE, SITE_NAME, SITE_URL, WEB_APP_URL } from './site'
+import { APP_STORE_URL, COMPANY, CONTACT_EMAIL, LANGUAGES, PLAY_LISTING_URL, PLAY_LIVE, SITE_NAME, SITE_URL, WEB_APP_URL } from './site'
 import type { Copy } from './i18n/en'
 
 /** Stable ids so the pieces point at each other. */
@@ -25,7 +25,7 @@ export function organization(): JsonLd {
       email: CONTACT_EMAIL,
       availableLanguage: 'English',
     },
-    ...(PLAY_LIVE ? { sameAs: [PLAY_LISTING_URL] } : {}),
+    sameAs: [APP_STORE_URL, ...(PLAY_LIVE ? [PLAY_LISTING_URL] : [])],
   }
 }
 
@@ -53,12 +53,13 @@ export function softwareApplication(copy: Copy): JsonLd {
     url: SITE_URL,
     image: `${SITE_URL}/og.jpg`,
     applicationCategory: 'LifestyleApplication',
-    operatingSystem: 'Android 7.0 or newer, and web browsers',
+    operatingSystem: 'iOS 17 or newer, and Android 7.0 or newer',
     inLanguage: LANGUAGES.map((language) => language.code),
     isAccessibleForFree: true,
     offers: { '@type': 'Offer', price: '0', priceCurrency: 'USD' },
     publisher: { '@id': ORG_ID },
-    ...(PLAY_LIVE ? { downloadUrl: PLAY_LISTING_URL, installUrl: PLAY_LISTING_URL } : { installUrl: WEB_APP_URL }),
+    downloadUrl: APP_STORE_URL,
+    installUrl: PLAY_LIVE ? PLAY_LISTING_URL : WEB_APP_URL,
   }
 }
 

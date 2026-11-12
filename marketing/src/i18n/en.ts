@@ -26,13 +26,13 @@ export const en = {
     webNote: 'No account needed to try.',
     open: 'Open the app',
     playSoon: 'Coming soon to Google Play',
-    iosSmall: 'In progress',
-    iosMain: 'Get it on iPhone',
+    iosSmall: 'Download on the',
+    iosMain: 'App Store',
     scan: 'On a computer? Scan to open Google Play on your Android phone.',
     scanAlt: 'QR code that opens Resuming on Google Play',
   },
   hero: {
-    eyebrow: 'No ads · 7 languages · Works in your browser',
+    eyebrow: 'No ads · 7 languages · iPhone and Android',
     title: 'It’s your Today.',
     titleAccent: 'Just resume.',
     subtitle: 'Everything, in one gentle list.',
@@ -306,7 +306,7 @@ export const en = {
     items: [
       {
         q: 'Is Resuming free?',
-        a: 'Yes. It’s free on Google Play and on the web, and there are no ads.',
+        a: 'Yes. It’s free on the App Store and on Google Play, and there are no ads.',
         aSoon: 'Yes. It’s free on the web, and it will be free on Google Play too. There are no ads.',
       },
       {
@@ -315,7 +315,7 @@ export const en = {
       },
       {
         q: 'Which phones does it work on?',
-        a: 'Android phones running Android 7.0 or newer, from Google Play. On an iPhone or a computer, use it in the browser at resuming.me.',
+        a: 'iPhone from the App Store, and Android phones running Android 7.0 or newer from Google Play.',
         aSoon: 'The Android app, for Android 7.0 or newer, is coming soon to Google Play. Until then, use it in the browser at resuming.me on any phone or computer.',
       },
       {
@@ -364,7 +364,7 @@ export const en = {
     ],
     where: {
       title: 'Where you can use it',
-      body: 'In any browser at resuming.me, on a phone or a computer, with no account needed to try. Google Play has the Android app for Android 7.0 or newer.',
+      body: 'On iPhone from the App Store, and on Android 7.0 or newer from Google Play.',
       bodySoon:
         'In any browser at resuming.me, on a phone or a computer, with no account needed to try. The Android app, for Android 7.0 or newer, is coming soon to Google Play.',
     },

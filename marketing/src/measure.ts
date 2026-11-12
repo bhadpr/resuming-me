@@ -4,7 +4,7 @@
  * Sends two kinds of events to the same Supabase `events` table the app uses, so they show up
  * next to the app's own numbers:
  *   site_viewed       once per page load: language, where the visitor came from, phone or computer
- *   site_cta_clicked  a tap on a Google Play link or a "try it in your browser" link
+ *   site_cta_clicked  a tap on a Google Play link or an App Store link
  *
  * What it never sends: IP address, full referrer URL, user agent, or anything typed on the page.
  * It does nothing when the visitor asks not to be tracked (Do Not Track or Global Privacy Control),
@@ -125,6 +125,7 @@ function whereOnPage(link: HTMLElement): string {
 
 function kindOfLink(href: string): string | null {
   if (href.includes('play.google.com')) return 'play'
+  if (href.includes('apps.apple.com')) return 'ios'
   if (/^https:\/\/resuming\.me\/start/.test(href)) return 'web'
   return null
 }

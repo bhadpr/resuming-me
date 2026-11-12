@@ -7,7 +7,7 @@ export const COMPANY = 'Cheerful Games, Inc.'
 /** The plain Play listing, with no tracking, for structured data and llms.txt. */
 export const PLAY_LISTING_URL = `https://play.google.com/store/apps/details?id=${PLAY_PACKAGE}`
 /** Shown in the sitemap as the last change. Bump it when the page content really changes. */
-export const CONTENT_UPDATED = '2026-10-29'
+export const CONTENT_UPDATED = '2026-11-12'
 /**
  * Search engine ownership tokens. Leave empty to add no tag.
  * Verifying the domain by DNS (a TXT record in Cloudflare) works too and needs no code.
@@ -22,11 +22,11 @@ export const BING_SITE_VERIFICATION = ''
 export const PLAY_LIVE = true
 
 /**
- * Flip this one line to true on iPhone launch day, and set APP_STORE_URL.
- * The school-district waitlist form stays either way.
+ * The iPhone app is on the App Store. The school-district waitlist form stays either way.
+ * The link has no country, so Apple opens the visitor's own store.
  */
-export const IOS_LIVE = false
-export const APP_STORE_URL = ''
+export const IOS_LIVE = true
+export const APP_STORE_URL = 'https://apps.apple.com/app/resuming/id6827251888'
 /** Public waitlist endpoint. JWT verification is off; the function checks its own origin and inputs. */
 export const WAITLIST_URL = 'https://api.resuming.me/functions/v1/join-waitlist'
 

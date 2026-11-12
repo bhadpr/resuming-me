@@ -3,7 +3,7 @@ import Icon from './Icons.astro'
 import IosNotify from './IosNotify.astro'
 import { loadEnv } from 'vite'
 import { fileURLToPath } from 'node:url'
-import { PLAY_LIVE, WEB_APP_URL, playUrl } from '../site'
+import { APP_STORE_URL, PLAY_LIVE, playUrl } from '../site'
 import type { Copy } from '../i18n/en'
 
 interface Props {
@@ -37,7 +37,10 @@ const schoolKey = env.VITE_SUPABASE_ANON_KEY ?? ''
         <span><small>{copy.cta.playOn}</small>{copy.cta.playSmall}</span>
       </a>
     ) : null}
-    <a class="btn btn-web" href={WEB_APP_URL}>{copy.cta.web}</a>
+    <a class="btn btn-ios-live" href={APP_STORE_URL}>
+      <Icon name="apple" />
+      <span><small>{copy.cta.iosSmall}</small>{copy.cta.iosMain}</span>
+    </a>
   </div>
 </div>
 <div data-zip-miss hidden>

@@ -169,23 +169,27 @@ p {
   transform: translateY(-1px);
 }
 
-.btn-play {
+.btn-play,
+.btn-ios-live {
   background: var(--ink);
   color: #fff;
   box-shadow: 0 6px 20px rgb(26 37 40 / 0.22);
 }
 
-.btn-play:hover {
+.btn-play:hover,
+.btn-ios-live:hover {
   box-shadow: 0 10px 28px rgb(26 37 40 / 0.28);
 }
 
-.btn-play svg {
+.btn-play svg,
+.btn-ios-live svg {
   width: 1.35rem;
   height: 1.35rem;
   flex: none;
 }
 
-.btn-play small {
+.btn-play small,
+.btn-ios-live small {
   display: block;
   font-size: 0.7rem;
   font-weight: 600;
@@ -194,7 +198,8 @@ p {
   opacity: 0.75;
 }
 
-.btn-play span {
+.btn-play span,
+.btn-ios-live span {
   text-align: left;
   line-height: 1.15;
 }

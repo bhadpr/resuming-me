@@ -1,5 +1,5 @@
-import { useEffect, useState, type FormEvent } from 'react'
-import { useNavigate, useSearchParams } from 'react-router-dom'
+import { useState, type FormEvent } from 'react'
+import { useSearchParams } from 'react-router-dom'
 import { Capacitor } from '@capacitor/core'
 import { addDays } from '../lib/dates'
 import { useLocale } from '../hooks/useLocale'
@@ -12,13 +12,11 @@ import {
   createWalkingChallenge,
   goalSpanOk,
   hourTargetOk,
-  myChallengeIndex,
   TEAM_IMAGE_COUNT,
   teamImageSrc,
   raceLastDay,
   stepTargetOk,
   teamNamesOk,
-  type ChallengeIndexRow,
   type ChallengeShape,
 } from '../lib/challenges'
 import { Icon } from './Icon'
@@ -32,10 +30,8 @@ export function ChallengeForm({
   onCreated: (code: string) => void
 }) {
   const { t } = useLocale()
-  const navigate = useNavigate()
   const [params] = useSearchParams()
   const today = challengeToday()
-  const [mine, setMine] = useState<ChallengeIndexRow[]>([])
   const [measure, setMeasure] = useState<'walk' | 'meditate'>(
     params.get('measure') === 'meditate' ? 'meditate' : 'walk',
   )
@@ -62,20 +58,6 @@ export function ChallengeForm({
   const [error, setError] = useState<string | null>(null)
 
   const names = shape === 'race' ? teams : [groupName]
-
-  useEffect(() => {
-    let live = true
-    void myChallengeIndex()
-      .then((rows) => {
-        if (live) setMine(rows)
-      })
-      .catch(() => {
-        if (live) setMine([])
-      })
-    return () => {
-      live = false
-    }
-  }, [])
 
   function changeStart(value: string) {
     setStartsOn(value)
@@ -177,21 +159,6 @@ export function ChallengeForm({
           <span className="activity-desc">{t('challenge.measureSitHint')}</span>
         </label>
       </fieldset>
-      {mine.some((row) => row.phase !== 'past') && (
-        <div className="challenge-yours">
-          <span className="field-label">{t('challenge.yours')}</span>
-          {mine.filter((row) => row.phase !== 'past').map((row) => (
-            <button
-              key={row.code}
-              type="button"
-              className="btn btn-secondary"
-              onClick={() => navigate(`/t/${row.code}`)}
-            >
-              {row.title}
-            </button>
-          ))}
-        </div>
-      )}
       <label className="challenge-team-picture-btn">
         <img className="challenge-card-picture" src={cardPreview ?? '/og-walk.jpg'} alt="" />
         <input

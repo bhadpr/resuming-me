@@ -9,7 +9,7 @@ import Featured from './Featured.astro'
 import LangPick from './LangPick.astro'
 import ListMock from './ListMock.astro'
 import ZipCheck from './ZipCheck.astro'
-import { APP_URL, HERO_SCENES, LANGUAGES, PLAY_LIVE, WEB_APP_URL, playUrl } from '../site'
+import { APP_STORE_URL, APP_URL, HERO_SCENES, LANGUAGES, PLAY_LIVE, WEB_APP_URL, playUrl } from '../site'
 import type { Copy } from '../i18n/en'
 import type { Theme } from '../themes'
 
@@ -54,8 +54,12 @@ const cricketShot = holidayShot || theme?.slug === 'diwali'
           {copy.cta.playSmall}
         </a>
       ) : (
-        <a class="btn btn-play header-cta" href={WEB_APP_URL}>{copy.cta.open}</a>
+        <span class="play-soon"><Icon name="play" />{copy.cta.playSoon}</span>
       )}
+      <a class="btn btn-ios-live header-cta" href={APP_STORE_URL}>
+        <Icon name="apple" />
+        {copy.cta.iosMain}
+      </a>
     </div>
   </div>
 </header>
@@ -90,13 +94,15 @@ const cricketShot = holidayShot || theme?.slug === 'diwali'
                   <Icon name="play" />
                   <span><small>{copy.cta.playOn}</small>{copy.cta.playSmall}</span>
                 </a>
-                <a class="btn btn-web" href={WEB_APP_URL}>{copy.cta.web}</a>
               </>
             ) : (
-              <a class="btn btn-play" href={WEB_APP_URL}>{copy.cta.web}</a>
+              <span class="play-soon"><Icon name="play" />{copy.cta.playSoon}</span>
             )}
+            <a class="btn btn-ios-live" href={APP_STORE_URL}>
+              <Icon name="apple" />
+              <span><small>{copy.cta.iosSmall}</small>{copy.cta.iosMain}</span>
+            </a>
           </div>
-          <p class="cta-note">{copy.cta.webNote}</p>
           {theme.showSchoolWaitlist && <ZipCheck copy={copy} />}
         </div>
         {theme.slug === 'cricket' && (
@@ -189,16 +195,15 @@ const cricketShot = holidayShot || theme?.slug === 'diwali'
                 <Icon name="play" />
                 <span><small>{copy.cta.playOn}</small>{copy.cta.playSmall}</span>
               </a>
-              <a class="btn btn-web" href={WEB_APP_URL}>{copy.cta.web}</a>
             </>
           ) : (
-            <>
-              <a class="btn btn-play" href={WEB_APP_URL}>{copy.cta.web}</a>
-              <span class="play-soon"><Icon name="play" />{copy.cta.playSoon}</span>
-            </>
+            <span class="play-soon"><Icon name="play" />{copy.cta.playSoon}</span>
           )}
+          <a class="btn btn-ios-live" href={APP_STORE_URL}>
+            <Icon name="apple" />
+            <span><small>{copy.cta.iosSmall}</small>{copy.cta.iosMain}</span>
+          </a>
         </div>
-        <p class="cta-note">{copy.cta.webNote}</p>
         {PLAY_LIVE && (
           <div class="qr-card">
             <img src="/qr-play.svg" alt={copy.cta.scanAlt} width="88" height="88" loading="lazy" />
@@ -614,14 +619,14 @@ const cricketShot = holidayShot || theme?.slug === 'diwali'
                 <Icon name="play" />
                 <span><small>{copy.cta.playOn}</small>{copy.cta.playSmall}</span>
               </a>
-              <a class="btn btn-web" href={WEB_APP_URL}>{copy.cta.web}</a>
             </>
           ) : (
-            <>
-              <a class="btn btn-play" href={WEB_APP_URL}>{copy.cta.web}</a>
-              <span class="play-soon"><Icon name="play" />{copy.cta.playSoon}</span>
-            </>
+            <span class="play-soon"><Icon name="play" />{copy.cta.playSoon}</span>
           )}
+          <a class="btn btn-ios-live" href={APP_STORE_URL}>
+            <Icon name="apple" />
+            <span><small>{copy.cta.iosSmall}</small>{copy.cta.iosMain}</span>
+          </a>
         </div>
       </div>
     </div>
