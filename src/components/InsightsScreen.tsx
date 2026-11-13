@@ -30,7 +30,7 @@ import { formatPair, formatPairDelta } from '../lib/vitalChart'
 import { Icon } from './Icon'
 import { TaggedName } from './TodayKindTag'
 import { challengePhotoUrl } from '../lib/challengePhotos'
-import { myChallengeIndex, type ChallengeIndexRow } from '../lib/challenges'
+import { challengeCardSrc, myChallengeIndex, type ChallengeIndexRow } from '../lib/challenges'
 import './insights-ui.css'
 
 function chartTarget(activity: Activity | undefined): number | null {
@@ -658,7 +658,7 @@ export function InsightsScreen({
                       >
                         <img
                           className="insights-challenge-mark"
-                          src={challengePhotoUrl(row.cardPath) ?? '/og-walk.jpg'}
+                          src={challengePhotoUrl(row.cardPath) ?? challengeCardSrc(row.kind)}
                           alt=""
                         />
                         <span className="activity-meta">

@@ -4,6 +4,7 @@ import { walkingShareLines, walkingShareMessage, type WalkingScoreInput } from '
 import { translate, type Locale } from './i18n'
 import { addDays, daysBetween, todayLocalDate } from './dates'
 import type { PhoneSteps } from './healthSteps'
+import { discardChallengePictures, stageChallengePictures } from './challengePhotos'
 import { createSupabaseClient } from './supabase'
 
 const CODE_ALPHABET = 'abcdefghjkmnpqrstuvwxyz23456789'
@@ -24,7 +25,9 @@ export type ChallengeIssue =
   | 'dates'
   | 'past'
   | 'creatorCap'
+  | 'creatorCapAdmin'
   | 'memberCap'
+  | 'memberCapAdmin'
   | 'notAndroid'
   | 'already'
   | 'rate'
@@ -34,6 +37,7 @@ export type ChallengeIssue =
   | 'switchedOff'
   | 'ended'
   | 'unavailable'
+  | 'whatsapp'
   | 'failed'
 
 export interface ChallengeTeam {
@@ -45,15 +49,24 @@ export interface ChallengeTeam {
   /** 1–4. Matches /team-<image>.jpg when photoPath is empty. */
   image: number
   photoPath: string | null
+  /** Optional WhatsApp group. Joining the challenge does not join this group. */
+  whatsappUrl: string | null
 }
 
-/** The picture WhatsApp shows for every walking challenge. */
+/** The picture WhatsApp shows when a walking challenge has no picture of its own. */
 export const CHALLENGE_CARD_IMAGE = 'https://resuming.me/og-walk.jpg'
 
 export const TEAM_IMAGE_COUNT = 4
 
-export function teamImageSrc(image: number): string {
+/** The cover for a new challenge. Meditation uses Krishna by the river. */
+export function challengeCardSrc(kind?: string | null): string {
+  return kind === 'meditate' ? '/og-sit.jpg' : '/og-walk.jpg'
+}
+
+/** Team pictures. Walking teams wear a color. Meditation teams are Krishna, then Buddha. */
+export function teamImageSrc(image: number, kind?: string | null): string {
   const n = image >= 1 && image <= TEAM_IMAGE_COUNT ? image : 1
+  if (kind === 'meditate') return n % 2 === 1 ? '/sit-krishna.jpg' : '/sit-buddha.jpg'
   return `/team-${n}.jpg`
 }
 
@@ -89,6 +102,14 @@ export interface ChallengeBoard {
   cardPhoto: string | null
   /** The organizer's share sentence. Empty until they rewrite the starter. */
   shareMessage: string | null
+}
+
+/** iPhone Safari reports web. A walking join from that browser still counts as the iPhone. */
+export function challengePhone(): 'android' | 'ios' | 'web' {
+  const platform = Capacitor.getPlatform()
+  if (platform === 'android' || platform === 'ios') return platform
+  if (typeof navigator !== 'undefined' && /iPhone|iPad|iPod/i.test(navigator.userAgent)) return 'ios'
+  return 'web'
 }
 
 export function isChallengeCode(value: string): boolean {
@@ -149,14 +170,35 @@ export function raceLastDay(start: string): string {
   return addDays(start, 6)
 }
 
-/** A shared goal lasts 7 to 366 days, counting the start day. */
+/** A challenge lasts 1 to 30 days, counting the start day. */
 export function goalSpanOk(start: string, end: string): boolean {
   const span = daysBetween(start, end)
-  return span >= 6 && span <= 365
+  return span >= 0 && span <= 29
 }
 
 export function cleanChallengeName(raw: string): string {
   return raw.trim().replace(/\s+/g, ' ')
+}
+
+/** A WhatsApp group invite. Empty is fine. Anything else is refused. */
+export function cleanWhatsAppGroupLink(value: string): { url: string | null; ok: boolean } {
+  const trimmed = value.trim()
+  if (!trimmed) return { url: null, ok: true }
+  const withScheme = /^https?:\/\//i.test(trimmed) ? trimmed : `https://${trimmed}`
+  let parsed: URL
+  try {
+    parsed = new URL(withScheme)
+  } catch {
+    return { url: null, ok: false }
+  }
+  if (parsed.protocol !== 'https:' || parsed.hostname !== 'chat.whatsapp.com') {
+    return { url: null, ok: false }
+  }
+  const path = parsed.pathname.replace(/\/+$/, '')
+  const match = path.match(/^\/(?:invite\/)?([A-Za-z0-9]{10,64})$/)
+  if (!match) return { url: null, ok: false }
+  const invite = path.startsWith('/invite/') ? 'invite/' : ''
+  return { url: `https://chat.whatsapp.com/${invite}${match[1]}`, ok: true }
 }
 
 export function teamNamesOk(shape: ChallengeShape, names: readonly string[]): boolean {
@@ -199,9 +241,11 @@ export function isMeditationTemplate(templateId: string | null | undefined): boo
   return MEDITATION_TEMPLATES.some((id) => id === templateId)
 }
 
-/** Web and iPhone can watch a walking challenge. Only Android can join. */
+/** A computer can watch a walking challenge. An iPhone or Android phone can join. */
 export function walkingJoinGate(platform: string, steps: PhoneSteps | null): WalkingJoinGate {
-  if (platform !== 'android') return 'blocked'
+  if (platform !== 'android' && platform !== 'ios') return 'blocked'
+  // The iPhone browser cannot read Apple Health. Joining still counts; the app sends steps later.
+  if (platform === 'ios' && (!steps || steps.status === 'unavailable')) return 'join'
   if (!steps || steps.status === 'unavailable') return 'blocked'
   if (steps.status === 'needs-permission' || steps.status === 'denied') return 'connect'
   if (steps.steps <= 0) return 'confirm-empty'
@@ -210,6 +254,8 @@ export function walkingJoinGate(platform: string, steps: PhoneSteps | null): Wal
 
 export function challengeIssue(error: { message?: string } | null): ChallengeIssue {
   const message = error?.message ?? ''
+  if (message.includes('challenge_creator_cap_admin')) return 'creatorCapAdmin'
+  if (message.includes('challenge_member_cap_admin')) return 'memberCapAdmin'
   if (message.includes('challenge_creator_cap')) return 'creatorCap'
   if (message.includes('challenge_member_cap')) return 'memberCap'
   if (message.includes('challenge_past_start')) return 'past'
@@ -227,6 +273,7 @@ export function challengeIssue(error: { message?: string } | null): ChallengeIss
   if (message.includes('challenge_switched_off')) return 'switchedOff'
   if (message.includes('challenge_ended')) return 'ended'
   if (message.includes('challenge_unavailable')) return 'unavailable'
+  if (message.includes('challenge_whatsapp')) return 'whatsapp'
   return 'failed'
 }
 
@@ -273,6 +320,7 @@ interface BoardRow {
   photo_path?: string | null
   card_path?: string | null
   share_message?: string | null
+  whatsapp_url?: string | null
 }
 
 export async function getChallengeBoard(code: string): Promise<ChallengeBoard | null> {
@@ -321,6 +369,7 @@ export async function getChallengeBoard(code: string): Promise<ChallengeBoard | 
         recordPace: row.record_pace,
         image: pictures.teams.get(row.team_id)?.image ?? (index % TEAM_IMAGE_COUNT) + 1,
         photoPath: pictures.teams.get(row.team_id)?.photoPath ?? null,
+        whatsappUrl: row.whatsapp_url?.trim() || null,
       })),
     totalSteps: first.total_steps,
     recordTotal: first.record_total,
@@ -374,6 +423,7 @@ export async function createWalkingChallenge(input: {
   target: number | null
   teamNames: string[]
   teamImages?: number[]
+  teamLinks?: (string | null)[]
   join: boolean
   joinTeam: number | null
 }): Promise<{ id: string; code: string }> {
@@ -381,13 +431,13 @@ export async function createWalkingChallenge(input: {
     p_title: cleanChallengeName(input.title),
     p_shape: input.shape,
     p_starts_on: input.startsOn,
-    p_ends_on: input.shape === 'race' ? raceLastDay(input.startsOn) : input.endsOn ?? input.startsOn,
+    p_ends_on: input.endsOn ?? input.startsOn,
     p_target: input.shape === 'together' ? input.target : null,
     p_team_names: input.teamNames.map(cleanChallengeName).filter(Boolean),
     p_time_zone: deviceTimeZone(),
     p_join: input.join,
     p_join_team: input.join ? (input.joinTeam ?? 0) : 0,
-    p_platform: Capacitor.getPlatform(),
+    p_platform: challengePhone(),
     p_kind: input.kind ?? 'walk',
   })
   if (error) throw error
@@ -402,6 +452,14 @@ export async function createWalkingChallenge(input: {
     if (imageError) {
       // The challenge is already created. The page still shows a picture for each team.
     }
+  }
+  const links = input.teamLinks ?? []
+  if (links.some((link) => link)) {
+    const { error: linkError } = await createSupabaseClient().rpc('set_challenge_team_links', {
+      p_id: row.id,
+      p_links: links.map((link) => link ?? ''),
+    })
+    if (linkError) throw linkError
   }
   return { id: row.id, code: row.code }
 }
@@ -425,7 +483,7 @@ export async function joinWalkingChallenge(code: string, teamId: string): Promis
   const { error } = await createSupabaseClient().rpc('join_walking_challenge', {
     p_code: code,
     p_team_id: teamId,
-    p_platform: Capacitor.getPlatform(),
+    p_platform: challengePhone(),
   })
   if (error) throw error
 }
@@ -560,6 +618,42 @@ export async function cancelChallengeLeave(id: string): Promise<void> {
 export async function endWalkingChallenge(id: string): Promise<void> {
   const { error } = await createSupabaseClient().rpc('end_walking_challenge', { p_id: id })
   if (error) throw error
+}
+
+/** The organizer rewrites the name, the last day, each team, and any new pictures. */
+export async function updateChallengeDetails(input: {
+  id: string
+  title: string
+  endsOn: string
+  teams: { id: string; name: string; link: string; photo: Blob | null }[]
+  card: Blob | null
+}): Promise<void> {
+  const pictures =
+    input.card || input.teams.some((team) => team.photo)
+      ? await stageChallengePictures(
+          input.id,
+          input.card,
+          input.teams.map((team) => team.photo),
+        )
+      : null
+  try {
+    const { error } = await createSupabaseClient().rpc('update_challenge_details', {
+      p_id: input.id,
+      p_title: cleanChallengeName(input.title),
+      p_ends_on: input.endsOn,
+      p_team_ids: input.teams.map((team) => team.id),
+      p_team_names: input.teams.map((team) => cleanChallengeName(team.name)),
+      p_links: input.teams.map((team) => team.link),
+      p_card: pictures?.cardPath ?? '',
+      p_photo_paths: pictures ? pictures.teamPaths.map((path) => path ?? '') : input.teams.map(() => ''),
+    })
+    if (error) throw error
+  } catch (error) {
+    if (pictures) {
+      await discardChallengePictures([pictures.cardPath, ...pictures.teamPaths]).catch(() => {})
+    }
+    throw error
+  }
 }
 
 export async function setChallengeShareMessage(id: string, message: string): Promise<void> {

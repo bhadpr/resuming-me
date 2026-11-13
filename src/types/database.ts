@@ -1246,6 +1246,7 @@ export interface Database {
           photo_path: string | null
           card_path: string | null
           share_message: string | null
+          whatsapp_url: string | null
         }[]
       }
       set_challenge_share_message: {
@@ -1278,6 +1279,20 @@ export interface Database {
       end_walking_challenge: { Args: { p_id: string }; Returns: undefined }
       mark_challenge_shared: { Args: { p_id: string }; Returns: undefined }
       set_challenge_team_images: { Args: { p_id: string; p_images: number[] }; Returns: undefined }
+      set_challenge_team_links: { Args: { p_id: string; p_links: string[] }; Returns: undefined }
+      update_challenge_details: {
+        Args: {
+          p_id: string
+          p_title: string
+          p_ends_on: string
+          p_team_ids: string[]
+          p_team_names: string[]
+          p_links: string[]
+          p_card?: string
+          p_photo_paths?: string[]
+        }
+        Returns: undefined
+      }
       challenge_team_pictures: {
         Args: { p_code: string }
         Returns: { team_id: string; image: number; photo_path: string | null; card_path: string | null }[]

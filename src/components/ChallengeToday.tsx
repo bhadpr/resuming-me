@@ -7,6 +7,7 @@ import { walkingShareLines } from '../lib/challengeScore'
 import { challengePhotoUrl } from '../lib/challengePhotos'
 import {
   boardScoreInput,
+  challengeCardSrc,
   getChallengeBoard,
   myChallengeIndex,
   type ChallengeBoard,
@@ -55,7 +56,7 @@ function ChallengeRows({ rows }: { rows: ChallengeIndexRow[] }) {
         return (
           <li key={row.code} className="challenge-home-card item-kind-challenge">
             <button type="button" className="challenge-home-open" onClick={() => navigate(`/t/${row.code}`)}>
-              <img className="challenge-home-mark" src={challengePhotoUrl(row.cardPath) ?? '/og-walk.jpg'} alt="" />
+              <img className="challenge-home-mark" src={challengePhotoUrl(row.cardPath) ?? challengeCardSrc(row.kind)} alt="" />
               <span className="challenge-home-name">
                 {row.title}
                 {note && <span className="challenge-home-status">{note}</span>}
@@ -106,7 +107,7 @@ function ChallengeTodayRow({ row, board }: { row: ChallengeIndexRow; board: Chal
         onClick={() => navigate(`/t/${row.code}`)}
       >
         <div className="today-row-head">
-          <img className="challenge-today-mark" src={challengePhotoUrl(row.cardPath) ?? '/og-walk.jpg'} alt="" />
+          <img className="challenge-today-mark" src={challengePhotoUrl(row.cardPath) ?? challengeCardSrc(row.kind)} alt="" />
           <TaggedName kind={row.kind === 'meditate' ? 'sitChallenge' : 'stepChallenge'}>{row.title}</TaggedName>
         </div>
         <div className="today-row-main">

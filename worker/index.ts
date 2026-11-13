@@ -40,6 +40,11 @@ const LIST_PATH = /^\/c\/([a-z0-9]{6})\/?$/i
 const CHALLENGE_PATH = /^\/t\/([abcdefghjkmnpqrstuvwxyz23456789]{12})\/?$/i
 const CHALLENGE_CARD_PATH = /^\/t\/([abcdefghjkmnpqrstuvwxyz23456789]{12})\/card\.jpg$/i
 const WALK_IMAGE = 'https://resuming.me/og-walk.jpg'
+const SIT_IMAGE = 'https://resuming.me/og-sit.jpg'
+
+function defaultChallengeImage(kind: string | null | undefined): string {
+  return kind === 'meditate' ? SIT_IMAGE : WALK_IMAGE
+}
 const APPLE_APP_SITE_ASSOCIATION = {
   applinks: {
     apps: [],
@@ -342,13 +347,17 @@ function challengePhotoVersion(path: string | null): string | null {
 async function challengeCardImage(env: Env, code: string): Promise<Response> {
   const path = await fetchChallengePhotoPath(env, code)
   const storage = env.SUPABASE_URL?.replace(/\/+$/, '')
-  if (!path || !storage) return Response.redirect(WALK_IMAGE, 302)
+  const fallback = async () => {
+    const rows = await fetchChallenge(env, code)
+    return Response.redirect(defaultChallengeImage(rows?.[0]?.kind), 302)
+  }
+  if (!path || !storage) return fallback()
   try {
     const upstream = await fetch(`${storage}/storage/v1/object/public/challenge-photos/${path}`, {
       signal: AbortSignal.timeout(4000),
     })
     if (!upstream.ok || !(upstream.headers.get('content-type') ?? '').includes('image')) {
-      return Response.redirect(WALK_IMAGE, 302)
+      return fallback()
     }
     return new Response(upstream.body, {
       status: 200,
@@ -359,7 +368,7 @@ async function challengeCardImage(env: Env, code: string): Promise<Response> {
       },
     })
   } catch {
-    return Response.redirect(WALK_IMAGE, 302)
+    return fallback()
   }
 }
 
@@ -469,10 +478,12 @@ export default {
     const challengeMatch = CHALLENGE_PATH.exec(url.pathname)
     if (challengeMatch) {
       const code = challengeMatch[1].toLowerCase()
-      const card = challengePreview(await fetchChallenge(env, code))
+      const rows = await fetchChallenge(env, code)
+      const card = challengePreview(rows)
       const path = await fetchChallengePhotoPath(env, code)
       const version = challengePhotoVersion(path)
-      const photo = version ? `https://resuming.me/t/${code}/card.jpg?v=${version}` : WALK_IMAGE
+      const fallback = defaultChallengeImage(rows?.[0]?.kind)
+      const photo = version ? `https://resuming.me/t/${code}/card.jpg?v=${version}` : fallback
       const shared = url.searchParams.get('v')
       const pageUrl =
         shared && /^[a-z0-9]{8}$/.test(shared) ? `https://resuming.me/t/${code}?v=${shared}` : `https://resuming.me/t/${code}`
@@ -482,7 +493,7 @@ export default {
         card.description,
         pageUrl,
         photo,
-        photo === WALK_IMAGE,
+        photo === fallback,
         '1280',
         '720',
         'public, max-age=0, must-revalidate',

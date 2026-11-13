@@ -139,9 +139,9 @@ export const en = {
     points: [
       'By team, or all together',
       'Walking or meditation. One challenge, one of those.',
-      'The score stays hidden until 3 people have joined',
+      'The score shows from the first person who joins',
     ],
-    note: 'Joining a walking challenge needs an Android phone with Health Connect. Anyone with the link can follow the board. A meditation challenge can be joined in the browser too.',
+    note: 'An iPhone or an Android phone can join a walking challenge. Steps count when that app is opened. Anyone can follow the board. A meditation challenge can be joined in the browser too.',
     mock: {
       heading: 'Morning walk',
       line: 'So far: Green leads by 1,800 a day.',

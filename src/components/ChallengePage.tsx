@@ -1,4 +1,4 @@
-import { useEffect, useState } from 'react'
+import { useEffect, useState, type CSSProperties } from 'react'
 import { Link, useNavigate } from 'react-router-dom'
 import { Capacitor } from '@capacitor/core'
 import { useAuth } from '../hooks/useAuth'
@@ -6,17 +6,23 @@ import { useDocumentMeta } from '../hooks/useDocumentMeta'
 import { useLocale } from '../hooks/useLocale'
 import { meditationHours, publicChallengeCount } from '../lib/challengeScore'
 import { challengePhotoUrl } from '../lib/challengePhotos'
+import { addDays } from '../lib/dates'
 import {
   boardShareMessage,
   cancelChallengeLeave,
+  cleanChallengeName,
+  cleanWhatsAppGroupLink,
   defaultChallengeShare,
   challengeHasEnded,
   challengeIssue,
   challengeIssueKey,
+  challengePhone,
+  challengeCardSrc,
   challengeUrl,
   endWalkingChallenge,
   getChallengeBoard,
   getChallengeHistory,
+  goalSpanOk,
   isChallengeCode,
   joinWalkingChallenge,
   markChallengeShared,
@@ -24,12 +30,15 @@ import {
   setChallengeShareMessage,
   setWalkingChallengeStatus,
   teamImageSrc,
+  teamNamesOk,
+  updateChallengeDetails,
   walkingJoinGate,
   type ChallengeBoard,
   type ChallengeHistory,
 } from '../lib/challenges'
 import { ChallengeTrend, teamColor } from './ChallengeTrend'
 import { readPhoneSteps, requestPhoneSteps, type PhoneSteps } from '../lib/healthSteps'
+import { syncWalkingChallenges } from '../lib/walkingSync'
 import { Icon } from './Icon'
 
 type Load = { state: 'loading' } | { state: 'error' } | { state: 'ready'; board: ChallengeBoard | null }
@@ -48,14 +57,24 @@ export function ChallengePage({ code }: { code: string }) {
   const [copied, setCopied] = useState(false)
   const [shareDraft, setShareDraft] = useState<string | null>(null)
   const [shareFor, setShareFor] = useState('')
+  const [editing, setEditing] = useState(false)
+  const [titleDraft, setTitleDraft] = useState('')
+  const [endDraft, setEndDraft] = useState('')
+  const [cardFile, setCardFile] = useState<File | null>(null)
+  const [cardPreview, setCardPreview] = useState<string | null>(null)
+  const [teamDrafts, setTeamDrafts] = useState<
+    { id: string; name: string; link: string; file: File | null; preview: string | null }[]
+  >([])
   const [error, setError] = useState<string | null>(null)
   const [photoNote, setPhotoNote] = useState(false)
   const [history, setHistory] = useState<ChallengeHistory>({ teams: [], mine: [] })
   const board = load.state === 'ready' ? load.board : null
   const platform = Capacitor.getPlatform()
+  const phone = challengePhone()
+  const native = platform !== 'web'
   const sitting = board?.kind === 'meditate'
-  const stepsPending = !sitting && platform === 'android' && steps == null
-  const gate = sitting ? 'join' : walkingJoinGate(platform, steps)
+  const stepsPending = !sitting && native && (phone === 'android' || phone === 'ios') && steps == null
+  const gate = sitting ? 'join' : walkingJoinGate(phone, native ? steps : { status: 'unavailable' })
 
   useDocumentMeta({
     title: board?.title ? `${board.title} · Resuming` : 'Resuming',
@@ -96,7 +115,7 @@ export function ChallengePage({ code }: { code: string }) {
   }, [code, attempt])
 
   useEffect(() => {
-    if (platform !== 'android' || board?.kind === 'meditate') return
+    if (!native || phone === 'web' || board?.kind === 'meditate') return
     let live = true
     void readPhoneSteps().then((result) => {
       if (live) setSteps(result)
@@ -104,7 +123,7 @@ export function ChallengePage({ code }: { code: string }) {
     return () => {
       live = false
     }
-  }, [platform, attempt, board?.kind])
+  }, [native, phone, attempt, board?.kind])
 
   useEffect(() => {
     if (sessionStorage.getItem('resuming-challenge-photo-note') !== code) return
@@ -135,8 +154,92 @@ export function ChallengePage({ code }: { code: string }) {
     setError(null)
     try {
       await joinWalkingChallenge(code, teamId)
+      void syncWalkingChallenges().catch(() => {})
       setAttempt((count) => count + 1)
       setConfirmEmpty(false)
+    } catch (err) {
+      setError(t(challengeIssueKey(challengeIssue(err as { message?: string }))))
+    } finally {
+      setBusy(false)
+    }
+  }
+
+  function clearEditPictures() {
+    setCardPreview((current) => {
+      if (current) URL.revokeObjectURL(current)
+      return null
+    })
+    setCardFile(null)
+    setTeamDrafts((current) => {
+      current.forEach((team) => {
+        if (team.preview) URL.revokeObjectURL(team.preview)
+      })
+      return current
+    })
+  }
+
+  function startEdit() {
+    if (!board) return
+    clearEditPictures()
+    setTitleDraft(board.title ?? '')
+    setEndDraft(board.endsOn)
+    setTeamDrafts(
+      board.teams.map((team) => ({
+        id: team.id,
+        name: team.name,
+        link: team.whatsappUrl ?? '',
+        file: null,
+        preview: null,
+      })),
+    )
+    setError(null)
+    setEditing(true)
+  }
+
+  function stopEdit() {
+    clearEditPictures()
+    setTeamDrafts([])
+    setEditing(false)
+  }
+
+  async function saveEdits() {
+    if (!board) return
+    const title = cleanChallengeName(titleDraft)
+    if (!title || title.length > 60) {
+      setError(t('challenge.errors.name'))
+      return
+    }
+    if (!goalSpanOk(board.startsOn, endDraft)) {
+      setError(t('challenge.errors.dates'))
+      return
+    }
+    const names = teamDrafts.map((team) => cleanChallengeName(team.name))
+    if (!teamNamesOk(board.shape, names)) {
+      setError(t(board.shape === 'race' ? 'challenge.errors.teams' : 'challenge.errors.oneTeam'))
+      return
+    }
+    const links = teamDrafts.map((team) => cleanWhatsAppGroupLink(team.link))
+    if (links.some((link) => !link.ok)) {
+      setError(t('challenge.errors.whatsapp'))
+      return
+    }
+    setBusy(true)
+    setError(null)
+    try {
+      await updateChallengeDetails({
+        id: board.id,
+        title,
+        endsOn: endDraft,
+        card: cardFile,
+        teams: teamDrafts.map((team, index) => ({
+          id: team.id,
+          name: names[index] ?? '',
+          link: links[index]?.url ?? '',
+          photo: team.file,
+        })),
+      })
+      stopEdit()
+      setAttempt((count) => count + 1)
     } catch (err) {
       setError(t(challengeIssueKey(challengeIssue(err as { message?: string }))))
     } finally {
@@ -264,6 +367,7 @@ export function ChallengePage({ code }: { code: string }) {
       ? leadText.slice(soFarPrefix.length).trim()
       : leadText
 
+  const joining = !board.isOwner && !board.myTeamId
   const measure = board.kind === 'meditate' ? 'minutes' : 'steps'
   const ranked = [...board.teams].sort((a, b) => (b.pace ?? -1) - (a.pace ?? -1))
   const leaderPace = Math.max(
@@ -278,19 +382,84 @@ export function ChallengePage({ code }: { code: string }) {
   return (
     <section className="shared-event">
       {back}
-      <div className="challenge-detail-head">
-        <img className="challenge-detail-mark" src={challengePhotoUrl(board.cardPhoto) ?? '/og-walk.jpg'} alt="" />
+      <div className={editing ? 'challenge-detail-head is-editing' : 'challenge-detail-head'}>
+        {editing ? (
+          <label className="challenge-picture">
+            <img
+              className="challenge-detail-mark"
+              src={cardPreview ?? challengePhotoUrl(board.cardPhoto) ?? challengeCardSrc(board.kind)}
+              alt=""
+            />
+            <span className="challenge-picture-badge" aria-hidden="true">
+              <Icon name="photo" />
+            </span>
+            <input
+              className="challenge-file"
+              type="file"
+              accept="image/*"
+              aria-label={t('challenge.changePicture')}
+              onChange={(event) => {
+                const file = event.target.files?.[0]
+                if (!file) return
+                setCardFile(file)
+                setCardPreview((current) => {
+                  if (current) URL.revokeObjectURL(current)
+                  return URL.createObjectURL(file)
+                })
+              }}
+            />
+          </label>
+        ) : (
+          <img
+            className="challenge-detail-mark"
+            src={challengePhotoUrl(board.cardPhoto) ?? challengeCardSrc(board.kind)}
+            alt=""
+          />
+        )}
         <div className="shared-event-body">
           <p className="shared-event-intro">
             {t(board.kind === 'meditate' ? 'challenge.pageIntroSit' : 'challenge.pageIntro')}
           </p>
-          <h1 className="shared-event-title">{board.title}</h1>
-          <p className="shared-event-when">
-            {t('challenge.through', {
-              start: dateLabel.format(new Date(`${board.startsOn}T12:00:00`)),
-              end: dateLabel.format(new Date(`${board.endsOn}T12:00:00`)),
-            })}
-          </p>
+          {editing ? (
+            <>
+              <label className="field">
+                <span className="field-label">{t('challenge.name')}</span>
+                <input
+                  className="field-input"
+                  value={titleDraft}
+                  maxLength={60}
+                  onChange={(event) => setTitleDraft(event.target.value)}
+                />
+              </label>
+              <div className="challenge-dates">
+                <label className="field">
+                  <span className="field-label">{t('challenge.startDate')}</span>
+                  <input className="field-input" value={startsLabel} disabled />
+                </label>
+                <label className="field">
+                  <span className="field-label">{t('challenge.endDate')}</span>
+                  <input
+                    className="field-input"
+                    type="date"
+                    value={endDraft}
+                    min={board.startsOn}
+                    max={addDays(board.startsOn, 29)}
+                    onChange={(event) => setEndDraft(event.target.value)}
+                  />
+                </label>
+              </div>
+            </>
+          ) : (
+            <>
+              <h1 className="shared-event-title">{board.title}</h1>
+              <p className="shared-event-when">
+                {t('challenge.through', {
+                  start: dateLabel.format(new Date(`${board.startsOn}T12:00:00`)),
+                  end: dateLabel.format(new Date(`${board.endsOn}T12:00:00`)),
+                })}
+              </p>
+            </>
+          )}
         </div>
       </div>
       {photoNote && <p className="shared-event-note">{t('challenge.photoFailed')}</p>}
@@ -303,7 +472,7 @@ export function ChallengePage({ code }: { code: string }) {
             : t('challenge.targetLine', { target: board.target.toLocaleString(locale) })}
         </p>
       )}
-      {board.scorePhase && leadBare && (
+      {!editing && board.scorePhase && leadBare && (
         <p className="challenge-lead">
           {board.scorePhase === 'so_far' && <span className="challenge-lead-kicker">{t('challenge.soFarLabel')}</span>}
           <span className="challenge-lead-line">{leadBare}</span>
@@ -312,6 +481,7 @@ export function ChallengePage({ code }: { code: string }) {
       {over && <p className="shared-event-status">{t('challenge.ended')}</p>}
       {board.myLeavingOn && <p className="shared-event-note">{t('challenge.leaving')}</p>}
 
+      {!editing && (
       <ul className="shared-list-items">
         {ranked.map((team) => {
           const pace = team.pace == null ? null : publicChallengeCount(team.pace, measure)
@@ -320,14 +490,16 @@ export function ChallengePage({ code }: { code: string }) {
             (row) => row.pace != null && publicChallengeCount(row.pace, measure) === leaderPace,
           )
           const isLeader = pace != null && pace === leaderPace && leaders.length === 1
-          const needs = board.shape === 'race' && pace == null ? Math.max(0, 3 - team.memberCount) : 0
           return (
             <li key={team.id} className="shared-list-item">
               <div
-                className={
-                  team.id === board.myTeamId ? 'challenge-team-card is-mine' : 'challenge-team-card'
+                className={team.id === board.myTeamId ? 'challenge-team-card is-mine' : 'challenge-team-card'}
+                style={
+                  {
+                    '--team-ink': teamColor(team.image),
+                    ...(isLeader ? { borderColor: teamColor(team.image) } : {}),
+                  } as CSSProperties
                 }
-                style={isLeader ? { borderColor: teamColor(team.image) } : undefined}
               >
                 <div className="challenge-score-top">
                   <span className="challenge-team-heading">
@@ -341,11 +513,13 @@ export function ChallengePage({ code }: { code: string }) {
                     )}
                     <img
                       className="challenge-team-picture"
-                      src={challengePhotoUrl(team.photoPath) ?? teamImageSrc(team.image)}
+                      src={challengePhotoUrl(team.photoPath) ?? teamImageSrc(team.image, board.kind)}
                       alt=""
                     />
                     <span className="challenge-score-name">
-                      <span>{team.name}</span>
+                      <span className="challenge-team-ink" style={{ color: teamColor(team.image) }}>
+                        {team.name}
+                      </span>
                       <span className="challenge-score-meta">
                         {team.id === board.myTeamId && <span>{t('challenge.myTeam')}</span>}
                         <span>
@@ -353,6 +527,16 @@ export function ChallengePage({ code }: { code: string }) {
                             ? t('challenge.waiting')
                             : t('challenge.members', { count: team.memberCount })}
                         </span>
+                        {team.whatsappUrl && (
+                          <a
+                            className="challenge-whatsapp"
+                            href={team.whatsappUrl}
+                            target="_blank"
+                            rel="noopener noreferrer"
+                          >
+                            {t('challenge.whatsappJoin')}
+                          </a>
+                        )}
                       </span>
                     </span>
                   </span>
@@ -361,11 +545,6 @@ export function ChallengePage({ code }: { code: string }) {
                       {isLeader && <span className="challenge-score-lead">{t('challenge.leadsMark')}</span>}
                       <strong>{countLabel(pace)}</strong>
                       <span>{t(sitting ? 'challenge.scoreUnitMinutes' : 'challenge.scoreUnit')}</span>
-                    </span>
-                  )}
-                  {needs > 0 && (
-                    <span className="challenge-score-wait">
-                      {t('challenge.scoreNeed', { count: String(needs) })}
                     </span>
                   )}
                 </div>
@@ -379,8 +558,91 @@ export function ChallengePage({ code }: { code: string }) {
           )
         })}
       </ul>
+      )}
 
-      {new Set(history.teams.map((point) => point.day)).size >= 2 && (
+      {editing && (
+        <div className="challenge-edit-teams">
+          {board.teams.map((team) => {
+            const draft = teamDrafts.find((item) => item.id === team.id)
+            if (!draft) return null
+            return (
+              <div
+                key={team.id}
+                className="challenge-edit-team"
+                style={{ '--team-ink': teamColor(team.image) } as CSSProperties}
+              >
+                <label className="challenge-picture challenge-edit-photo">
+                  <img
+                    className="challenge-team-picture"
+                    src={draft.preview ?? challengePhotoUrl(team.photoPath) ?? teamImageSrc(team.image, board.kind)}
+                    alt=""
+                  />
+                  <span className="challenge-picture-badge" aria-hidden="true">
+                    <Icon name="photo" />
+                  </span>
+                  <input
+                    className="challenge-file"
+                    type="file"
+                    accept="image/*"
+                    aria-label={t('challenge.changePicture')}
+                    onChange={(event) => {
+                      const file = event.target.files?.[0]
+                      if (!file) return
+                      setTeamDrafts((current) =>
+                        current.map((item) => {
+                          if (item.id !== team.id) return item
+                          if (item.preview) URL.revokeObjectURL(item.preview)
+                          return { ...item, file, preview: URL.createObjectURL(file) }
+                        }),
+                      )
+                    }}
+                  />
+                </label>
+                <div className="challenge-edit-fields">
+                  <input
+                    className="field-input challenge-team-name"
+                    style={{ '--team-ink': teamColor(team.image) } as CSSProperties}
+                    value={draft.name}
+                    maxLength={40}
+                    aria-label={t('challenge.teams')}
+                    onChange={(event) =>
+                      setTeamDrafts((current) =>
+                        current.map((item) => (item.id === team.id ? { ...item, name: event.target.value } : item)),
+                      )
+                    }
+                  />
+                  <input
+                    className="field-input"
+                    value={draft.link}
+                    inputMode="url"
+                    placeholder={t('challenge.whatsappPlaceholder')}
+                    aria-label={t('challenge.whatsappGroup')}
+                    onChange={(event) =>
+                      setTeamDrafts((current) =>
+                        current.map((item) => (item.id === team.id ? { ...item, link: event.target.value } : item)),
+                      )
+                    }
+                  />
+                </div>
+              </div>
+            )
+          })}
+        </div>
+      )}
+
+      {editing && error && <p className="error">{error}</p>}
+      {editing && (
+        <div className="challenge-edit-actions">
+          <button type="button" className="btn btn-primary" disabled={busy} onClick={() => void saveEdits()}>
+            {busy ? t('challenge.saving') : t('challenge.save')}
+          </button>
+          <button type="button" className="btn btn-secondary" disabled={busy} onClick={stopEdit}>
+            {t('challenge.cancel')}
+          </button>
+        </div>
+      )}
+
+      {!editing && new Set(history.teams.map((point) => point.day)).size >= 2 && (
         <section className="challenge-chart-block" aria-label={t('challenge.dayByDay')}>
           <h2 className="today-period-title">{t('challenge.dayByDay')}</h2>
           <ChallengeTrend
@@ -404,7 +666,7 @@ export function ChallengePage({ code }: { code: string }) {
         </section>
       )}
 
-      {(history.mine.length > 0 || board.myRaw != null || board.myDayClosed) && (
+      {!editing && (history.mine.length > 0 || board.myRaw != null || board.myDayClosed) && (
         <section
           className="challenge-log-block"
           aria-label={t(board.kind === 'meditate' ? 'challenge.loggedHeadingMinutes' : 'challenge.loggedHeading')}
@@ -451,21 +713,21 @@ export function ChallengePage({ code }: { code: string }) {
         </section>
       )}
 
-      {error && <p className="error">{error}</p>}
+      {!editing && error && <p className="error">{error}</p>}
 
-      {!over && !board.myTeamId && !stepsPending && gate === 'blocked' && (
-        <p className="shared-event-note">{t('challenge.viewOnly')}</p>
-      )}
-
-      {!over && board.status === 'active' && !board.myTeamId && gate === 'connect' && (
+      {!editing && !over && board.status === 'active' && !board.myTeamId && gate === 'connect' && (
         <button type="button" className="btn btn-primary" disabled={busy} onClick={() => void connect()}>
           {t('challenge.connect')}
         </button>
       )}
 
-      {!over && board.status === 'active' && !board.myTeamId && (gate === 'join' || gate === 'confirm-empty') && (
+      {!editing && !over && board.status === 'active' && !board.myTeamId && (gate === 'join' || gate === 'confirm-empty') && (
         <>
-          {confirmEmpty && <p className="shared-event-note">{t('challenge.emptyWarning')}</p>}
+          {confirmEmpty && (
+            <p className="shared-event-note">
+              {t(phone === 'ios' ? 'challenge.emptyWarningApple' : 'challenge.emptyWarning')}
+            </p>
+          )}
           <button type="button" className="btn btn-primary" disabled={busy || !teamId} onClick={() => void join()}>
             {busy
               ? t('challenge.joining')
@@ -478,7 +740,7 @@ export function ChallengePage({ code }: { code: string }) {
         </>
       )}
 
-      {!over &&
+      {!editing && !over &&
         board.isOwner &&
         board.status === 'active' &&
         board.joinedCount > (board.myTeamId ? 1 : 0) && (
@@ -496,7 +758,7 @@ export function ChallengePage({ code }: { code: string }) {
           </button>
         )}
 
-      {recordUrl && user && (board.isOwner || board.myTeamId) && (
+      {!editing && recordUrl && user && (board.isOwner || board.myTeamId) && (
         <a
           className="btn btn-primary"
           href={recordUrl}
@@ -506,35 +768,41 @@ export function ChallengePage({ code }: { code: string }) {
         </a>
       )}
 
-      <label className="challenge-share-message">
-        <span className="field-label">{t('challenge.shareEdit')}</span>
-        <textarea
-          className="field-input"
-          maxLength={280}
-          rows={3}
-          value={shareDraftText}
-          onChange={(event) => {
-            setShareFor(board.id)
-            setShareDraft(event.target.value)
-          }}
-          onBlur={() => {
-            if (!user || !board.isOwner) return
-            const next = shareDraftText.trim()
-            const stored = board.shareMessage?.trim() ?? ''
-            const writing = !next || next === shareFallback ? '' : next
-            if (!next) setShareDraft(shareFallback)
-            if (writing === stored) return
-            setBusy(true)
-            setError(null)
-            void setChallengeShareMessage(board.id, writing)
-              .then(() => setAttempt((count) => count + 1))
-              .catch((err) => setError(t(challengeIssueKey(challengeIssue(err as { message?: string })))))
-              .finally(() => setBusy(false))
-          }}
-        />
-        <span className="shared-event-note">{t('challenge.shareHint')}</span>
-      </label>
+      {!editing && board.isOwner && (
+        <label className="challenge-share-message">
+          <span className="field-label">{t('challenge.shareEdit')}</span>
+          <textarea
+            className="field-input"
+            maxLength={280}
+            rows={3}
+            value={shareDraftText}
+            onChange={(event) => {
+              setShareFor(board.id)
+              setShareDraft(event.target.value)
+            }}
+            onBlur={() => {
+              if (!user) return
+              const next = shareDraftText.trim()
+              const stored = board.shareMessage?.trim() ?? ''
+              const writing = !next || next === shareFallback ? '' : next
+              if (!next) setShareDraft(shareFallback)
+              if (writing === stored) return
+              setBusy(true)
+              setError(null)
+              void setChallengeShareMessage(board.id, writing)
+                .then(() => setAttempt((count) => count + 1))
+                .catch((err) => setError(t(challengeIssueKey(challengeIssue(err as { message?: string })))))
+                .finally(() => setBusy(false))
+            }}
+          />
+          <span className="shared-event-note">{t('challenge.shareHint')}</span>
+        </label>
+      )}
+      {!editing && !joining && !board.isOwner && shareDraftText.trim() && (
+        <p className="challenge-share-read">{shareDraftText.trim()}</p>
+      )}
 
+      {!editing && !joining && (
       <div className="challenge-share-row">
         <button type="button" className="btn btn-secondary" onClick={() => void copyLink()}>
           {copied ? t('challenge.copied') : t('challenge.copy')}
@@ -543,8 +811,9 @@ export function ChallengePage({ code }: { code: string }) {
           {t('challenge.share')}
         </a>
       </div>
+      )}
 
-      {!over && board.myTeamId && (board.status === 'active' || board.status === 'switched_off') && (
+      {!editing && !over && board.myTeamId && (board.status === 'active' || board.status === 'switched_off') && (
         <button
           type="button"
           className="btn btn-ghost"
@@ -559,7 +828,13 @@ export function ChallengePage({ code }: { code: string }) {
         </button>
       )}
 
-      {!over && board.isOwner && board.status !== 'ended' && (
+      {!editing && board.isOwner && (
+        <button type="button" className="btn btn-ghost" disabled={busy} onClick={startEdit}>
+          {t('challenge.edit')}
+        </button>
+      )}
+
+      {!editing && !over && board.isOwner && board.status !== 'ended' && (
         <>
           {board.status === 'active' && (
             <button

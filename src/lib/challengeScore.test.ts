@@ -152,7 +152,7 @@ describe('walking share lines', () => {
     expect(lines.current).toBe('So far, Day 5: Night owls leads at 6,600 steps a day.')
   })
 
-  it('hides the pace while fewer than three people are in', () => {
+  it('names how many joined when a team has no pace yet', () => {
     const lines = walkingShareLines({
       shape: 'race',
       phase: 'so_far',

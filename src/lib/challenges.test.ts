@@ -1,6 +1,7 @@
 import { describe, expect, it } from 'vitest'
 import {
   challengeCodeFromUrl,
+  cleanWhatsAppGroupLink,
   challengeHasEnded,
   defaultChallengeShare,
   challengeIssue,
@@ -9,6 +10,8 @@ import {
   isChallengeCode,
   raceLastDay,
   stepTargetOk,
+  challengeCardSrc,
+  teamImageSrc,
   teamNamesOk,
   walkingJoinGate,
 } from './challenges'
@@ -32,6 +35,18 @@ describe('challenge link', () => {
     expect(
       defaultChallengeShare({ title: 'Morning sit', shape: 'together', kind: 'meditate', locale: 'en' }),
     ).toBe('Morning sit. Join the group. Everyone adds their minutes.')
+  })
+})
+
+describe('challenge pictures', () => {
+  it('uses walkers for a walk and Krishna or Buddha for a sit', () => {
+    expect(challengeCardSrc('walk')).toBe('/og-walk.jpg')
+    expect(challengeCardSrc('meditate')).toBe('/og-sit.jpg')
+    expect(teamImageSrc(1, 'walk')).toBe('/team-1.jpg')
+    expect(teamImageSrc(2, 'walk')).toBe('/team-2.jpg')
+    expect(teamImageSrc(1, 'meditate')).toBe('/sit-krishna.jpg')
+    expect(teamImageSrc(2, 'meditate')).toBe('/sit-buddha.jpg')
+    expect(teamImageSrc(3, 'meditate')).toBe('/sit-krishna.jpg')
   })
 })
 
@@ -80,11 +95,12 @@ describe('challenge dates', () => {
     expect(raceLastDay('2026-11-04')).toBe('2026-11-10')
   })
 
-  it('accepts a shared goal of 7 to 366 days', () => {
+  it('accepts 1 to 30 days, counting the start', () => {
+    expect(goalSpanOk('2026-11-04', '2026-11-04')).toBe(true)
     expect(goalSpanOk('2026-11-04', '2026-11-10')).toBe(true)
-    expect(goalSpanOk('2026-11-04', '2027-11-04')).toBe(true)
-    expect(goalSpanOk('2026-11-04', '2026-11-09')).toBe(false)
-    expect(goalSpanOk('2026-11-04', '2027-11-05')).toBe(false)
+    expect(goalSpanOk('2026-11-04', '2026-12-03')).toBe(true)
+    expect(goalSpanOk('2026-11-04', '2026-12-04')).toBe(false)
+    expect(goalSpanOk('2026-11-04', '2026-11-03')).toBe(false)
   })
 })
 
@@ -108,10 +124,28 @@ describe('team names and targets', () => {
   })
 })
 
+describe('WhatsApp group link', () => {
+  it('keeps a group invite and refuses anything else', () => {
+    expect(cleanWhatsAppGroupLink('').url).toBeNull()
+    expect(cleanWhatsAppGroupLink('  ').ok).toBe(true)
+    expect(cleanWhatsAppGroupLink('https://chat.whatsapp.com/Abcd1234Efgh').url).toBe(
+      'https://chat.whatsapp.com/Abcd1234Efgh',
+    )
+    expect(cleanWhatsAppGroupLink('chat.whatsapp.com/invite/Abcd1234Efgh').url).toBe(
+      'https://chat.whatsapp.com/invite/Abcd1234Efgh',
+    )
+    expect(cleanWhatsAppGroupLink('https://wa.me/919876543210').ok).toBe(false)
+    expect(cleanWhatsAppGroupLink('https://example.com/group').ok).toBe(false)
+  })
+})
+
 describe('walking join gate', () => {
-  it('blocks the web and iPhone', () => {
+  it('blocks a computer and lets an iPhone join', () => {
     expect(walkingJoinGate('web', { status: 'count', steps: 4000 })).toBe('blocked')
-    expect(walkingJoinGate('ios', { status: 'count', steps: 4000 })).toBe('blocked')
+    expect(walkingJoinGate('ios', { status: 'count', steps: 4000 })).toBe('join')
+    expect(walkingJoinGate('ios', { status: 'unavailable' })).toBe('join')
+    expect(walkingJoinGate('ios', { status: 'needs-permission' })).toBe('connect')
+    expect(walkingJoinGate('ios', { status: 'count', steps: 0 })).toBe('confirm-empty')
   })
 
   it('asks Android to connect, confirm an empty source, or join', () => {
@@ -126,6 +160,8 @@ describe('walking join gate', () => {
 describe('challenge errors', () => {
   it('maps server exceptions', () => {
     expect(challengeIssue({ message: 'challenge_creator_cap' })).toBe('creatorCap')
+    expect(challengeIssue({ message: 'challenge_creator_cap_admin' })).toBe('creatorCapAdmin')
+    expect(challengeIssue({ message: 'challenge_member_cap_admin' })).toBe('memberCapAdmin')
     expect(challengeIssue({ message: 'challenge_not_android' })).toBe('notAndroid')
     expect(challengeIssue({ message: 'something else' })).toBe('failed')
   })
